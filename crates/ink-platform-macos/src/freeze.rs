@@ -121,6 +121,13 @@ fn make(mtm: MainThreadMarker) -> Panel {
     window.setLevel(FREEZE_LEVEL);
     window.setCollectionBehavior(NSWindowCollectionBehavior(ALL_SPACES));
     window.setSharingType(NSWindowSharingType::None);
+    // 창 색 공간을 그림(SCK sRGB)과 맞춘다: 안 맞으면 층을 넘길 때(flush) CPU가 4K 그림 전체를 디스플레이 색으로
+    // 바꿔 24 ms가 든다 → 3.5 ms(2026-11-26 실측). 화면에 낼 때의 색 변환은 창 서버가 한다.
+    // SAFETY: NSColorSpace·NSWindow 공개 메서드(클래스 메서드는 autoreleased 객체를 돌려준다).
+    unsafe {
+        let cs: *mut AnyObject = objc2::msg_send![objc2::class!(NSColorSpace), sRGBColorSpace];
+        let _: () = objc2::msg_send![&*window, setColorSpace: cs];
+    }
     window.setAnimationBehavior(NSWindowAnimationBehavior::None);
     let layers = Layers::new();
     let view = NSView::initWithFrame(NSView::alloc(mtm), rect);
@@ -143,15 +150,21 @@ pub fn show(monitor: u32, space: &Space, bounds: PhysRect, w: u32, h: u32, bgra:
     let Some(s) = space.screen_of(bounds).copied() else { return false };
     let Some(frame) = screen_frame(mtm, &s) else { return false };
     let Some(img) = capture::take_image(monitor, w, h).or_else(|| pixels::image_from_bgra(w, h, bgra)) else { return false };
+    let t = std::time::Instant::now();
+    let ms = |a: std::time::Instant| a.elapsed().as_secs_f64() * 1000.0;
     PANELS.with_borrow_mut(|panels| {
         let p = panels.entry(monitor).or_insert_with(|| make(mtm));
         p.screen = Some(s);
         p.window.setFrame_display(frame, false);
+        let framed = ms(t);
         p.layers.set_image(s.pt.w, s.pt.h, Some(&img));
         p.layers.hole(highlight.map(|r| s.local_to_pt(r)));
+        let layered = ms(t);
         // 층 변경을 지금 창 서버로 보낸 뒤 앞으로(첫 그림부터 정지 화면이 보이게)
         CATransaction::flush();
+        let flushed = ms(t);
         p.window.orderFrontRegardless();
+        log::debug!("freeze monitor {monitor}: frame {framed:.1}, layers {layered:.1}, flush {flushed:.1}, front {:.1} ms", ms(t));
     });
     true
 }
