@@ -128,7 +128,7 @@ pub fn ensure_overlays<R: Runtime>(app: &AppHandle<R>, layout: &MonitorLayout) {
         let _ = w.set_background_color(Some(Color(0, 0, 0, 0)));
     }
     #[cfg(target_os = "macos")]
-    ink_platform_macos::freeze::retain(&layout.monitors.iter().map(|m| m.id).collect::<Vec<_>>());
+    ink_platform_macos::freeze::prepare(&layout.monitors.iter().map(|m| m.id).collect::<Vec<_>>());
     let keep: Vec<String> = layout.monitors.iter().map(|m| label(m.id)).collect();
     for (l, w) in app.webview_windows() {
         if l.starts_with(PREFIX) && !keep.contains(&l) {

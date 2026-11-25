@@ -183,11 +183,9 @@ pub fn hide_all() {
     });
 }
 
-/// 배치에 없는 모니터의 창을 닫는다.
-pub fn retain(monitors: &[u32]) {
-    if MainThreadMarker::new().is_none() {
-        return;
-    }
+/// 배치에 맞춰 창을 미리 만들어 숨겨 두고(첫 진입이 창 만들기를 기다리지 않게), 없어진 모니터의 창은 닫는다.
+pub fn prepare(monitors: &[u32]) {
+    let Some(mtm) = MainThreadMarker::new() else { return };
     PANELS.with_borrow_mut(|panels| {
         panels.retain(|id, p| {
             let keep = monitors.contains(id);
@@ -196,6 +194,9 @@ pub fn retain(monitors: &[u32]) {
             }
             keep
         });
+        for id in monitors {
+            panels.entry(*id).or_insert_with(|| make(mtm));
+        }
     });
 }
 
