@@ -4,12 +4,20 @@
 //! 카탈로그로 추정한 다른 앱 겹침(Snipaste 등)은 실제로 등록해 보고 확인하고,
 //! 규칙·이 표·설정 파일에서 읽은 키(PowerToys 저수준 훅)는 등록이 성공해도 막는다.
 
-use crate::ports::{HotkeyError, Ports};
+use crate::ports::{HotkeyError, Ports, SystemEvent};
 use crate::state::*;
-use ink_domain::settings::{self, LoadError, Settings};
+use ink_domain::geometry::MonitorLayout;
+use ink_domain::mode::{self, Mode, ModeCommand};
+use ink_domain::settings::{self, ExcludedApp, LoadError, Settings};
 use ink_domain::shortcuts::{canonicalize, catalog, spoken, to_accelerator, Analysis, Environment, Level, Platform, SlotDef};
+use ink_domain::snapshot::{filter_windows, CaptureKind, Snapshot};
+use ink_domain::timing::{self, EntryTiming, Stats};
 use serde_json::Value;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::time::Instant;
+
+/// 진입 시간 표본을 몇 개까지 기억할지(M1 통계, n ≥ 100).
+const TIMING_KEEP: usize = 500;
 
 /// 단축키를 잠시 꺼도 남겨 두는 칸(`` Alt+` ``).
 pub const PAUSE_SLOT: &str = "pause";
@@ -53,11 +61,17 @@ pub struct ImportPreview {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HotkeyOutcome {
-    /// 모드 시작 등 — 칸 ID
+    /// 아직 서비스가 처리하지 않는 동작 — 칸 ID(어댑터가 처리하거나 "준비 중")
     Start(String),
+    /// 캡처 모드를 시작·전환·끝냄
+    Captured,
     /// 단축키 잠시 끄기·켜기를 처리함
     Toggled(bool),
     Ignored,
+}
+
+fn ms(d: std::time::Duration) -> f64 {
+    d.as_secs_f64() * 1000.0
 }
 
 pub struct InkService {
@@ -77,6 +91,29 @@ pub struct InkService {
     readonly: bool,
     notices: Vec<String>,
     pinned_count: u32,
+    // ── 모드·캡처(단계 2) ──
+    epoch: Instant,
+    mode: Mode,
+    session_seq: u64,
+    /// 지난번 오버레이를 맞춘 배치 — 지문이 다르면 다시 맞춘다
+    prepared: Option<MonitorLayout>,
+    snapshot: Option<Snapshot>,
+    /// (단축키 시각, 진입 계측) — UI가 그렸다고 알리면 마감
+    pending: Option<(Instant, EntryTiming)>,
+    ready_samples: VecDeque<f64>,
+    secure_notified: bool,
+}
+
+/// 모드 섬 둘째 줄(처음 3번과 `?`일 때만 보임 — 섬 호스트가 정함).
+fn capture_island(kind: CaptureKind) -> IslandEvent {
+    let (text, variant, hints): (&str, &str, &[(&str, &str)]) = match kind {
+        CaptureKind::Region => ("범위 캡처", "region", &[("휠", "넓히기·좁히기"), ("Tab", "창"), ("Enter", "복사"), ("Esc", "취소")]),
+        CaptureKind::Window => ("창 캡처", "window", &[("클릭", "찍기"), ("F2", "활성 창"), ("Esc", "취소")]),
+        CaptureKind::Record => ("녹화 범위", "region", &[("드래그", "범위"), ("클릭", "모니터"), ("Esc", "취소")]),
+    };
+    let mut ev = IslandEvent::new(IslandKind::Mode, text).variant(variant).hints(hints);
+    ev.mode = Some(kind.slot().into());
+    ev
 }
 
 fn failure_of(a: &Analysis) -> Failure {
@@ -133,8 +170,17 @@ impl InkService {
             readonly,
             notices,
             pinned_count: 0,
+            epoch: Instant::now(),
+            mode: Mode::Idle,
+            session_seq: 0,
+            prepared: None,
+            snapshot: None,
+            pending: None,
+            ready_samples: VecDeque::new(),
+            secure_notified: false,
         };
         svc.refresh_environment();
+        svc.prepare_overlays();
         if first_run && !svc.readonly {
             if let Err(e) = svc.save() {
                 log::warn!("first save failed: {e:?}");
@@ -181,6 +227,7 @@ impl InkService {
             readonly: self.readonly,
             location: self.ports.store.location(),
             notices: self.notices.clone(),
+            mode: self.mode,
         }
     }
 
@@ -514,6 +561,11 @@ impl InkService {
 
     /// 어댑터가 전역 키 눌림을 넘긴다.
     pub fn on_hotkey(&mut self, slot: &str) -> HotkeyOutcome {
+        self.on_hotkey_at(slot, Instant::now())
+    }
+
+    /// `pressed` = 어댑터가 키를 받은 순간(진입 계측 M1의 시작점).
+    pub fn on_hotkey_at(&mut self, slot: &str, pressed: Instant) -> HotkeyOutcome {
         if slot == PAUSE_SLOT {
             let next = !self.hotkeys_enabled;
             self.set_hotkeys_enabled(next);
@@ -522,7 +574,222 @@ impl InkService {
         if !self.hotkeys_enabled || !self.registered.contains_key(slot) {
             return HotkeyOutcome::Ignored;
         }
-        HotkeyOutcome::Start(slot.to_string())
+        match mode::on_hotkey(&self.mode, slot, self.now_ms()) {
+            ModeCommand::Start(kind) => {
+                self.begin_capture(kind, pressed);
+                HotkeyOutcome::Captured
+            }
+            ModeCommand::Switch(kind) => {
+                self.end_capture();
+                self.begin_capture(kind, pressed);
+                HotkeyOutcome::Captured
+            }
+            ModeCommand::End => {
+                self.end_capture();
+                HotkeyOutcome::Captured
+            }
+            ModeCommand::ActiveWindow => {
+                // 단계 3(F2)에서 활성 창 캡처로 — 지금은 모드만 끝낸다
+                self.end_capture();
+                HotkeyOutcome::Start("active".into())
+            }
+            ModeCommand::Ignore => HotkeyOutcome::Start(slot.to_string()),
+        }
+    }
+
+    // ───────────── 캡처 진입(단계 2): 정지 스냅숏 → 오버레이 ─────────────
+
+    fn now_ms(&self) -> u64 {
+        self.epoch.elapsed().as_millis() as u64
+    }
+
+    pub fn mode(&self) -> Mode {
+        self.mode
+    }
+
+    pub fn snapshot(&self) -> Option<&Snapshot> {
+        self.snapshot.as_ref()
+    }
+
+    /// 강조를 옮긴다(단계 3의 커서 질의 결과·Tab·휠). 지금 세션일 때만.
+    pub fn set_highlight(&mut self, rect: Option<ink_domain::geometry::PhysRect>) {
+        if let Mode::Capture { session, .. } = self.mode {
+            self.ports.overlay.highlight(session, rect);
+        }
+    }
+
+    /// 배치가 바뀌었으면 오버레이 창을 모니터에 다시 맞춘다. 바뀌었으면 true.
+    fn prepare_overlays(&mut self) -> bool {
+        let layout = self.ports.monitors.layout();
+        if self.prepared.as_ref().map(|l| l.fingerprint()) == Some(layout.fingerprint()) {
+            return false;
+        }
+        self.ports.overlay.prepare(&layout);
+        self.prepared = Some(layout);
+        true
+    }
+
+    fn excluded_apps(&self) -> Vec<ExcludedApp> {
+        self.settings.get("capture.excluded").and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default()
+    }
+
+    /// 트레이 메뉴·명령에서 시작(단축키가 꺼져 있어도). 이미 캡처 중이면 새로 시작.
+    pub fn start_capture(&mut self, kind: CaptureKind) {
+        self.end_capture();
+        self.begin_capture(kind, Instant::now());
+    }
+
+    /// 캡처 먼저 → 표시 나중(R-CAP-1). 창 목록과 이미지는 같은 순간(08 §4.1-2): 창 목록(가벼움)을 바로 앞에서 찍는다.
+    fn begin_capture(&mut self, kind: CaptureKind, pressed: Instant) {
+        if self.ports.probe.secure_desktop() {
+            if !self.secure_notified {
+                self.secure_notified = true;
+                self.island(IslandEvent::new(IslandKind::Off, "보안 화면에서는 쓸 수 없어요").variant("security"));
+            }
+            return;
+        }
+        let t = Instant::now();
+        self.prepare_overlays();
+        let layout = self.prepared.clone().unwrap_or_default();
+        let cursor = self.ports.monitors.cursor();
+        let probe_ms = ms(t.elapsed());
+
+        // 창 목록과 이미지를 나란히 — 같은 순간에 가깝고(08 §4.1-2) 진입 시간도 줄어든다
+        let Ports { windows: catalog, screen, .. } = &mut self.ports;
+        let catalog: &dyn crate::ports::WindowCatalog = catalog.as_ref();
+        let ((raw, windows_ms), (captured, capture_ms)) = std::thread::scope(|s| {
+            let list = s.spawn(|| {
+                let t = Instant::now();
+                let raw = catalog.windows();
+                (raw, ms(t.elapsed()))
+            });
+            let t = Instant::now();
+            let captured = screen.capture(&layout);
+            let cap = (captured, ms(t.elapsed()));
+            (list.join().unwrap_or_default(), cap)
+        });
+        let frames = match captured {
+            Ok(f) if !f.is_empty() => f,
+            Ok(_) | Err(_) => {
+                self.island(IslandEvent::new(IslandKind::Problem, "화면을 가져오지 못했어요"));
+                return;
+            }
+        };
+
+        self.session_seq += 1;
+        let session = self.session_seq;
+        let windows = filter_windows(&raw, &layout, std::process::id(), &self.excluded_apps());
+        let snapshot = Snapshot { id: session, kind, layout: layout.clone(), windows, cursor };
+        // 기본 강조: F1·F3 = 커서 모니터 전체(작업 표시줄 포함), F2 = 커서 아래 창(Snapshot::default_highlight)
+        let highlight = snapshot.default_highlight();
+        let overlay = OverlaySession {
+            session,
+            kind,
+            cursor,
+            native_frame: false,
+            highlight,
+            monitors: layout
+                .monitors
+                .iter()
+                .map(|m| OverlayMonitor { id: m.id, bounds: m.bounds, work: m.work, scale: m.scale, primary: m.primary, frame_url: None })
+                .collect(),
+        };
+
+        let t = Instant::now();
+        let painted_at = match self.ports.overlay.show(&overlay, frames) {
+            Ok(at) => at,
+            Err(e) => {
+                log::warn!("overlay show failed: {e}");
+                self.ports.overlay.hide(session);
+                self.island(IslandEvent::new(IslandKind::Problem, "캡처 화면을 띄우지 못했어요"));
+                return;
+            }
+        };
+        let show_ms = ms(t.elapsed());
+
+        let timing = EntryTiming {
+            probe_ms,
+            windows_ms,
+            capture_ms,
+            show_ms,
+            frame_ms: painted_at.map(|at| ms(at.saturating_duration_since(pressed))),
+            monitors: layout.monitors.len(),
+            windows: snapshot.windows.len(),
+            ..Default::default()
+        };
+        self.pending = Some((pressed, timing));
+        self.snapshot = Some(snapshot);
+        self.mode = Mode::Capture { session, kind, started_ms: self.now_ms() };
+        self.island(capture_island(kind));
+        self.emit_state();
+    }
+
+    /// UI가 정지 화면을 그렸다(첫 모니터만 센다) → 계측 한 줄(M1).
+    pub fn overlay_ready(&mut self, session: u64) -> Option<EntryTiming> {
+        self.overlay_ready_with(session, None, None)
+    }
+
+    /// `ui_load_ms`·`ui_paint_ms` = UI가 잰 세션 알림→이미지 load, load→그림.
+    pub fn overlay_ready_with(&mut self, session: u64, ui_load_ms: Option<f64>, ui_paint_ms: Option<f64>) -> Option<EntryTiming> {
+        if !matches!(self.mode, Mode::Capture { session: s, .. } if s == session) {
+            return None;
+        }
+        let (pressed, mut timing) = self.pending.take()?;
+        timing.ready_ms = Some(ms(pressed.elapsed()));
+        timing.ui_load_ms = ui_load_ms;
+        timing.ui_paint_ms = ui_paint_ms;
+        self.record_timing(&timing);
+        Some(timing)
+    }
+
+    fn record_timing(&mut self, timing: &EntryTiming) {
+        log::info!("{}", timing.log_line());
+        if self.ready_samples.len() == TIMING_KEEP {
+            self.ready_samples.pop_front();
+        }
+        self.ready_samples.push_back(timing.entry_ms());
+    }
+
+    /// 이번 실행의 진입 시간 통계(p50·p95).
+    pub fn entry_stats(&self) -> Option<Stats> {
+        timing::stats(&self.ready_samples.iter().copied().collect::<Vec<_>>())
+    }
+
+    /// 모드 끝(Esc·우클릭·같은 키·잠금). 정지 이미지는 어댑터가 버린다.
+    pub fn end_capture(&mut self) {
+        let Mode::Capture { session, .. } = self.mode else { return };
+        self.ports.overlay.hide(session);
+        self.mode = Mode::Idle;
+        self.snapshot = None;
+        // UI가 알리기 전에 끝났어도 네이티브 정지 화면 시간은 남긴다
+        if let Some((_, timing)) = self.pending.take() {
+            if timing.frame_ms.is_some() {
+                self.record_timing(&timing);
+            }
+        }
+        self.island(IslandEvent::new(IslandKind::End, ""));
+        self.emit_state();
+    }
+
+    /// 잠금·절전이면 모드를 끝내고, 배치가 바뀌었거나 깨어나면 오버레이를 다시 맞춘다(R-SYS-3, 02 §7).
+    pub fn on_system_event(&mut self, ev: SystemEvent) {
+        match ev {
+            SystemEvent::Lock | SystemEvent::Suspend => self.end_capture(),
+            SystemEvent::DisplayChange => {
+                if self.mode != Mode::Idle {
+                    self.end_capture();
+                    self.island(IslandEvent::new(IslandKind::Info, "화면 구성이 바뀌어 캡처를 닫았어요"));
+                }
+                self.prepare_overlays();
+            }
+            SystemEvent::Unlock | SystemEvent::Resume => {
+                self.secure_notified = false;
+                // 깨어난 뒤에는 지문이 같아도 창을 다시 맞춘다(투명도·위치 재지정, R-SYS-6)
+                self.prepared = None;
+                self.prepare_overlays();
+            }
+            SystemEvent::ThemeChange => self.emit_state(),
+        }
     }
 
     // ───────────── 설정 ─────────────

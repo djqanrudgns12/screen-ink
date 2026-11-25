@@ -16,6 +16,13 @@ export const ISLAND_DURATIONS = {
 
 export const HINT_MAX_AUTO_SHOW = 3;
 
+/** 섬 늘기·줄기 스프링 규격(10-design-system.md §6). */
+export const ISLAND_SPRING = Object.freeze({
+  stiffness: 0.22,
+  damping: 0.78,
+  contentDelayMs: 80,
+});
+
 /**
  * @typedef {Object} IslandQueueState
  * @property {any | null} current       지금 화면에 보이는 섬
@@ -71,6 +78,7 @@ export function getAutoDismissMs(island, { hasActiveMode = false, reducedMotion 
  */
 export function pushIsland(state, island, { now = Date.now(), reducedMotion = false } = {}) {
   if (!island) return state;
+  if (island.kind === 'end') return clearModeIsland(state);
 
   const nextSeq = state.seq + 1;
   const modeUses = { ...state.modeUses };
@@ -149,6 +157,7 @@ export function clearModeIsland(state) {
     activeMode: null,
     current: showingMode ? null : state.current,
     expiresAt: showingMode ? null : state.expiresAt,
+    hovering: showingMode ? false : state.hovering,
     helpOpen: false,
   };
 }

@@ -10,6 +10,7 @@ const COMMANDS: &[&str] = &[
     "preview_import",
     "apply_import",
     "reset_all",
+    "overlay_ready",
 ];
 
 fn main() {

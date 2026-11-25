@@ -3,6 +3,12 @@
 //! - PowerToys: 저수준 훅이라 `RegisterHotKey` 시험으로 겹침이 안 보인다 → 모듈 설정 파일을 **읽기만** 해서 키를 안다(02 §6.2-2)
 
 pub mod powertoys;
+#[cfg(windows)]
+pub mod events;
+#[cfg(windows)]
+pub mod freeze;
+#[cfg(windows)]
+pub mod screen;
 
 use ink_app::SystemProbe;
 use ink_domain::shortcuts::LiveBinding;
@@ -36,6 +42,17 @@ impl SystemProbe for WindowsProbe {
             return Some(Vec::new());
         }
         powertoys::read_bindings(self.powertoys_dir.as_ref()?)
+    }
+
+    fn secure_desktop(&self) -> bool {
+        #[cfg(windows)]
+        {
+            events::secure_desktop_active()
+        }
+        #[cfg(not(windows))]
+        {
+            false
+        }
     }
 }
 

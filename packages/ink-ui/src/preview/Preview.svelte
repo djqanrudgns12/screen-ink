@@ -4,6 +4,7 @@
   import {
     AppIcon,
     Banner,
+    CaptureOverlay,
     CheatSheet,
     FirstRunSheet,
     Group,
@@ -53,6 +54,47 @@
   let firstConflict = $state(true);
   let cheatOpen = $state(true);
   let cheatMode = $state('draw');
+  let overlayActive = $state(false);
+  let overlayNativeFrame = $state(params.get('native') === '1');
+  /** @type {{ loadMs?: number, paintMs?: number } | null} */
+  let overlayLastTiming = $state(null);
+
+  const PREVIEW_HIGHLIGHT = { x: 240, y: 140, w: 560, h: 340 };
+
+  // 가짜 클라이언트는 nativeFrame·highlight를 보내지 않으므로 미리보기 전용 래퍼에서 주입한다.
+  const overlayPreviewClient = {
+    getState: () => client.getState(),
+    updateSetting: (path, value) => client.updateSetting(path, value),
+    setShortcut: (id, combo) => client.setShortcut(id, combo),
+    previewShortcut: (id, combo) => client.previewShortcut(id, combo),
+    resetShortcutGroup: (group) => client.resetShortcutGroup(group),
+    undo: () => client.undo(),
+    setHotkeysEnabled: (enabled) => client.setHotkeysEnabled(enabled),
+    run: (action) => client.run(action),
+    previewImport: () => client.previewImport(),
+    applyImport: (path) => client.applyImport(path),
+    resetAll: () => client.resetAll(),
+    overlayReady: (session, ui) => {
+      overlayLastTiming = ui ?? null;
+      return client.overlayReady(session, ui);
+    },
+    subscribe(handler) {
+      return client.subscribe((e) => {
+        if (e.type === 'overlay') {
+          handler({
+            type: 'overlay',
+            overlay: {
+              ...e.overlay,
+              nativeFrame: overlayNativeFrame,
+              highlight: e.overlay.highlight ?? PREVIEW_HIGHLIGHT,
+            },
+          });
+          return;
+        }
+        handler(e);
+      });
+    },
+  };
 
   // 트레이 미리보기에서 준비됨(겹침 없음) 상태를 보여 주기 위한 보조 클라이언트
   const cleanTrayClient = createFakeClient({ platform: initialPlatform, snipasteRunning: false });
@@ -67,11 +109,14 @@
 
   $effect(() => {
     const off = client.subscribe((e) => {
-      if (e.type === 'state' && e.state?.theme) {
-        if (e.state.theme === 'light' || e.state.theme === 'dark') {
-          theme = e.state.theme;
-        } else if (e.state.theme === 'system') {
-          theme = systemDark ? 'dark' : 'light';
+      if (e.type === 'state') {
+        overlayActive = e.state?.mode?.mode === 'capture';
+        if (e.state?.theme) {
+          if (e.state.theme === 'light' || e.state.theme === 'dark') {
+            theme = e.state.theme;
+          } else if (e.state.theme === 'system') {
+            theme = systemDark ? 'dark' : 'light';
+          }
         }
       }
     });
@@ -115,13 +160,14 @@
 </script>
 
 <div class="pv-shell" data-theme={theme}>
-  {#if !hideBar}
+  {#if !hideBar && !overlayActive}
     <header class="pv-bar" data-cheat-ignore="true">
       <div class="pv-bar-group">
         {#each [
           { id: 'tray', label: '트레이 (S01)' },
           { id: 'settings', label: '설정 (S02~S05)' },
           { id: 'first', label: '첫 실행 (S06)' },
+          { id: 'overlay', label: '오버레이 (S07)' },
           { id: 'cheat', label: '단축키 한 장 (S16)' },
           { id: 'island', label: '섬 (S17)' },
           { id: 'board', label: '부품 판 (F01·F02)' },
@@ -259,6 +305,61 @@
         bind:open={firstOpen}
         onChangeShortcuts={() => updateQuery('settings', theme, 'shortcuts')}
       />
+    </div>
+  {:else if screen === 'overlay'}
+    <div class="pv-stage">
+      <div class="pv-overlay-launcher">
+        <h2>캡처 오버레이</h2>
+        <p class="pv-overlay-sub">Shift 색 표기 전환 · Esc 또는 우클릭 취소</p>
+        <div class="pv-bar-group" role="group" aria-label="오버레이 렌더 방식">
+          <button
+            type="button"
+            class="pv-pill ink-focus"
+            data-active={!overlayNativeFrame ? 'true' : undefined}
+            onclick={() => (overlayNativeFrame = false)}
+          >
+            웹 이미지 (nativeFrame=false)
+          </button>
+          <button
+            type="button"
+            class="pv-pill ink-focus"
+            data-active={overlayNativeFrame ? 'true' : undefined}
+            onclick={() => (overlayNativeFrame = true)}
+          >
+            네이티브 정지 화면 (nativeFrame=true)
+          </button>
+        </div>
+        <div class="pv-bar-group">
+          <button
+            type="button"
+            class="pv-pill ink-focus"
+            data-active="true"
+            onclick={() => client.run('capture.region')}
+          >
+            범위 캡처 (F1)
+          </button>
+          <button
+            type="button"
+            class="pv-pill ink-focus"
+            onclick={() => client.run('capture.window')}
+          >
+            창 캡처 (F2)
+          </button>
+          <button
+            type="button"
+            class="pv-pill ink-focus"
+            onclick={() => client.run('record.toggle')}
+          >
+            녹화 범위 (F3)
+          </button>
+        </div>
+        {#if overlayLastTiming}
+          <p class="pv-overlay-sub ink-mono">
+            직전 overlayReady · load {overlayLastTiming.loadMs ?? 0}ms · paint {overlayLastTiming.paintMs ?? 0}ms
+          </p>
+        {/if}
+      </div>
+      <CaptureOverlay client={overlayPreviewClient} monitorId={0} />
     </div>
   {:else if screen === 'cheat'}
     <div class="pv-stage">
@@ -549,6 +650,29 @@
     display: grid;
     place-items: center;
     padding: 24px;
+  }
+
+  .pv-overlay-launcher {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 28px;
+    border-radius: var(--ink-r-window);
+    background: var(--ink-surface);
+    box-shadow: var(--ink-group-ring);
+  }
+
+  .pv-overlay-launcher h2 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 600;
+  }
+
+  .pv-overlay-sub {
+    margin: 0;
+    font-size: 12px;
+    color: var(--ink-sub);
   }
 
   .pv-tray-split {

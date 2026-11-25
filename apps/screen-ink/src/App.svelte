@@ -2,10 +2,10 @@
   import { onMount, untrack } from 'svelte';
   import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
   import { listen } from '@tauri-apps/api/event';
-  import { IslandHost, SettingsWindow, TrayPopoverScreen, applyTheme, watchSystemTheme } from '@screen-ink/ui';
+  import { CaptureOverlay, IslandHost, SettingsWindow, TrayPopoverScreen, applyTheme, watchSystemTheme } from '@screen-ink/ui';
 
-  /** @type {{ client: import('@screen-ink/client').InkClient, view: 'popover'|'settings'|'island', firstRun?: boolean }} */
-  let { client, view, firstRun = false } = $props();
+  /** @type {{ client: import('@screen-ink/client').InkClient, view: 'popover'|'settings'|'island'|'overlay', firstRun?: boolean, monitorId?: number }} */
+  let { client, view, firstRun = false, monitorId = 0 } = $props();
 
   let pref = $state('system');
   let systemDark = $state(typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
@@ -74,6 +74,8 @@
   <div bind:this={shell}>
     <IslandHost {client} />
   </div>
+{:else if view === 'overlay'}
+  <CaptureOverlay {client} {monitorId} />
 {:else}
   {#key firstRunKey}
     <SettingsWindow {client} firstRun={showFirstRun} onClose={() => client.run('settings.close')} />

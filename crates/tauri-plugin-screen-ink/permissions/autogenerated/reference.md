@@ -15,6 +15,7 @@ screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있
 - `allow-preview-import`
 - `allow-apply-import`
 - `allow-reset-all`
+- `allow-overlay-ready`
 
 ## Permission Table
 
@@ -73,6 +74,32 @@ Enables the get_state command without any pre-configured scope.
 <td>
 
 Denies the get_state command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-overlay-ready`
+
+</td>
+<td>
+
+Enables the overlay_ready command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-overlay-ready`
+
+</td>
+<td>
+
+Denies the overlay_ready command without any pre-configured scope.
 
 </td>
 </tr>

@@ -46,7 +46,8 @@
  *
  * @typedef {'capture.region'|'capture.window'|'record.toggle'|'draw'|'zoom'|'board'|'pin.toggle'|'pin.releaseAll'|'draw.restore'|'folder.open'|'settings.open'|'firstRun.open'|'app.quit'|'snipaste.howto'
  *   |'folder.pick'|'logs.open'|'settings.export'|'capture.history.clear'
- *   |'settings.close'|'popover.close'|'island.hidden'} InkAction
+ *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'} InkAction
+ *   capture.cancel = 오버레이에서 Esc·우클릭(모드 끝, 정지 이미지 버림)
  *   folder.pick = 저장 폴더 [바꾸기](폴더 고르기 → output.folder) · logs.open = 로그 폴더 · settings.export = 내보내기(저장 대화)
  *   settings.close·popover.close·island.hidden = 창 닫기(앱 셸이 씀)
  *
@@ -64,10 +65,33 @@
  * @property {string[]} [warnings]
  *
  * @typedef {Object} IslandEvent  화면 위 섬(R-UI-1·5)
- * @property {'result'|'problem'|'info'|'mode'|'off'} kind
+ * @property {'result'|'problem'|'info'|'mode'|'off'|'end'} kind   end = 모드가 끝남 → 모드 섬을 거둠
  * @property {string} text
  * @property {string} [detail]
  * @property {{label: string, action: InkAction|'undo'}} [button]
+ * @property {string} [variant]    region·window·record·security … (없으면 kind로)
+ * @property {string} [mode]       모드 섬의 모드 이름(region·window·record) — 키 안내 둘째 줄 횟수 세기
+ * @property {string} [value]      고정폭 값(크기 등)
+ * @property {{key: string, label: string}[]} [hints]  둘째 줄 키 안내
+ *
+ * @typedef {{x: number, y: number, w: number, h: number}} PhysRect  물리 px, 가상 화면 좌표
+ *
+ * @typedef {Object} OverlayMonitor
+ * @property {number} id
+ * @property {PhysRect} bounds
+ * @property {PhysRect} work
+ * @property {number} scale         1 = 100%, 1.5 = 150%
+ * @property {boolean} primary
+ * @property {string} [frameUrl]    정지 이미지(BMP, 물리 px 그대로). <img crossorigin="anonymous">로 — 캔버스 픽셀 읽기 가능
+ *
+ * @typedef {Object} OverlaySession  F1·F2·F3 진입 한 번(정지 스냅숏)
+ * @property {number} session
+ * @property {'region'|'window'|'record'} kind
+ * @property {OverlayMonitor[]} monitors   오버레이 창마다 자기 monitor id 것만 그림
+ * @property {{x: number, y: number}} cursor  단축키 순간 커서(물리 px)
+ * @property {boolean} nativeFrame  true = 네이티브 창이 이미 정지 화면(50% 어둡게 + 강조만 밝게)을 그림 →
+ *   UI는 이미지·어둡게를 깔지 않고 투명 층(테두리·꺾쇠·확대경·크기)만. 이미지는 확대경용으로 늦게 읽음
+ * @property {PhysRect} [highlight] 첫 강조(물리 px) — 단계 2는 커서 아래 창
  */
 
 /**
@@ -83,7 +107,8 @@
  * @property {() => Promise<ImportPick>} previewImport   가져오기: 파일 고르기 + 바뀌는 항목(저장 안 함)
  * @property {(path: string) => Promise<{ok: boolean, error?: string, state: InkState}>} applyImport  시트 [가져오기] — 되돌리기 1건
  * @property {() => Promise<InkState>} resetAll   모두 처음으로(확인 시트 뒤)
- * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent}) => void) => () => void} subscribe
+ * @property {(session: number, ui?: {loadMs?: number, paintMs?: number}) => Promise<void>} overlayReady  오버레이가 정지 이미지를 **그린 뒤**(load + 다음 프레임) — 진입 계측 M1. ui = 세션 알림→load, load→그림(선택)
+ * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession}) => void) => () => void} subscribe
  */
 
 export const SHORTCUT_GROUPS = [

@@ -8,4 +8,7 @@ const params = new URLSearchParams(location.search);
 const view = params.get('view') ?? 'settings';
 document.documentElement.dataset.view = view;
 
-mount(App, { target: document.getElementById('app'), props: { client: createTauriClient(), view, firstRun: params.get('first') === '1' } });
+mount(App, {
+  target: document.getElementById('app'),
+  props: { client: createTauriClient(), view, firstRun: params.get('first') === '1', monitorId: Number(params.get('monitor') ?? 0) },
+});

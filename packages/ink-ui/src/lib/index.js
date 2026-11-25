@@ -32,12 +32,14 @@ export { default as GeneralPage } from './screens/GeneralPage.svelte';
 export { default as FirstRunSheet } from './screens/FirstRunSheet.svelte';
 export { default as CheatSheet } from './screens/CheatSheet.svelte';
 export { default as IslandHost } from './screens/IslandHost.svelte';
+export { default as CaptureOverlay } from './screens/CaptureOverlay.svelte';
 
 // 순수 모델
 export { eventToCombo, isEscapeOnly, isClearOnly } from './models/keyCombo.js';
 export {
   ISLAND_DURATIONS,
   HINT_MAX_AUTO_SHOW,
+  ISLAND_SPRING,
   createIslandState,
   getAutoDismissMs,
   pushIsland,
@@ -47,6 +49,25 @@ export {
   setHelpOpen,
   shouldShowHintLine,
 } from './models/islandQueue.js';
+export {
+  MAGNIFIER_LENS,
+  findMonitorForOverlay,
+  clientToPhysical,
+  physicalToClient,
+  isPhysicalPointInMonitor,
+  isPhysicalRectOverlappingMonitor,
+  physicalRectToClient,
+  resolveMonitorHighlight,
+  clientToImagePixel,
+  computeSampleRect,
+  buildMagnifierPatch,
+  computeMagnifierPosition,
+  clampByte,
+  formatHex,
+  formatRgb,
+  formatColor,
+  toggleColorFormat,
+} from './models/captureOverlay.js';
 export { resolveTheme, applyTheme, watchSystemTheme } from './models/theme.js';
 export {
   validateFilenameTemplate,

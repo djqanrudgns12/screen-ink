@@ -38,11 +38,11 @@ Windows: UI Automation · Windows.Graphics.Capture · Magnification API · Media
 ## 개발
 
 ```
-crates/ink-domain            순수 규칙(단축키 판정·설정 v3·이름 규칙·좌표) — 시험 31
+crates/ink-domain            순수 규칙(단축키 판정·설정 v3·이름 규칙·좌표·스냅숏·모드·계측) — 시험 41
 crates/ink-app               유스케이스(InkService: 바로 반영·단축키 등록 트랜잭션·되돌리기) — 포트만 앎
 crates/ink-store             설정 파일(원자적 쓰기·백업 교대·손상 복구·포터블)
-crates/ink-platform-windows  실행 중인 앱 이름·PowerToys 설정 키·작업 표시줄 밝기
-crates/ink-platform-fake     가짜 어댑터 + 유스케이스 흐름 시험 18
+crates/ink-platform-windows  모니터·창 목록·GDI 정지 캡처·네이티브 정지 화면 창·시스템 사건·PowerToys 설정 키
+crates/ink-platform-fake     가짜 어댑터 + 유스케이스 흐름 시험 18 + 캡처 진입 11
 crates/tauri-plugin-screen-ink  명령·이벤트·트레이·팝오버/설정/섬 창 — install(builder) 한 줄로 붙임
 packages/ink-client          InkClient 계약(Tauri·가짜) — UI가 만나는 유일한 문
 packages/ink-ui              디자인 시스템(토큰·아이콘·부품)·화면(S01~S06·S16·S17)·미리보기
@@ -56,6 +56,7 @@ apps/screen-ink              단독 앱 셸
 | 화면 미리보기(가짜 클라이언트) | `npm run ui:dev` → http://localhost:5180/?screen=tray · settings · island · board · first · cheat |
 | 앱 실행 | `npm run app:dev` (트레이 상주, 첫 실행은 설정 창 + 안내 시트) |
 | 단축키 자료 다시 만들기 | `npm run shortcuts:data` (입력표 → `docs/shortcuts/catalog-v1.json`) |
+| 진입 시간(M1) 재기 | 앱을 띄운 채 `powershell -ExecutionPolicy Bypass -File bench\m1-overlay.ps1 -Count 100 -Save` |
 
 - C 드라이브가 좁으면 Rust 빌드 폴더를 옮긴다: `$env:CARGO_TARGET_DIR='D:\dev-cache\screen-ink\target'`
 - 학교망에서 crates.io 인증서 폐기 확인이 실패하면 그 창에서만 `$env:CARGO_HTTP_CHECK_REVOKE='false'`

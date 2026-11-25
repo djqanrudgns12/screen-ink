@@ -135,6 +135,8 @@ sequenceDiagram
 
 **프레임 전송**: 정지 이미지는 base64로 보내지 않는다. 플러그인이 `ink://frame/<id>` 사용자 URI 프로토콜로 메모리의 BGRA/PNG 바이트를 바로 내준다(Tidy의 "원본 바이트 IPC" 규칙). 프레임은 모드가 끝나면 즉시 버린다.
 
+**정지 화면은 네이티브 창이 그린다(단계 2 실측으로 결정, 2026-11-25)**: 웹뷰로 1080p BMP를 넘기면 사용자 프로토콜에서 한 장 ~160 ms가 들어 진입 p50이 258 ms였다. 그래서 Windows는 모니터마다 네이티브 팝업(`ink-platform-windows::freeze`)이 캡처한 BGRA를 `SetDIBitsToDevice`로 바로 그린다 — 처음부터 **50% 어둡게**, 강조 사각형만 원본으로 밝게 뚫는다(강조 이동 = 바뀐 두 사각형만 다시 그림). 웹뷰 오버레이(`ink-overlay-<n>`)는 그 위 투명 층으로 테두리·꺾쇠·확대경·크기만 그리고, 이미지는 확대경용으로 첫 그림 뒤에 늦게 읽는다(`OverlaySession.nativeFrame`). 오버레이 창의 보이기·숨기기는 Win32로 직접 해 WebView2 렌더러를 깨워 둔다. 결과(학교 PC, 1080p×2, n=100): **p50 60 · p95 69 ms**([bench/results/2026-11-25-m1-overlay.md](../../bench/results/2026-11-25-m1-overlay.md)). 맥은 같은 계약으로 `nativeFrame=false`(웹뷰가 이미지 + 어둡게)부터 시작한다.
+
 **스레드**: 단축키 메시지 루프 · UIA 전용 COM 스레드 · 캡처 작업 · 녹화(프레임 풀+인코더) · 웹뷰(UI). 유스케이스는 tokio 위에서 돌고 포트 호출은 시간 제한을 둔다.
 
 ## 5. UI 층 (packages/ink-ui)

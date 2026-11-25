@@ -28,6 +28,13 @@ ink-platform-fake = { path = "crates/ink-platform-fake" }
 ink-platform-windows = { path = "crates/ink-platform-windows" }
 tauri-plugin-screen-ink = { path = "crates/tauri-plugin-screen-ink" }
 
+# 개발 빌드에서도 픽셀을 만지는 작은 크레이트는 최적화한다(진입 시간 측정이 릴리스와 가깝게).
+[profile.dev.package.ink-platform-windows]
+opt-level = 3
+
+[profile.dev.package.ink-domain]
+opt-level = 3
+
 [profile.release]
 lto = "thin"
 codegen-units = 1

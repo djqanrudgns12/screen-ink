@@ -44,6 +44,23 @@ test('가져오기는 미리 보기 뒤 반영, 되돌리기 한 번에 원래�
   assert.equal(s.location.portable, false);
 });
 
+test('캡처 진입은 오버레이 세션·모드 섬, 취소는 끝 섬과 idle', async () => {
+  const c = createFakeClient({ frameUrl: 'frame.png' });
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+  await c.run('capture.region');
+  const ov = seen.find((e) => e.type === 'overlay').overlay;
+  assert.equal(ov.kind, 'region');
+  assert.equal(ov.monitors[0].frameUrl, 'frame.png');
+  assert.equal((await c.getState()).mode.mode, 'capture');
+  assert.equal(seen.find((e) => e.type === 'island').island.kind, 'mode');
+  await c.overlayReady(ov.session);
+  assert.deepEqual(c.readyLog, [ov.session]);
+  await c.run('capture.cancel');
+  assert.equal((await c.getState()).mode.mode, 'idle');
+  assert.equal(seen.at(-1).island.kind, 'end');
+});
+
 test('키캡은 Windows에서 Shift, 맥에서 기호', () => {
   assert.deepEqual(keycaps('Alt+Shift+D'), ['Alt', 'Shift', 'D']);
   assert.deepEqual(keycaps('Option+Shift+1', 'macos'), ['⌥', '⇧', '1']);

@@ -1,0 +1,294 @@
+//! 모니터별 오버레이 창(`ink-overlay-<id>`)과 정지 이미지 프로토콜(`ink://frame/<세션>/<모니터>`).
+//!
+//! - 창은 미리 만들어 숨겨 둔다(R-CAP-1). 만들기는 언제나 이벤트 루프 대기열로 미룬다 — 플러그인
+//!   초기화·동기 명령 안에서 창을 만들면 교착된다.
+//! - 정지 이미지는 base64로 보내지 않는다. 메모리의 BMP를 프로토콜이 바로 내주고, 모드가 끝나면 버린다(03 §4).
+//! - 보일 때마다 웹뷰 배경 투명을 다시 지정한다(R-SYS-6).
+
+use ink_app::{Frame, OverlayHost, OverlaySession};
+use ink_domain::geometry::{MonitorLayout, PhysRect};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use tauri::http::{Request, Response};
+use tauri::window::Color;
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Runtime, UriSchemeContext, WebviewUrl, WebviewWindowBuilder};
+
+pub const SCHEME: &str = "ink";
+pub const EVT_OVERLAY: &str = "screen-ink://overlay";
+const PREFIX: &str = "ink-overlay-";
+
+pub fn label(monitor: u32) -> String {
+    format!("{PREFIX}{monitor}")
+}
+
+/// 웹뷰에서 쓸 이미지 주소(Windows WebView2는 `http://<scheme>.localhost/`로 사용자 프로토콜을 연다).
+pub fn frame_url(session: u64, monitor: u32) -> String {
+    if cfg!(windows) || cfg!(target_os = "android") {
+        format!("http://{SCHEME}.localhost/frame/{session}/{monitor}")
+    } else {
+        format!("{SCHEME}://localhost/frame/{session}/{monitor}")
+    }
+}
+
+type FrameMap = HashMap<(u64, u32), Frame>;
+
+/// (세션, 모니터) → 정지 이미지(BGRA). 지금 세션 것만 둔다. 픽셀은 `Arc`라 복사 없이 함께 쓴다.
+#[derive(Default, Clone)]
+pub struct FrameStore(Arc<Mutex<FrameMap>>);
+
+impl FrameStore {
+    fn put(&self, session: u64, frames: &[Frame]) {
+        let mut m = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        m.clear();
+        for f in frames {
+            m.insert((session, f.monitor_id), f.clone());
+        }
+    }
+
+    fn drop_session(&self, session: u64) {
+        self.0.lock().unwrap_or_else(|e| e.into_inner()).retain(|(s, _), _| *s != session);
+    }
+
+    pub fn get(&self, session: u64, monitor: u32) -> Option<Frame> {
+        self.0.lock().unwrap_or_else(|e| e.into_inner()).get(&(session, monitor)).cloned()
+    }
+}
+
+/// `ink://` 프로토콜 처리기.
+pub fn serve<R: Runtime>(ctx: UriSchemeContext<'_, R>, req: Request<Vec<u8>>) -> Response<Vec<u8>> {
+    let not_found = || Response::builder().status(404).body(Vec::new()).unwrap();
+    let path = req.uri().path().trim_start_matches('/');
+    let mut parts = path.split('/');
+    let (Some("frame"), Some(s), Some(m)) = (parts.next(), parts.next(), parts.next()) else { return not_found() };
+    let (Ok(session), Ok(monitor)) = (s.parse::<u64>(), m.parse::<u32>()) else { return not_found() };
+    let Some(store) = ctx.app_handle().try_state::<FrameStore>() else { return not_found() };
+    let Some(f) = store.get(session, monitor) else { return not_found() };
+    Response::builder()
+        .header("Content-Type", "image/bmp")
+        .header("Cache-Control", "no-store")
+        // 확대경이 캔버스로 픽셀을 읽을 수 있게(crossorigin="anonymous")
+        .header("Access-Control-Allow-Origin", "*")
+        .body(ink_domain::bmp::encode(f.width, f.height, &f.bgra))
+        .unwrap_or_else(|_| not_found())
+}
+
+/// 배치에 맞춰 오버레이 창을 만들고(없으면)·옮기고·남는 창을 닫는다. 메인 스레드 대기열에서만 부른다.
+pub fn ensure_overlays<R: Runtime>(app: &AppHandle<R>, layout: &MonitorLayout) {
+    for m in &layout.monitors {
+        let l = label(m.id);
+        let w = match app.get_webview_window(&l) {
+            Some(w) => w,
+            None => match WebviewWindowBuilder::new(app, &l, WebviewUrl::App(format!("index.html?view=overlay&monitor={}", m.id).into()))
+                .title("screen-ink overlay")
+                .decorations(false)
+                .transparent(true)
+                .shadow(false)
+                .resizable(false)
+                .always_on_top(true)
+                .skip_taskbar(true)
+                .visible(false)
+                .focused(false)
+                .build()
+            {
+                Ok(w) => {
+                    // 웹뷰 표시 상태를 한 번 켜 두고 창만 숨긴다(이후 보이기·숨기기는 Win32로, 렌더러는 깨어 있게).
+                    // 내용이 투명하므로 이 순간에도 화면에는 아무것도 보이지 않는다.
+                    let _ = w.show();
+                    let _ = show_raw(&w, false);
+                    w
+                }
+                Err(e) => {
+                    log::error!("overlay window {l}: {e}");
+                    continue;
+                }
+            },
+        };
+        // 위치 먼저(그 모니터 배율을 받게) → 크기
+        let _ = w.set_position(PhysicalPosition::new(m.bounds.x, m.bounds.y));
+        let _ = w.set_size(PhysicalSize::new(m.bounds.w as u32, m.bounds.h as u32));
+        let _ = w.set_background_color(Some(Color(0, 0, 0, 0)));
+    }
+    let keep: Vec<String> = layout.monitors.iter().map(|m| label(m.id)).collect();
+    for (l, w) in app.webview_windows() {
+        if l.starts_with(PREFIX) && !keep.contains(&l) {
+            let _ = w.destroy();
+        }
+    }
+}
+
+/// 다른 스레드에서 메인 스레드 대기열로(즉시 실행이 아니라 이벤트 루프가 돈 뒤에).
+pub fn defer<R: Runtime>(app: &AppHandle<R>, f: impl FnOnce(&AppHandle<R>) + Send + 'static) {
+    let h = app.clone();
+    std::thread::spawn(move || {
+        let inner = h.clone();
+        if let Err(e) = h.run_on_main_thread(move || f(&inner)) {
+            log::error!("defer to main thread failed: {e}");
+        }
+    });
+}
+
+pub struct TauriOverlayHost<R: Runtime> {
+    pub app: AppHandle<R>,
+    pub frames: FrameStore,
+    #[cfg(windows)]
+    pub freeze: ink_platform_windows::freeze::Freeze,
+    /// 지금 세션의 모니터 배치(강조를 모니터별로 나눌 때)
+    layout: Option<MonitorLayout>,
+}
+
+impl<R: Runtime> TauriOverlayHost<R> {
+    pub fn new(app: AppHandle<R>, frames: FrameStore) -> Self {
+        Self {
+            app,
+            frames,
+            #[cfg(windows)]
+            freeze: Default::default(),
+            layout: None,
+        }
+    }
+
+    /// 정지 화면을 네이티브 창에 바로 그린다(Windows). 모든 모니터에 그렸으면 true.
+    fn paint_native(&mut self, session: &OverlaySession, frames: &[Frame]) -> bool {
+        #[cfg(windows)]
+        {
+            let mut all = !frames.is_empty();
+            for f in frames {
+                let Some(m) = session.monitors.iter().find(|m| m.id == f.monitor_id) else { continue };
+                let local = session.highlight.and_then(|r| r.intersect(&m.bounds)).map(|r| PhysRect::new(r.x - m.bounds.x, r.y - m.bounds.y, r.w, r.h));
+                all &= self.freeze.show(m.id, m.bounds, f.bgra.clone(), f.width, f.height, local);
+            }
+            if !all {
+                self.freeze.hide_all();
+            }
+            all
+        }
+        #[cfg(not(windows))]
+        {
+            let _ = (session, frames);
+            false
+        }
+    }
+}
+
+impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
+    fn prepare(&mut self, layout: &MonitorLayout) {
+        #[cfg(windows)]
+        self.freeze.retain(&layout.monitors.iter().map(|m| m.id).collect::<Vec<_>>());
+        let layout = layout.clone();
+        defer(&self.app, move |app| ensure_overlays(app, &layout));
+    }
+
+    fn highlight(&mut self, session: u64, rect: Option<PhysRect>) {
+        let _ = session;
+        #[cfg(windows)]
+        if let Some(layout) = self.layout.clone() {
+            for m in &layout.monitors {
+                let local = rect.and_then(|r| r.intersect(&m.bounds)).map(|r| PhysRect::new(r.x - m.bounds.x, r.y - m.bounds.y, r.w, r.h));
+                self.freeze.set_highlight(m.id, local);
+            }
+        }
+        #[cfg(not(windows))]
+        let _ = rect;
+    }
+
+    fn show(&mut self, session: &OverlaySession, frames: Vec<Frame>) -> Result<Option<std::time::Instant>, String> {
+        let windows: Vec<_> = session.monitors.iter().map(|m| (m, self.app.get_webview_window(&label(m.id)))).collect();
+        if windows.iter().any(|(_, w)| w.is_none()) {
+            // 아직 창을 만드는 중(시작 직후·모니터를 막 꽂음) — 다음 진입부터 된다
+            self.prepare(&MonitorLayout::new(session.monitors.iter().map(|m| ink_domain::geometry::Monitor { id: m.id, bounds: m.bounds, work: m.work, scale: m.scale, primary: m.primary }).collect()));
+            return Err("overlay windows not ready".into());
+        }
+        self.frames.put(session.session, &frames);
+        self.layout = Some(MonitorLayout::new(
+            session.monitors.iter().map(|m| ink_domain::geometry::Monitor { id: m.id, bounds: m.bounds, work: m.work, scale: m.scale, primary: m.primary }).collect(),
+        ));
+        // 1) 정지 화면(어둡게 + 강조만 밝게)을 네이티브 창에 바로 그린다 — 눈에 보이는 첫 변화(진입 시간의 끝점)
+        let native = self.paint_native(session, &frames);
+        let painted_at = native.then(std::time::Instant::now);
+        let mut payload = session.clone();
+        payload.native_frame = native;
+        for m in &mut payload.monitors {
+            m.frame_url = Some(frame_url(session.session, m.id));
+        }
+        // 2) 웹뷰 오버레이(투명: 어둡게·선택·확대경)를 그 위에. 위치·크기·투명 배경은 prepare·hide에서 미리 맞춰 둠
+        self.app.emit(EVT_OVERLAY, &payload).map_err(|e| e.to_string())?;
+        let cursor = session.cursor;
+        for (_, w) in &windows {
+            show_raw(w.as_ref().expect("checked above"), true).map_err(|e| e.to_string())?;
+        }
+        // 키(Esc·Enter)는 커서가 있는 모니터 창이 받는다
+        let focus = session.monitors.iter().find(|m| m.bounds.contains(cursor)).or(session.monitors.first());
+        if let Some(m) = focus {
+            if let Some(w) = self.app.get_webview_window(&label(m.id)) {
+                focus_raw(&w);
+            }
+        }
+        Ok(painted_at)
+    }
+
+    fn hide(&mut self, session: u64) {
+        #[cfg(windows)]
+        self.freeze.hide_all();
+        for (l, w) in self.app.webview_windows() {
+            if l.starts_with(PREFIX) {
+                let _ = show_raw(&w, false);
+                // R-SYS-6: 투명 배경 다시 지정은 숨긴 뒤에(다음 진입의 시간을 쓰지 않게)
+                let _ = w.set_background_color(Some(Color(0, 0, 0, 0)));
+            }
+        }
+        self.frames.drop_session(session);
+    }
+}
+
+/// Windows: 창만 보이기·숨기기(웹뷰 렌더러는 깨어 있게). 다른 곳: Tauri 기본.
+fn show_raw<R: Runtime>(w: &tauri::WebviewWindow<R>, show: bool) -> tauri::Result<()> {
+    #[cfg(windows)]
+    {
+        let h = w.hwnd()?;
+        ink_platform_windows::events::set_window_shown(h.0 as isize, show);
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    {
+        if show {
+            w.show()
+        } else {
+            w.hide()
+        }
+    }
+}
+
+fn focus_raw<R: Runtime>(w: &tauri::WebviewWindow<R>) {
+    #[cfg(windows)]
+    if let Ok(h) = w.hwnd() {
+        ink_platform_windows::events::focus_window(h.0 as isize);
+        return;
+    }
+    let _ = w.set_focus();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn 이미지_주소와_창_이름() {
+        assert_eq!(label(1), "ink-overlay-1");
+        let u = frame_url(7, 1);
+        assert!(u.ends_with("/frame/7/1"));
+        if cfg!(windows) {
+            assert_eq!(u, "http://ink.localhost/frame/7/1");
+        }
+    }
+
+    #[test]
+    fn 프레임은_지금_세션만_쥔다() {
+        let s = FrameStore::default();
+        s.put(1, &[Frame { monitor_id: 0, width: 1, height: 1, bgra: Arc::new(vec![1]) }]);
+        s.put(2, &[Frame { monitor_id: 0, width: 1, height: 1, bgra: Arc::new(vec![2]) }]);
+        assert!(s.get(1, 0).is_none());
+        assert_eq!(s.get(2, 0).unwrap().bgra.as_slice(), &[2]);
+        s.drop_session(2);
+        assert!(s.get(2, 0).is_none());
+    }
+}

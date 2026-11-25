@@ -13,7 +13,9 @@ body,
 html[data-view='popover'],
 html[data-view='popover'] body,
 html[data-view='island'],
-html[data-view='island'] body {
+html[data-view='island'] body,
+html[data-view='overlay'],
+html[data-view='overlay'] body {
   background: transparent;
   overflow: hidden;
 }

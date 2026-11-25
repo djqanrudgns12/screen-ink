@@ -14,4 +14,5 @@ permissions = [
   "allow-preview-import",
   "allow-apply-import",
   "allow-reset-all",
+  "allow-overlay-ready",
 ]

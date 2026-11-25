@@ -8,12 +8,18 @@
 //! 스레드 규칙: 서비스는 메인 스레드에서만 만진다(동기 명령·트레이·단축키 처리). 창을 새로 만드는
 //! 명령(`run`)만 비동기로 두고(Windows WebView2 교착 회피) 서비스 일은 메인 스레드로 넘긴다.
 
+mod overlay;
 mod tray_art;
 
-use ink_app::{HotkeyError, HotkeyOutcome, HotkeyRegistry, ImportPreview, InkService, InkState, IslandEvent, IslandKind, Notifier, Ports, PreviewResult, SetShortcutResult, SystemProbe, UpdateResult};
+use ink_app::{
+    HotkeyError, HotkeyOutcome, HotkeyRegistry, ImportPreview, InkService, InkState, IslandEvent, IslandKind, MonitorProbe, Notifier, Ports, PreviewResult, ScreenSource,
+    SetShortcutResult, SystemEvent, SystemProbe, UpdateResult, WindowCatalog,
+};
 #[cfg(not(windows))]
 use ink_domain::shortcuts::LiveBinding;
 use ink_domain::shortcuts::{catalog, Platform};
+use ink_domain::snapshot::CaptureKind;
+use overlay::{FrameStore, TauriOverlayHost};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -85,7 +91,8 @@ impl<R: Runtime> HotkeyRegistry for TauriHotkeys<R> {
 
 struct TauriNotifier<R: Runtime> {
     app: AppHandle<R>,
-    tray_mode: Mutex<Option<TrayMode>>,
+    /// 마지막으로 그린 (상태, 밝은 작업 표시줄) — 같으면 아이콘을 다시 그리지 않는다
+    tray_mode: Mutex<Option<(TrayMode, bool)>>,
 }
 
 impl<R: Runtime> Notifier for TauriNotifier<R> {
@@ -98,17 +105,76 @@ impl<R: Runtime> Notifier for TauriNotifier<R> {
         } else {
             TrayMode::Off
         };
+        let key = (mode, light_taskbar());
         let mut last = self.tray_mode.lock().unwrap_or_else(|e| e.into_inner());
-        if *last != Some(mode) {
-            *last = Some(mode);
+        if *last != Some(key) {
+            *last = Some(key);
             set_tray_icon(&self.app, mode, state);
         }
     }
 
     fn island(&self, event: &IslandEvent) {
-        show_island(&self.app);
+        // 모드 끝은 거두기만 — 창을 새로 보이지 않는다(UI가 섬을 치우면 창도 숨김)
+        if event.kind != IslandKind::End {
+            show_island(&self.app);
+        }
         let _ = self.app.emit(EVT_ISLAND, event);
     }
+}
+
+/// 맥 등 아직 화면 어댑터가 없는 곳 — 캡처는 실패로 알린다(맥 조정은 다른 환경에서).
+#[cfg(not(windows))]
+struct NullScreen;
+
+#[cfg(not(windows))]
+impl ScreenSource for NullScreen {
+    fn capture(&mut self, _layout: &ink_domain::geometry::MonitorLayout) -> Result<Vec<ink_app::Frame>, String> {
+        Err("screen capture not implemented on this platform yet".into())
+    }
+}
+
+#[cfg(not(windows))]
+impl WindowCatalog for NullScreen {
+    fn windows(&self) -> Vec<ink_domain::snapshot::RawWindow> {
+        Vec::new()
+    }
+}
+
+#[cfg(not(windows))]
+impl MonitorProbe for NullScreen {
+    fn layout(&self) -> ink_domain::geometry::MonitorLayout {
+        ink_domain::geometry::MonitorLayout::default()
+    }
+
+    fn cursor(&self) -> ink_domain::geometry::PhysPoint {
+        ink_domain::geometry::PhysPoint::default()
+    }
+}
+
+fn screen_ports() -> (Box<dyn ScreenSource>, Box<dyn WindowCatalog>, Box<dyn MonitorProbe>) {
+    #[cfg(windows)]
+    {
+        use ink_platform_windows::screen::WindowsScreen;
+        (Box::new(WindowsScreen), Box::new(WindowsScreen), Box::new(WindowsScreen))
+    }
+    #[cfg(not(windows))]
+    {
+        (Box::new(NullScreen), Box::new(NullScreen), Box::new(NullScreen))
+    }
+}
+
+/// 섬·팝오버는 캡처·녹화에 안 찍힌다(R-UI-5, S11).
+fn exclude_from_capture<R: Runtime>(app: &AppHandle<R>, label: &str) {
+    #[cfg(windows)]
+    if let Some(w) = app.get_webview_window(label) {
+        if let Ok(h) = w.hwnd() {
+            if !ink_platform_windows::events::exclude_from_capture(h.0 as isize, true) {
+                log::info!("exclude from capture not available for {label}");
+            }
+        }
+    }
+    #[cfg(not(windows))]
+    let _ = (app, label);
 }
 
 /// 맥 등 아직 어댑터가 없는 곳 — 아무 앱도 없다고 본다(맥 조정은 다른 환경에서).
@@ -186,6 +252,11 @@ fn show_island<R: Runtime>(app: &AppHandle<R>) {
         let _ = w.set_position(PhysicalPosition::new(x, y));
     }
     let _ = w.show();
+    // 캡처 중이면 정지 화면·오버레이 창이 나중에 맨 위로 올라와 있다 → 섬을 그 위로(맨 위 무리의 맨 앞)
+    #[cfg(windows)]
+    if let Ok(h) = w.hwnd() {
+        ink_platform_windows::events::set_window_shown(h.0 as isize, true);
+    }
     let gen = app.state::<IslandGen>().0.fetch_add(1, Ordering::SeqCst) + 1;
     let app = app.clone();
     std::thread::spawn(move || {
@@ -339,11 +410,19 @@ fn not_ready<R: Runtime>(app: &AppHandle<R>, slot_or_action: &str) {
     app.state::<Ink>().lock().island(IslandEvent::new(IslandKind::Info, "준비 중이에요").detail(label));
 }
 
-fn on_hotkey<R: Runtime>(app: &AppHandle<R>, slot: &str) {
-    let outcome = app.state::<Ink>().lock().on_hotkey(slot);
+fn on_hotkey<R: Runtime>(app: &AppHandle<R>, slot: &str, pressed: Instant) {
+    let outcome = app.state::<Ink>().lock().on_hotkey_at(slot, pressed);
     if let HotkeyOutcome::Start(slot) = outcome {
         not_ready(app, &slot);
     }
+}
+
+/// 트레이·명령에서 캡처 시작(단축키가 꺼져 있어도).
+fn start_capture<R: Runtime>(app: &AppHandle<R>, kind: CaptureKind) {
+    if let Some(p) = app.get_webview_window(POPOVER) {
+        let _ = p.hide();
+    }
+    app.state::<Ink>().lock().start_capture(kind);
 }
 
 #[cfg(not(debug_assertions))]
@@ -411,6 +490,12 @@ fn set_hotkeys_enabled(ink: State<'_, Ink>, enabled: bool) -> InkState {
 #[tauri::command]
 fn reset_all(ink: State<'_, Ink>) -> InkState {
     ink.lock().reset_all()
+}
+
+/// 오버레이가 정지 이미지를 그렸다 → 진입 계측(M1) 한 줄.
+#[tauri::command]
+fn overlay_ready(ink: State<'_, Ink>, session: u64, load_ms: Option<f64>, paint_ms: Option<f64>) {
+    ink.lock().overlay_ready_with(session, load_ms, paint_ms);
 }
 
 #[derive(serde::Serialize)]
@@ -553,6 +638,19 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             })
             .map_err(|e| e.to_string())?;
         }
+        "capture.region" | "capture.window" | "record.toggle" => {
+            let kind = match action.as_str() {
+                "capture.region" => CaptureKind::Region,
+                "capture.window" => CaptureKind::Window,
+                _ => CaptureKind::Record,
+            };
+            let h = app.clone();
+            app.run_on_main_thread(move || start_capture(&h, kind)).map_err(|e| e.to_string())?;
+        }
+        "capture.cancel" => {
+            let h = app.clone();
+            app.run_on_main_thread(move || h.state::<Ink>().lock().end_capture()).map_err(|e| e.to_string())?;
+        }
         other => {
             hide(POPOVER);
             let h = app.clone();
@@ -570,14 +668,21 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
     app.manage(PopoverClock::default());
     app.manage(IslandGen::default());
     app.manage(HotkeySlots::default());
+    let frames = FrameStore::default();
+    app.manage(frames.clone());
 
     let exe_dir = std::env::current_exe()?.parent().map(|p| p.to_path_buf()).unwrap_or_default();
     let (dir, portable) = ink_store::resolve_dir(&exe_dir, &app.path().config_dir()?.join("screen-ink"));
+    let (screen, windows, monitors) = screen_ports();
     let ports = Ports {
         hotkeys: Box::new(TauriHotkeys { app: app.clone() }),
         probe: probe(),
         store: Box::new(ink_store::JsonFileStore::new(dir, portable)),
         notifier: Box::new(TauriNotifier { app: app.clone(), tray_mode: Mutex::new(None) }),
+        screen,
+        windows,
+        monitors,
+        overlay: Box::new(TauriOverlayHost::new(app.clone(), frames)),
     };
     let mut service = InkService::new(ports, Platform::current(), app.package_info().version.to_string());
     let failed = service.start();
@@ -606,6 +711,9 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
 
 fn finish_setup<R: Runtime>(app: &AppHandle<R>, initial: InkState, first_run: bool, autostart: bool, started: Instant) -> tauri::Result<()> {
     build_static_windows(app)?;
+    exclude_from_capture(app, ISLAND);
+    exclude_from_capture(app, POPOVER);
+    listen_system_events(app);
     let mode = if initial.hotkeys_enabled { TrayMode::Ready } else { TrayMode::Off };
     TrayIconBuilder::with_id(TRAY_ID)
         .icon(tray_image(mode))
@@ -629,6 +737,23 @@ fn finish_setup<R: Runtime>(app: &AppHandle<R>, initial: InkState, first_run: bo
     Ok(())
 }
 
+/// 잠금·절전·디스플레이 변경·테마(R-SYS-3). 사건 스레드 → 메인 스레드로 넘겨 서비스에.
+fn listen_system_events<R: Runtime>(app: &AppHandle<R>) {
+    #[cfg(windows)]
+    {
+        let handle = app.clone();
+        ink_platform_windows::events::listen(move |ev: SystemEvent| {
+            let h = handle.clone();
+            let _ = handle.run_on_main_thread(move || {
+                log::info!("system event {ev:?}");
+                h.state::<Ink>().lock().on_system_event(ev);
+            });
+        });
+    }
+    #[cfg(not(windows))]
+    let _ = app;
+}
+
 /// 전역 단축키 플러그인(처리기 = 눌린 칸을 서비스로). screen-ink 플러그인보다 **먼저** 붙여야 한다.
 pub fn global_shortcut<R: Runtime>() -> TauriPlugin<R> {
     tauri_plugin_global_shortcut::Builder::new()
@@ -636,11 +761,13 @@ pub fn global_shortcut<R: Runtime>() -> TauriPlugin<R> {
             if event.state() != ShortcutState::Pressed {
                 return;
             }
+            // 진입 계측(M1)의 시작점 = 키 메시지를 받은 이 순간
+            let pressed = Instant::now();
             let Some(slots) = app.try_state::<HotkeySlots>() else { return };
             let slot = slots.0.lock().unwrap_or_else(|e| e.into_inner()).get(&shortcut.id()).cloned();
             if let Some(slot) = slot {
                 let h = app.clone();
-                let _ = app.run_on_main_thread(move || on_hotkey(&h, &slot));
+                let _ = app.run_on_main_thread(move || on_hotkey(&h, &slot, pressed));
             }
         })
         .build()
@@ -670,8 +797,10 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             run,
             preview_import,
             apply_import,
-            reset_all
+            reset_all,
+            overlay_ready
         ])
+        .register_uri_scheme_protocol(overlay::SCHEME, |ctx, req| overlay::serve(ctx, req))
         .setup(|app, _api| setup(app))
         .on_event(|_app, event| {
             // 트레이 상주 앱: 마지막 창을 닫아도 끝나지 않는다(끝내기는 팝오버 [끝내기] = exit(0))

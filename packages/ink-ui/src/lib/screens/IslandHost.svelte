@@ -1,6 +1,9 @@
 <script>
+  import { Spring } from 'svelte/motion';
   import Island from '../components/Island.svelte';
   import {
+    ISLAND_SPRING,
+    clearModeIsland,
     createIslandState,
     dismissIsland,
     getAutoDismissMs,
@@ -12,6 +15,7 @@
 
   /**
    * S17 섬 호스트 — 한 번에 하나, 1.2초 자동 닫힘(올리면 멈춤), 안내 줄은 처음 3번 또는 '?' 때만.
+   * 한 줄 ↔ 두 줄 ↔ 결과 전환은 스프링(단단함 .22 · 감쇠 .78)으로 폭·높이를 잇는다(10 §6).
    * @type {{
    *   client: import('@screen-ink/client').InkClient,
    *   position?: 'fixed' | 'inline',
@@ -23,6 +27,18 @@
   let queue = $state(createIslandState());
   let platform = $state('windows');
   let reducedMotion = $state(false);
+  /** @type {HTMLDivElement | null} */
+  let measureEl = $state(null);
+  let hasMeasured = $state(false);
+
+  const springW = new Spring(0, {
+    stiffness: ISLAND_SPRING.stiffness,
+    damping: ISLAND_SPRING.damping,
+  });
+  const springH = new Spring(0, {
+    stiffness: ISLAND_SPRING.stiffness,
+    damping: ISLAND_SPRING.damping,
+  });
 
   $effect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
@@ -44,7 +60,10 @@
       if (e.type === 'state' && e.state?.platform) {
         platform = e.state.platform;
       } else if (e.type === 'island') {
-        queue = pushIsland(queue, e.island, { now: Date.now(), reducedMotion });
+        queue =
+          e.island?.kind === 'end'
+            ? clearModeIsland(queue)
+            : pushIsland(queue, e.island, { now: Date.now(), reducedMotion });
       }
     });
     return () => {
@@ -61,6 +80,36 @@
       queue = dismissIsland(queue);
     }, delay);
     return () => clearTimeout(timer);
+  });
+
+  $effect(() => {
+    const el = measureEl;
+    if (!el) {
+      hasMeasured = false;
+      return;
+    }
+
+    const syncSize = () => {
+      const rect = el.getBoundingClientRect();
+      const w = Math.ceil(rect.width);
+      const h = Math.ceil(rect.height);
+      if (w <= 0 || h <= 0) return;
+
+      if (!hasMeasured || reducedMotion) {
+        springW.set(w, { instant: true });
+        springH.set(h, { instant: true });
+        hasMeasured = true;
+      } else {
+        springW.target = w;
+        springH.target = h;
+      }
+    };
+
+    syncSize();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(syncSize);
+    ro.observe(el);
+    return () => ro.disconnect();
   });
 
   function handleKeydown(e) {
@@ -82,7 +131,11 @@
     return 'info';
   });
 
+  let mutedSurface = $derived(variant === 'off' || variant === 'security');
   let showHints = $derived(shouldShowHintLine(queue));
+  let morphKey = $derived(
+    current ? `${current.kind}:${variant}:${current.text}:${showHints ? 1 : 0}` : '',
+  );
   let durationMs = $derived(
     current && current.kind !== 'mode'
       ? getAutoDismissMs(current, { hasActiveMode: Boolean(queue.activeMode), reducedMotion })
@@ -115,30 +168,47 @@
 
 {#if current}
   <div class="ink-island-host {className}" data-position={position}>
-    {#key queue.seq}
-      <Island
-        {variant}
-        text={current.text}
-        lead={current.lead || ''}
-        detail={current.detail || ''}
-        value={current.value || ''}
-        combo={current.combo || ''}
-        keys={current.keys}
-        {platform}
-        keyHint={current.keyHint || ''}
-        countdown={current.countdown ?? null}
-        penColor={current.penColor || 'R'}
-        penWidth={current.penWidth || ''}
-        micOff={Boolean(current.micOff)}
-        button={actionButton}
-        hints={current.hints || []}
-        {showHints}
-        progressDurationMs={current.kind === 'result' ? durationMs : null}
-        paused={queue.hovering}
-        onmouseenter={() => (queue = setIslandHover(queue, true, { now: Date.now(), reducedMotion }))}
-        onmouseleave={() => (queue = setIslandHover(queue, false, { now: Date.now(), reducedMotion }))}
-      />
-    {/key}
+    <div
+      class="ink-island-morph"
+      data-muted={mutedSurface ? 'true' : undefined}
+      style:width={hasMeasured ? `${springW.current}px` : undefined}
+      style:height={hasMeasured ? `${springH.current}px` : undefined}
+    >
+      <div class="ink-island-measure" bind:this={measureEl}>
+        {#key morphKey}
+          <div
+            class="ink-island-content"
+            data-reveal={hasMeasured && !reducedMotion ? 'true' : undefined}
+          >
+            {#key queue.seq}
+              <Island
+                {variant}
+                text={current.text}
+                lead={current.lead || ''}
+                detail={current.detail || ''}
+                value={current.value || ''}
+                valueMuted={Boolean(current.valueMuted)}
+                combo={current.combo || ''}
+                keys={current.keys}
+                {platform}
+                keyHint={current.keyHint || ''}
+                countdown={current.countdown ?? null}
+                penColor={current.penColor || 'R'}
+                penWidth={current.penWidth || ''}
+                micOff={Boolean(current.micOff)}
+                button={actionButton}
+                hints={current.hints || []}
+                {showHints}
+                progressDurationMs={current.kind === 'result' ? durationMs : null}
+                paused={queue.hovering}
+                onmouseenter={() => (queue = setIslandHover(queue, true, { now: Date.now(), reducedMotion }))}
+                onmouseleave={() => (queue = setIslandHover(queue, false, { now: Date.now(), reducedMotion }))}
+              />
+            {/key}
+          </div>
+        {/key}
+      </div>
+    </div>
   </div>
 {/if}
 
@@ -155,5 +225,49 @@
     left: 0;
     right: 0;
     top: 14px;
+  }
+
+  .ink-island-morph {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 520px;
+    border-radius: 22px;
+    background: var(--ink-island);
+    box-shadow: var(--ink-island-shadow);
+    overflow: hidden;
+    pointer-events: auto;
+  }
+
+  .ink-island-morph[data-muted='true'] {
+    background: var(--ink-island-muted);
+  }
+
+  .ink-island-measure {
+    flex: none;
+    display: inline-flex;
+  }
+
+  .ink-island-content {
+    display: inline-flex;
+  }
+
+  .ink-island-content[data-reveal='true'] {
+    animation: ink-island-content-in 120ms ease-out 80ms both;
+  }
+
+  .ink-island-morph :global(.ink-island) {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  @keyframes ink-island-content-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 </style>

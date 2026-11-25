@@ -5,6 +5,12 @@ pub mod ports;
 pub mod service;
 pub mod state;
 
-pub use ports::{HotkeyError, HotkeyRegistry, Loaded, Notifier, Ports, SettingsStore, StoreError, StoreLocation, SystemProbe};
+pub use ports::{
+    Frame, HotkeyError, HotkeyRegistry, Loaded, MonitorProbe, Notifier, OverlayHost, Ports, ScreenSource, SettingsStore, StoreError, StoreLocation, SystemEvent, SystemProbe,
+    WindowCatalog,
+};
 pub use service::{HotkeyOutcome, ImportPreview, InkService, PAUSE_SLOT};
-pub use state::{ConflictSummary, InkState, IslandButton, IslandEvent, IslandKind, PreviewResult, RowStatus, SetShortcutResult, ShortcutRow, UpdateResult};
+pub use state::{
+    ConflictSummary, InkState, IslandButton, IslandEvent, IslandHint, IslandKind, OverlayMonitor, OverlaySession, PreviewResult, RowStatus, SetShortcutResult, ShortcutRow,
+    UpdateResult,
+};

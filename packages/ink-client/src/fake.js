@@ -18,12 +18,26 @@ const DEFAULT_SETTINGS = {
   'topmost.border': 4, 'topmost.sound': false,
 };
 
-export function createFakeClient({ platform = 'windows', snipasteRunning = true } = {}) {
+const CAPTURE_ISLAND = {
+  region: { text: '범위 캡처', variant: 'region', hints: [{ key: '휠', label: '넓히기·좁히기' }, { key: 'Tab', label: '창' }, { key: 'Enter', label: '복사' }, { key: 'Esc', label: '취소' }] },
+  window: { text: '창 캡처', variant: 'window', hints: [{ key: '클릭', label: '찍기' }, { key: 'F2', label: '활성 창' }, { key: 'Esc', label: '취소' }] },
+  record: { text: '녹화 범위', variant: 'region', hints: [{ key: '드래그', label: '범위' }, { key: '클릭', label: '모니터' }, { key: 'Esc', label: '취소' }] },
+};
+const CAPTURE_ACTION = { 'capture.region': 'region', 'capture.window': 'window', 'record.toggle': 'record' };
+
+/**
+ * @param {{platform?: 'windows'|'macos', snipasteRunning?: boolean, frameUrl?: string}} [opts]
+ *   frameUrl = 미리보기에서 오버레이 바탕으로 쓸 정지 이미지(없으면 오버레이가 빈 바탕)
+ */
+export function createFakeClient({ platform = 'windows', snipasteRunning = true, frameUrl = undefined } = {}) {
   const combos = Object.fromEntries(Object.entries(defaults.slots).map(([id, v]) => [id, (platform === 'macos' ? v.mac : v.win) || '']));
   const settings = { ...DEFAULT_SETTINGS };
   const history = [];
   const subs = new Set();
   let hotkeysEnabled = true;
+  let mode = { mode: 'idle' };
+  let sessionSeq = 0;
+  const readyLog = [];
 
   const judge = (slot, combo) => {
     if (!combo) return { status: 'off' };
@@ -47,6 +61,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true 
       readonly: false,
       location: { path: 'C:\\Users\\…\\AppData\\Roaming\\screen-ink\\settings.json', portable: false, readOnly: false },
       notices: [],
+      mode,
     };
   };
   // 가져오기 장면: 다른 PC에서 내보낸 파일(3개가 다름)
@@ -120,7 +135,39 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true 
       island(enabled ? { kind: 'info', text: '단축키를 다시 켰어요' } : { kind: 'off', text: '단축키를 잠시 껐어요', detail: 'Alt+`' });
       return state();
     },
+    async overlayReady(session) {
+      if (mode.mode === 'capture' && mode.session === session) readyLog.push(session);
+    },
+    /** 시험용: overlayReady가 받아들인 세션들 */
+    get readyLog() { return [...readyLog]; },
     async run(action) {
+      if (CAPTURE_ACTION[action]) {
+        const kind = CAPTURE_ACTION[action];
+        sessionSeq += 1;
+        mode = { mode: 'capture', session: sessionSeq, kind, startedMs: Date.now() };
+        const bounds = { x: 0, y: 0, w: 1920, h: 1080 };
+        emit({
+          type: 'overlay',
+          overlay: {
+            session: sessionSeq,
+            kind,
+            cursor: { x: 760, y: 420 },
+            nativeFrame: false,
+            highlight: { x: 480, y: 220, w: 960, h: 560 },
+            monitors: [{ id: 0, bounds, work: { ...bounds, h: 1040 }, scale: 1, primary: true, frameUrl }],
+          },
+        });
+        changed();
+        island({ kind: 'mode', mode: kind, ...CAPTURE_ISLAND[kind] });
+        return;
+      }
+      if (action === 'capture.cancel') {
+        if (mode.mode !== 'capture') return;
+        mode = { mode: 'idle' };
+        changed();
+        island({ kind: 'end', text: '' });
+        return;
+      }
       if (action === 'folder.pick') {
         history.push({ kind: 'setting', path: 'output.folder', prev: settings['output.folder'] });
         settings['output.folder'] = 'D:\\수업자료\\캡처'; changed(); return;

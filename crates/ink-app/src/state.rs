@@ -67,6 +67,8 @@ pub struct InkState {
     pub location: StoreLocation,
     /// 시작할 때 한 번 알려 줄 문구(손상 복구·읽을 수 없던 값)
     pub notices: Vec<String>,
+    /// 지금 모드(`{mode:'idle'}` · `{mode:'capture', session, kind, startedMs}`)
+    pub mode: ink_domain::mode::Mode,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -77,6 +79,37 @@ pub enum IslandKind {
     Info,
     Mode,
     Off,
+    /// 모드가 끝남 — 모드 섬을 거둔다
+    End,
+}
+
+/// 오버레이 한 세션(UI로 나감). 정지 이미지 주소는 어댑터가 채운다.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OverlaySession {
+    pub session: u64,
+    pub kind: ink_domain::snapshot::CaptureKind,
+    pub monitors: Vec<OverlayMonitor>,
+    /// 단축키 순간 커서(물리 px, 가상 화면)
+    pub cursor: ink_domain::geometry::PhysPoint,
+    /// 정지 화면(50% 어둡게 + 강조만 밝게)을 네이티브 창이 이미 그리고 있음 — UI는 이미지·어둡게를 깔지 않고
+    /// 테두리·꺾쇠·확대경·크기만 그린다(이미지는 확대경용으로 늦게 읽음).
+    pub native_frame: bool,
+    /// 첫 강조(가상 화면 물리 px) — 단계 2는 커서 아래 창, 단계 3에서 요소까지
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub highlight: Option<ink_domain::geometry::PhysRect>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OverlayMonitor {
+    pub id: u32,
+    pub bounds: ink_domain::geometry::PhysRect,
+    pub work: ink_domain::geometry::PhysRect,
+    pub scale: f64,
+    pub primary: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub frame_url: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -87,6 +120,12 @@ pub struct IslandButton {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct IslandHint {
+    pub key: String,
+    pub label: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct IslandEvent {
     pub kind: IslandKind,
     pub text: String,
@@ -94,11 +133,33 @@ pub struct IslandEvent {
     pub detail: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub button: Option<IslandButton>,
+    /// 섬 모양(region·window·record·security …) — 없으면 kind로 정함
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub variant: Option<String>,
+    /// 모드 섬의 모드 이름(사용 횟수 세기 — 키 안내 둘째 줄은 처음 3번만)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode: Option<String>,
+    /// 고정폭 값(크기 `718×40` 등)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<String>,
+    /// 둘째 줄 키 안내
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub hints: Vec<IslandHint>,
 }
 
 impl IslandEvent {
     pub fn new(kind: IslandKind, text: impl Into<String>) -> Self {
-        Self { kind, text: text.into(), detail: None, button: None }
+        Self { kind, text: text.into(), detail: None, button: None, variant: None, mode: None, value: None, hints: Vec::new() }
+    }
+
+    pub fn variant(mut self, v: &str) -> Self {
+        self.variant = Some(v.into());
+        self
+    }
+
+    pub fn hints(mut self, list: &[(&str, &str)]) -> Self {
+        self.hints = list.iter().map(|(k, l)| IslandHint { key: (*k).into(), label: (*l).into() }).collect();
+        self
     }
 
     pub fn detail(mut self, d: impl Into<String>) -> Self {

@@ -1,7 +1,12 @@
 //! 가짜 어댑터 — 상태를 `Arc<Mutex<_>>`로 바깥에 내놓아 시험이 "이 PC 장면"을 꾸미고 결과를 들여다본다.
 
-use ink_app::{HotkeyError, HotkeyRegistry, InkState, IslandEvent, Loaded, Notifier, Ports, SettingsStore, StoreError, StoreLocation, SystemProbe};
+use ink_app::{
+    Frame, HotkeyError, HotkeyRegistry, InkState, IslandEvent, Loaded, MonitorProbe, Notifier, OverlayHost, OverlaySession, Ports, ScreenSource, SettingsStore, StoreError,
+    StoreLocation, SystemProbe, WindowCatalog,
+};
+use ink_domain::geometry::{Monitor, MonitorLayout, PhysPoint, PhysRect};
 use ink_domain::shortcuts::LiveBinding;
+use ink_domain::snapshot::RawWindow;
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
@@ -39,6 +44,7 @@ impl HotkeyRegistry for FakeHotkeys {
 pub struct ProbeScene {
     pub running: Vec<String>,
     pub live: Option<Vec<LiveBinding>>,
+    pub secure_desktop: bool,
 }
 
 #[derive(Clone, Default)]
@@ -51,6 +57,115 @@ impl SystemProbe for FakeProbe {
 
     fn live_bindings(&self) -> Option<Vec<LiveBinding>> {
         self.0.lock().unwrap().live.clone()
+    }
+
+    fn secure_desktop(&self) -> bool {
+        self.0.lock().unwrap().secure_desktop
+    }
+}
+
+/// 화면 장면: 모니터 배치·커서·창 목록·캡처 실패 여부.
+#[derive(Debug)]
+pub struct Screen {
+    pub layout: MonitorLayout,
+    pub cursor: PhysPoint,
+    pub windows: Vec<RawWindow>,
+    pub capture_fails: bool,
+    pub captures: usize,
+}
+
+impl Default for Screen {
+    fn default() -> Self {
+        Screen {
+            layout: MonitorLayout::new(vec![
+                Monitor { id: 0, bounds: PhysRect::new(0, 0, 1920, 1080), work: PhysRect::new(0, 0, 1920, 1040), scale: 1.0, primary: true },
+                Monitor { id: 1, bounds: PhysRect::new(1920, 0, 2880, 1800), work: PhysRect::new(1920, 0, 2880, 1728), scale: 1.5, primary: false },
+            ]),
+            cursor: PhysPoint { x: 400, y: 300 },
+            windows: vec![RawWindow {
+                handle: 1,
+                pid: 7,
+                exe: "chrome.exe".into(),
+                class: "Chrome_WidgetWin_1".into(),
+                rect: PhysRect::new(100, 100, 1200, 800),
+                visible: true,
+                ..Default::default()
+            }],
+            capture_fails: false,
+            captures: 0,
+        }
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct FakeScreen(pub Arc<Mutex<Screen>>);
+
+impl ScreenSource for FakeScreen {
+    fn capture(&mut self, layout: &MonitorLayout) -> Result<Vec<Frame>, String> {
+        let mut s = self.0.lock().unwrap();
+        if s.capture_fails {
+            return Err("capture failed".into());
+        }
+        s.captures += 1;
+        Ok(layout.monitors.iter().map(|m| Frame { monitor_id: m.id, width: m.bounds.w as u32, height: m.bounds.h as u32, bgra: Arc::new(vec![0; 64]) }).collect())
+    }
+}
+
+impl WindowCatalog for FakeScreen {
+    fn windows(&self) -> Vec<RawWindow> {
+        self.0.lock().unwrap().windows.clone()
+    }
+}
+
+impl MonitorProbe for FakeScreen {
+    fn layout(&self) -> MonitorLayout {
+        self.0.lock().unwrap().layout.clone()
+    }
+
+    fn cursor(&self) -> PhysPoint {
+        self.0.lock().unwrap().cursor
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct OverlayLog {
+    pub prepared: usize,
+    /// 지금 보이는 세션과 쥔 이미지 수
+    pub showing: Option<(u64, usize)>,
+    pub shown: Vec<OverlaySession>,
+    pub fail_show: bool,
+    /// 네이티브 정지 화면 창이 있는 척(진입 시간 끝점 시험)
+    pub native: bool,
+    pub highlights: Vec<Option<PhysRect>>,
+}
+
+#[derive(Clone, Default)]
+pub struct FakeOverlay(pub Arc<Mutex<OverlayLog>>);
+
+impl OverlayHost for FakeOverlay {
+    fn prepare(&mut self, _layout: &MonitorLayout) {
+        self.0.lock().unwrap().prepared += 1;
+    }
+
+    fn show(&mut self, session: &OverlaySession, frames: Vec<Frame>) -> Result<Option<std::time::Instant>, String> {
+        let mut o = self.0.lock().unwrap();
+        if o.fail_show {
+            return Err("webview gone".into());
+        }
+        o.showing = Some((session.session, frames.len()));
+        o.shown.push(session.clone());
+        Ok(o.native.then(std::time::Instant::now))
+    }
+
+    fn highlight(&mut self, _session: u64, rect: Option<PhysRect>) {
+        self.0.lock().unwrap().highlights.push(rect);
+    }
+
+    fn hide(&mut self, session: u64) {
+        let mut o = self.0.lock().unwrap();
+        if o.showing.map(|(s, _)| s) == Some(session) {
+            o.showing = None;
+        }
     }
 }
 
@@ -114,6 +229,8 @@ pub struct FakeWorld {
     pub probe: FakeProbe,
     pub store: MemoryStore,
     pub notifier: RecordingNotifier,
+    pub screen: FakeScreen,
+    pub overlay: FakeOverlay,
 }
 
 impl FakeWorld {
@@ -127,6 +244,10 @@ impl FakeWorld {
             probe: Box::new(self.probe.clone()),
             store: Box::new(self.store.clone()),
             notifier: Box::new(self.notifier.clone()),
+            screen: Box::new(self.screen.clone()),
+            windows: Box::new(self.screen.clone()),
+            monitors: Box::new(self.screen.clone()),
+            overlay: Box::new(self.overlay.clone()),
         }
     }
 

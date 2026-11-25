@@ -80,3 +80,32 @@ test('shows second hint line only for first 3 mode uses or when ? help is open',
   s = setHelpOpen(s, false);
   assert.equal(shouldShowHintLine(s), false);
 });
+
+test('kind "end" clears active mode island while keeping any transient result island visible', () => {
+  let s = createIslandState();
+  const mode = {
+    kind: 'mode',
+    mode: 'region',
+    variant: 'region',
+    text: '범위 캡처',
+    hints: [{ key: 'Esc', label: '취소' }],
+  };
+  s = pushIsland(s, mode, { now: 100 });
+  assert.equal(s.current?.text, '범위 캡처');
+
+  // Cancelling capture emits kind: 'end' -> clears mode island
+  s = pushIsland(s, { kind: 'end', text: '' }, { now: 200 });
+  assert.equal(s.current, null);
+  assert.equal(s.activeMode, null);
+
+  // If a result island is already showing over a mode, kind: 'end' drops activeMode without killing result
+  s = pushIsland(s, mode, { now: 300 });
+  s = pushIsland(s, { kind: 'result', text: '복사했어요' }, { now: 400 });
+  s = pushIsland(s, { kind: 'end', text: '' }, { now: 450 });
+  assert.equal(s.activeMode, null);
+  assert.equal(s.current?.text, '복사했어요');
+
+  // Dismissing that result now clears completely instead of restoring ended mode
+  s = dismissIsland(s);
+  assert.equal(s.current, null);
+});
