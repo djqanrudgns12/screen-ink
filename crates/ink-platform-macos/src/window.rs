@@ -144,6 +144,29 @@ pub fn place(ns_window: *mut c_void, space: &Space, bounds: PhysRect) -> bool {
     true
 }
 
+/// 팝오버를 메뉴 막대 아이콘 바로 아래에 붙인다(CG 전역 포인트 `icon`). `pad` = 카드 둘레 투명 여백,
+/// `gap` = 메뉴 막대 아래와 카드 윗변 사이. 창 크기는 지금 것을 쓰고, 가로는 아이콘 가운데에 맞춰 화면 안으로 가둔다.
+/// 맥은 창 크기를 바꿀 때 왼쪽 아래를 고정하므로, 크기가 바뀔 때마다 다시 불러 윗변을 붙든다.
+pub fn place_below(ns_window: *mut c_void, space: &Space, icon: RectF, pad: f64, gap: f64) -> bool {
+    let (Some(w), Some(mtm)) = (window(ns_window), MainThreadMarker::new()) else { return false };
+    let Some(primary_h) = NSScreen::screens(mtm).firstObject().map(|p| p.frame().size.height) else { return false };
+    let (cx, cy) = (icon.x + icon.w / 2.0, icon.y + icon.h / 2.0);
+    let Some(s) = space.screens.iter().find(|s| cx >= s.pt.x && cx < s.pt.right() && cy >= s.pt.y && cy < s.pt.bottom()).or(space.screens.first()) else { return false };
+    // SAFETY: NSWindow 공개 메서드.
+    let frame: NSRect = unsafe { msg_send![w, frame] };
+    let (fw, _) = (frame.size.width, frame.size.height);
+    const EDGE: f64 = 8.0; // 카드와 화면 가장자리 사이
+    let lo = s.pt.x + EDGE - pad;
+    let hi = (s.pt.right() - EDGE + pad - fw).max(lo);
+    let x = (cx - fw / 2.0).clamp(lo, hi);
+    let top = icon.bottom() + gap - pad;
+    // SAFETY: NSWindow 공개 메서드(Cocoa 좌표: 원점 왼쪽 아래 → 윗변 = 주 화면 높이 − CG y).
+    unsafe {
+        let _: () = msg_send![w, setFrameTopLeftPoint: NSPoint::new(x, primary_h - top)];
+    }
+    true
+}
+
 /// 활성화하지 않고 **지금 Space** 맨 앞으로 바로(비동기 아님). 전체 화면 앱 위에서도 그 자리에 뜬다.
 pub fn order_front(ns_window: *mut c_void) {
     let Some(w) = window(ns_window) else { return };

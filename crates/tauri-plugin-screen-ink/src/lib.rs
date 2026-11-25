@@ -60,6 +60,25 @@ impl Ink {
 #[derive(Default)]
 struct PopoverClock(Mutex<Option<Instant>>);
 
+/// 맥: 팝오버를 붙인 메뉴 막대 아이콘(CG 전역 포인트). 카드 크기가 바뀌면 다시 붙인다.
+#[cfg(target_os = "macos")]
+#[derive(Default)]
+struct PopoverAnchor(Mutex<Option<ink_platform_macos::coords::RectF>>);
+
+/// 맥 팝오버: 카드 둘레 투명 여백(App.svelte `.popover-shell` padding)과 메뉴 막대 아래 틈(pt).
+#[cfg(target_os = "macos")]
+const POPOVER_PAD: f64 = 8.0;
+#[cfg(target_os = "macos")]
+const POPOVER_GAP: f64 = 5.0;
+
+#[cfg(target_os = "macos")]
+fn anchor_popover<R: Runtime>(app: &AppHandle<R>) {
+    let Some(icon) = *app.state::<PopoverAnchor>().0.lock().unwrap_or_else(|e| e.into_inner()) else { return };
+    if let Some(ns) = app.get_webview_window(POPOVER).and_then(|w| w.ns_window().ok()) {
+        ink_platform_macos::window::place_below(ns, &ink_platform_macos::space(), icon, POPOVER_PAD, POPOVER_GAP);
+    }
+}
+
 /// 섬 창 세대 — 새 섬이 오면 이전 안전 타이머는 무시.
 #[derive(Default)]
 struct IslandGen(AtomicU64);
@@ -357,6 +376,11 @@ fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .build()?;
     let handle = app.clone();
     popover.on_window_event(move |e| {
+        // 맥: 카드에 맞춰 창 크기가 바뀌면 왼쪽 아래가 고정돼 윗변이 움직인다 → 아이콘 아래에 다시 붙인다
+        #[cfg(target_os = "macos")]
+        if let WindowEvent::Resized(_) = e {
+            anchor_popover(&handle);
+        }
         if let WindowEvent::Focused(false) = e {
             if let Some(w) = handle.get_webview_window(POPOVER) {
                 let _ = w.hide();
@@ -381,7 +405,7 @@ fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     Ok(())
 }
 
-/// 트레이 아이콘 위(작업 표시줄이 위면 아래)에, 모니터 작업 영역 안으로 가둬서 연다.
+/// 트레이 팝오버 열기·닫기. 위치: Windows = 아이콘 위(작업 표시줄이 위면 아래), 맥 = 메뉴 막대 아이콘 바로 아래.
 fn toggle_popover<R: Runtime>(app: &AppHandle<R>, tray_rect: Rect) {
     let Some(w) = app.get_webview_window(POPOVER) else { return };
     if w.is_visible().unwrap_or(false) {
@@ -392,6 +416,41 @@ fn toggle_popover<R: Runtime>(app: &AppHandle<R>, tray_rect: Rect) {
     if just_closed {
         return;
     }
+    // 맥: tray-icon 사각형은 "포인트 × 그 화면 배율" → 포인트로 돌려 아이콘 바로 아래에 붙인다(혼합 배율에서도 정확)
+    #[cfg(target_os = "macos")]
+    {
+        let scale = w.scale_factor().unwrap_or(1.0);
+        let p = tray_rect.position.to_physical::<f64>(scale);
+        let z = tray_rect.size.to_physical::<f64>(scale);
+        // 클릭 순간 커서(포인트)로 어느 화면 배율인지 가린다(혼합 배율에서 숫자만으로는 모호)
+        let icon = ink_platform_macos::space().unscale_rect(p.x, p.y, z.width, z.height, Some(ink_platform_macos::display::cursor_pt()));
+        *app.state::<PopoverAnchor>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some(icon);
+        anchor_popover(app);
+    }
+    #[cfg(not(target_os = "macos"))]
+    place_popover_near(&w, tray_rect);
+    {
+        let ink = app.state::<Ink>();
+        let mut s = ink.lock();
+        s.refresh_environment();
+        let st = s.state();
+        let _ = app.emit(EVT_STATE, &st);
+    }
+    // 맥: 활성화하지 않는 패널을 지금 Space(전체 화면 앱 포함)에 올리고 키 창으로만 — 앱을 활성화하면 Space가 넘어간다
+    #[cfg(target_os = "macos")]
+    if let Ok(ns) = w.ns_window() {
+        ink_platform_macos::window::order_front(ns);
+        let _ = w.show();
+        ink_platform_macos::window::make_key(ns);
+        return;
+    }
+    let _ = w.show();
+    let _ = w.set_focus();
+}
+
+/// 트레이 아이콘 위(작업 표시줄이 위면 아래)에, 모니터 작업 영역 안으로 가둔다(Windows).
+#[cfg(not(target_os = "macos"))]
+fn place_popover_near<R: Runtime>(w: &tauri::WebviewWindow<R>, tray_rect: Rect) {
     let scale = w.scale_factor().unwrap_or(1.0);
     let pos = tray_rect.position.to_physical::<i32>(scale);
     let size = tray_rect.size.to_physical::<i32>(scale);
@@ -412,23 +471,6 @@ fn toggle_popover<R: Runtime>(app: &AppHandle<R>, tray_rect: Rect) {
         }
         let _ = w.set_position(PhysicalPosition::new(x, y));
     }
-    {
-        let ink = app.state::<Ink>();
-        let mut s = ink.lock();
-        s.refresh_environment();
-        let st = s.state();
-        let _ = app.emit(EVT_STATE, &st);
-    }
-    // 맥: 활성화하지 않는 패널을 지금 Space(전체 화면 앱 포함)에 올리고 키 창으로만 — 앱을 활성화하면 Space가 넘어간다
-    #[cfg(target_os = "macos")]
-    if let Ok(ns) = w.ns_window() {
-        ink_platform_macos::window::order_front(ns);
-        let _ = w.show();
-        ink_platform_macos::window::make_key(ns);
-        return;
-    }
-    let _ = w.show();
-    let _ = w.set_focus();
 }
 
 /// 설정 창(S02~S05). 이미 있으면 앞으로(05 §11-1 단일 창).
@@ -768,6 +810,8 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
 fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error>> {
     let started = Instant::now();
     app.manage(PopoverClock::default());
+    #[cfg(target_os = "macos")]
+    app.manage(PopoverAnchor::default());
     app.manage(IslandGen::default());
     app.manage(HotkeySlots::default());
     let frames = FrameStore::default();

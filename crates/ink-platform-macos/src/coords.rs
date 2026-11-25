@@ -245,6 +245,20 @@ impl Space {
         self.screens.iter().find(|s| s.phys == bounds)
     }
 
+    /// "포인트 × 그 화면 배율"로 받은 사각형(tray-icon·tao 물리 좌표) → CG 전역 포인트.
+    /// 혼합 배율에서는 숫자만으로 정해지지 않는다(3000 = 배율 2의 1500pt도, 배율 1의 3000pt도 됨).
+    /// `hint` = 그 사각형 안에 있던 점(클릭 순간 커서, 포인트)이 들어가는 쪽을 고르고, 없으면 그 화면 안에 드는 쪽.
+    pub fn unscale_rect(&self, x: f64, y: f64, w: f64, h: f64, hint: Option<(f64, f64)>) -> RectF {
+        let cands: Vec<(RectF, &Placed)> = self.screens.iter().map(|s| (RectF::new(x / s.scale, y / s.scale, w / s.scale, h / s.scale), s)).collect();
+        let near = |r: &RectF, (hx, hy): (f64, f64)| hx >= r.x - 2.0 && hx <= r.right() + 2.0 && hy >= r.y - 2.0 && hy <= r.bottom() + 2.0;
+        if let Some(hint) = hint {
+            if let Some((r, _)) = cands.iter().find(|(r, s)| near(r, hint) && s.pt.contains(r.center().0, r.center().1)) {
+                return *r;
+            }
+        }
+        cands.iter().find(|(r, s)| s.pt.contains(r.center().0, r.center().1)).map(|(r, _)| *r).unwrap_or(RectF::new(x, y, w, h))
+    }
+
     pub fn screen_by_display(&self, display: u32) -> Option<&Placed> {
         self.screens.iter().find(|s| s.display == display)
     }
@@ -344,6 +358,18 @@ mod tests {
         assert_eq!(s.screen_by_display(2).unwrap().phys, PhysRect::new(5000, 0, 1920, 1080));
         // 틈에 있는 점은 가장 가까운 화면(주 화면, 280pt) 기준으로 잰다
         assert_eq!(s.to_phys(2200.0, 10.0), PhysPoint { x: 4400, y: 20 });
+    }
+
+    #[test]
+    fn 배율을_곱해_온_트레이_사각형을_포인트로() {
+        let s = Space::new(&[scr(3, 0.0, 0.0, 1920.0, 1080.0, 2.0, true), scr(1, 1920.0, 0.0, 1920.0, 1080.0, 1.0, false)]);
+        // 주 화면(배율 2) 메뉴 막대의 아이콘: 1200pt,0 30x30pt → tray-icon은 2400,0 60x60을 준다
+        assert_eq!(s.unscale_rect(2400.0, 0.0, 60.0, 60.0, Some((1210.0, 12.0))), RectF::new(1200.0, 0.0, 30.0, 30.0));
+        // 오른쪽 화면(배율 1)의 아이콘 3000pt: 숫자만 보면 주 화면 1500pt(÷2)와 같다 → 클릭한 커서 위치로 가린다
+        assert_eq!(s.unscale_rect(3000.0, 0.0, 30.0, 30.0, Some((3010.0, 10.0))), RectF::new(3000.0, 0.0, 30.0, 30.0));
+        assert_eq!(s.unscale_rect(3000.0, 0.0, 60.0, 60.0, Some((1510.0, 10.0))), RectF::new(1500.0, 0.0, 30.0, 30.0));
+        // 힌트가 없으면 그 화면 안에 드는 첫 쪽
+        assert_eq!(s.unscale_rect(2400.0, 0.0, 60.0, 60.0, None), RectF::new(1200.0, 0.0, 30.0, 30.0));
     }
 
     #[test]
