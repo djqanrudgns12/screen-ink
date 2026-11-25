@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>최종 — 첫 실행</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap">
+<style>
+body{margin:0}
+.r{display:flex;align-items:center;gap:12px;height:40px;padding:0 14px;font-size:13.5px;color:#F7F8FA;border-top:1px solid #2C2E35}
+.r:first-child{border-top:0}
+.r svg{width:18px;height:18px;flex:none;fill:none;stroke:#C9CCD3;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.r .l{flex:1;white-space:nowrap}
+.k{display:flex;gap:3px}
+.k kbd{font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace;font-size:11.5px;color:#F7F8FA;background:#2C2E35;border-radius:5px;padding:0 8px;line-height:22px}
+</style>
+</helmet>
+<div style="width: 960px; height: 600px; position: relative; overflow: hidden; background: #2B2D33; font-family: 'IBM Plex Sans KR', system-ui, sans-serif">
+  <div style="position: absolute; inset: 0; background: rgba(0,0,0,.35)"></div>
+  <div role="dialog" aria-label="첫 실행 안내" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 520px; box-sizing: border-box; padding: 28px 28px 22px; border-radius: 22px; background: #1C1D21; box-shadow: inset 0 0 0 1px rgba(255,255,255,.07), 0 30px 90px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 18px; color: #F7F8FA">
+    <div style="display: flex; align-items: center; gap: 16px">
+      <svg width="56" height="56" viewBox="0 0 64 64" role="img" aria-label="screen-ink"><defs><linearGradient id="f8" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2F2F32"/><stop offset="1" stop-color="#141416"/></linearGradient></defs><rect width="64" height="64" rx="14.5" fill="url(#f8)"/><rect x=".5" y=".5" width="63" height="63" rx="14" fill="none" stroke="#FFFFFF" stroke-opacity=".14"/><path d="M17 25v-5a3 3 0 0 1 3-3h5M39 17h5a3 3 0 0 1 3 3v5M47 39v5a3 3 0 0 1-3 3h-5M25 47h-5a3 3 0 0 1-3-3v-5" fill="none" stroke="#F2F2EE" stroke-width="3.4" stroke-linecap="round"/><path d="M32 22.5c4.2 5.2 6.5 8.5 6.5 11.3a6.5 6.5 0 0 1-13 0c0-2.8 2.3-6.1 6.5-11.3z" fill="#FF9F0A"/><ellipse cx="29.6" cy="33.4" rx="1.5" ry="2.5" fill="#FFFFFF" opacity=".55"/></svg>
+      <div>
+        <h1 style="margin: 0; font-size: 20px; font-weight: 600">screen-ink가 준비됐어요</h1>
+        <p style="margin: 4px 0 0; font-size: 13px; color: #8E939E">트레이에 있다가 단축키를 누르면 나타나요</p>
+      </div>
+    </div>
+
+    <div>
+      <p style="margin: 0 4px 7px; font-size: 11px; font-weight: 500; letter-spacing: .04em; color: #8E939E">먼저 이 셋만</p>
+      <div style="background: #232429; border-radius: 14px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.04)">
+        <div class="r"><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M12 8.8c1.4 1.8 2.2 2.9 2.2 3.9a2.2 2.2 0 0 1-4.4 0c0-1 .8-2.1 2.2-3.9z" fill="#FF9F0A" stroke="none"/></svg><span class="l">범위 캡처 <small style="margin-left: 6px; font-size: 12px; color: #8E939E">알아서 찾아요</small></span><span class="k"><kbd>F1</kbd></span></div>
+        <div class="r"><svg viewBox="0 0 24 24"><path d="M15 4.5l4.5 4.5L9.5 19H5v-4.5z"/><path d="M13 6.5l4.5 4.5"/><circle cx="4.8" cy="20.4" r="1.5" fill="#FF9F0A" stroke="none"/></svg><span class="l">판서 <small style="margin-left: 6px; font-size: 12px; color: #8E939E">멈추고 쓰기</small></span><span class="k"><kbd>Alt</kbd><kbd>1</kbd></span></div>
+        <div class="r"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/><circle cx="10.5" cy="10.5" r="1.8" fill="#FF9F0A" stroke="none"/></svg><span class="l">실시간 확대 <small style="margin-left: 6px; font-size: 12px; color: #8E939E">움직이는 그대로</small></span><span class="k"><kbd>Alt</kbd><kbd>2</kbd></span></div>
+      </div>
+    </div>
+
+    <div role="status" style="display: flex; align-items: center; gap: 10px; padding: 9px 8px 9px 14px; border-radius: 14px; background: rgba(255,159,10,.1); box-shadow: inset 0 0 0 1px rgba(255,159,10,.25)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF9F0A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5l8.5 15h-17z"/><path d="M12 10.5v4M12 17h.01"/></svg>
+      <p style="margin: 0; flex: 1; font-size: 12.5px; white-space: nowrap">F1·F3 키 4개는 <b style="font-weight: 600">Snipaste</b>가 쓰고 있어요</p>
+      <button type="button" style="height: 26px; padding: 0 12px; border-radius: 13px; border: 0; background: #2C2E35; color: #F7F8FA; font-family: inherit; font-size: 12px">끄는 법</button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px">
+      <p style="margin: 0; flex: 1; font-size: 11.5px; color: #8E939E; white-space: nowrap"><span style="font-family: 'IBM Plex Mono','IBM Plex Sans KR',monospace; color: #C9CCD3; background: #2C2E35; border-radius: 4px; padding: 0 5px">?</span> 모드 안에서 언제든 단축키 한 장</p>
+      <button type="button" style="height: 34px; padding: 0 16px; border-radius: 17px; border: 0; background: #26272C; color: #F7F8FA; font-family: inherit; font-size: 13px">단축키 바꾸기</button>
+      <button type="button" style="height: 34px; padding: 0 20px; border-radius: 17px; border: 0; background: #F7F8FA; color: #111315; font-family: inherit; font-size: 13px; font-weight: 600">시작하기</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":600}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

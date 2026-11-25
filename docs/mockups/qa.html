@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>screen-ink 시안 자동 조작 시험</title>
+<style>
+  body { margin: 0; font: 13px/1.5 'Malgun Gothic', sans-serif; }
+  iframe { width: 1440px; height: 900px; border: 0; display: block; }
+  pre { margin: 0; padding: 10px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<!-- 시안을 iframe으로 열고, 화면마다 대표 조작을 합성 이벤트로 보낸 뒤 결과 DOM을 확인한다.
+     실행: Edge 헤드리스 --dump-dom 으로 열면 결과 상자(out)에 PASS/FAIL 줄이 남는다(docs/mockups/qa.ps1). -->
+<pre id="out">running</pre>
+<iframe id="f" src="screen-ink-mockups.html?shot=1#s01"></iframe>
+<script>
+'use strict';
+const out = document.getElementById('out');
+const frame = document.getElementById('f');
+const results = [];
+const errors = [];
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const W = () => frame.contentWindow;
+const D = () => frame.contentDocument;
+const ok = (name, pass, detail = '') => results.push(`${pass ? 'PASS' : 'FAIL'} ${name}${detail ? ' — ' + detail : ''}`);
+const text = (sel) => D().querySelector(sel)?.textContent?.trim() ?? null;
+const toasts = () => [...D().querySelectorAll('#toasts .toast .msg')].map((n) => n.textContent.trim());
+const lastToast = () => toasts().at(-1) ?? '';
+async function go(id) { W().location.hash = '#' + id; await sleep(120); }
+function deskXY(x, y) { const r = D().getElementById('desk').getBoundingClientRect(); return { cx: r.left + x, cy: r.top + y }; }
+function key(k, o = {}) {
+  const init = { key: k, ctrlKey: !!o.ctrl, shiftKey: !!o.shift, altKey: !!o.alt, bubbles: true, cancelable: true };
+  W().dispatchEvent(new (W().KeyboardEvent)('keydown', init));
+  W().dispatchEvent(new (W().KeyboardEvent)('keyup', init));
+}
+function mouse(type, x, y, o = {}) {
+  const { cx, cy } = deskXY(x, y);
+  const el = D().elementFromPoint(cx, cy) || D().getElementById('desk');
+  const Ctor = type.startsWith('pointer') ? W().PointerEvent : W().MouseEvent;
+  el.dispatchEvent(new Ctor(type, { clientX: cx, clientY: cy, button: o.button ?? 0, buttons: o.buttons ?? 0, ctrlKey: !!o.ctrl, shiftKey: !!o.shift, altKey: !!o.alt, pointerId: 1, bubbles: true, cancelable: true }));
+}
+function wheel(x, y, dy, o = {}) {
+  const { cx, cy } = deskXY(x, y);
+  const el = D().elementFromPoint(cx, cy) || D().getElementById('desk');
+  el.dispatchEvent(new (W().WheelEvent)('wheel', { clientX: cx, clientY: cy, deltaY: dy, ctrlKey: !!o.ctrl, bubbles: true, cancelable: true }));
+}
+const click = (sel) => D().querySelector(sel)?.click();
+
+async function run() {
+  W().addEventListener('error', (e) => errors.push(String(e.message)));
+
+  // S01 트레이
+  await go('s01');
+  click('#pause');
+  ok('S01 단축키 잠시 끄기', D().querySelector('#pause')?.getAttribute('aria-checked') === 'true', text('.tm-head small'));
+
+  // S02 단축키
+  await go('s02');
+  click('[data-k="region"]');
+  ok('S02 키 입력 대기', text('[data-k="region"]')?.includes('누르세요'), text('[data-k="region"]'));
+  key('5', { ctrl: true, shift: true });
+  ok('S02 새 키 등록', text('[data-k="region"]') === 'Ctrl+Shift+5', text('[data-k="region"]'));
+  ok('S02 적용 전 변경 1개', text('.st-pending')?.includes('1개'), text('.st-pending'));
+  click('[data-fix="record"]');
+  ok('S02 추천 칩으로 충돌 해결', text('[data-k="record"]') !== 'F3', text('[data-k="record"]'));
+  click('#apply');
+  ok('S02 적용', text('.st-pending')?.includes('모두 적용'), lastToast());
+  click('[data-k="draw"]'); key('Backspace');
+  ok('S02 Backspace = 비우기', text('[data-k="draw"]') === '없음', text('[data-k="draw"]'));
+  click('[data-k="zoom"]'); key('F1');
+  ok('S02 외부 충돌 감지(F1)', D().querySelectorAll('.krow.bad').length >= 1, D().querySelector('.krow.bad small')?.textContent);
+  click('[data-tab="draw"]');
+  ok('S02→S03 탭 이동', text('.st-tab.on')?.includes('그리기'), text('.st-tab.on'));
+
+  // S02 확정본 v1: 전역 16칸 · 모드 안 키 바꾸기 · Snipaste 원인 안내
+  click('[data-tab="keys"]');
+  ok('S02 전역 16칸', D().querySelectorAll('.krow').length === 16, String(D().querySelectorAll('.krow').length));
+  ok('S02 Snipaste 원인 안내', !!D().querySelector('.conflict .snip'), text('.conflict b'));
+  click('[data-open="draw"]');
+  ok('S02 판서 안 키 29개 펼침', D().querySelectorAll('.mrow').length === 29, String(D().querySelectorAll('.mrow').length));
+  click('[data-mk="draw:d-pen"]'); key('m');
+  ok('S02 모드 안 겹침 감지(펜=M)', D().querySelectorAll('.mrow.bad').length >= 2, D().querySelector('.mrow.bad small')?.textContent);
+  click('[data-mk="draw:d-pen"]'); key('q');
+  ok('S02 모드 안 키 바꾸기(펜=Q)', text('[data-mk="draw:d-pen"]') === 'Q' && D().querySelectorAll('.mrow.bad').length === 0, text('[data-mk="draw:d-pen"]'));
+
+  // S04 파일 이름 규칙
+  await go('s04');
+  const tpl = D().querySelector('#tpl');
+  tpl.value = '수업:{yyyy}'; tpl.dispatchEvent(new (W().Event)('input', { bubbles: true }));
+  ok('S04 금지 글자 경고', text('#pv')?.includes('쓸 수 없는'), text('#pv'));
+  tpl.value = '수업_{yyyy}{MM}{dd}_{n}'; tpl.dispatchEvent(new (W().Event)('input', { bubbles: true }));
+  ok('S04 미리보기', text('#pv')?.includes('수업_20261125_001.png'), text('#pv'));
+
+  // S07 캡처 스마트 인식
+  await go('s07');
+  mouse('mousemove', 478, 492);
+  const c0 = text('.cap-crumb .cur');
+  wheel(478, 492, -120);
+  const c1 = text('.cap-crumb .cur');
+  ok('S07 휠 ↑ = 부모', c0 && c1 && c0 !== c1, `${c0} → ${c1}`);
+  wheel(478, 492, 120); wheel(478, 492, 120);
+  ok('S07 휠 ↓ = 자식', text('.cap-crumb .cur') === '칸', text('.cap-crumb .cur'));
+  key('Tab');
+  ok('S07 Tab = 창 단위', text('.cap-crumb .cur')?.includes('창'), text('.cap-crumb .cur'));
+  key('Tab'); key('c');
+  ok('S07 C = 색 복사', /#[0-9A-F]{6} 복사했어요/.test(lastToast()), lastToast());
+  key('Shift'); key('c');
+  ok('S07 Shift = RGB 전환', lastToast().startsWith('RGB'), lastToast());
+  mouse('mousemove', 478, 492); mouse('mousedown', 478, 492); mouse('mouseup', 478, 492);
+  ok('S07 클릭 = 확정', !!D().querySelector('.cap-actions.on'), text('.cap-badge'));
+  const b0 = text('.cap-badge'); key('ArrowRight', { ctrl: true });
+  ok('S07 Ctrl+→ = 늘리기', text('.cap-badge') !== b0, `${b0} → ${text('.cap-badge')}`);
+  key('Enter');
+  ok('S07 Enter = 복사', lastToast().includes('복사했어요 ·'), lastToast());
+  key('r');
+  ok('S07 R = 직전 범위', lastToast().includes('직전 범위'), lastToast());
+  key('Escape'); key(',');
+  ok('S07 , = 지난 범위', lastToast().includes('지난 범위'), lastToast());
+
+  // S09 드래그 + 자석
+  await go('s09');
+  key('Escape');
+  mouse('mousemove', 300, 600); mouse('mousedown', 300, 600); mouse('mousemove', 600, 700); mouse('mousemove', 886, 790);
+  const guides = D().querySelectorAll('.cap-guide.on').length;
+  mouse('mouseup', 886, 790);
+  ok('S09 자석 안내선', guides >= 1, `안내선 ${guides}개`);
+  ok('S09 드래그 확정', !!D().querySelector('.cap-actions.on'), text('.cap-badge'));
+
+  // S10 판서
+  await go('s10');
+  const cv = () => D().querySelector('canvas').toDataURL().length;
+  const before = cv();
+  mouse('pointerdown', 300, 300);
+  for (let i = 1; i <= 12; i++) mouse('pointermove', 300 + i * 15, 300 + Math.sin(i) * 20);
+  mouse('pointerup', 480, 300);
+  ok('S10 펜 획', cv() !== before, `${before} → ${cv()}`);
+  key('g');
+  ok('S10 G = 초록', text('.bubble')?.includes('초록'), text('.bubble'));
+  wheel(700, 400, -120, { ctrl: true });
+  ok('S10 Ctrl+휠 = 굵기', text('.bubble')?.includes('5px'), text('.bubble'));
+  wheel(700, 400, -120);
+  ok('S10 휠 = 확대', text('.zoom-badge')?.includes('×'), text('.zoom-badge'));
+  mouse('contextmenu', 700, 400, { button: 2 });
+  ok('S10 확대 중 우클릭 = 손 모드', text('.bubble')?.includes('손 모드'), text('.bubble'));
+  mouse('pointerdown', 700, 400);
+  ok('S10 좌클릭 = 다시 판서', text('.bubble')?.includes('다시 판서'), text('.bubble'));
+  key('Escape');
+  ok('S10 Esc = 보관', lastToast().includes('보관'), lastToast());
+  key('R', { ctrl: true, shift: true });
+  ok('S10 Ctrl+Shift+R = 복원', lastToast().includes('다시 불러왔어요'), lastToast());
+  key('e');
+  ok('S10 E = 모두 지우기 + 되돌리기', lastToast().includes('모두 지웠어요'), lastToast());
+  key('z', { ctrl: true });
+
+  // S11 실시간 확대
+  await go('s11');
+  mouse('mousemove', 500, 500); wheel(500, 500, -120);
+  ok('S11 휠 = 배율', text('.zoom-badge')?.includes('×3'), text('.zoom-badge'));
+  key('1', { alt: true }); await sleep(80);
+  ok('S11 Alt+1 = 판서 전환', W().location.hash === '#s10', W().location.hash);
+
+  // S12 칠판
+  await go('s12');
+  key('k');
+  ok('S12 K = 검은 칠판', !!D().querySelector('.dz-bg.board-k'), text('.bubble'));
+
+  // S13 녹화
+  await go('s13');
+  key('F3');
+  ok('S13 F3 = 저장', lastToast().includes('녹화를 저장'), lastToast());
+
+  // 모든 화면이 오류 없이 그려지는지
+  for (let i = 1; i <= 15; i++) { const id = 's' + String(i).padStart(2, '0'); await go(id); ok(`${id} 렌더링`, D().getElementById('stage').children.length > 0); }
+
+  const pass = results.filter((r) => r.startsWith('PASS')).length;
+  out.textContent = `RESULT ${pass}/${results.length} passed, ${errors.length} page errors\n` + results.join('\n') + (errors.length ? '\nERRORS\n' + errors.join('\n') : '');
+}
+frame.addEventListener('load', () => run().catch((e) => { out.textContent = 'CRASH ' + e.stack + '\n' + results.join('\n'); }));
+</script>
+</body>
+</html>

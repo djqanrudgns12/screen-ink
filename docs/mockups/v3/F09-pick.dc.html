@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>최종 — F1 범위 고르기</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+.td{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));height:40px;align-items:center;border-top:1px solid #E5E5EA;font-size:15px;color:#1D1D1F;text-align:center}
+.ik kbd{font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace;font-size:10.5px;color:#F7F8FA;background:#2C2E35;border-radius:5px;padding:0 6px;line-height:18px;margin-right:6px}
+.ik span{display:inline-flex;align-items:center;white-space:nowrap}
+</style>
+</helmet>
+<div style="width: 960px; height: 600px; position: relative; overflow: hidden; background: #E9EBEF; font-family: 'IBM Plex Sans KR', system-ui, sans-serif">
+  <div style="position: absolute; left: 80px; top: 36px; width: 800px; height: 528px; background: #FFFFFF; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); font-family: 'Noto Sans KR', sans-serif">
+    <p style="position: absolute; left: 40px; top: 52px; margin: 0; font-size: 26px; font-weight: 700; color: #1D1D1F">3. 분수의 나눗셈</p>
+    <p style="position: absolute; left: 40px; top: 104px; margin: 0; font-size: 15px; color: #3A3A3C">나누는 수를 뒤집어 곱하면 됩니다. 아래 표로 차례를 확인해 봅시다.</p>
+    <div style="position: absolute; left: 40px; top: 160px; width: 720px; border: 1px solid #E5E5EA; border-radius: 8px; overflow: hidden">
+      <div class="td" style="border-top: 0; background: #F5F5F7; font-weight: 500"><span>식</span><span>바꾸기</span><span>답</span></div>
+      <div class="td"><span>3/4 ÷ 1/8</span><span>3/4 × 8</span><span>6</span></div>
+      <div class="td"><span>2/3 ÷ 1/6</span><span>2/3 × 6</span><span>4</span></div>
+      <div class="td"><span>5/6 ÷ 5/12</span><span>5/6 × 12/5</span><span>2</span></div>
+    </div>
+    <div style="position: absolute; left: 40px; top: 360px; width: 340px; height: 120px; border-radius: 8px; background: #F5F5F7"></div>
+    <div style="position: absolute; left: 400px; top: 360px; width: 360px; height: 120px; border-radius: 8px; background: #F5F5F7"></div>
+  </div>
+
+  <div aria-label="고른 범위" style="position: absolute; left: 121px; top: 237px; width: 718px; height: 40px; outline: 1.5px solid #FF9F0A; box-shadow: 0 0 0 9999px rgba(12,12,14,.5)"></div>
+  <svg aria-hidden="true" width="734" height="56" viewBox="0 0 734 56" style="position: absolute; left: 113px; top: 229px"><path d="M1 13V1h12M721 1h12v12M733 43v12h-12M13 55H1V43" fill="none" stroke="#FF9F0A" stroke-width="2.5" stroke-linecap="round"/></svg>
+
+  <div role="status" aria-label="섬" style="position: absolute; left: 50%; top: 14px; transform: translateX(-50%); width: 470px; box-sizing: border-box; padding: 10px 16px; border-radius: 22px; background: #000000; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 14px 36px rgba(0,0,0,.45); display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #F7F8FA; white-space: nowrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F7F8FA" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M12 8.8c1.4 1.8 2.2 2.9 2.2 3.9a2.2 2.2 0 0 1-4.4 0c0-1 .8-2.1 2.2-3.9z" fill="#FF9F0A" stroke="none"/></svg>
+      <b style="font-weight: 600">범위 캡처</b>
+      <span style="color: #8E939E">창 › 표 › <span style="color: #F7F8FA">2행</span></span>
+      <span style="flex: 1"></span>
+      <span style="font-family: 'IBM Plex Mono','IBM Plex Sans KR',monospace; font-size: 12px; color: #FFB340">718×40</span>
+    </div>
+    <div class="ik" style="display: flex; gap: 14px; font-size: 12px; color: #C9CCD3">
+      <span><kbd>휠</kbd>넓히기·좁히기</span><span><kbd>Tab</kbd>창</span><span><kbd>Enter</kbd>복사</span><span><kbd>Esc</kbd>취소</span>
+    </div>
+  </div>
+
+  <svg aria-hidden="true" width="22" height="22" viewBox="0 0 22 22" style="position: absolute; left: 549px; top: 246px"><path d="M11 1v8M11 13v8M1 11h8M13 11h8" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/><path d="M11 1v8M11 13v8M1 11h8M13 11h8" stroke="#121212" stroke-width="1.1" stroke-linecap="round"/></svg>
+
+  <div aria-label="확대경" style="position: absolute; left: 584px; top: 282px; display: flex; flex-direction: column; align-items: flex-start; gap: 5px">
+    <div style="width: 108px; height: 84px; border-radius: 10px; overflow: hidden; position: relative; background: #FFFFFF; box-shadow: 0 0 0 1.5px #000000, 0 10px 26px rgba(0,0,0,.35)">
+      <div style="position: absolute; left: 0; right: 0; top: 52px; height: 9px; background: #E5E5EA"></div>
+      <div style="position: absolute; left: 50px; top: 0; bottom: 0; width: 9px; border-left: 1px solid #FF9F0A; border-right: 1px solid #FF9F0A"></div>
+      <div style="position: absolute; top: 37px; left: 0; right: 0; height: 9px; border-top: 1px solid #FF9F0A; border-bottom: 1px solid #FF9F0A"></div>
+    </div>
+    <div style="display: flex; gap: 7px; align-items: center; height: 22px; padding: 0 8px; border-radius: 11px; background: #000000; font-size: 11px; color: #F7F8FA; white-space: nowrap"><span style="width: 9px; height: 9px; border-radius: 3px; background: #FFFFFF"></span><span style="font-family: 'IBM Plex Mono','IBM Plex Sans KR',monospace">#FFFFFF</span><span style="color: #8E939E">C 복사</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":600}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

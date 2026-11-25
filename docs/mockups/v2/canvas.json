@@ -1,0 +1,46 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-11-25T03:30:00Z" },
+  "title": "screen-ink 시안 5방향",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1600, "h": 560, "title": "한눈에 보기 — 5가지 방향" },
+    "A-tray.dc.html": { "x": 0, "y": 1000, "w": 720, "h": 560, "title": "A · 트레이 팝오버" },
+    "A-settings.dc.html": { "x": 800, "y": 1000, "w": 960, "h": 640, "title": "A · 설정 — 단축키" },
+    "A-capture.dc.html": { "x": 1840, "y": 1000, "w": 960, "h": 600, "title": "A · F1 캡처 화면" },
+    "A-kit.dc.html": { "x": 2880, "y": 1000, "w": 720, "h": 640, "title": "A · 요소 시트" },
+    "B-tray.dc.html": { "x": 0, "y": 2080, "w": 720, "h": 560, "title": "B · 트레이 팝오버" },
+    "B-settings.dc.html": { "x": 800, "y": 2080, "w": 960, "h": 640, "title": "B · 설정 — 단축키" },
+    "B-capture.dc.html": { "x": 1840, "y": 2080, "w": 960, "h": 600, "title": "B · F1 캡처 화면" },
+    "B-kit.dc.html": { "x": 2880, "y": 2080, "w": 720, "h": 640, "title": "B · 요소 시트" },
+    "C-tray.dc.html": { "x": 0, "y": 3160, "w": 720, "h": 560, "title": "C · 트레이 팝오버" },
+    "C-settings.dc.html": { "x": 800, "y": 3160, "w": 960, "h": 640, "title": "C · 설정 — 단축키" },
+    "C-capture.dc.html": { "x": 1840, "y": 3160, "w": 960, "h": 600, "title": "C · F1 캡처 화면" },
+    "C-kit.dc.html": { "x": 2880, "y": 3160, "w": 720, "h": 640, "title": "C · 요소 시트" },
+    "D-tray.dc.html": { "x": 0, "y": 4240, "w": 720, "h": 560, "title": "D · 트레이 팝오버" },
+    "D-settings.dc.html": { "x": 800, "y": 4240, "w": 960, "h": 640, "title": "D · 설정 — 단축키" },
+    "D-capture.dc.html": { "x": 1840, "y": 4240, "w": 960, "h": 600, "title": "D · F1 캡처 화면" },
+    "D-kit.dc.html": { "x": 2880, "y": 4240, "w": 720, "h": 640, "title": "D · 요소 시트" },
+    "E-tray.dc.html": { "x": 0, "y": 5320, "w": 720, "h": 560, "title": "E · 트레이 팝오버" },
+    "E-settings.dc.html": { "x": 800, "y": 5320, "w": 960, "h": 640, "title": "E · 설정 — 단축키" },
+    "E-capture.dc.html": { "x": 1840, "y": 5320, "w": 960, "h": 600, "title": "E · F1 캡처 화면" },
+    "E-kit.dc.html": { "x": 2880, "y": 5320, "w": 720, "h": 640, "title": "E · 요소 시트" }
+  },
+  "order": [
+    "Main.dc.html",
+    "A-tray.dc.html", "A-settings.dc.html", "A-capture.dc.html", "A-kit.dc.html",
+    "B-tray.dc.html", "B-settings.dc.html", "B-capture.dc.html", "B-kit.dc.html",
+    "C-tray.dc.html", "C-settings.dc.html", "C-capture.dc.html", "C-kit.dc.html",
+    "D-tray.dc.html", "D-settings.dc.html", "D-capture.dc.html", "D-kit.dc.html",
+    "E-tray.dc.html", "E-settings.dc.html", "E-capture.dc.html", "E-kit.dc.html"
+  ],
+  "notes": {
+    "rowA": { "x": 0, "y": 740, "text": "A · 클리어 — macOS 설정의 정석", "kind": "title1", "maxW": 3600 },
+    "rowB": { "x": 0, "y": 1820, "text": "B · 아일랜드 — 알약 하나로 말하기", "kind": "title1", "maxW": 3600 },
+    "rowC": { "x": 0, "y": 2900, "text": "C · 문구점 — 종이와 색연필", "kind": "title1", "maxW": 3600 },
+    "rowD": { "x": 0, "y": 3980, "text": "D · 젤리 — 말랑한 파스텔", "kind": "title1", "maxW": 3600 },
+    "rowE": { "x": 0, "y": 5060, "text": "E · 그래파이트 — 모노톤과 한 점", "kind": "title1", "maxW": 3600 }
+  },
+  "designSystems": []
+}

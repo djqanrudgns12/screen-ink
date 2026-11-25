@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>최종 — Alt+3 칠판</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap">
+<style>
+body{margin:0}
+.mono{font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace}
+.k{font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace;font-size:10.5px;color:#C9CCD3;background:#2C2E35;border-radius:5px;padding:0 6px;line-height:18px}
+</style>
+</helmet>
+<div style="width: 960px; height: 600px; position: relative; overflow: hidden; background: #FFFFFF; font-family: 'IBM Plex Sans KR', system-ui, sans-serif">
+  <svg aria-hidden="true" width="960" height="600" viewBox="0 0 960 600" style="position: absolute; left: 0; top: 0">
+    <path d="M150 170c10-26 30-30 40-6s-2 50-22 52M150 216h56M234 168c0 18 0 34 4 48M228 190h22M262 176c18-8 32 4 26 18s-24 14-26 4 18 20 28 20" fill="none" stroke="#1A1A1A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M330 192h40M350 172v40" stroke="#1A1A1A" stroke-width="4" stroke-linecap="round"/>
+    <path d="M400 170c10-26 30-30 40-6s-2 50-22 52M400 216h56M486 166l22 50M484 216l26-50" fill="none" stroke="#1A1A1A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M560 192h30M560 204h30" stroke="#1A1A1A" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="660" cy="194" r="44" fill="none" stroke="#E5484D" stroke-width="4"/>
+    <path d="M640 180c14-14 30 0 18 14s-20 24 4 26" fill="none" stroke="#E5484D" stroke-width="4" stroke-linecap="round"/>
+    <rect x="150" y="300" width="250" height="150" rx="6" fill="none" stroke="#2F6FED" stroke-width="4"/>
+    <path d="M150 350h250M150 400h250M233 300v150M316 300v150" stroke="#2F6FED" stroke-width="2.5" stroke-opacity=".55"/>
+    <path d="M440 376c60-10 120-10 180 0" fill="none" stroke="#2BA36B" stroke-width="4" stroke-linecap="round"/>
+    <path d="M608 362l14 14-16 12" fill="none" stroke="#2BA36B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M660 350c20-24 50-24 60 0s-8 46-30 48-36-12-30-48z" fill="#F2B705" fill-opacity=".25" stroke="#F2B705" stroke-width="4" stroke-linejoin="round"/>
+  </svg>
+
+  <div role="status" aria-label="섬 — 칠판" style="position: absolute; left: 50%; top: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px 0 16px; border-radius: 20px; background: #000000; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 14px 36px rgba(0,0,0,.25); font-size: 13px; color: #F7F8FA; white-space: nowrap">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F7F8FA" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="4" width="17" height="11.5" rx="1.5"/><path d="M8.5 20l2-4.5M15.5 20l-2-4.5"/><circle cx="16.4" cy="12" r="1.4" fill="#FF9F0A" stroke="none"/></svg>
+    <b style="font-weight: 600">칠판</b>
+    <span style="color: #8E939E">흰색</span>
+    <span class="mono" style="font-size: 12px; color: #FFB340">1 / 3</span>
+    <span style="width: 1px; height: 14px; background: #2C2E35"></span>
+    <span class="k">W</span><span class="k">K</span><span style="font-size: 12px; color: #8E939E">색</span>
+    <span class="k">PgDn</span><span style="font-size: 12px; color: #8E939E">새 장</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":600}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

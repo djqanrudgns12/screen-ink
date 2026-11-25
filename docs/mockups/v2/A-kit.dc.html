@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>A 클리어 — 요소 시트</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+.sec{display:flex;flex-direction:column;gap:10px}
+.sh{margin:0;font-size:12px;font-weight:500;color:#6E6E73}
+.box{background:#FFFFFF;border-radius:12px;box-shadow:0 0 0 .5px rgba(0,0,0,.1);padding:14px;display:flex;align-items:center;gap:14px}
+.tok{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tok div{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#1D1D1F;white-space:nowrap}
+.tok i{width:22px;height:22px;border-radius:6px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
+.tok small{color:#6E6E73;font-size:10.5px}
+.btn{border:0;font-family:inherit;font-size:13px;font-weight:500;height:30px;padding:0 14px;border-radius:8px}
+</style>
+</helmet>
+<div style="width: 720px; height: 640px; box-sizing: border-box; padding: 28px 32px; background: #F5F5F7; font-family: 'Noto Sans KR', system-ui, sans-serif; color: #1D1D1F; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 24px; align-content: start">
+
+  <section class="sec">
+    <p class="sh">앱 아이콘</p>
+    <div class="box" style="gap: 18px; align-items: flex-end">
+      <svg width="88" height="88" viewBox="0 0 64 64" role="img" aria-label="앱 아이콘 큰 것"><rect width="64" height="64" rx="15" fill="#FFFFFF"/><rect x=".5" y=".5" width="63" height="63" rx="14.5" fill="none" stroke="#000" stroke-opacity=".1"/><path d="M18 24v-4a2 2 0 0 1 2-2h4M40 18h4a2 2 0 0 1 2 2v4M46 40v4a2 2 0 0 1-2 2h-4M24 46h-4a2 2 0 0 1-2-2v-4" fill="none" stroke="#C7C7CC" stroke-width="3" stroke-linecap="round"/><path d="M22 38c5-9 9 3 14-5s7-3 8-1" fill="none" stroke="#0A7CFF" stroke-width="4" stroke-linecap="round"/></svg>
+      <svg width="44" height="44" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#FFFFFF"/><rect x=".5" y=".5" width="63" height="63" rx="14.5" fill="none" stroke="#000" stroke-opacity=".1"/><path d="M18 24v-4a2 2 0 0 1 2-2h4M40 18h4a2 2 0 0 1 2 2v4M46 40v4a2 2 0 0 1-2 2h-4M24 46h-4a2 2 0 0 1-2-2v-4" fill="none" stroke="#C7C7CC" stroke-width="3" stroke-linecap="round"/><path d="M22 38c5-9 9 3 14-5s7-3 8-1" fill="none" stroke="#0A7CFF" stroke-width="4" stroke-linecap="round"/></svg>
+      <svg width="24" height="24" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#FFFFFF"/><rect x=".5" y=".5" width="63" height="63" rx="14.5" fill="none" stroke="#000" stroke-opacity=".14"/><path d="M22 38c5-9 9 3 14-5s7-3 8-1" fill="none" stroke="#0A7CFF" stroke-width="6" stroke-linecap="round"/></svg>
+    </div>
+  </section>
+
+  <section class="sec">
+    <p class="sh">트레이 아이콘 — 기본 · 녹화 중 · 꺼짐</p>
+    <div class="box" style="justify-content: space-around; padding: 0; overflow: hidden; height: 116px; gap: 0">
+      <div style="flex: 1; height: 100%; display: flex; align-items: center; justify-content: space-evenly; background: #F5F5F7">
+        <svg width="20" height="20" viewBox="0 0 18 18" role="img" aria-label="기본"><path d="M2.5 6V4a1.5 1.5 0 0 1 1.5-1.5h2M12 2.5h2A1.5 1.5 0 0 1 15.5 4v2M15.5 12v2a1.5 1.5 0 0 1-1.5 1.5h-2M6 15.5H4A1.5 1.5 0 0 1 2.5 14v-2" fill="none" stroke="#1D1D1F" stroke-width="1.6" stroke-linecap="round"/><circle cx="9" cy="9" r="2.2" fill="#1D1D1F"/></svg>
+        <svg width="20" height="20" viewBox="0 0 18 18" role="img" aria-label="녹화 중"><path d="M2.5 6V4a1.5 1.5 0 0 1 1.5-1.5h2M12 2.5h2A1.5 1.5 0 0 1 15.5 4v2M15.5 12v2a1.5 1.5 0 0 1-1.5 1.5h-2M6 15.5H4A1.5 1.5 0 0 1 2.5 14v-2" fill="none" stroke="#1D1D1F" stroke-width="1.6" stroke-linecap="round"/><circle cx="9" cy="9" r="3.2" fill="#FF3B30"/></svg>
+        <svg width="20" height="20" viewBox="0 0 18 18" role="img" aria-label="꺼짐"><path d="M2.5 6V4a1.5 1.5 0 0 1 1.5-1.5h2M12 2.5h2A1.5 1.5 0 0 1 15.5 4v2M15.5 12v2a1.5 1.5 0 0 1-1.5 1.5h-2M6 15.5H4A1.5 1.5 0 0 1 2.5 14v-2" fill="none" stroke="#1D1D1F" stroke-opacity=".35" stroke-width="1.6" stroke-linecap="round"/><circle cx="9" cy="9" r="2.2" fill="none" stroke="#1D1D1F" stroke-opacity=".35" stroke-width="1.2"/></svg>
+      </div>
+      <div style="flex: 1; height: 100%; display: flex; align-items: center; justify-content: space-evenly; background: #1D1D1F">
+        <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true"><path d="M2.5 6V4a1.5 1.5 0 0 1 1.5-1.5h2M12 2.5h2A1.5 1.5 0 0 1 15.5 4v2M15.5 12v2a1.5 1.5 0 0 1-1.5 1.5h-2M6 15.5H4A1.5 1.5 0 0 1 2.5 14v-2" fill="none" stroke="#F5F5F7" stroke-width="1.6" stroke-linecap="round"/><circle cx="9" cy="9" r="2.2" fill="#F5F5F7"/></svg>
+        <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true"><path d="M2.5 6V4a1.5 1.5 0 0 1 1.5-1.5h2M12 2.5h2A1.5 1.5 0 0 1 15.5 4v2M15.5 12v2a1.5 1.5 0 0 1-1.5 1.5h-2M6 15.5H4A1.5 1.5 0 0 1 2.5 14v-2" fill="none" stroke="#F5F5F7" stroke-width="1.6" stroke-linecap="round"/><circle cx="9" cy="9" r="3.2" fill="#FF453A"/></svg>
+        <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true"><path d="M2.5 6V4a1.5 1.5 0 0 1 1.5-1.5h2M12 2.5h2A1.5 1.5 0 0 1 15.5 4v2M15.5 12v2a1.5 1.5 0 0 1-1.5 1.5h-2M6 15.5H4A1.5 1.5 0 0 1 2.5 14v-2" fill="none" stroke="#F5F5F7" stroke-opacity=".4" stroke-width="1.6" stroke-linecap="round"/><circle cx="9" cy="9" r="2.2" fill="none" stroke="#F5F5F7" stroke-opacity=".4" stroke-width="1.2"/></svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" style="grid-column: 1 / -1">
+    <p class="sh">색</p>
+    <div class="box" style="display: block">
+      <div class="tok">
+        <div><i style="background: #F5F5F7"></i>바탕 <small>#F5F5F7</small></div>
+        <div><i style="background: #FFFFFF"></i>면 <small>#FFFFFF</small></div>
+        <div><i style="background: #1D1D1F"></i>글자 <small>#1D1D1F</small></div>
+        <div><i style="background: #6E6E73"></i>보조 글자 <small>#6E6E73</small></div>
+        <div><i style="background: #E5E5EA"></i>구분선 <small>#E5E5EA</small></div>
+        <div><i style="background: #0A7CFF"></i>강조 <small>#0A7CFF</small></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <p class="sh">말풍선 — 결과 · 문제</p>
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <div role="status" style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 6px 0 6px; border-radius: 22px; background: rgba(250,250,252,.95); box-shadow: 0 0 0 .5px rgba(0,0,0,.12), 0 8px 22px rgba(0,0,0,.14)">
+        <span style="width: 44px; height: 32px; border-radius: 16px 8px 8px 16px; background: #F2F2F7; box-shadow: inset 0 0 0 1px #E5E5EA"></span>
+        <span style="flex: 1; font-size: 13px; white-space: nowrap">복사했어요 · 718×40</span>
+        <button type="button" class="btn" style="height: 32px; border-radius: 16px; background: #F2F2F7; color: #0A7CFF">저장</button>
+      </div>
+      <div role="status" style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 6px 0 14px; border-radius: 22px; background: rgba(250,250,252,.95); box-shadow: 0 0 0 .5px rgba(0,0,0,.12), 0 8px 22px rgba(0,0,0,.14)">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #FF9F0A"></span>
+        <span style="flex: 1; font-size: 13px; white-space: nowrap">F1은 Snipaste가 쓰고 있어요</span>
+        <button type="button" class="btn" style="height: 32px; border-radius: 16px; background: #F2F2F7; color: #0A7CFF">해결</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <p class="sh">판서 중 상태 알약 · 확인 시트 단추</p>
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; border-radius: 22px; background: rgba(250,250,252,.95); box-shadow: 0 0 0 .5px rgba(0,0,0,.12), 0 8px 22px rgba(0,0,0,.14); font-size: 13px; white-space: nowrap">
+        <span style="width: 14px; height: 14px; border-radius: 50%; background: #FF3B30; box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 2.5px rgba(0,0,0,.15)"></span>
+        <span>펜 4px</span><span style="color: #C7C7CC">|</span><span style="font-variant-numeric: tabular-nums">× 1.75</span><span style="color: #C7C7CC">|</span><span style="color: #6E6E73">? 단축키</span>
+      </div>
+      <div style="display: flex; gap: 8px">
+        <button type="button" class="btn" style="background: #FFFFFF; color: #1D1D1F; box-shadow: 0 0 0 .5px rgba(0,0,0,.2)">취소</button>
+        <button type="button" class="btn" style="background: #FF3B30; color: #FFFFFF">기록 지우기</button>
+        <button type="button" class="btn" style="background: none; color: #0A7CFF">되돌리기</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":720,"height":640}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

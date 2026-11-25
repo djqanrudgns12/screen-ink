@@ -15,7 +15,7 @@
 | 용도(해석) | API | 우리에게 주는 뜻 |
 |---|---|---|
 | 창 목록·경계 | `EnumWindows` `EnumChildWindows` `GetWindowRect` `GetWindowInfo` **`DwmGetWindowAttribute`** `IsWindowVisible` `IsIconic` **`IsHungAppWindow`** `GetClassNameW` `GetWindowTextW` `GetWindowThreadProcessId` `QueryFullProcessImageNameW` | 창 테두리는 DWM 확장 프레임(그림자 제외)으로 잡고, **응답 없는 창은 건너뛴다**(멈춘 앱 때문에 캡처가 굳지 않게). |
-| UI 요소 인식 | `OLEACC!AccessibleObjectFromWindow`(MSAA), `ole32!CoCreateInstance`(COM 객체 — UIA인지 정적 import로는 [미확인]) | MSAA 경로를 함께 둔다 = UIA가 비거나 느릴 때의 대비. |
+| UI 요소 인식 | `OLEACC!AccessibleObjectFromWindow`(MSAA), `ole32!CoCreateInstance`. 2026-11-25 식별자 검사: `IAccessible` IID 있음, UIA `CUIAutomation`·`CUIAutomation8` CLSID·`IUIAutomation` IID 없음 → **MSAA만**([08 §1](../prd/08-smart-capture.md)) | MSAA는 웹·WebView2·WinUI에서 얕다 → screen-ink는 UIA + MSAA + 화면 이미지까지 합친다(PRD R-CAP-17). |
 | 화면 캡처 | GDI `GetDC` `BitBlt` `CreateDIBSection` `GetDIBits`; `d3d11!D3D11CreateDevice` + WinRT `RoGetActivationFactory`(지연 로드) | GDI가 기본, D3D11·WinRT(Windows.Graphics.Capture로 보임 [추정])는 선택 경로. 로그 "Support HDR color correction: true" → **HDR 모니터 색 보정**을 따로 한다. |
 | 모니터 구성 | `QueryDisplayConfig` `DisplayConfigGetDeviceInfo` `GetDisplayConfigBufferSizes` `GetMonitorInfoW` | 모니터 이름·배율·배치를 디스플레이 구성 API로 정확히 읽는다. |
 | 단축키·입력 | **`RegisterHotKey`**/`UnregisterHotKey`, `SetWindowsHookExW`, `GetAsyncKeyState`, `SendInput` | 전역 키는 `RegisterHotKey`, 훅은 보조(캡처 모드 중 입력 [추정]). |

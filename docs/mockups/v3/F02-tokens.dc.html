@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>최종 — 색 · 글자 · 부품</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap">
+<style>
+body{margin:0}
+.half{box-sizing:border-box;padding:32px 36px;display:flex;flex-direction:column;gap:20px}
+.lab{margin:0 0 9px;font-size:11px;font-weight:500;letter-spacing:.04em}
+.sw{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.sw div{display:flex;flex-direction:column;gap:6px;font-size:11.5px;white-space:nowrap}
+.sw i{height:40px;border-radius:7px}
+.sw small{font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace;font-size:10.5px}
+.ty{display:flex;flex-direction:column;gap:6px}
+.ty div{display:flex;align-items:baseline;gap:14px;white-space:nowrap}
+.ty small{font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace;font-size:10.5px;min-width:96px}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.mono{font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace}
+.btn{height:30px;padding:0 14px;border-radius:6px;border:0;font-family:inherit;font-size:12.5px;font-weight:500}
+</style>
+</helmet>
+<div style="width: 1200px; height: 760px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); font-family: 'IBM Plex Sans KR', system-ui, sans-serif">
+
+  <section class="half" style="background: #EFEFEC; color: #121212">
+    <div style="display: flex; align-items: baseline; gap: 10px"><h2 style="margin: 0; font-size: 19px; font-weight: 600">라이트 · 그래파이트</h2><span class="mono" style="font-size: 11px; color: #6B6B68">E</span></div>
+    <div>
+      <p class="lab" style="color: #6B6B68">색</p>
+      <div class="sw">
+        <div><i style="background: #EFEFEC; box-shadow: inset 0 0 0 1px #CFCFC9"></i>바탕<small style="color: #6B6B68">#EFEFEC</small></div>
+        <div><i style="background: #FFFFFF; box-shadow: inset 0 0 0 1px #CFCFC9"></i>면<small style="color: #6B6B68">#FFFFFF</small></div>
+        <div><i style="background: #DDDDD8"></i>구분선<small style="color: #6B6B68">#DDDDD8</small></div>
+        <div><i style="background: #1A1A1A"></i>반전 면<small style="color: #6B6B68">#1A1A1A</small></div>
+        <div><i style="background: #121212"></i>글자<small style="color: #6B6B68">#121212</small></div>
+        <div><i style="background: #6B6B68"></i>보조 글자<small style="color: #6B6B68">#6B6B68</small></div>
+        <div><i style="background: #FF9F0A"></i>강조(주황)<small style="color: #6B6B68">#FF9F0A</small></div>
+        <div><i style="background: #9A5B00"></i>강조 글자<small style="color: #6B6B68">#9A5B00</small></div>
+      </div>
+    </div>
+    <div>
+      <p class="lab" style="color: #6B6B68">글자 — IBM Plex Sans KR · 숫자와 키는 Plex Mono</p>
+      <div class="ty">
+        <div><small style="color: #6B6B68">제목 19 / 600</small><span style="font-size: 19px; font-weight: 600">단축키</span></div>
+        <div><small style="color: #6B6B68">본문 13 / 400</small><span style="font-size: 13px">범위 캡처</span></div>
+        <div><small style="color: #6B6B68">묶음 11 / 500</small><span style="font-size: 11px; font-weight: 500; color: #6B6B68; letter-spacing: .04em">화면 도구</span></div>
+        <div><small style="color: #6B6B68">키 11 / Mono</small><span class="mono" style="font-size: 11px">Alt Shift D · 718×40</span></div>
+      </div>
+    </div>
+    <div>
+      <p class="lab" style="color: #6B6B68">부품</p>
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <div class="row">
+          <button type="button" class="btn" style="background: #1A1A1A; color: #FAFAF8">시작하기</button>
+          <button type="button" class="btn" style="background: #FFFFFF; color: #121212; box-shadow: inset 0 0 0 1px #CFCFC9">단축키 바꾸기</button>
+          <button type="button" class="btn" style="background: none; color: #9A5B00; padding: 0 6px">기본값</button>
+          <span role="switch" aria-checked="true" style="width: 32px; height: 18px; border-radius: 9px; background: #1A1A1A; position: relative"><span style="position: absolute; top: 2px; right: 2px; width: 14px; height: 14px; border-radius: 50%; background: #FF9F0A"></span></span>
+          <span role="switch" aria-checked="false" style="width: 32px; height: 18px; border-radius: 9px; background: #DDDDD8; position: relative"><span style="position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,.2)"></span></span>
+        </div>
+        <div class="row">
+          <span style="display: flex; border-radius: 6px; box-shadow: 0 0 0 1px #CFCFC9; overflow: hidden; font-size: 12px"><span style="padding: 4px 12px; background: #1A1A1A; color: #FAFAF8">복사</span><span style="padding: 4px 12px; background: #FFFFFF">저장</span><span style="padding: 4px 12px; background: #FFFFFF; border-left: 1px solid #E4E4E0">둘 다</span></span>
+          <span style="display: flex; gap: 3px"><kbd class="mono" style="font-size: 11px; color: #3A3A38; background: #EFEFEC; border: 1px solid #DDDDD8; border-radius: 4px; padding: 0 6px; line-height: 19px">Alt</kbd><kbd class="mono" style="font-size: 11px; color: #3A3A38; background: #EFEFEC; border: 1px solid #DDDDD8; border-radius: 4px; padding: 0 6px; line-height: 19px">Shift</kbd><kbd class="mono" style="font-size: 11px; color: #3A3A38; background: #EFEFEC; border: 1px solid #DDDDD8; border-radius: 4px; padding: 0 6px; line-height: 19px">D</kbd></span>
+          <span style="display: flex; align-items: center; gap: 12px; font-size: 11.5px; color: #3A3A38"><span style="display: flex; align-items: center; gap: 5px"><i style="width: 7px; height: 7px; border-radius: 50%; background: #2E9E6A"></i>준비됨</span><span style="display: flex; align-items: center; gap: 5px"><i style="width: 7px; height: 7px; border-radius: 50%; background: #C26100"></i>겹침</span><span style="display: flex; align-items: center; gap: 5px"><i style="width: 7px; height: 7px; border-radius: 50%; background: #E5484D"></i>녹화</span></span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="lab" style="color: #6B6B68">모서리 · 간격</p>
+      <div class="row" style="font-size: 11px; color: #3A3A38">
+        <span style="width: 36px; height: 24px; border-radius: 4px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #CFCFC9"></span><span class="mono">키 4</span>
+        <span style="width: 36px; height: 24px; border-radius: 6px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #CFCFC9"></span><span class="mono">행 6</span>
+        <span style="width: 36px; height: 24px; border-radius: 8px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #CFCFC9"></span><span class="mono">묶음 8</span>
+        <span style="width: 36px; height: 24px; border-radius: 12px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #CFCFC9"></span><span class="mono">창 12</span>
+        <span class="mono" style="margin-left: 8px; color: #6B6B68">간격 4 · 8 · 12 · 16 · 24 · 32</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="half" style="background: #111214; color: #F7F8FA">
+    <div style="display: flex; align-items: baseline; gap: 10px"><h2 style="margin: 0; font-size: 19px; font-weight: 600">다크 · 아일랜드</h2><span class="mono" style="font-size: 11px; color: #8E939E">B</span></div>
+    <div>
+      <p class="lab" style="color: #8E939E">색</p>
+      <div class="sw">
+        <div><i style="background: #111214; box-shadow: inset 0 0 0 1px #2C2E35"></i>바탕<small style="color: #8E939E">#111214</small></div>
+        <div><i style="background: #1C1D21; box-shadow: inset 0 0 0 1px #2C2E35"></i>면<small style="color: #8E939E">#1C1D21</small></div>
+        <div><i style="background: #26272C"></i>띄운 면<small style="color: #8E939E">#26272C</small></div>
+        <div><i style="background: #000000; box-shadow: inset 0 0 0 1px #2C2E35"></i>섬(알약)<small style="color: #8E939E">#000000</small></div>
+        <div><i style="background: #F7F8FA"></i>글자<small style="color: #8E939E">#F7F8FA</small></div>
+        <div><i style="background: #8E939E"></i>보조 글자<small style="color: #8E939E">#8E939E</small></div>
+        <div><i style="background: #FF9F0A"></i>강조(주황)<small style="color: #8E939E">#FF9F0A</small></div>
+        <div><i style="background: #2C2E35"></i>구분선·키<small style="color: #8E939E">#2C2E35</small></div>
+      </div>
+    </div>
+    <div>
+      <p class="lab" style="color: #8E939E">섬 — 화면 위 모든 안내가 이 알약 하나</p>
+      <div style="display: flex; flex-direction: column; gap: 10px; align-items: flex-start">
+        <span style="display: inline-flex; align-items: center; gap: 10px; height: 36px; padding: 0 16px; border-radius: 18px; background: #000000; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); font-size: 13px; white-space: nowrap"><i style="width: 8px; height: 8px; border-radius: 50%; background: #FF9F0A"></i><b style="font-weight: 600">범위 캡처</b><span style="color: #8E939E">창 › 표 › 2행</span><span class="mono" style="font-size: 11.5px; color: #C9CCD3">718×40</span></span>
+        <span style="display: inline-flex; align-items: center; gap: 10px; height: 36px; padding: 0 6px 0 6px; border-radius: 18px; background: #000000; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); font-size: 13px; white-space: nowrap"><span style="width: 38px; height: 26px; border-radius: 13px 5px 5px 13px; background: #2C2E35"></span>복사했어요<span class="mono" style="font-size: 11.5px; color: #8E939E">718×40</span><span style="height: 26px; padding: 0 12px; border-radius: 13px; background: #F7F8FA; color: #111315; display: inline-flex; align-items: center; font-size: 12px; font-weight: 500">저장</span></span>
+      </div>
+    </div>
+    <div>
+      <p class="lab" style="color: #8E939E">부품</p>
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <div class="row">
+          <button type="button" class="btn" style="background: #F7F8FA; color: #111315; border-radius: 15px">시작하기</button>
+          <button type="button" class="btn" style="background: #26272C; color: #F7F8FA; border-radius: 15px">단축키 바꾸기</button>
+          <button type="button" class="btn" style="background: none; color: #FFB340; padding: 0 6px">기본값</button>
+          <span role="switch" aria-checked="true" style="width: 32px; height: 18px; border-radius: 9px; background: #FF9F0A; position: relative"><span style="position: absolute; top: 2px; right: 2px; width: 14px; height: 14px; border-radius: 50%; background: #111315"></span></span>
+          <span role="switch" aria-checked="false" style="width: 32px; height: 18px; border-radius: 9px; background: #34363D; position: relative"><span style="position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #8E939E"></span></span>
+        </div>
+        <div class="row">
+          <span style="display: flex; padding: 3px; border-radius: 15px; background: #26272C; font-size: 12px"><span style="padding: 3px 12px; border-radius: 12px; background: #F7F8FA; color: #111315">복사</span><span style="padding: 3px 12px; color: #C9CCD3">저장</span><span style="padding: 3px 12px; color: #C9CCD3">둘 다</span></span>
+          <span style="display: flex; gap: 3px"><kbd class="mono" style="font-size: 11px; color: #F7F8FA; background: #2C2E35; border-radius: 5px; padding: 0 7px; line-height: 20px">Alt</kbd><kbd class="mono" style="font-size: 11px; color: #F7F8FA; background: #2C2E35; border-radius: 5px; padding: 0 7px; line-height: 20px">Shift</kbd><kbd class="mono" style="font-size: 11px; color: #F7F8FA; background: #2C2E35; border-radius: 5px; padding: 0 7px; line-height: 20px">D</kbd></span>
+          <span style="display: flex; align-items: center; gap: 12px; font-size: 11.5px; color: #C9CCD3"><span style="display: flex; align-items: center; gap: 5px"><i style="width: 7px; height: 7px; border-radius: 50%; background: #3DD68C"></i>준비됨</span><span style="display: flex; align-items: center; gap: 5px"><i style="width: 7px; height: 7px; border-radius: 50%; background: #FF9F0A"></i>겹침</span><span style="display: flex; align-items: center; gap: 5px"><i style="width: 7px; height: 7px; border-radius: 50%; background: #FF5A5F"></i>녹화</span></span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="lab" style="color: #8E939E">모서리 — 다크는 한 단계 더 둥글게</p>
+      <div class="row" style="font-size: 11px; color: #C9CCD3">
+        <span style="width: 36px; height: 24px; border-radius: 5px; background: #26272C"></span><span class="mono">키 5</span>
+        <span style="width: 36px; height: 24px; border-radius: 9px; background: #26272C"></span><span class="mono">행 9</span>
+        <span style="width: 36px; height: 24px; border-radius: 14px; background: #26272C"></span><span class="mono">묶음 14</span>
+        <span style="width: 36px; height: 24px; border-radius: 18px; background: #26272C"></span><span class="mono">창 18</span>
+        <span style="width: 52px; height: 24px; border-radius: 999px; background: #000000; box-shadow: inset 0 0 0 1px #2C2E35"></span><span class="mono">섬 999</span>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":760}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

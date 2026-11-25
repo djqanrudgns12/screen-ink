@@ -1,0 +1,817 @@
+<title>screen-ink 단축키표</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* 배치: 왼쪽 = 정할 단축키 칸(전역 → 모드 안), 오른쪽 = 고르는 칸을 돕는 패널(겹침·추천·키보드 지도·참고 목록) */
+:root {
+  --bg: #faf7f0; --surface: #ffffff; --surface-2: #f3eee2; --ink: #1d2330; --muted: #5f6675; --line: #e6dfcf;
+  --accent: #b45f06; --accent-soft: #f6e7cf;
+  --block: #b42318; --block-soft: #fde8e6; --warn: #a14f00; --warn-soft: #fff1d6;
+  --repl: #5b6577; --repl-soft: #eceff4; --ok: #0f7a4f; --ok-soft: #dff3ea; --mine: #3451c7; --mine-soft: #e5ebff; --focus: #2563eb;
+  --font-text: 'IBM Plex Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', system-ui, sans-serif;
+  --font-key: 'JetBrains Mono', ui-monospace, Consolas, 'Malgun Gothic', monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #17191f; --surface: #21242c; --surface-2: #2a2e38; --ink: #e7e9ee; --muted: #a3aab8; --line: #363b47;
+  --accent: #f0a64a; --accent-soft: #3a2d1c; --block: #ff8a80; --block-soft: #3d2222; --warn: #ffc069; --warn-soft: #3b2f1a;
+  --repl: #aab3c5; --repl-soft: #2b303b; --ok: #5fd3a0; --ok-soft: #1c3329; --mine: #9db2ff; --mine-soft: #252d4a; --focus: #7aa2ff; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #17191f; --surface: #21242c; --surface-2: #2a2e38; --ink: #e7e9ee; --muted: #a3aab8; --line: #363b47;
+  --accent: #f0a64a; --accent-soft: #3a2d1c; --block: #ff8a80; --block-soft: #3d2222; --warn: #ffc069; --warn-soft: #3b2f1a;
+  --repl: #aab3c5; --repl-soft: #2b303b; --ok: #5fd3a0; --ok-soft: #1c3329; --mine: #9db2ff; --mine-soft: #252d4a; --focus: #7aa2ff; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-text); font-size: 14px; line-height: 1.55; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.wrap { max-width: 1440px; margin: 0 auto; display: grid; gap: 16px; }
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 20px; }
+header.top .ttl { flex: 1 1 360px; min-width: 0; }
+h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+.lede { margin: 4px 0 0; color: var(--muted); max-width: 70ch; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; padding: 3px; gap: 3px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); }
+.seg button { border: 0; background: transparent; padding: 5px 12px; border-radius: 7px; font-weight: 600; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 9px; font-weight: 600; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.save { font-size: 12.5px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.save i { width: 8px; height: 8px; border-radius: 50%; background: var(--repl); display: inline-block; }
+.save[data-s="saved"] i { background: var(--ok); } .save[data-s="saving"] i { background: var(--warn); } .save[data-s="error"] i { background: var(--block); }
+.summary { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 600; background: var(--surface); border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.pill b { font-weight: 700; }
+.lv-block { color: var(--block); background: var(--block-soft); border-color: transparent; }
+.lv-warn { color: var(--warn); background: var(--warn-soft); border-color: transparent; }
+.lv-repl { color: var(--repl); background: var(--repl-soft); border-color: transparent; }
+.lv-ok { color: var(--ok); background: var(--ok-soft); border-color: transparent; }
+.lv-mine { color: var(--mine); background: var(--mine-soft); border-color: transparent; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1020px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.col { display: grid; gap: 14px; min-width: 0; }
+section.group { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+section.group > header { padding: 12px 14px 10px; border-bottom: 1px solid var(--line); background: var(--surface-2); display: grid; gap: 2px; }
+section.group h2 { margin: 0; font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+section.group h2 .tag { font-size: 11px; font-weight: 700; letter-spacing: .02em; padding: 1px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+section.group > header p { margin: 0; font-size: 12.5px; color: var(--muted); }
+.thead, .slot { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 14px; }
+.thead { font-size: 11.5px; font-weight: 700; color: var(--muted); letter-spacing: .03em; padding-block: 6px; border-bottom: 1px solid var(--line); }
+.slot { border-bottom: 1px solid var(--line); }
+.slot:last-child { border-bottom: 0; }
+.slot.focus { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.slot .name { min-width: 0; }
+.slot .name strong { display: block; font-weight: 600; }
+.slot .name small { display: block; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.slot .name .badge { font-size: 10.5px; font-weight: 700; padding: 0 6px; border-radius: 99px; background: var(--repl-soft); color: var(--repl); margin-left: 4px; vertical-align: 1px; }
+.slot.fixed .rec { opacity: .7; cursor: default; }
+.cell { display: grid; gap: 4px; min-width: 0; }
+.rec { width: 100%; min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 9px; border: 1px solid var(--line); border-bottom-width: 2px; background: var(--surface); text-align: left; }
+.rec .k { font-family: var(--font-key); font-weight: 700; font-size: 13px; overflow-wrap: anywhere; }
+.rec .k.empty { font-family: var(--font-text); font-weight: 500; color: var(--muted); font-size: 12.5px; }
+.rec .dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: transparent; }
+.rec[data-lv="block"] { border-color: var(--block); } .rec[data-lv="block"] .dot { background: var(--block); }
+.rec[data-lv="warn"] { border-color: var(--warn); } .rec[data-lv="warn"] .dot { background: var(--warn); }
+.rec[data-lv="repl"] .dot { background: var(--repl); } .rec[data-lv="ok"] .dot { background: var(--ok); }
+.rec.listening { border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 22%, transparent); }
+.rec.listening .k { color: var(--focus); font-family: var(--font-text); font-weight: 600; }
+.why { font-size: 11.5px; line-height: 1.4; color: var(--muted); overflow-wrap: anywhere; }
+.why.block { color: var(--block); } .why.warn { color: var(--warn); }
+.mods { display: flex; flex-wrap: wrap; gap: 3px; }
+.mods button { border: 1px solid var(--line); background: transparent; border-radius: 6px; padding: 0 6px; font-size: 11px; font-family: var(--font-key); color: var(--muted); }
+.mods button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.fixedlist { padding: 10px 14px 12px; display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); border-top: 1px dashed var(--line); }
+.fixedlist b { color: var(--ink); font-family: var(--font-key); font-weight: 700; }
+aside.panel { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); display: grid; gap: 14px; max-height: calc(100vh - 24px); overflow: auto; min-width: 0; }
+@media (max-width: 1020px) { aside.panel { position: static; max-height: none; } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 10px; min-width: 0; }
+.card h3 { margin: 0; font-size: .95rem; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card h3 small { font-weight: 500; color: var(--muted); font-size: 12px; }
+.focusname { font-weight: 700; color: var(--accent); }
+.hits { display: grid; gap: 6px; }
+.hit { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: start; font-size: 12.5px; padding: 6px 8px; border-radius: 9px; }
+.hit .src { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 99px; white-space: nowrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 3px 10px; font-family: var(--font-key); font-size: 12.5px; font-weight: 700; }
+.chip:hover { border-color: var(--accent); }
+.chip.lv-repl, .chip.lv-ok, .chip.lv-warn { border-color: transparent; }
+.kbd-mods { display: flex; flex-wrap: wrap; gap: 5px; }
+.kbd-mods button { border: 1px solid var(--line); background: transparent; border-radius: 99px; padding: 2px 9px; font-family: var(--font-key); font-size: 11.5px; font-weight: 700; color: var(--muted); }
+.kbd-mods button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.kbd-scroll { overflow-x: auto; }
+.kbd { display: grid; gap: 4px; min-width: 520px; }
+.kr { display: flex; gap: 4px; }
+.key { flex: 1 1 0; min-width: 0; height: 40px; border-radius: 7px; border: 1px solid var(--line); border-bottom-width: 2px; background: var(--surface); display: grid; place-items: center; padding: 0 2px; font-family: var(--font-key); font-size: 12px; font-weight: 700; position: relative; }
+.key small { position: absolute; left: 3px; right: 3px; bottom: 1px; font-family: var(--font-text); font-size: 9px; font-weight: 600; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.key[data-lv="block"] { background: var(--block-soft); color: var(--block); border-color: transparent; }
+.key[data-lv="warn"] { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.key[data-lv="repl"] { background: var(--repl-soft); color: var(--repl); border-color: transparent; }
+.key[data-lv="mine"] { background: var(--mine-soft); color: var(--mine); border-color: transparent; }
+.key[data-lv="ok"] { color: var(--ok); }
+.key.gap { visibility: hidden; }
+.keepers { display: grid; gap: 6px; }
+.keeper { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.keeper input { width: 16px; height: 16px; accent-color: var(--accent); }
+.keeper small { color: var(--muted); font-size: 12px; }
+.ref-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ref-tools input[type="search"] { flex: 1 1 160px; min-width: 0; padding: 6px 10px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface); }
+.ref-list { display: grid; gap: 2px; max-height: 460px; overflow: auto; }
+.ref-row { display: grid; grid-template-columns: minmax(96px, auto) minmax(0, 1fr) auto; gap: 8px; align-items: baseline; padding: 5px 6px; border-radius: 7px; font-size: 12.5px; }
+.ref-row:hover { background: var(--surface-2); }
+.ref-row .c { font-family: var(--font-key); font-weight: 700; white-space: nowrap; }
+.ref-row .w { min-width: 0; color: var(--ink); }
+.ref-row .s { font-size: 11px; font-weight: 700; padding: 0 7px; border-radius: 99px; white-space: nowrap; }
+.note { font-size: 12.5px; color: var(--muted); margin: 0; }
+.note b { color: var(--ink); }
+.export textarea { width: 100%; min-height: 160px; font-family: var(--font-key); font-size: 12px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface-2); padding: 8px; }
+@media (max-width: 640px) {
+  .thead { display: none; }
+  .slot { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .slot .name { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="ttl">
+      <h1>screen-ink 단축키표</h1>
+      <p class="lede">칸을 누르고 원하는 키를 누르면 정해져요. 겹치는 키는 바로 빨간색으로 알려 줘요. <b>Backspace</b>는 비우기, 칸 바깥을 누르면 취소예요. 전역 키는 모든 앱 위에서 먼저 가져가고, 모드 안 키는 캡처·판서 화면이 떠 있을 때만 써요.</p>
+    </div>
+    <div class="tools">
+      <span class="seg" role="group" aria-label="정하는 운영체제">
+        <button type="button" id="plat-win" aria-pressed="true">Windows</button>
+        <button type="button" id="plat-mac" aria-pressed="false">macOS</button>
+      </span>
+      <button type="button" class="btn" id="fill-prd" title="PRD v0.3에 적어 둔 값으로 빈칸을 채워요">PRD 값으로 빈칸 채우기</button>
+      <button type="button" class="btn" id="mac-from-win" title="Windows 값을 바탕으로 맥 빈칸을 채워요(Ctrl→⌘, Alt→⌥)">맥 빈칸 = Windows 바꿔 넣기</button>
+      <button type="button" class="btn primary" id="copy-out">결과 복사</button>
+      <span class="save" id="save" data-s="idle"><i></i><span id="save-text">불러오는 중…</span></span>
+    </div>
+  </header>
+
+  <div class="summary" id="summary"></div>
+  <div class="legend">
+    <span><i style="background:var(--block)"></i>막힘 — 운영체제·켜 둔 앱이 먼저 씀, 또는 이 표 안에서 겹침</span>
+    <span><i style="background:var(--warn)"></i>주의 — 그 앱을 쓰는 동안 그 앱의 기능이 막힘</span>
+    <span><i style="background:var(--repl)"></i>대체 — 이 앱이 대신할 Snipaste·아이캔 줌잇·ZoomIt(계속 쓰면 막힘)</span>
+    <span><i style="background:var(--ok)"></i>비어 있음</span>
+    <span><i style="background:var(--mine)"></i>내가 정한 다른 칸</span>
+  </div>
+
+  <div class="grid">
+    <div class="col" id="slots"></div>
+    <aside class="panel" aria-label="고르는 데 도움">
+      <div class="card" id="inspect"></div>
+      <div class="card">
+        <h3>키보드 지도 <small id="kbd-scope"></small></h3>
+        <div class="kbd-mods" id="kbd-mods" role="group" aria-label="함께 누를 수정 키"></div>
+        <div class="kbd-scroll"><div class="kbd" id="kbd"></div></div>
+        <p class="note">빈 키(초록 글자)를 누르면 지금 고르는 칸에 바로 들어가요.</p>
+      </div>
+      <div class="card">
+        <h3>함께 쓰는 앱 <small>켜면 그 앱 키와 겹칠 때 "막힘"</small></h3>
+        <div class="keepers" id="keepers"></div>
+        <p class="note">이 PC에서 실행 중이지만 단축키를 확인하지 못한 앱: <b>카카오톡</b>, <b>쿨메신저</b>. 각 앱 설정의 단축키 화면에서 한 번 확인해 주세요.</p>
+      </div>
+      <div class="card">
+        <h3>이미 쓰이는 단축키 <small id="ref-count"></small></h3>
+        <div class="ref-tools">
+          <input type="search" id="ref-q" placeholder="키나 기능 찾기 (예: F1, 캡처)" aria-label="참고 목록 찾기">
+          <select id="ref-src" aria-label="출처 고르기"></select>
+        </div>
+        <div class="ref-list" id="ref-list"></div>
+      </div>
+      <div class="card export" id="export" hidden>
+        <h3>결과(표)</h3>
+        <p class="note" id="export-note">아래 글을 복사해 대화창에 붙여 넣어도 돼요.</p>
+        <textarea id="export-text" readonly aria-label="정한 단축키 표"></textarea>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ─────────────── 1. 정할 칸 ───────────────
+   scope: global(모든 앱 위) · capture(F1·F2 화면 안) · draw(판서·칠판 안) · zoom(실시간 확대 안)
+   prd: PRD v0.3 값(빈칸 채우기용). fixed: 바꾸지 않는 줄(참고). */
+const SLOTS = [
+  { g: 'global', id: 'region', name: '범위 캡처', desc: '창·UI 요소를 알아서 찾고 드래그로도 고름', need: true, prd: { win: 'F1', mac: 'F1' } },
+  { g: 'global', id: 'window', name: '창 캡처', desc: '가려진 부분까지 그 창만 · 두 번 누르면 활성 창', need: true, prd: { win: 'F2', mac: 'F2' } },
+  { g: 'global', id: 'record', name: '화면 녹화 시작·중지', desc: '같은 키를 다시 누르면 MP4로 저장', need: true, prd: { win: 'F3', mac: 'F3' } },
+  { g: 'global', id: 'draw', name: '판서', desc: '화면을 멈추고 쓰기 · 휠 확대 · 실시간 확대 중이면 그 장면을 멈춤', need: true, prd: { win: 'Alt+1', mac: 'Option+1' } },
+  { g: 'global', id: 'zoom', name: '실시간 확대', desc: '움직이는 화면을 그대로 확대', need: true, prd: { win: 'Alt+2', mac: 'Option+2' } },
+  { g: 'global', id: 'board', name: '칠판', desc: '빈 흰 칠판 · 안에서 W/K로 흰·검 바꾸기', need: true, prd: { win: 'Alt+3', mac: 'Option+3' } },
+  { g: 'global', id: 'last', name: '직전 범위 바로 캡처', desc: '고르는 화면 없이 지난번 범위를 바로 복사', opt: 'P1' },
+  { g: 'global', id: 'full', name: '커서 모니터 전체 바로 캡처', desc: '고르는 화면 없이 모니터 한 장', opt: '선택' },
+  { g: 'global', id: 'active', name: '활성 창 바로 캡처', desc: '비워 두면 "창 캡처 키 두 번"으로 동작', opt: '선택' },
+  { g: 'global', id: 'delay', name: '지연 캡처', desc: '3·5·10초 뒤 범위 캡처(메뉴가 열린 화면 찍기)', opt: 'P1' },
+  { g: 'global', id: 'restore', name: '직전 판서 다시 열기', desc: '판서를 열고 보관한 판서를 바로 불러옴', opt: '선택' },
+  { g: 'global', id: 'pause', name: '단축키 켜기·끄기', desc: '다른 앱이 같은 키를 써야 할 때 잠시 끔', opt: '선택' },
+  { g: 'global', id: 'topmost', name: '창 항상 위 고정', desc: '지금 앞에 있는 창(크롬 등)을 맨 위에 고정 · 한 번 더 = 풀기 · Windows만', opt: 'P1', noMac: true },
+  { g: 'global', id: 'pin', name: '화면에 붙이기(핀)', desc: '캡처·클립보드를 화면 위에 띄움 — Snipaste 붙이기 대신', opt: '후속' },
+  { g: 'global', id: 'pinToggle', name: '핀 모두 숨기기·보이기', desc: '띄운 핀을 한 번에 숨기고 다시 보임', opt: '후속' },
+  { g: 'global', id: 'timer', name: '타이머', desc: '수업 타이머 — 아이캔 줌잇 타이머 대신', opt: '후속' },
+
+  { g: 'capture', id: 'c-detect', name: '창 ↔ UI 요소 찾기 전환', prd: { win: 'Tab', mac: 'Tab' } },
+  { g: 'capture', id: 'c-copy', name: '복사하고 끝내기', desc: '더블클릭도 같음', prd: { win: 'Enter', mac: 'Enter' } },
+  { g: 'capture', id: 'c-save', name: '저장', prd: { win: 'Ctrl+S', mac: 'Cmd+S' } },
+  { g: 'capture', id: 'c-quick', name: '빠른 저장(묻지 않고 저장 폴더로)', prd: { win: 'Ctrl+Shift+S', mac: 'Shift+Cmd+S' } },
+  { g: 'capture', id: 'c-cancel', name: '취소', prd: { win: 'Esc', mac: 'Esc' } },
+  { g: 'capture', id: 'c-last', name: '직전 범위로', prd: { win: 'R', mac: 'R' } },
+  { g: 'capture', id: 'c-prev', name: '지난 범위(앞)', prd: { win: ',', mac: ',' } },
+  { g: 'capture', id: 'c-next', name: '지난 범위(뒤)', prd: { win: '.', mac: '.' } },
+  { g: 'capture', id: 'c-full', name: '모니터 전체 고르기', desc: '한 번 더 = 모든 모니터', prd: { win: 'Ctrl+A', mac: 'Cmd+A' } },
+  { g: 'capture', id: 'c-cursor', name: '마우스 커서 넣기·빼기', prd: { win: '`', mac: '`' } },
+  { g: 'capture', id: 'c-color', name: '확대경 색 복사', prd: { win: 'C', mac: 'C' } },
+
+  { g: 'draw', id: 'd-pen', name: '펜', prd: { win: 'P', mac: 'P' } },
+  { g: 'draw', id: 'd-marker', name: '형광펜', prd: { win: 'M', mac: 'M' } },
+  { g: 'draw', id: 'd-text', name: '글자', prd: { win: 'T', mac: 'T' } },
+  { g: 'draw', id: 'd-select', name: '고르기·옮기기', prd: { win: 'S', mac: 'S' } },
+  { g: 'draw', id: 'd-eraser', name: '지우개(획 단위)', prd: { win: 'D', mac: 'D' } },
+  { g: 'draw', id: 'd-clear', name: '모두 지우기', prd: { win: 'E', mac: 'E' } },
+  { g: 'draw', id: 'd-red', name: '색: 빨강', prd: { win: 'R', mac: 'R' } },
+  { g: 'draw', id: 'd-yellow', name: '색: 노랑', prd: { win: 'Y', mac: 'Y' } },
+  { g: 'draw', id: 'd-green', name: '색: 초록', prd: { win: 'G', mac: 'G' } },
+  { g: 'draw', id: 'd-orange', name: '색: 주황', prd: { win: 'O', mac: 'O' } },
+  { g: 'draw', id: 'd-blue', name: '색: 파랑', prd: { win: 'B', mac: 'B' } },
+  { g: 'draw', id: 'd-lime', name: '색: 연두', prd: { win: 'L', mac: 'L' } },
+  { g: 'draw', id: 'd-white', name: '흰 칠판으로', prd: { win: 'W', mac: 'W' } },
+  { g: 'draw', id: 'd-black', name: '검은 칠판으로', prd: { win: 'K', mac: 'K' } },
+  { g: 'draw', id: 'd-undo', name: '되돌리기', prd: { win: 'Ctrl+Z', mac: 'Cmd+Z' } },
+  { g: 'draw', id: 'd-redo', name: '다시 하기', prd: { win: 'Ctrl+Y', mac: 'Shift+Cmd+Z' } },
+  { g: 'draw', id: 'd-copy', name: '판서한 화면 복사', prd: { win: 'Ctrl+C', mac: 'Cmd+C' } },
+  { g: 'draw', id: 'd-save', name: '판서한 화면 저장', prd: { win: 'Ctrl+S', mac: 'Cmd+S' } },
+  { g: 'draw', id: 'd-restore', name: '직전 판서 불러오기', prd: { win: 'Ctrl+Shift+R', mac: 'Shift+Cmd+R' } },
+  { g: 'draw', id: 'd-center', name: '커서를 화면 가운데로', prd: { win: 'Space', mac: 'Space' } },
+  { g: 'draw', id: 'd-zin', name: '확대', desc: '휠 위도 같음', prd: { win: 'Up', mac: 'Up' } },
+  { g: 'draw', id: 'd-zout', name: '축소', desc: '휠 아래도 같음', prd: { win: 'Down', mac: 'Down' } },
+  { g: 'draw', id: 'd-wup', name: '펜 굵게', desc: 'Ctrl+휠 위도 같음', prd: { win: 'Ctrl+Up', mac: 'Cmd+Up' } },
+  { g: 'draw', id: 'd-wdown', name: '펜 가늘게', desc: 'Ctrl+휠 아래도 같음', prd: { win: 'Ctrl+Down', mac: 'Cmd+Down' } },
+  { g: 'draw', id: 'd-help', name: '단축키 한 장 보기', prd: { win: 'Shift+/', mac: 'Shift+/' } },
+  { g: 'draw', id: 'd-exit', name: '판서 끝내기', desc: '확대 안 한 상태의 우클릭도 같음', prd: { win: 'Esc', mac: 'Esc' } },
+  { g: 'draw', id: 'd-spot', name: '화면 강조(스포트라이트)', opt: 'P1', prd: { win: 'H', mac: 'H' } },
+  { g: 'draw', id: 'd-check', name: '체크 도장', opt: 'P1', prd: { win: 'F6', mac: 'F6' } },
+  { g: 'draw', id: 'd-number', name: '번호 도장(1, 2, 3…)', opt: 'P1', prd: { win: 'F7', mac: 'F7' } },
+
+  { g: 'zoom', id: 'z-in', name: '더 확대', desc: '휠 위도 같음', prd: { win: 'Up', mac: 'Up' } },
+  { g: 'zoom', id: 'z-out', name: '덜 확대', desc: '휠 아래도 같음', prd: { win: 'Down', mac: 'Down' } },
+  { g: 'zoom', id: 'z-exit', name: '실시간 확대 끝내기', desc: '실시간 확대 키를 다시 눌러도 끝남', prd: { win: 'Esc', mac: 'Esc' } },
+];
+const GROUPS = [
+  { id: 'global', title: '전역 단축키', tag: '모든 앱 위에서', text: '어느 앱을 보고 있든 이 키를 누르면 screen-ink가 먼저 받아요. 그래서 다른 앱의 같은 키는 그동안 막혀요. 필수 6개는 꼭 정하고, 나머지는 비워 둬도 돼요(트레이 메뉴로 시작).' },
+  { id: 'capture', title: '캡처 화면 안', tag: 'F1·F2를 누른 뒤', text: '범위를 고르는 화면이 떠 있을 때만 써요. 다른 앱과 겹쳐도 괜찮고, 이 화면 안의 다른 키와만 안 겹치면 돼요.', fixed: [['휠 ↑ / ↓', '부모 / 자식 요소로 넓히기·좁히기'], ['W A S D', '커서 1px 이동'], ['← ↑ → ↓', '정한 범위 1px 이동'], ['Ctrl + 방향키', '그쪽 변 1px 늘리기'], ['Shift + 방향키', '그쪽 변 1px 줄이기'], ['Shift', '확대경 색 형식 HEX ↔ RGB'], ['Alt 누른 채 드래그', '모서리 자석 잠시 끄기'], ['우클릭', '범위 다시 정하기 → 한 번 더 = 취소']] },
+  { id: 'draw', title: '판서·칠판 화면 안', tag: '판서·칠판을 켠 뒤', text: '아이캔 줌잇과 같은 글자 키를 기본으로 넣어 두었어요. 글자 키는 한/영 상태와 상관없이 같은 자리 키로 받아요.', fixed: [['Shift + 드래그', '직선(수평·수직 자동 맞춤)'], ['Ctrl + 드래그', '사각형'], ['Ctrl + Shift + 드래그', '화살표'], ['Tab + 드래그', '원'], ['+ Alt', '점선으로'], ['휠 / Ctrl + 휠', '확대 / 펜 굵기'], ['우클릭', '확대 중이면 손(이동) 모드, 아니면 끝내기'], ['획 끝에서 0.5초 멈춤', '직선·원·사각형 후보로 바꾸기']] },
+  { id: 'zoom', title: '실시간 확대 화면 안', tag: '실시간 확대를 켠 뒤', text: '"판서" 전역 키를 누르면 지금 확대된 장면을 멈추고 판서로 넘어가요.' },
+];
+
+/* ─────────────── 2. 이미 쓰이는 단축키 ───────────────
+   lv: block(막힘) · warn(주의) · repl(대체할 앱 — 계속 쓰면 막힘) · pt(PowerToys — 켜 두면 막힘)
+   when: 언제 쓰이는지 짧게. '1~9'처럼 쓰면 범위로 펼친다. */
+const SRC = {
+  win: { label: 'Windows', lv: 'block' },
+  ime: { label: '한글 입력', lv: 'block' },
+  winapp: { label: '앱 기능', lv: 'warn' },
+  hwp: { label: '한글(HWP)', lv: 'warn' },
+  ppt: { label: '슬라이드 쇼', lv: 'warn' },
+  pt: { label: 'PowerToys', lv: 'keep', keepKey: 'powertoys' },
+  ptaot: { label: 'PowerToys 항상 위', lv: 'keep', keepKey: 'powertoysAot' },
+  snip: { label: 'Snipaste', lv: 'keep', keepKey: 'snipaste' },
+  icz: { label: '아이캔 줌잇', lv: 'keep', keepKey: 'icanzoomit' },
+  zi: { label: 'ZoomIt', lv: 'keep', keepKey: 'zoomit' },
+  mac: { label: 'macOS', lv: 'block' },
+  macapp: { label: '맥 앱 기능', lv: 'warn' },
+};
+const REF = [
+  // Windows 11
+  ['win', 'win', 'Win+Shift+S', '캡처 도구 — 영역 캡처'],
+  ['win', 'win', 'PrtScn', '캡처 도구 열기(Windows 11 기본 · 설정 > 접근성 > 키보드에서 끌 수 있음)', 'warn'],
+  ['win', 'win', 'Win+PrtScn', '전체 화면을 사진 폴더에 저장'],
+  ['win', 'win', 'Alt+PrtScn', '활성 창을 클립보드로'],
+  ['win', 'win', 'Win+Shift+R', '캡처 도구 화면 녹화(최신 Windows 11)'],
+  ['win', 'win', 'Win+G', 'Xbox Game Bar'],
+  ['win', 'win', 'Win+Alt+R', 'Game Bar 녹화 시작·중지'],
+  ['win', 'win', 'Win+Alt+G', 'Game Bar 방금 전 구간 녹화'],
+  ['win', 'win', 'Win+Alt+PrtScn', 'Game Bar 스크린샷'],
+  ['win', 'win', 'Win+Plus', '돋보기 켜기·확대'], ['win', 'win', 'Win+Minus', '돋보기 축소'], ['win', 'win', 'Win+Esc', '돋보기 끄기'],
+  ['win', 'win', 'Ctrl+Alt+M', '돋보기 보기 바꾸기(돋보기가 켜져 있을 때)', 'warn'],
+  ['win', 'win', 'Ctrl+Alt+F', '돋보기 전체 화면 보기(켜져 있을 때)', 'warn'],
+  ['win', 'win', 'Ctrl+Alt+L', '돋보기 렌즈 보기(켜져 있을 때)', 'warn'],
+  ['win', 'win', 'Ctrl+Alt+D', '돋보기 고정 보기(켜져 있을 때)', 'warn'],
+  ['win', 'win', 'Ctrl+Win+Enter', '내레이터'],
+  ['win', 'win', 'Win+V', '클립보드 기록'], ['win', 'win', 'Win+.', '이모지'], ['win', 'win', 'Win+H', '음성 입력'],
+  ['win', 'win', 'Win+L', '화면 잠금'], ['win', 'win', 'Ctrl+Alt+Delete', '보안 화면'], ['win', 'win', 'Ctrl+Shift+Esc', '작업 관리자'],
+  ['win', 'win', 'Alt+Tab', '창 전환'], ['win', 'win', 'Alt+F4', '창 닫기'], ['win', 'win', 'Alt+Esc', '창 순서대로 전환'], ['win', 'win', 'Ctrl+Esc', '시작 메뉴'],
+  ['win', 'win', 'Alt+Space', '창 메뉴(이 PC에서는 PowerToys Run이 씀)', 'warn'],
+  ['win', 'win', 'Win+D', '바탕 화면 보기'], ['win', 'win', 'Win+M', '모두 최소화'], ['win', 'win', 'Win+E', '파일 탐색기'], ['win', 'win', 'Win+R', '실행'],
+  ['win', 'win', 'Win+I', '설정'], ['win', 'win', 'Win+A', '빠른 설정'], ['win', 'win', 'Win+N', '알림'], ['win', 'win', 'Win+S', '검색'],
+  ['win', 'win', 'Win+X', '빠른 링크 메뉴'], ['win', 'win', 'Win+Tab', '작업 보기'], ['win', 'win', 'Win+W', '위젯'],
+  ['win', 'win', 'Ctrl+Win+D', '새 가상 데스크톱'], ['win', 'win', 'Ctrl+Win+Left', '이전 데스크톱'], ['win', 'win', 'Ctrl+Win+Right', '다음 데스크톱'], ['win', 'win', 'Ctrl+Win+F4', '데스크톱 닫기'],
+  ['win', 'win', 'Win+Up', '창 최대화'], ['win', 'win', 'Win+Down', '창 복원·최소화'], ['win', 'win', 'Win+Left', '왼쪽 반에 맞추기'], ['win', 'win', 'Win+Right', '오른쪽 반에 맞추기'],
+  ['win', 'win', 'Shift+Win+Left', '창을 다른 모니터로'], ['win', 'win', 'Shift+Win+Right', '창을 다른 모니터로'], ['win', 'win', 'Win+Z', '스냅 레이아웃'],
+  ['win', 'win', 'Win+P', '디스플레이 모드(복제·확장) — 교실 TV 연결 때 자주 씀'], ['win', 'win', 'Win+K', '무선 디스플레이 연결'],
+  ['win', 'win', 'Win+1~9', '작업 표시줄 앱 열기'], ['win', 'win', 'Win+T', '작업 표시줄 순환'], ['win', 'win', 'Win+B', '알림 영역'],
+  ['win', 'win', 'Win+Space', '입력 언어 바꾸기'], ['win', 'win', 'Ctrl+Shift+Win+B', '그래픽 드라이버 다시 시작'],
+  ['win', 'win', 'Shift+F10', '오른쪽 클릭 메뉴', 'warn'],
+  ['win', 'win', 'Ctrl+Alt+Up', '화면 회전(일부 Intel 그래픽 드라이버)', 'warn'], ['win', 'win', 'Ctrl+Alt+Down', '화면 회전(일부 Intel 그래픽 드라이버)', 'warn'],
+  ['win', 'win', 'Ctrl+Alt+Left', '화면 회전(일부 Intel 그래픽 드라이버)', 'warn'], ['win', 'win', 'Ctrl+Alt+Right', '화면 회전(일부 Intel 그래픽 드라이버)', 'warn'],
+  // 한글 입력
+  ['ime', 'win', '한/영', '한/영 전환'], ['ime', 'win', '한자', '한자 변환'], ['ime', 'win', 'Shift+Space', '한/영 전환(입력기 설정에 따라)', 'warn'],
+  // 앱 기능(Windows)
+  ['winapp', 'win', 'F1', '도움말(거의 모든 앱)'], ['winapp', 'win', 'F2', '이름 바꾸기(탐색기) · 셀 편집(엑셀)'], ['winapp', 'win', 'F3', '찾기(탐색기·브라우저)'],
+  ['winapp', 'win', 'F4', '주소 표시줄(탐색기) · 참조 바꾸기(엑셀)'], ['winapp', 'win', 'F5', '새로 고침 · PowerPoint 쇼 처음부터'], ['winapp', 'win', 'Shift+F5', 'PowerPoint 지금 슬라이드부터 쇼'],
+  ['winapp', 'win', 'F6', '창 영역 옮겨 가기 · 주소 표시줄'], ['winapp', 'win', 'F7', '맞춤법(Office) · 캐럿 탐색(브라우저)'], ['winapp', 'win', 'F8', '엑셀 선택 넓히기'],
+  ['winapp', 'win', 'F9', '엑셀 다시 계산'], ['winapp', 'win', 'F10', '메뉴 막대'], ['winapp', 'win', 'F11', '전체 화면(브라우저·탐색기)'], ['winapp', 'win', 'F12', '다른 이름으로 저장(Office) · 개발자 도구(브라우저)'],
+  ['winapp', 'win', 'Ctrl+1~8', '브라우저 탭 옮기기 · 엑셀 Ctrl+1 셀 서식'], ['winapp', 'win', 'Ctrl+9', '브라우저 마지막 탭'],
+  ['winapp', 'win', 'Ctrl+Shift+1~8', '탐색기 보기 바꾸기 · 엑셀 표시 형식(숫자·시간·날짜·통화·%)'],
+  ['winapp', 'win', 'Alt+1~9', 'Office(워드·엑셀·PowerPoint) 빠른 실행 도구 모음 단추'],
+  ['winapp', 'win', 'Ctrl+Shift+S', 'Edge 웹 캡처'], ['winapp', 'win', 'Ctrl+Shift+T', '브라우저 닫은 탭 다시 열기'], ['winapp', 'win', 'Ctrl+Shift+N', '시크릿 창 · 탐색기 새 폴더'],
+  ['winapp', 'win', 'Ctrl+Shift+Delete', '인터넷 사용 기록 삭제'],
+  ['winapp', 'win', 'Ctrl+C', '복사', 'block'], ['winapp', 'win', 'Ctrl+V', '붙여넣기', 'block'], ['winapp', 'win', 'Ctrl+X', '잘라내기', 'block'], ['winapp', 'win', 'Ctrl+Z', '되돌리기', 'block'],
+  ['winapp', 'win', 'Ctrl+Y', '다시 하기', 'block'], ['winapp', 'win', 'Ctrl+A', '모두 선택', 'block'], ['winapp', 'win', 'Ctrl+S', '저장', 'block'],
+  ['winapp', 'win', 'Ctrl+F', '찾기'], ['winapp', 'win', 'Ctrl+P', '인쇄'], ['winapp', 'win', 'Ctrl+N', '새 문서·새 창'], ['winapp', 'win', 'Ctrl+O', '열기'], ['winapp', 'win', 'Ctrl+W', '탭·문서 닫기'],
+  ['winapp', 'win', 'Ctrl+T', '브라우저 새 탭'], ['winapp', 'win', 'Ctrl+D', '브라우저 즐겨찾기 추가'], ['winapp', 'win', 'Ctrl+H', '브라우저 기록 · 워드 바꾸기'], ['winapp', 'win', 'Ctrl+R', '새로 고침 · 오른쪽 정렬'],
+  ['winapp', 'win', 'Ctrl+L', '주소 표시줄 · 왼쪽 정렬'], ['winapp', 'win', 'Ctrl+E', '가운데 정렬 · 브라우저 검색'], ['winapp', 'win', 'Ctrl+B', '굵게'], ['winapp', 'win', 'Ctrl+I', '기울임'], ['winapp', 'win', 'Ctrl+U', '밑줄'], ['winapp', 'win', 'Ctrl+K', '링크 넣기'],
+  ['winapp', 'win', 'Ctrl+Shift+V', '서식 없이 붙여넣기(브라우저·Office)'], ['winapp', 'win', 'Ctrl+Shift+P', '브라우저 InPrivate·시크릿 창'],
+  ['winapp', 'win', 'Ctrl+F1', 'Office 리본 접기·펴기'], ['winapp', 'win', 'Shift+F1', '워드 서식 보기'], ['winapp', 'win', 'Alt+F1', '엑셀 차트 바로 만들기'],
+  ['winapp', 'win', 'Ctrl+F2', 'Office 인쇄 미리 보기'], ['winapp', 'win', 'Shift+F2', '엑셀 메모 편집'], ['winapp', 'win', 'Shift+F3', '워드 대/소문자 바꾸기 · 엑셀 함수 넣기'],
+  ['winapp', 'win', 'Ctrl+F4', '문서·탭 닫기'], ['winapp', 'win', 'Ctrl+F5', '브라우저 강력 새로 고침'], ['winapp', 'win', 'Alt+F8', 'Office 매크로'], ['winapp', 'win', 'Alt+F11', 'Office VBA 편집기'],
+  ['winapp', 'win', 'Shift+F11', '엑셀 새 시트'], ['winapp', 'win', 'Shift+F12', 'Office 저장'],
+  ['winapp', 'win', 'Alt+Shift+D', '워드 날짜 넣기'], ['winapp', 'win', 'Alt+Shift+T', '워드 시간 넣기'], ['winapp', 'win', 'Alt+Shift+P', '워드 쪽 번호 넣기'],
+  // 한글(HWP) — 자주 쓰는 것만
+  ['hwp', 'win', 'F3', '블록 지정'], ['hwp', 'win', 'F5', '표 셀 블록'], ['hwp', 'win', 'F6', '스타일'], ['hwp', 'win', 'F7', '편집 용지'],
+  ['hwp', 'win', 'Alt+L', '글자 모양'], ['hwp', 'win', 'Alt+T', '문단 모양'], ['hwp', 'win', 'Alt+S', '저장'], ['hwp', 'win', 'Alt+V', '다른 이름으로 저장'], ['hwp', 'win', 'Alt+P', '인쇄'], ['hwp', 'win', 'Ctrl+F10', '문자표'],
+  // PowerPoint 슬라이드 쇼 중
+  ['ppt', 'win', 'Ctrl+P', '쇼 중 펜'], ['ppt', 'win', 'Ctrl+A', '쇼 중 화살표 포인터'], ['ppt', 'win', 'Ctrl+E', '쇼 중 지우개'], ['ppt', 'win', 'Ctrl+I', '쇼 중 형광펜'],
+  ['ppt', 'win', 'Ctrl+L', '쇼 중 레이저 포인터'], ['ppt', 'win', 'Ctrl+M', '쇼 중 잉크 보이기·숨기기'], ['ppt', 'win', 'Ctrl+H', '쇼 중 포인터 숨기기'],
+  ['ppt', 'win', 'B', '쇼 중 검은 화면'], ['ppt', 'win', 'W', '쇼 중 흰 화면'], ['ppt', 'win', 'E', '쇼 중 잉크 모두 지우기'], ['ppt', 'win', 'G', '쇼 중 모든 슬라이드 보기'],
+  // PowerToys(이 PC 설정 파일에서 읽은 값, 켜진 기능)
+  ['pt', 'win', 'Shift+Win+V', '고급 붙여넣기'], ['pt', 'win', 'Ctrl+Alt+Win+V', '일반 텍스트로 붙여넣기'],
+  ['ptaot', 'win', 'Alt+Shift+D', '창 항상 위에 두기(이 PC에서 바꾼 값 · 기본은 Win+Ctrl+T)'], ['ptaot', 'win', 'Ctrl+Win+=', '고정한 창 더 불투명하게(기본값)'], ['ptaot', 'win', 'Ctrl+Win+-', '고정한 창 더 투명하게(기본값)'],
+  ['pt', 'win', 'Shift+Win+C', '색 선택기'], ['pt', 'win', 'Ctrl+Shift+Win+R', 'Crop And Lock 창 잘라 붙이기'], ['pt', 'win', 'Ctrl+Shift+Win+T', 'Crop And Lock 썸네일'],
+  ['pt', 'win', 'Shift+Win+`', 'FancyZones 편집기'], ['pt', 'win', 'Win+PgDn', 'FancyZones 다음 창'], ['pt', 'win', 'Win+PgUp', 'FancyZones 이전 창'],
+  ['pt', 'win', 'Shift+Win+F', '마우스 찾기'], ['pt', 'win', 'Ctrl+Shift+Win+M', '화면 눈금자'], ['pt', 'win', 'Shift+Win+H', '마우스 강조'],
+  ['pt', 'win', 'Ctrl+Space', 'Peek 미리 보기'], ['pt', 'win', 'Alt+Space', 'PowerToys Run'], ['pt', 'win', 'Shift+Win+/', '단축키 가이드'], ['pt', 'win', 'Ctrl+Win+`', 'Workspaces'],
+  ['pt', 'win', 'Alt+Win+Space', 'Command Palette(기본값 · 설정 파일에서 확인 못 함)'],
+  // Snipaste(이 PC 화면 캡처 기준)
+  ['snip', 'win', 'F1', '캡처'], ['snip', 'win', 'Ctrl+F1', '캡처 후 복사'], ['snip', 'win', 'Shift+F1', '커스텀 캡처'],
+  ['snip', 'win', 'F3', '붙이기(핀)'], ['snip', 'win', 'Shift+F3', '모든 이미지 보이기·숨기기'], ['snip', 'win', 'Ctrl+F3', '다른 이미지 그룹 전환'],
+  // 아이캔 줌잇(이 PC 설정·단축키표)
+  ['icz', 'win', 'Ctrl+1', '확대하기'], ['icz', 'win', 'Ctrl+2', '판서하기'], ['icz', 'win', 'Ctrl+3', '타이머'], ['icz', 'win', 'Ctrl+4', '실시간 확대'], ['icz', 'win', 'Ctrl+Shift+F12', '화면 색 반전'],
+  // ZoomIt(소스 기본값 · 이 PC의 PowerToys에서는 꺼져 있음)
+  ['zi', 'win', 'Ctrl+1', '확대'], ['zi', 'win', 'Ctrl+2', '그리기'], ['zi', 'win', 'Ctrl+3', '쉬는 시간 타이머'], ['zi', 'win', 'Ctrl+4', 'LiveZoom'], ['zi', 'win', 'Ctrl+Shift+4', 'LiveDraw'],
+  ['zi', 'win', 'Ctrl+5', '녹화'], ['zi', 'win', 'Ctrl+6', '스닙(영역 복사)'], ['zi', 'win', 'Ctrl+Shift+6', '스닙 저장'], ['zi', 'win', 'Ctrl+Alt+6', '글자 인식 스닙'],
+  ['zi', 'win', 'Ctrl+7', 'DemoType'], ['zi', 'win', 'Ctrl+Shift+7', 'DemoType 처음으로'], ['zi', 'win', 'Ctrl+8', '파노라마'], ['zi', 'win', 'Ctrl+Shift+8', '파노라마 저장'], ['zi', 'win', 'Ctrl+9', '미러'],
+  // macOS
+  ['mac', 'mac', 'Shift+Cmd+3', '전체 화면 캡처'], ['mac', 'mac', 'Shift+Cmd+4', '영역 캡처(Space = 창)'], ['mac', 'mac', 'Shift+Cmd+5', '캡처·녹화 도구'], ['mac', 'mac', 'Shift+Cmd+6', 'Touch Bar 캡처'],
+  ['mac', 'mac', 'Ctrl+Shift+Cmd+3', '전체 화면을 클립보드로'], ['mac', 'mac', 'Ctrl+Shift+Cmd+4', '영역을 클립보드로'],
+  ['mac', 'mac', 'Cmd+Space', 'Spotlight'], ['mac', 'mac', 'Option+Cmd+Space', 'Finder 검색 창'], ['mac', 'mac', 'Ctrl+Space', '입력 소스 바꾸기(한/영)'], ['mac', 'mac', 'Ctrl+Option+Space', '다음 입력 소스'],
+  ['mac', 'mac', 'Cmd+Tab', '앱 전환'], ['mac', 'mac', 'Cmd+`', '같은 앱 창 전환'], ['mac', 'mac', 'Cmd+Q', '앱 끝내기'], ['mac', 'mac', 'Cmd+W', '창 닫기'], ['mac', 'mac', 'Cmd+H', '앱 가리기'],
+  ['mac', 'mac', 'Option+Cmd+H', '다른 앱 가리기'], ['mac', 'mac', 'Cmd+M', '창 최소화'], ['mac', 'mac', 'Option+Cmd+Esc', '강제 종료'], ['mac', 'mac', 'Ctrl+Cmd+Q', '화면 잠금'], ['mac', 'mac', 'Shift+Cmd+Q', '로그아웃'],
+  ['mac', 'mac', 'Ctrl+Cmd+F', '전체 화면 켜기·끄기', 'warn'],
+  ['mac', 'mac', 'Ctrl+Up', 'Mission Control'], ['mac', 'mac', 'Ctrl+Down', '앱 윈도우'], ['mac', 'mac', 'Ctrl+Left', '왼쪽 데스크톱'], ['mac', 'mac', 'Ctrl+Right', '오른쪽 데스크톱'],
+  ['mac', 'mac', 'Ctrl+1~9', '데스크톱 1~9로(설정에서 켠 경우)', 'warn'],
+  ['mac', 'mac', 'Option+Cmd+8', '확대/축소 켜기(손쉬운 사용에서 켠 경우)', 'warn'], ['mac', 'mac', 'Option+Cmd+=', '화면 확대(켠 경우)', 'warn'], ['mac', 'mac', 'Option+Cmd+-', '화면 축소(켠 경우)', 'warn'],
+  ['mac', 'mac', 'Option+Cmd+F5', '손쉬운 사용 단축키'], ['mac', 'mac', 'Cmd+F5', 'VoiceOver'], ['mac', 'mac', 'Ctrl+Cmd+Space', '이모지·기호'],
+  ['mac', 'mac', 'Option+1~9', '특수 문자 입력(¡ ™ £ ¢ ∞ § ¶ • ª) — 가로채면 이 글자를 못 침', 'warn'], ['mac', 'mac', 'Option+0', '특수 문자 입력(º)', 'warn'],
+  ['mac', 'mac', 'F1~12', '기본은 밝기·음량 등 — F키로 쓰려면 fn을 함께', 'warn'],
+  ['mac', 'mac', 'Cmd+F1', '디스플레이 미러링 켜기·끄기'], ['mac', 'mac', 'Ctrl+F1', '키보드 탐색 켜기·끄기', 'warn'],
+  ['mac', 'mac', 'Ctrl+F2', '메뉴 막대로(키보드 탐색을 켠 경우)', 'warn'], ['mac', 'mac', 'Ctrl+F3', 'Dock으로(켠 경우)', 'warn'], ['mac', 'mac', 'Caps Lock', '한/영 전환(설정에 따라)'],
+  ['macapp', 'mac', 'Cmd+C', '복사', 'block'], ['macapp', 'mac', 'Cmd+V', '붙여넣기', 'block'], ['macapp', 'mac', 'Cmd+X', '잘라내기', 'block'], ['macapp', 'mac', 'Cmd+Z', '되돌리기', 'block'],
+  ['macapp', 'mac', 'Shift+Cmd+Z', '다시 하기', 'block'], ['macapp', 'mac', 'Cmd+A', '모두 선택', 'block'], ['macapp', 'mac', 'Cmd+S', '저장', 'block'],
+  ['macapp', 'mac', 'Cmd+F', '찾기'], ['macapp', 'mac', 'Cmd+P', '인쇄'], ['macapp', 'mac', 'Cmd+N', '새 문서·새 창'], ['macapp', 'mac', 'Cmd+O', '열기'], ['macapp', 'mac', 'Cmd+T', '브라우저 새 탭'],
+  ['macapp', 'mac', 'Cmd+R', '새로 고침'], ['macapp', 'mac', 'Cmd+L', '주소 표시줄'], ['macapp', 'mac', 'Cmd+D', '즐겨찾기 추가'], ['macapp', 'mac', 'Cmd+B', '굵게'], ['macapp', 'mac', 'Cmd+I', '기울임'], ['macapp', 'mac', 'Cmd+U', '밑줄'], ['macapp', 'mac', 'Cmd+K', '링크 넣기'],
+  ['macapp', 'mac', 'Ctrl+A', '글 칸에서 줄 처음으로'], ['macapp', 'mac', 'Ctrl+E', '글 칸에서 줄 끝으로'], ['macapp', 'mac', 'Ctrl+K', '글 칸에서 줄 끝까지 지우기'], ['macapp', 'mac', 'Ctrl+D', '글 칸에서 앞 글자 지우기'], ['macapp', 'mac', 'Ctrl+H', '글 칸에서 뒤 글자 지우기'],
+  ['macapp', 'mac', 'Cmd+1~9', '브라우저 탭 · Finder 보기 바꾸기'], ['macapp', 'mac', 'Shift+Cmd+/', '도움말 메뉴'], ['macapp', 'mac', 'Cmd+,', '앱 설정'], ['macapp', 'mac', 'Shift+Cmd+T', '브라우저 닫은 탭 다시 열기'],
+];
+
+/* ─────────────── 3. 키 이름 정리 ─────────────── */
+const MOD_ORDER = { win: ['Ctrl', 'Alt', 'Shift', 'Win'], mac: ['Ctrl', 'Option', 'Shift', 'Cmd'] };
+const MAC_SYM = { Ctrl: '⌃', Option: '⌥', Shift: '⇧', Cmd: '⌘' };
+const IS_MOD = new Set(['Ctrl', 'Alt', 'Shift', 'Win', 'Option', 'Cmd']);
+function parse(combo) {
+  if (!combo) return { mods: [], key: '' };
+  const parts = combo.split('+').map((s) => s.trim()).filter(Boolean);
+  const mods = parts.filter((p) => IS_MOD.has(p));
+  const key = parts.filter((p) => !IS_MOD.has(p)).join('+');
+  return { mods, key };
+}
+function norm(combo, plat) {
+  const { mods, key } = parse(combo);
+  const order = MOD_ORDER[plat];
+  const m = order.filter((o) => mods.includes(o));
+  return [...m, key].filter(Boolean).join('+');
+}
+function expand(combo) {
+  const m = combo.match(/^(.*?)(F?)(\d+)~(\d+)$/);
+  if (!m) return [combo];
+  const out = [];
+  for (let i = +m[3]; i <= +m[4]; i++) out.push(`${m[1]}${m[2]}${i}`);
+  return out;
+}
+function show(combo, plat) {
+  if (!combo) return '';
+  if (plat === 'mac') { const { mods, key } = parse(combo); return mods.map((x) => MAC_SYM[x] || x).join('') + key; }
+  return combo.replace(/\+/g, ' + ');
+}
+const KEY_CODE = { Backquote: '`', Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Backslash: '\\', Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/', Space: 'Space', Enter: 'Enter', NumpadEnter: 'Enter', Escape: 'Esc', Tab: 'Tab', Backspace: 'Backspace', Delete: 'Delete', Insert: 'Insert', Home: 'Home', End: 'End', PageUp: 'PgUp', PageDown: 'PgDn', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', PrintScreen: 'PrtScn', Pause: 'Pause', ScrollLock: 'ScrLk', CapsLock: 'Caps Lock', Lang1: '한/영', Lang2: '한자', NumpadAdd: 'Plus', NumpadSubtract: 'Minus', ContextMenu: 'Menu' };
+const MOD_CODES = new Set(['ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight', 'OSLeft', 'OSRight']);
+const IS_MAC_BROWSER = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+function comboFromEvent(e, plat) {
+  let key = null;
+  if (e.key === 'HangulMode') key = '한/영'; else if (e.key === 'HanjaMode') key = '한자';
+  else if (MOD_CODES.has(e.code)) return null;
+  else if (/^Key[A-Z]$/.test(e.code)) key = e.code.slice(3);
+  else if (/^Digit\d$/.test(e.code)) key = e.code.slice(5);
+  else if (/^Numpad\d$/.test(e.code)) key = 'Num' + e.code.slice(6);
+  else if (/^F\d{1,2}$/.test(e.code)) key = e.code;
+  else if (KEY_CODE[e.code]) key = KEY_CODE[e.code];
+  else if (e.key && e.key.length === 1) key = e.key.toUpperCase();
+  if (!key) return null;
+  const mods = [];
+  if (plat === 'win') {
+    if (e.ctrlKey) mods.push('Ctrl'); if (e.altKey) mods.push('Alt'); if (e.shiftKey) mods.push('Shift'); if (e.metaKey) mods.push('Win');
+  } else if (IS_MAC_BROWSER) {
+    if (e.ctrlKey) mods.push('Ctrl'); if (e.altKey) mods.push('Option'); if (e.shiftKey) mods.push('Shift'); if (e.metaKey) mods.push('Cmd');
+  } else { // 윈도우 키보드로 맥 값을 정할 때: Ctrl = ⌘, Alt = ⌥ (⌃는 칸 아래 단추로)
+    if (e.ctrlKey) mods.push('Cmd'); if (e.altKey) mods.push('Option'); if (e.shiftKey) mods.push('Shift');
+  }
+  return norm([...mods, key].join('+'), plat);
+}
+
+/* ─────────────── 4. 상태 ─────────────── */
+const STORE_KEY = 'screen-ink-shortcuts-v1';
+const DEFAULT_KEEP = { snipaste: false, icanzoomit: false, zoomit: false, powertoys: true, powertoysAot: false };
+let state = { version: 1, keep: { ...DEFAULT_KEEP }, slots: {}, updatedAt: null };
+let plat = 'win';
+let focusId = 'region';
+let listening = null; // {id, plat}
+let kbdMods = null; // null = 칸 종류에 맞는 기본(전역은 Alt/⌥, 모드 안은 없음)
+let db = null, docRef = null, saveTimer = null, saving = false, pendingSave = false, dbReady = false;
+const $ = (id) => document.getElementById(id);
+const valOf = (id, p = plat) => state.slots[id]?.[p] || '';
+const slotOf = (id) => SLOTS.find((s) => s.id === id);
+
+/* 출처별 실제 단계: keep 계열은 계속 쓰면 막힘, 아니면 대체 */
+function srcLevel(src, entryLv) {
+  const s = SRC[src];
+  if (s.lv === 'keep') return state.keep[s.keepKey] ? 'block' : 'repl';
+  return entryLv || s.lv;
+}
+let REF_INDEX = { win: new Map(), mac: new Map() };
+function buildIndex() {
+  REF_INDEX = { win: new Map(), mac: new Map() };
+  for (const [src, p, combo, what, lv] of REF) {
+    for (const c of expand(combo)) {
+      const k = norm(c, p);
+      if (!REF_INDEX[p].has(k)) REF_INDEX[p].set(k, []);
+      REF_INDEX[p].get(k).push({ src, what, lv });
+    }
+  }
+}
+const RANK = { ok: 0, repl: 1, warn: 2, block: 3 };
+const worst = (a, b) => (RANK[a] >= RANK[b] ? a : b);
+function isFKey(k) { return /^F\d{1,2}$/.test(k); }
+const SPECIAL_ALONE = new Set(['PrtScn', 'Pause', 'ScrLk', 'Insert']);
+
+/* 한 칸에 어떤 값을 넣었을 때 문제를 모두 모은다 */
+function analyze(slot, p, combo) {
+  const items = [];
+  if (!combo) return { lv: slot.need ? 'warn' : 'ok', items: slot.need ? [{ lv: 'warn', src: '필수', what: '아직 정하지 않았어요' }] : [], empty: true };
+  const { mods, key } = parse(combo);
+  const global = slot.g === 'global';
+  if (key === '한/영' || key === '한자' || key === 'Caps Lock') items.push({ lv: 'block', src: '규칙', what: '한/영 전환 키라 쓸 수 없어요' });
+  if (global) {
+    if (!mods.length && !isFKey(key) && !SPECIAL_ALONE.has(key)) items.push({ lv: 'block', src: '규칙', what: '수정 키(Ctrl·Alt 등) 없이 일반 키 하나는 전역으로 못 써요 — 타자를 막아요' });
+    else if (mods.length === 1 && mods[0] === 'Shift' && !isFKey(key)) items.push({ lv: 'block', src: '규칙', what: 'Shift + 글자는 대문자·기호 입력이라 전역으로 못 써요' });
+    if (p === 'mac' && isFKey(key)) items.push({ lv: 'warn', src: '규칙', what: '맥 키보드는 F키에 fn을 함께 눌러야 해요' });
+  }
+  // 모드 안 키도 운영체제가 먼저 가져가는 조합(Win·Cmd 조합 등)은 아래 참고 목록에서 막힘으로 걸러진다
+  const hits = REF_INDEX[p].get(norm(combo, p)) || [];
+  for (const h of hits) {
+    const lv = srcLevel(h.src, h.lv);
+    // 모드 안 키는 그 화면이 떠 있을 때만 쓰므로 다른 앱 기능과는 겹쳐도 된다 — 운영체제 예약만 본다
+    if (!global && !['win', 'ime', 'mac'].includes(h.src)) continue;
+    if (!global && lv !== 'block') continue;
+    items.push({ lv, src: SRC[h.src].label, what: h.what });
+  }
+  // 맥에서 ⌥(·⇧) + 글자·숫자·기호는 특수 문자 입력 — 목록에 없는 조합도 알려 준다
+  if (global && p === 'mac' && mods.includes('Option') && !mods.includes('Cmd') && !mods.includes('Ctrl') && key.length === 1 && !items.some((i) => i.src === SRC.mac.label)) {
+    items.push({ lv: 'warn', src: '규칙', what: '⌥ + 글자·기호는 특수 문자 입력이라, 가로채면 그 글자를 못 쳐요' });
+  }
+  for (const other of SLOTS) {
+    if (other.id === slot.id) continue;
+    const v = valOf(other.id, p);
+    if (!v || norm(v, p) !== norm(combo, p)) continue;
+    if (other.g === slot.g) items.push({ lv: 'block', src: '이 표', what: `‘${other.name}’과 같은 키예요` });
+    else if (global) items.push({ lv: 'warn', src: '이 표', what: `${GROUPS.find((g) => g.id === other.g).title}의 ‘${other.name}’ 키를 전역 키가 먼저 가져가요` });
+    else if (other.g === 'global') items.push({ lv: 'block', src: '이 표', what: `전역 ‘${other.name}’ 키라 이 화면에서도 전역이 먼저 받아요` });
+  }
+  let lv = 'ok';
+  for (const it of items) lv = worst(lv, it.lv);
+  return { lv, items };
+}
+
+/* ─────────────── 5. 그리기 ─────────────── */
+function el(tag, attrs = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v;
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else if (v !== false && v != null) n.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids) if (k != null) n.append(k);
+  return n;
+}
+function recButton(slot, p) {
+  if (p === 'mac' && slot.noMac) {
+    return el('div', { class: 'cell' }, el('div', { class: 'rec', 'aria-disabled': 'true', style: 'opacity:.6;cursor:default' }, el('span', { class: 'k empty', text: '맥은 지원 안 함' })), el('div', { class: 'why', text: 'macOS에는 다른 앱 창을 위에 고정하는 공개 기능이 없어요' }));
+  }
+  const v = valOf(slot.id, p);
+  const a = analyze(slot, p, v);
+  const isListen = listening && listening.id === slot.id && listening.plat === p;
+  const b = el('button', { type: 'button', class: 'rec' + (isListen ? ' listening' : ''), id: `rec-${slot.id}-${p}`, 'data-lv': a.empty ? '' : a.lv, 'aria-label': `${slot.name} ${p === 'win' ? 'Windows' : 'macOS'} 키` });
+  b.append(el('span', { class: 'k' + (!v && !isListen ? ' empty' : ''), text: isListen ? '키를 누르세요…' : (v ? show(v, p) : (slot.g === 'global' && !slot.need ? '비워 둠' : '정하기')) }), el('span', { class: 'dot' }));
+  b.addEventListener('click', (e) => { e.stopPropagation(); focusId = slot.id; if (p !== plat) setPlat(p, false); listening = isListen ? null : { id: slot.id, plat: p }; render(); });
+  b.addEventListener('focus', () => { if (focusId !== slot.id) { focusId = slot.id; renderPanel(); markFocus(); } });
+  const cell = el('div', { class: 'cell' }, b);
+  if (v) {
+    const top = a.items.find((it) => it.lv === a.lv && a.lv !== 'ok');
+    if (top) cell.append(el('div', { class: 'why ' + (a.lv === 'repl' ? '' : a.lv), text: `${top.src}: ${top.what}` + (a.items.length > 1 ? ` 외 ${a.items.length - 1}건` : '') }));
+    const mods = el('div', { class: 'mods', role: 'group', 'aria-label': '수정 키 바꾸기' });
+    const { mods: cur } = parse(v);
+    for (const m of MOD_ORDER[p]) {
+      mods.append(el('button', { type: 'button', 'aria-pressed': String(cur.includes(m)), title: `${m} 넣기·빼기`, text: p === 'mac' ? MAC_SYM[m] : m, onclick: (e) => { e.stopPropagation(); toggleMod(slot.id, p, m); } }));
+    }
+    cell.append(mods);
+  }
+  return cell;
+}
+function markFocus() { document.querySelectorAll('.slot').forEach((r) => r.classList.toggle('focus', r.dataset.id === focusId)); }
+function renderSlots() {
+  const box = $('slots');
+  box.replaceChildren();
+  for (const g of GROUPS) {
+    const sec = el('section', { class: 'group', 'aria-labelledby': `h-${g.id}` });
+    sec.append(el('header', {}, el('h2', { id: `h-${g.id}` }, g.title, el('span', { class: 'tag', text: g.tag })), el('p', { text: g.text })));
+    sec.append(el('div', { class: 'thead', 'aria-hidden': 'true' }, el('span', { text: '기능' }), el('span', { text: 'Windows' }), el('span', { text: 'macOS' })));
+    for (const s of SLOTS.filter((x) => x.g === g.id)) {
+      const name = el('div', { class: 'name' }, el('strong', {}, s.name, s.opt ? el('span', { class: 'badge', text: s.opt }) : (s.need ? el('span', { class: 'badge', text: '필수' }) : null)), s.desc ? el('small', { text: s.desc }) : null);
+      const row = el('div', { class: 'slot' + (s.id === focusId ? ' focus' : ''), 'data-id': s.id }, name, recButton(s, 'win'), recButton(s, 'mac'));
+      row.addEventListener('click', () => { if (focusId !== s.id) { if (slotOf(focusId)?.g !== s.g) kbdMods = null; focusId = s.id; renderPanel(); markFocus(); } });
+      sec.append(row);
+    }
+    if (g.fixed) {
+      const fl = el('div', { class: 'fixedlist' }, el('span', { text: '바꾸지 않는 조작(참고)' }));
+      for (const [k, w] of g.fixed) fl.append(el('span', {}, el('b', { text: k }), ` — ${w}`));
+      sec.append(fl);
+    }
+    box.append(sec);
+  }
+}
+function renderSummary() {
+  const box = $('summary'); box.replaceChildren();
+  for (const p of ['win', 'mac']) {
+    const req = SLOTS.filter((s) => s.need);
+    const done = req.filter((s) => valOf(s.id, p)).length;
+    let block = 0, warn = 0;
+    for (const s of SLOTS) { const v = valOf(s.id, p); if (!v) continue; const a = analyze(s, p, v); if (a.lv === 'block') block++; else if (a.lv === 'warn') warn++; }
+    const label = p === 'win' ? 'Windows' : 'macOS';
+    box.append(el('span', { class: 'pill' + (done === req.length ? ' lv-ok' : '') }, `${label} 필수 `, el('b', { text: `${done}/${req.length}` })));
+    box.append(el('span', { class: 'pill' + (block ? ' lv-block' : '') }, `${label} 막힘 `, el('b', { text: String(block) })));
+    box.append(el('span', { class: 'pill' + (warn ? ' lv-warn' : '') }, `${label} 주의 `, el('b', { text: String(warn) })));
+  }
+}
+const LV_TEXT = { block: '막힘', warn: '주의', repl: '대체', ok: '비어 있음' };
+function suggestions(slot, p) {
+  const out = [];
+  const tried = new Set();
+  const modsets = slot.g === 'global'
+    ? (p === 'win' ? [['Alt'], ['Ctrl', 'Shift'], ['Ctrl', 'Alt'], ['Alt', 'Shift'], [], ['Shift'], ['Ctrl']] : [['Option'], ['Ctrl', 'Option'], ['Shift', 'Cmd'], ['Option', 'Cmd'], ['Ctrl', 'Cmd'], []])
+    : [[], ['Shift'], p === 'win' ? ['Ctrl'] : ['Cmd']];
+  const keys = slot.g === 'global' ? ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'F1', 'F2', 'F3', 'F4', 'F6', 'F7', 'F8', 'F9', 'Q', 'A', 'Z', 'X', 'S', 'D'] : 'QWERTYUIOPASDFGHJKLZXCVBNM1234567890'.split('');
+  for (const ms of modsets) for (const k of keys) {
+    if (slot.g === 'global' && ms.length === 0 && !isFKey(k)) continue;
+    const c = norm([...ms, k].join('+'), p);
+    if (tried.has(c)) continue; tried.add(c);
+    const a = analyze(slot, p, c);
+    if (a.lv === 'ok' || a.lv === 'repl') out.push({ c, lv: a.lv });
+    if (out.length >= 10) return out;
+  }
+  return out;
+}
+function renderInspect() {
+  const box = $('inspect'); box.replaceChildren();
+  const s = slotOf(focusId); if (!s) return;
+  const g = GROUPS.find((x) => x.id === s.g);
+  box.append(el('h3', {}, '지금 고르는 칸 ', el('span', { class: 'focusname', text: s.name }), el('small', { text: `${g.title} · ${plat === 'win' ? 'Windows' : 'macOS'}` })));
+  const v = valOf(s.id);
+  const a = analyze(s, plat, v);
+  const hits = el('div', { class: 'hits' });
+  if (!v) hits.append(el('p', { class: 'note', text: '아직 비어 있어요. 아래 추천을 누르거나, 왼쪽 칸을 눌러 키를 직접 눌러 보세요.' }));
+  else if (!a.items.length) hits.append(el('div', { class: 'hit lv-ok' }, el('span', { class: 'src lv-ok', text: '좋아요' }), el('span', { text: `${show(v, plat)}은(는) 아무것과도 겹치지 않아요.` })));
+  for (const it of a.items) {
+    const cls = 'lv-' + it.lv;
+    hits.append(el('div', { class: 'hit ' + cls }, el('span', { class: 'src ' + cls, text: `${LV_TEXT[it.lv]} · ${it.src}` }), el('span', { text: it.what })));
+  }
+  box.append(hits);
+  const sug = suggestions(s, plat);
+  box.append(el('div', { class: 'note', text: s.g === 'global' ? '겹치지 않는 추천(회색은 Snipaste·줌잇과만 겹침):' : '이 화면 안에서 비어 있는 키:' }));
+  const chips = el('div', { class: 'chips' });
+  for (const x of sug) chips.append(el('button', { type: 'button', class: 'chip lv-' + x.lv, title: LV_TEXT[x.lv], text: show(x.c, plat), onclick: () => assign(s.id, plat, x.c) }));
+  box.append(chips);
+}
+const KB_ROWS = [
+  ['Esc', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12', 'PrtScn'],
+  ['`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='],
+  ['Tab', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']'],
+  ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', "'", 'Enter'],
+  ['Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/', 'Up'],
+  ['Space', 'Left', 'Down', 'Right', 'PgUp', 'PgDn'],
+];
+const SHORT = { Esc: 'Esc', PrtScn: 'Prt', Enter: '⏎', Space: 'Space', Up: '↑', Down: '↓', Left: '←', Right: '→', Tab: 'Tab', PgUp: 'PgUp', PgDn: 'PgDn' };
+function renderKbd() {
+  const s = slotOf(focusId); if (!s) return;
+  $('kbd-scope').textContent = `${s.g === 'global' ? '전역' : GROUPS.find((g) => g.id === s.g).title} 기준 · ${plat === 'win' ? 'Windows' : 'macOS'}`;
+  const mb = $('kbd-mods'); mb.replaceChildren();
+  const options = plat === 'win'
+    ? [[], ['Ctrl'], ['Alt'], ['Shift'], ['Ctrl', 'Shift'], ['Ctrl', 'Alt'], ['Alt', 'Shift'], ['Ctrl', 'Alt', 'Shift'], ['Shift', 'Win']]
+    : [[], ['Cmd'], ['Option'], ['Ctrl'], ['Shift', 'Cmd'], ['Option', 'Cmd'], ['Ctrl', 'Option'], ['Ctrl', 'Cmd'], ['Ctrl', 'Option', 'Shift']];
+  const key = (ms) => MOD_ORDER[plat].filter((m) => ms.includes(m)).join('+');
+  if (kbdMods === null || !options.some((o) => key(o) === key(kbdMods))) kbdMods = s.g === 'global' ? options[2] : [];
+  for (const o of options) mb.append(el('button', { type: 'button', 'aria-pressed': String(key(o) === key(kbdMods)), text: o.length ? (plat === 'mac' ? o.map((x) => MAC_SYM[x]).join('') : o.join('+')) : '없음', onclick: () => { kbdMods = o; renderKbd(); } }));
+  const kb = $('kbd'); kb.replaceChildren();
+  for (const row of KB_ROWS) {
+    const r = el('div', { class: 'kr' });
+    for (const k of row) {
+      const c = norm([...kbdMods, k].join('+'), plat);
+      const owner = SLOTS.find((x) => x.id !== s.id && valOf(x.id) && norm(valOf(x.id), plat) === c && (x.g === s.g || x.g === 'global' || s.g === 'global'));
+      const a = analyze(s, plat, c);
+      const lv = owner && a.lv !== 'block' ? 'mine' : a.lv;
+      const tip = owner ? `${owner.name}(내가 정함)` : (a.items[0] ? `${a.items[0].src}: ${a.items[0].what}` : '비어 있음');
+      const btn = el('button', { type: 'button', class: 'key', 'data-lv': lv, title: `${show(c, plat)} — ${tip}`, 'aria-label': `${show(c, plat)} ${LV_TEXT[a.lv] || ''}` }, SHORT[k] || k);
+      if (owner) btn.append(el('small', { text: owner.name }));
+      else if (a.items[0] && a.lv !== 'ok') btn.append(el('small', { text: a.items[0].src }));
+      btn.addEventListener('click', () => assign(s.id, plat, c));
+      r.append(btn);
+    }
+    kb.append(r);
+  }
+}
+function renderKeepers() {
+  const box = $('keepers'); box.replaceChildren();
+  const rows = [['snipaste', 'Snipaste', '이 PC에서 실행 중 · 자동 시작'], ['icanzoomit', '아이캔 줌잇', '다운로드 폴더에 있음'], ['zoomit', 'ZoomIt', 'PowerToys 안 · 지금 꺼져 있음'], ['powertoys', 'PowerToys(항상 위 말고 켜진 기능)', '이 PC에서 실행 중'], ['powertoysAot', 'PowerToys 항상 위', '이 PC: Alt+Shift+D · screen-ink가 대신하면 PowerToys에서 이 기능만 끄기']];
+  for (const [k, label, sub] of rows) {
+    const id = 'keep-' + k;
+    const input = el('input', { type: 'checkbox', id });
+    input.checked = !!state.keep[k];
+    input.addEventListener('change', () => { state.keep[k] = input.checked; buildIndex(); changed(); });
+    box.append(el('label', { class: 'keeper', for: id }, input, el('span', {}, `${label} 계속 씀 `, el('small', { text: sub }))));
+  }
+}
+function renderRef() {
+  const sel = $('ref-src');
+  if (!sel.options.length) {
+    sel.append(el('option', { value: '', text: '모든 출처' }));
+    for (const [k, v] of Object.entries(SRC)) sel.append(el('option', { value: k, text: v.label }));
+  }
+  const q = $('ref-q').value.trim().toLowerCase();
+  const src = sel.value;
+  const list = $('ref-list'); list.replaceChildren();
+  let n = 0;
+  for (const [s, p, combo, what, lv] of REF) {
+    if (src && s !== src) continue;
+    if (!src && p !== plat) continue;
+    const text = `${combo} ${what} ${SRC[s].label}`.toLowerCase();
+    if (q && !text.includes(q) && !show(combo, p).toLowerCase().includes(q)) continue;
+    const L = srcLevel(s, lv);
+    list.append(el('div', { class: 'ref-row' }, el('span', { class: 'c', text: show(combo, p) }), el('span', { class: 'w', text: what }), el('span', { class: 's lv-' + L, text: SRC[s].label })));
+    n++;
+  }
+  $('ref-count').textContent = `${n}개 · ${src ? SRC[src].label : (plat === 'win' ? 'Windows 기준' : 'macOS 기준')}`;
+}
+function renderPanel() { renderInspect(); renderKbd(); }
+function render() { renderSlots(); renderSummary(); renderPanel(); renderKeepers(); renderRef(); }
+
+/* ─────────────── 6. 바꾸기 ─────────────── */
+function assign(id, p, combo) {
+  state.slots[id] = { ...(state.slots[id] || {}), [p]: combo ? norm(combo, p) : '' };
+  listening = null;
+  changed();
+}
+function toggleMod(id, p, m) {
+  const v = valOf(id, p); if (!v) return;
+  const { mods, key } = parse(v);
+  const next = mods.includes(m) ? mods.filter((x) => x !== m) : [...mods, m];
+  assign(id, p, [...next, key].join('+'));
+}
+function changed() { state.updatedAt = new Date().toISOString(); render(); queueSave(); }
+function setPlat(p, rerender = true) {
+  plat = p;
+  $('plat-win').setAttribute('aria-pressed', String(p === 'win'));
+  $('plat-mac').setAttribute('aria-pressed', String(p === 'mac'));
+  kbdMods = null;
+  if (rerender) render();
+}
+window.addEventListener('keydown', (e) => {
+  if (!listening) return;
+  const s = slotOf(listening.id);
+  if (e.key === 'Backspace' && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) { e.preventDefault(); assign(listening.id, listening.plat, ''); return; }
+  if (e.key === 'Escape' && s.g === 'global' && !e.ctrlKey && !e.altKey && !e.shiftKey) { e.preventDefault(); listening = null; render(); return; }
+  const c = comboFromEvent(e, listening.plat);
+  if (!c) return; // 수정 키만 누른 상태
+  e.preventDefault(); e.stopPropagation();
+  const p = listening.plat, id = listening.id;
+  assign(id, p, c);
+  const b = $(`rec-${id}-${p}`); if (b) b.focus();
+}, true);
+document.addEventListener('click', () => { if (listening) { listening = null; render(); } });
+$('plat-win').addEventListener('click', () => setPlat('win'));
+$('plat-mac').addEventListener('click', () => setPlat('mac'));
+$('ref-q').addEventListener('input', renderRef);
+$('ref-src').addEventListener('change', renderRef);
+$('fill-prd').addEventListener('click', () => {
+  for (const s of SLOTS) if (s.prd) for (const p of ['win', 'mac']) if (!valOf(s.id, p)) state.slots[s.id] = { ...(state.slots[s.id] || {}), [p]: norm(s.prd[p], p) };
+  changed();
+});
+$('mac-from-win').addEventListener('click', () => {
+  const map = { Ctrl: 'Cmd', Alt: 'Option', Win: 'Ctrl', Shift: 'Shift' };
+  for (const s of SLOTS) {
+    const w = valOf(s.id, 'win'); if (s.noMac || !w || valOf(s.id, 'mac')) continue;
+    const { mods, key } = parse(w);
+    state.slots[s.id] = { ...(state.slots[s.id] || {}), mac: norm([...mods.map((m) => map[m]), key].join('+'), 'mac') };
+  }
+  changed();
+});
+
+/* ─────────────── 7. 결과 내보내기 ─────────────── */
+function exportText() {
+  const lines = ['| 묶음 | 기능 | Windows | macOS | 상태 |', '|---|---|---|---|---|'];
+  for (const g of GROUPS) for (const s of SLOTS.filter((x) => x.g === g.id)) {
+    const w = valOf(s.id, 'win'), m = s.noMac ? '' : valOf(s.id, 'mac');
+    if (!w && !m && !s.need) continue;
+    const aw = analyze(s, 'win', w), am = analyze(s, 'mac', m);
+    const st = [aw, am].map((a, i) => (a.empty ? '' : `${i ? 'mac' : 'win'} ${LV_TEXT[a.lv]}`)).filter(Boolean).join(', ');
+    lines.push(`| ${g.title} | ${s.name} | ${w || '(비움)'} | ${m || '(비움)'} | ${st} |`);
+  }
+  lines.push('', `함께 쓰는 앱: ${Object.entries(state.keep).filter(([, v]) => v).map(([k]) => k).join(', ') || '없음'}`, `저장 시각: ${state.updatedAt || '-'}`);
+  return lines.join('\n');
+}
+$('copy-out').addEventListener('click', async () => {
+  const t = exportText();
+  const box = $('export'); box.hidden = false;
+  const ta = $('export-text'); ta.value = t;
+  try { await navigator.clipboard.writeText(t); $('export-note').textContent = '복사했어요. 대화창에 붙여 넣어도 되고, 저장된 값은 Claude가 바로 읽을 수 있어요.'; }
+  catch { ta.focus(); ta.select(); $('export-note').textContent = '자동 복사가 막혀 있어 글을 골라 두었어요. Ctrl+C로 복사하세요.'; }
+});
+
+/* ─────────────── 8. 저장(공유 저장소 · 없으면 이 브라우저) ─────────────── */
+function setSave(s, text) { const b = $('save'); b.dataset.s = s; $('save-text').textContent = text; }
+function queueSave() { clearTimeout(saveTimer); saveTimer = setTimeout(flushSave, 700); }
+async function flushSave() {
+  saveTimer = null;
+  const body = JSON.parse(JSON.stringify(state));
+  if (!docRef) {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(body)); setSave('saved', '이 브라우저에 저장됨'); } catch { setSave('error', '저장할 수 없어요(브라우저 저장소 막힘) — 결과 복사를 쓰세요'); }
+    return;
+  }
+  if (saving) { pendingSave = true; return; }
+  saving = true; setSave('saving', '저장하는 중…');
+  try {
+    await docRef.set(body);
+    const t = new Date(); setSave('saved', `저장됨 · ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`);
+  } catch (e) {
+    if (e && e.code === 'invalid_argument') setSave('error', '읽기만 할 수 있는 화면이에요(바꾼 값은 저장되지 않아요)');
+    else setSave('error', '저장하지 못했어요 — 잠시 뒤 다시 바꾸거나 결과 복사를 쓰세요');
+  } finally {
+    saving = false;
+    if (pendingSave) { pendingSave = false; flushSave(); }
+  }
+}
+function loadLocal() {
+  try { const raw = localStorage.getItem(STORE_KEY); if (raw) { const v = JSON.parse(raw); if (v && v.slots) state = { ...state, ...v, keep: { ...DEFAULT_KEEP, ...(v.keep || {}) } }; } } catch { /* 비어 있음 */ }
+}
+async function connect() {
+  let api = null;
+  try { api = window.claude && typeof window.claude.use === 'function' ? await window.claude.use('db') : null; } catch { api = null; }
+  if (!api) { loadLocal(); buildIndex(); render(); setSave('idle', '이 브라우저에만 저장돼요'); return; }
+  db = api; docRef = db.doc('shortcuts/choices');
+  const timer = setTimeout(() => { if (!dbReady) setSave('error', '저장소에 아직 닿지 않았어요 — 바꾼 값은 연결되면 저장돼요'); }, 10000);
+  docRef.onSnapshot((snap) => {
+    if (!snap.metadata.fromCache) { dbReady = true; clearTimeout(timer); }
+    if (snap.exists && !saving && !saveTimer) {
+      const v = snap.data();
+      if (v && v.slots) { state = { version: 1, keep: { ...DEFAULT_KEEP, ...(v.keep || {}) }, slots: JSON.parse(JSON.stringify(v.slots)), updatedAt: v.updatedAt || null }; buildIndex(); render(); }
+    }
+    if (dbReady && !saving) setSave(snap.exists ? 'saved' : 'idle', snap.exists ? '저장된 값을 불러왔어요' : '아직 저장한 값이 없어요');
+  }, () => { clearTimeout(timer); setSave('error', '저장소를 쓸 수 없어요 — 결과 복사를 쓰세요'); });
+}
+buildIndex();
+render();
+connect();
+</script>

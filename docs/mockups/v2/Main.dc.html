@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>screen-ink 시안 5방향 한눈에</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;family=IBM+Plex+Sans+KR:wght@400;500;600&amp;family=Gowun+Dodum&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap">
+<style>
+body{margin:0}
+.card{display:flex;flex-direction:column;gap:18px;padding:28px;border-radius:24px;box-sizing:border-box;height:388px}
+.nm{margin:0;font-size:22px;font-weight:700;letter-spacing:-0.01em}
+.cp{margin:0;font-size:14px;white-space:nowrap}
+.sw{display:flex;gap:8px}
+.sw span{width:28px;height:28px;border-radius:9px}
+.meta{display:grid;grid-template-columns:56px 1fr;row-gap:8px;font-size:12.5px;margin:0}
+.meta dt{opacity:.62}.meta dd{margin:0;white-space:nowrap}
+</style>
+</helmet>
+<div style="width: 1600px; height: 560px; box-sizing: border-box; padding: 44px 48px; background: #FBFBFD; font-family: 'Noto Sans KR', system-ui, sans-serif; color: #1D1D1F; display: flex; flex-direction: column; gap: 28px">
+  <div style="display: flex; align-items: baseline; gap: 16px">
+    <h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em">screen-ink 시안 5방향</h1>
+    <p style="margin: 0; font-size: 15px; color: #6E6E73">같은 정보 구조, 다섯 가지 표정 — 아래 줄에서 화면별로 비교해 고르세요</p>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px">
+
+    <section class="card" style="background: #F5F5F7; color: #1D1D1F; box-shadow: inset 0 0 0 1px #E5E5EA">
+      <svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="A 앱 아이콘"><rect width="64" height="64" rx="15" fill="#FFFFFF"/><rect x=".5" y=".5" width="63" height="63" rx="14.5" fill="none" stroke="#000" stroke-opacity=".08"/><path d="M18 24v-4a2 2 0 0 1 2-2h4M40 18h4a2 2 0 0 1 2 2v4M46 40v4a2 2 0 0 1-2 2h-4M24 46h-4a2 2 0 0 1-2-2v-4" fill="none" stroke="#C7C7CC" stroke-width="3" stroke-linecap="round"/><path d="M22 38c5-9 9 3 14-5s7-3 8-1" fill="none" stroke="#0A7CFF" stroke-width="4" stroke-linecap="round"/></svg>
+      <div><p class="nm">A · 클리어</p><p class="cp" style="color: #6E6E73">macOS 설정의 정석, 반투명 재질</p></div>
+      <div class="sw"><span style="background: #F5F5F7; box-shadow: inset 0 0 0 1px #D1D1D6"></span><span style="background: #FFFFFF; box-shadow: inset 0 0 0 1px #D1D1D6"></span><span style="background: #1D1D1F"></span><span style="background: #6E6E73"></span><span style="background: #0A7CFF"></span></div>
+      <dl class="meta"><dt>재질</dt><dd>흐림 + 얇은 구분선</dd><dt>아이콘</dt><dd>색 타일 안 선 아이콘</dd><dt>글꼴</dt><dd>Pretendard · 가나다 Aa</dd><dt>귀여움</dt><dd>모드마다 색 타일</dd></dl>
+    </section>
+
+    <section class="card" style="background: #111113; color: #F5F5F7">
+      <svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="B 앱 아이콘"><rect width="64" height="64" rx="15" fill="#000"/><rect x="14" y="14" width="36" height="12" rx="6" fill="#F5F5F7"/><circle cx="44" cy="20" r="3" fill="#FFD60A"/><path d="M20 44c4-6 8 2 12-3s6-2 8 0" fill="none" stroke="#F5F5F7" stroke-opacity=".5" stroke-width="3.5" stroke-linecap="round"/></svg>
+      <div><p class="nm">B · 아일랜드</p><p class="cp" style="color: #A1A1AA">화면 위 알약 하나가 늘고 줄어듦</p></div>
+      <div class="sw"><span style="background: #000"></span><span style="background: #1C1C1E"></span><span style="background: #F5F5F7"></span><span style="background: #A1A1AA"></span><span style="background: #FFD60A"></span></div>
+      <dl class="meta"><dt>재질</dt><dd>검은 유리 알약</dd><dt>아이콘</dt><dd>흰 선 · 노란 한 점</dd><dt>글꼴</dt><dd>Pretendard · 가나다 Aa</dd><dt>귀여움</dt><dd>알약이 말하듯 움직임</dd></dl>
+    </section>
+
+    <section class="card" style="background: #FAF7F0; color: #2A2925; box-shadow: inset 0 0 0 1px #ECE5D6">
+      <svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="C 앱 아이콘"><rect width="64" height="64" rx="15" fill="#FFFDF8"/><rect x=".5" y=".5" width="63" height="63" rx="14.5" fill="none" stroke="#E2D9C6"/><path d="M16 44h32" stroke="#F2B705" stroke-width="6" stroke-linecap="round" opacity=".55"/><path d="M19 40l20-20 5 5-20 20-6 1z" fill="#E5484D"/><path d="M39 20l5 5" stroke="#2A2925" stroke-width="2"/><path d="M19 40l-1 6 6-1" fill="#2A2925"/></svg>
+      <div><p class="nm" style="font-family: 'Gowun Dodum', sans-serif; font-weight: 400">C · 문구점</p><p class="cp" style="color: #766F62">따뜻한 종이와 색연필 네 자루</p></div>
+      <div class="sw"><span style="background: #FAF7F0; box-shadow: inset 0 0 0 1px #E2D9C6"></span><span style="background: #E5484D"></span><span style="background: #2F6FED"></span><span style="background: #2BA36B"></span><span style="background: #F2B705"></span></div>
+      <dl class="meta"><dt>재질</dt><dd>종이 면 + 얇은 테두리</dd><dt>아이콘</dt><dd>둥근 끝 2px 선</dd><dt>글꼴</dt><dd>고운돋움 제목 · 가나다</dd><dt>귀여움</dt><dd>메모지 같은 묶음</dd></dl>
+    </section>
+
+    <section class="card" style="background: #F6F5FB; color: #24223A; box-shadow: inset 0 0 0 1px #ECEAF5">
+      <svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="D 앱 아이콘"><rect width="64" height="64" rx="18" fill="#EAE2FF"/><rect x="2" y="2" width="60" height="30" rx="16" fill="#FFFFFF" opacity=".45"/><rect x="17" y="17" width="30" height="30" rx="11" fill="#7C5CFF"/><path d="M25 36c3-5 6 1 9-3s4-2 5-1" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round"/></svg>
+      <div><p class="nm">D · 젤리</p><p class="cp" style="color: #6B6789">모드마다 파스텔, 말랑한 둥근 면</p></div>
+      <div class="sw"><span style="background: #FFE4D6"></span><span style="background: #DCEBFF"></span><span style="background: #EAE2FF"></span><span style="background: #D9F4EA"></span><span style="background: #FFF2C7"></span></div>
+      <dl class="meta"><dt>재질</dt><dd>무광 + 위쪽 빛 한 줄</dd><dt>아이콘</dt><dd>파스텔 칩 안 굵은 선</dd><dt>글꼴</dt><dd>Pretendard 굵게 · 가나다</dd><dt>귀여움</dt><dd>가장 강함</dd></dl>
+    </section>
+
+    <section class="card" style="background: #EFEFEC; color: #121212; box-shadow: inset 0 0 0 1px #DDDDD8; font-family: 'IBM Plex Sans KR', sans-serif">
+      <svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="E 앱 아이콘"><rect width="64" height="64" rx="15" fill="#1A1A1A"/><path d="M18 26v-6a2 2 0 0 1 2-2h6M38 18h6a2 2 0 0 1 2 2v6M46 38v6a2 2 0 0 1-2 2h-6M26 46h-6a2 2 0 0 1-2-2v-6" fill="none" stroke="#FAFAF8" stroke-width="2.5" stroke-linecap="round"/><circle cx="32" cy="32" r="5" fill="#FF9F0A"/></svg>
+      <div><p class="nm">E · 그래파이트</p><p class="cp" style="color: #6B6B68">모노톤 도구에 주황 한 점</p></div>
+      <div class="sw"><span style="background: #EFEFEC; box-shadow: inset 0 0 0 1px #CFCFC9"></span><span style="background: #FAFAF8; box-shadow: inset 0 0 0 1px #CFCFC9"></span><span style="background: #1A1A1A"></span><span style="background: #6B6B68"></span><span style="background: #FF9F0A"></span></div>
+      <dl class="meta"><dt>재질</dt><dd>불투명 면 · 선 위주</dd><dt>아이콘</dt><dd>1.5px 가는 선</dd><dt>글꼴</dt><dd>Plex Sans KR · Mono 키</dd><dt>귀여움</dt><dd>주황 점 하나로만</dd></dl>
+    </section>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":560}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

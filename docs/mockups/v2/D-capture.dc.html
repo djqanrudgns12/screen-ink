@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>D 젤리 — F1 캡처 화면</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+.td{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));height:40px;align-items:center;border-top:1px solid #E5E5EA;font-size:15px;color:#1D1D1F;text-align:center}
+.hint kbd{font-family:inherit;font-size:11.5px;font-weight:700;color:#4C3BB8;background:#F1EDFF;border-radius:8px;padding:2px 8px;margin-right:6px}
+.hint span{display:inline-flex;align-items:center;white-space:nowrap}
+</style>
+</helmet>
+<div style="width: 960px; height: 600px; position: relative; overflow: hidden; background: #E9EBEF; font-family: 'Noto Sans KR', system-ui, sans-serif">
+  <div style="position: absolute; left: 80px; top: 36px; width: 800px; height: 528px; background: #FFFFFF; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08)">
+    <p style="position: absolute; left: 40px; top: 40px; margin: 0; font-size: 26px; font-weight: 700; color: #1D1D1F">3. 분수의 나눗셈</p>
+    <p style="position: absolute; left: 40px; top: 92px; margin: 0; font-size: 15px; color: #3A3A3C">나누는 수를 뒤집어 곱하면 됩니다. 아래 표로 차례를 확인해 봅시다.</p>
+    <div style="position: absolute; left: 40px; top: 160px; width: 720px; border: 1px solid #E5E5EA; border-radius: 8px; overflow: hidden">
+      <div class="td" style="border-top: 0; background: #F5F5F7; font-weight: 500"><span>식</span><span>바꾸기</span><span>답</span></div>
+      <div class="td"><span>3/4 ÷ 1/8</span><span>3/4 × 8</span><span>6</span></div>
+      <div class="td"><span>2/3 ÷ 1/6</span><span>2/3 × 6</span><span>4</span></div>
+      <div class="td"><span>5/6 ÷ 5/12</span><span>5/6 × 12/5</span><span>2</span></div>
+    </div>
+    <div style="position: absolute; left: 40px; top: 360px; width: 340px; height: 120px; border-radius: 8px; background: #F5F5F7"></div>
+    <div style="position: absolute; left: 400px; top: 360px; width: 360px; height: 120px; border-radius: 8px; background: #F5F5F7"></div>
+  </div>
+
+  <div aria-label="고른 범위" style="position: absolute; left: 121px; top: 237px; width: 718px; height: 40px; outline: 3px solid #7C5CFF; border-radius: 4px; box-shadow: 0 0 0 7px rgba(124,92,255,.22), 0 0 0 9999px rgba(36,34,58,.42)"></div>
+
+  <div style="position: absolute; left: 116px; top: 196px; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 15px; background: #FFFFFF; box-shadow: 0 6px 16px rgba(76,60,160,.22); font-size: 12px; color: #24223A; white-space: nowrap">
+    <span style="width: 8px; height: 8px; border-radius: 50%; background: #7C5CFF"></span>
+    <span style="color: #6B6789">창 › 표 ›</span><span style="font-weight: 700">2행</span>
+    <span style="font-variant-numeric: tabular-nums; color: #4C3BB8; font-weight: 700">718 × 40</span>
+  </div>
+
+  <svg aria-hidden="true" width="22" height="22" viewBox="0 0 22 22" style="position: absolute; left: 549px; top: 246px"><path d="M11 1v8M11 13v8M1 11h8M13 11h8" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round"/><path d="M11 1v8M11 13v8M1 11h8M13 11h8" stroke="#24223A" stroke-width="1.4" stroke-linecap="round"/></svg>
+
+  <div aria-label="확대경" style="position: absolute; left: 584px; top: 282px; display: flex; flex-direction: column; align-items: center; gap: 7px">
+    <div style="width: 96px; height: 96px; border-radius: 50%; overflow: hidden; position: relative; background: #FFFFFF; box-shadow: 0 0 0 5px #FFFFFF, 0 10px 24px rgba(76,60,160,.3)">
+      <div style="position: absolute; left: 0; right: 0; top: 60px; height: 8px; background: #E5E5EA"></div>
+      <div style="position: absolute; left: 44px; top: 0; bottom: 0; width: 8px; border-left: 1px solid rgba(124,92,255,.8); border-right: 1px solid rgba(124,92,255,.8)"></div>
+      <div style="position: absolute; top: 44px; left: 0; right: 0; height: 8px; border-top: 1px solid rgba(124,92,255,.8); border-bottom: 1px solid rgba(124,92,255,.8)"></div>
+    </div>
+    <div style="display: flex; gap: 6px; align-items: center; height: 24px; padding: 0 10px; border-radius: 12px; background: #FFFFFF; box-shadow: 0 4px 12px rgba(76,60,160,.2); font-size: 11px; font-weight: 500; color: #24223A; font-variant-numeric: tabular-nums; white-space: nowrap"><span style="width: 10px; height: 10px; border-radius: 4px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #D9D6E8"></span>#FFFFFF · 1284, 612</div>
+  </div>
+
+  <div class="hint" style="position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; gap: 18px; align-items: center; height: 44px; padding: 0 18px; border-radius: 22px; background: #FFFFFF; box-shadow: 0 12px 30px rgba(76,60,160,.28); font-size: 12.5px; font-weight: 500; color: #3D3A57">
+    <span><kbd>휠</kbd>넓히기·좁히기</span>
+    <span><kbd>Tab</kbd>창 단위</span>
+    <span><kbd>Enter</kbd>복사</span>
+    <span><kbd>Esc</kbd>취소</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":600}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

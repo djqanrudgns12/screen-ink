@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>최종 — Alt+1 판서</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+.td{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));height:68px;align-items:center;border-top:1.5px solid #E5E5EA;font-size:26px;color:#1D1D1F;text-align:center}
+.mono{font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace}
+.pc{width:14px;height:14px;border-radius:50%}
+</style>
+</helmet>
+<div style="width: 960px; height: 600px; position: relative; overflow: hidden; background: #FFFFFF; font-family: 'IBM Plex Sans KR', system-ui, sans-serif">
+  <div style="position: absolute; left: -60px; top: 40px; width: 1080px; font-family: 'Noto Sans KR', sans-serif">
+    <div style="margin-left: 130px; width: 820px; border: 1.5px solid #E5E5EA; border-radius: 12px; overflow: hidden">
+      <div class="td" style="border-top: 0; background: #F5F5F7; font-weight: 500; font-size: 22px"><span>식</span><span>바꾸기</span><span>답</span></div>
+      <div class="td"><span>3/4 ÷ 1/8</span><span>3/4 × 8</span><span>6</span></div>
+      <div class="td"><span>2/3 ÷ 1/6</span><span>2/3 × 6</span><span>4</span></div>
+      <div class="td"><span>5/6 ÷ 5/12</span><span>5/6 × 12/5</span><span>2</span></div>
+    </div>
+  </div>
+  <svg aria-hidden="true" width="960" height="600" viewBox="0 0 960 600" style="position: absolute; left: 0; top: 0">
+    <path d="M792 122c-26-22-86-16-88 18s46 42 78 30 30-40 2-50" fill="none" stroke="#E5484D" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M300 206c40 16 84 18 116 4" fill="none" stroke="#2F6FED" stroke-width="5" stroke-linecap="round"/>
+    <path d="M408 200l12 9-13 8" fill="none" stroke="#2F6FED" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M396 280h170" stroke="#F2B705" stroke-opacity=".45" stroke-width="26" stroke-linecap="round"/>
+    <path d="M120 470c12-18 22 4 34-10s16-16 26-2M200 466c8-10 18-10 22 2s14 6 22-4M262 470h40" fill="none" stroke="#E5484D" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+
+  <div aria-hidden="true" style="position: absolute; left: 472px; top: 452px; width: 26px; height: 26px; border-radius: 50%; box-shadow: 0 0 0 2px #E5484D, 0 0 0 5px rgba(229,72,77,.18)"></div>
+  <span aria-hidden="true" style="position: absolute; left: 482px; top: 462px; width: 6px; height: 6px; border-radius: 50%; background: #E5484D"></span>
+
+  <div role="status" aria-label="섬 — 판서" style="position: absolute; left: 50%; top: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 8px 0 10px; border-radius: 20px; background: #000000; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 14px 36px rgba(0,0,0,.3); font-size: 13px; color: #F7F8FA; white-space: nowrap">
+    <span class="pc" style="background: #E5484D; box-shadow: 0 0 0 2px #000, 0 0 0 3.5px #F7F8FA"></span>
+    <span>펜</span><span class="mono" style="font-size: 11.5px; color: #8E939E">4px</span>
+    <span style="width: 1px; height: 14px; background: #2C2E35"></span>
+    <span class="mono" style="font-size: 12px; color: #FFB340">×1.75</span>
+    <span style="width: 1px; height: 14px; background: #2C2E35"></span>
+    <span style="display: inline-flex; align-items: center; gap: 5px"><span style="font-size: 12px; color: #8E939E">보관</span><span class="mono" style="font-size: 10.5px; color: #C9CCD3; background: #2C2E35; border-radius: 5px; padding: 0 6px; line-height: 18px">Esc</span></span>
+    <span class="mono" style="font-size: 10.5px; color: #C9CCD3; background: #2C2E35; border-radius: 5px; padding: 0 7px; line-height: 18px">?</span>
+  </div>
+
+  <div aria-label="위치 지도" style="position: absolute; right: 20px; bottom: 20px; width: 96px; height: 60px; border-radius: 8px; background: rgba(0,0,0,.72); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1)">
+    <span style="position: absolute; left: 22px; top: 12px; width: 54px; height: 34px; border-radius: 3px; box-shadow: 0 0 0 1.5px #FF9F0A"></span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":600}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

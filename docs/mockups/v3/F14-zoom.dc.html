@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>최종 — Alt+2 실시간 확대</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+.mono{font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace}
+.ik kbd{font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace;font-size:10.5px;color:#F7F8FA;background:#2C2E35;border-radius:5px;padding:0 6px;line-height:18px;margin-right:6px}
+.ik span{display:inline-flex;align-items:center;white-space:nowrap}
+</style>
+</helmet>
+<div style="width: 960px; height: 600px; position: relative; overflow: hidden; background: #F5F5F7; font-family: 'IBM Plex Sans KR', system-ui, sans-serif">
+  <div style="position: absolute; left: -80px; top: 60px; width: 1200px; height: 620px; border-radius: 24px; background: #0F1115; overflow: hidden">
+    <div style="position: absolute; left: 140px; top: 70px; width: 520px; height: 300px; border-radius: 16px; background: #1D2B4A"></div>
+    <div style="position: absolute; left: 200px; top: 130px; width: 200px; height: 200px; border-radius: 50%; background: #2F55D4; opacity: .85"></div>
+    <div style="position: absolute; left: 330px; top: 170px; width: 260px; height: 150px; border-radius: 18px; background: #F2B705; opacity: .9"></div>
+    <p style="position: absolute; left: 700px; top: 90px; margin: 0; font-family: 'Noto Sans KR', sans-serif; font-size: 44px; font-weight: 700; color: #FFFFFF; line-height: 1.25">물의 순환<br><span style="font-size: 28px; font-weight: 400; color: #C9CCD3">증발 → 응결 → 강수</span></p>
+    <div style="position: absolute; left: 140px; top: 400px; width: 900px; height: 8px; border-radius: 4px; background: #2C2E35"><div style="width: 38%; height: 8px; border-radius: 4px; background: #F7F8FA"></div></div>
+    <span class="mono" style="position: absolute; left: 140px; top: 426px; font-size: 22px; color: #8E939E">02:14 / 05:40</span>
+  </div>
+
+  <div aria-hidden="true" style="position: absolute; left: 520px; top: 300px">
+    <span style="position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,159,10,.18); box-shadow: 0 0 0 1.5px rgba(255,159,10,.7)"></span>
+    <svg width="26" height="32" viewBox="0 0 18 22" style="position: absolute; left: -2px; top: -2px"><path d="M2 2l12.5 11.5H8.5L5 20z" fill="#121212" stroke="#FFFFFF" stroke-width="1.5" stroke-linejoin="round"/></svg>
+  </div>
+
+  <div role="status" aria-label="섬 — 실시간 확대" style="position: absolute; left: 50%; top: 14px; transform: translateX(-50%); width: 470px; box-sizing: border-box; padding: 10px 16px; border-radius: 22px; background: #000000; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 14px 36px rgba(0,0,0,.4); display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #F7F8FA; white-space: nowrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F7F8FA" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/><circle cx="10.5" cy="10.5" r="1.8" fill="#FF9F0A" stroke="none"/></svg>
+      <b style="font-weight: 600">실시간 확대</b>
+      <span style="color: #8E939E">움직이는 화면 그대로</span>
+      <span style="flex: 1"></span>
+      <span class="mono" style="font-size: 12px; color: #FFB340">×2.0</span>
+    </div>
+    <div class="ik" style="display: flex; gap: 14px; font-size: 12px; color: #C9CCD3">
+      <span><kbd>휠</kbd>배율</span><span><kbd>Alt 1</kbd>멈추고 쓰기</span><span><kbd>Esc</kbd>끝</span>
+    </div>
+  </div>
+
+  <div aria-label="위치 지도" style="position: absolute; right: 20px; bottom: 20px; width: 112px; height: 70px; border-radius: 9px; background: rgba(0,0,0,.85); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1)">
+    <span style="position: absolute; left: 34px; top: 20px; width: 50px; height: 32px; border-radius: 3px; box-shadow: 0 0 0 1.5px #FF9F0A"></span>
+    <span class="mono" style="position: absolute; left: 8px; bottom: 5px; font-size: 9.5px; color: #8E939E">모니터 1</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":600}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

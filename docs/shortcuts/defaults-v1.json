@@ -1,0 +1,303 @@
+{
+  "schema": "screen-ink.shortcuts.defaults",
+  "version": 1,
+  "confirmedAt": "2026-11-25",
+  "source": "docs/shortcuts/shortcut-picker.html (db shortcuts/choices v12)",
+  "slots": {
+    "region": {
+      "scope": "global",
+      "win": "F1",
+      "mac": "F1"
+    },
+    "window": {
+      "scope": "global",
+      "win": "F2",
+      "mac": "F2"
+    },
+    "record": {
+      "scope": "global",
+      "win": "F3",
+      "mac": "F3"
+    },
+    "draw": {
+      "scope": "global",
+      "win": "Alt+1",
+      "mac": "Option+1"
+    },
+    "zoom": {
+      "scope": "global",
+      "win": "Alt+2",
+      "mac": "Option+2"
+    },
+    "board": {
+      "scope": "global",
+      "win": "Alt+3",
+      "mac": "Option+3"
+    },
+    "last": {
+      "scope": "global",
+      "win": "Shift+F1",
+      "mac": "Shift+F1"
+    },
+    "full": {
+      "scope": "global",
+      "win": "Ctrl+F1",
+      "mac": "Ctrl+Option+F1"
+    },
+    "active": {
+      "scope": "global",
+      "win": "Shift+F2",
+      "mac": "Shift+F2"
+    },
+    "delay": {
+      "scope": "global",
+      "win": "Alt+F1",
+      "mac": "Option+F1"
+    },
+    "restore": {
+      "scope": "global",
+      "win": "Alt+Shift+1",
+      "mac": "Option+Shift+1"
+    },
+    "pause": {
+      "scope": "global",
+      "win": "Alt+`",
+      "mac": "Option+`"
+    },
+    "topmost": {
+      "scope": "global",
+      "win": "Alt+Shift+D",
+      "mac": null
+    },
+    "pin": {
+      "scope": "global",
+      "win": "Alt+Shift+V",
+      "mac": "Option+Shift+V"
+    },
+    "pinToggle": {
+      "scope": "global",
+      "win": "Alt+Shift+H",
+      "mac": "Option+Shift+H"
+    },
+    "timer": {
+      "scope": "global",
+      "win": "Alt+4",
+      "mac": "Option+4"
+    },
+    "c-detect": {
+      "scope": "capture",
+      "win": "Tab",
+      "mac": "Tab"
+    },
+    "c-copy": {
+      "scope": "capture",
+      "win": "Enter",
+      "mac": "Enter"
+    },
+    "c-save": {
+      "scope": "capture",
+      "win": "Ctrl+S",
+      "mac": "Cmd+S"
+    },
+    "c-quick": {
+      "scope": "capture",
+      "win": "Ctrl+Shift+S",
+      "mac": "Shift+Cmd+S"
+    },
+    "c-cancel": {
+      "scope": "capture",
+      "win": "Esc",
+      "mac": "Esc"
+    },
+    "c-last": {
+      "scope": "capture",
+      "win": "R",
+      "mac": "R"
+    },
+    "c-prev": {
+      "scope": "capture",
+      "win": ",",
+      "mac": ","
+    },
+    "c-next": {
+      "scope": "capture",
+      "win": ".",
+      "mac": "."
+    },
+    "c-full": {
+      "scope": "capture",
+      "win": "Ctrl+A",
+      "mac": "Cmd+A"
+    },
+    "c-cursor": {
+      "scope": "capture",
+      "win": "`",
+      "mac": "`"
+    },
+    "c-color": {
+      "scope": "capture",
+      "win": "C",
+      "mac": "C"
+    },
+    "d-pen": {
+      "scope": "draw",
+      "win": "P",
+      "mac": "P"
+    },
+    "d-marker": {
+      "scope": "draw",
+      "win": "M",
+      "mac": "M"
+    },
+    "d-text": {
+      "scope": "draw",
+      "win": "T",
+      "mac": "T"
+    },
+    "d-select": {
+      "scope": "draw",
+      "win": "S",
+      "mac": "S"
+    },
+    "d-eraser": {
+      "scope": "draw",
+      "win": "D",
+      "mac": "D"
+    },
+    "d-clear": {
+      "scope": "draw",
+      "win": "E",
+      "mac": "E"
+    },
+    "d-red": {
+      "scope": "draw",
+      "win": "R",
+      "mac": "R"
+    },
+    "d-yellow": {
+      "scope": "draw",
+      "win": "Y",
+      "mac": "Y"
+    },
+    "d-green": {
+      "scope": "draw",
+      "win": "G",
+      "mac": "G"
+    },
+    "d-orange": {
+      "scope": "draw",
+      "win": "O",
+      "mac": "O"
+    },
+    "d-blue": {
+      "scope": "draw",
+      "win": "B",
+      "mac": "B"
+    },
+    "d-lime": {
+      "scope": "draw",
+      "win": "L",
+      "mac": "L"
+    },
+    "d-white": {
+      "scope": "draw",
+      "win": "W",
+      "mac": "W"
+    },
+    "d-black": {
+      "scope": "draw",
+      "win": "K",
+      "mac": "K"
+    },
+    "d-undo": {
+      "scope": "draw",
+      "win": "Ctrl+Z",
+      "mac": "Cmd+Z"
+    },
+    "d-redo": {
+      "scope": "draw",
+      "win": "Ctrl+Y",
+      "mac": "Shift+Cmd+Z"
+    },
+    "d-copy": {
+      "scope": "draw",
+      "win": "Ctrl+C",
+      "mac": "Cmd+C"
+    },
+    "d-save": {
+      "scope": "draw",
+      "win": "Ctrl+S",
+      "mac": "Cmd+S"
+    },
+    "d-restore": {
+      "scope": "draw",
+      "win": "Ctrl+Shift+R",
+      "mac": "Shift+Cmd+R"
+    },
+    "d-center": {
+      "scope": "draw",
+      "win": "Space",
+      "mac": "Space"
+    },
+    "d-zin": {
+      "scope": "draw",
+      "win": "Up",
+      "mac": "Up"
+    },
+    "d-zout": {
+      "scope": "draw",
+      "win": "Down",
+      "mac": "Down"
+    },
+    "d-wup": {
+      "scope": "draw",
+      "win": "Ctrl+Up",
+      "mac": "Cmd+Up"
+    },
+    "d-wdown": {
+      "scope": "draw",
+      "win": "Ctrl+Down",
+      "mac": "Cmd+Down"
+    },
+    "d-help": {
+      "scope": "draw",
+      "win": "Shift+/",
+      "mac": "Shift+/"
+    },
+    "d-exit": {
+      "scope": "draw",
+      "win": "Esc",
+      "mac": "Esc"
+    },
+    "d-spot": {
+      "scope": "draw",
+      "win": "H",
+      "mac": "H"
+    },
+    "d-check": {
+      "scope": "draw",
+      "win": "F6",
+      "mac": "F6"
+    },
+    "d-number": {
+      "scope": "draw",
+      "win": "F7",
+      "mac": "F7"
+    },
+    "z-in": {
+      "scope": "zoom",
+      "win": "Up",
+      "mac": "Up"
+    },
+    "z-out": {
+      "scope": "zoom",
+      "win": "Down",
+      "mac": "Down"
+    },
+    "z-exit": {
+      "scope": "zoom",
+      "win": "Esc",
+      "mac": "Esc"
+    }
+  }
+}

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>D 젤리 — 요소 시트</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+.sh{margin:0 0 10px;font-size:12px;font-weight:700;color:#6B6789}
+.card{background:#FFFFFF;border-radius:18px;box-shadow:0 0 0 1px #ECEAF5,0 6px 18px rgba(76,60,160,.06);padding:14px}
+.mode{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.mode div{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;font-weight:500;color:#24223A;white-space:nowrap}
+.mode i{width:40px;height:40px;border-radius:13px;display:grid;place-items:center}
+.mode i b{width:14px;height:14px;border-radius:5px}
+.tok{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tok div{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#24223A;white-space:nowrap}
+.tok i{width:22px;height:22px;border-radius:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.tok small{color:#6B6789;font-size:10.5px}
+</style>
+</helmet>
+<div style="width: 720px; height: 640px; box-sizing: border-box; padding: 28px 32px; background: #F6F5FB; font-family: 'Noto Sans KR', system-ui, sans-serif; color: #24223A; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; align-content: start">
+
+  <section>
+    <p class="sh">앱 아이콘</p>
+    <div class="card" style="display: flex; align-items: flex-end; gap: 16px">
+      <svg width="84" height="84" viewBox="0 0 64 64" role="img" aria-label="앱 아이콘"><rect width="64" height="64" rx="18" fill="#EAE2FF"/><rect x="2" y="2" width="60" height="30" rx="16" fill="#FFFFFF" opacity=".45"/><rect x="17" y="17" width="30" height="30" rx="11" fill="#7C5CFF"/><path d="M25 36c3-5 6 1 9-3s4-2 5-1" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round"/></svg>
+      <svg width="42" height="42" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="#EAE2FF"/><rect x="17" y="17" width="30" height="30" rx="11" fill="#7C5CFF"/><path d="M25 36c3-5 6 1 9-3s4-2 5-1" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round"/></svg>
+    </div>
+  </section>
+
+  <section>
+    <p class="sh">트레이 아이콘 — 기본 · 녹화 중 · 꺼짐</p>
+    <div style="display: flex; height: 112px; border-radius: 18px; overflow: hidden">
+      <div style="flex: 1; display: flex; align-items: center; justify-content: space-evenly; background: #FFFFFF">
+        <svg width="20" height="20" viewBox="0 0 18 18" role="img" aria-label="기본"><rect x="3" y="3" width="12" height="12" rx="4.5" fill="#24223A"/><path d="M6 10.5c1-1.6 2 .4 3-1s1.5-.6 2-.3" fill="none" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <svg width="20" height="20" viewBox="0 0 18 18" role="img" aria-label="녹화 중"><rect x="3" y="3" width="12" height="12" rx="4.5" fill="#24223A"/><circle cx="9" cy="9" r="2.6" fill="#FF6B6B"/></svg>
+        <svg width="20" height="20" viewBox="0 0 18 18" role="img" aria-label="꺼짐"><rect x="3.8" y="3.8" width="10.4" height="10.4" rx="4" fill="none" stroke="#24223A" stroke-opacity=".35" stroke-width="1.6"/></svg>
+      </div>
+      <div style="flex: 1; display: flex; align-items: center; justify-content: space-evenly; background: #171923">
+        <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true"><rect x="3" y="3" width="12" height="12" rx="4.5" fill="#F1F4FA"/><path d="M6 10.5c1-1.6 2 .4 3-1s1.5-.6 2-.3" fill="none" stroke="#171923" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true"><rect x="3" y="3" width="12" height="12" rx="4.5" fill="#F1F4FA"/><circle cx="9" cy="9" r="2.6" fill="#FF6B6B"/></svg>
+        <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true"><rect x="3.8" y="3.8" width="10.4" height="10.4" rx="4" fill="none" stroke="#F1F4FA" stroke-opacity=".4" stroke-width="1.6"/></svg>
+      </div>
+    </div>
+  </section>
+
+  <section style="grid-column: 1 / -1">
+    <p class="sh">모드 색 — 연한 바탕 10% + 아이콘 한 색, 글자는 늘 중립색</p>
+    <div class="card mode">
+      <div><i style="background: #FFF1EB"><b style="background: #E86A33"></b></i>범위 캡처</div>
+      <div><i style="background: #EAF2FF"><b style="background: #3B7BE8"></b></i>창 캡처</div>
+      <div><i style="background: #FEF0F0"><b style="background: #E5484D"></b></i>녹화</div>
+      <div><i style="background: #F1EDFF"><b style="background: #7C5CFF"></b></i>판서</div>
+      <div><i style="background: #EAF8F3"><b style="background: #16A37A"></b></i>확대</div>
+      <div><i style="background: #FFF8E5"><b style="background: #B07A00"></b></i>칠판</div>
+    </div>
+  </section>
+
+  <section>
+    <p class="sh">바탕 색</p>
+    <div class="card tok" style="grid-template-columns: repeat(2, minmax(0, 1fr))">
+      <div><i style="background: #F6F5FB"></i>바탕 <small>#F6F5FB</small></div>
+      <div><i style="background: #FFFFFF"></i>면 <small>#FFFFFF</small></div>
+      <div><i style="background: #24223A"></i>글자 <small>#24223A</small></div>
+      <div><i style="background: #6B6789"></i>보조 <small>#6B6789</small></div>
+      <div><i style="background: #ECEAF5"></i>구분선 <small>#ECEAF5</small></div>
+      <div><i style="background: #7C5CFF"></i>강조 <small>#7C5CFF</small></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="sh">말풍선 · 판서 상태</p>
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <div role="status" style="display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 7px; border-radius: 23px; background: #FFFFFF; box-shadow: 0 10px 24px rgba(76,60,160,.18)">
+        <span style="width: 42px; height: 32px; border-radius: 16px 9px 9px 16px; background: #F1EDFF"></span>
+        <span style="flex: 1; font-size: 13px; font-weight: 500; white-space: nowrap">복사했어요</span>
+        <button type="button" style="height: 32px; padding: 0 14px; border-radius: 16px; border: 0; background: #7C5CFF; color: #FFFFFF; font-family: inherit; font-size: 12.5px; font-weight: 700">저장</button>
+      </div>
+      <div role="status" style="display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 16px; border-radius: 23px; background: #FFFFFF; box-shadow: 0 10px 24px rgba(76,60,160,.18); font-size: 13px; font-weight: 500; white-space: nowrap">
+        <span style="width: 16px; height: 16px; border-radius: 6px; background: #E5484D"></span>펜 4px<span style="color: #6B6789">× 1.75</span><span style="flex: 1"></span><span style="font-size: 11.5px; color: #4C3BB8; background: #F1EDFF; border-radius: 8px; padding: 2px 8px">?</span>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":720,"height":640}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

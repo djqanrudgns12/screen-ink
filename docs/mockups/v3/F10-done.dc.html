@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>최종 — F1 결과</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+.td{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));height:40px;align-items:center;border-top:1px solid #E5E5EA;font-size:15px;color:#1D1D1F;text-align:center}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:14px;border:0;font-family:inherit;font-size:12px;white-space:nowrap}
+.chip kbd{font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace;font-size:10px;opacity:.7}
+</style>
+</helmet>
+<div style="width: 960px; height: 600px; position: relative; overflow: hidden; background: #E9EBEF; font-family: 'IBM Plex Sans KR', system-ui, sans-serif">
+  <div style="position: absolute; left: 80px; top: 36px; width: 800px; height: 528px; background: #FFFFFF; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); font-family: 'Noto Sans KR', sans-serif">
+    <p style="position: absolute; left: 40px; top: 52px; margin: 0; font-size: 26px; font-weight: 700; color: #1D1D1F">3. 분수의 나눗셈</p>
+    <p style="position: absolute; left: 40px; top: 104px; margin: 0; font-size: 15px; color: #3A3A3C">나누는 수를 뒤집어 곱하면 됩니다. 아래 표로 차례를 확인해 봅시다.</p>
+    <div style="position: absolute; left: 40px; top: 160px; width: 720px; border: 1px solid #E5E5EA; border-radius: 8px; overflow: hidden">
+      <div class="td" style="border-top: 0; background: #F5F5F7; font-weight: 500"><span>식</span><span>바꾸기</span><span>답</span></div>
+      <div class="td"><span>3/4 ÷ 1/8</span><span>3/4 × 8</span><span>6</span></div>
+      <div class="td"><span>2/3 ÷ 1/6</span><span>2/3 × 6</span><span>4</span></div>
+      <div class="td"><span>5/6 ÷ 5/12</span><span>5/6 × 12/5</span><span>2</span></div>
+    </div>
+    <div style="position: absolute; left: 40px; top: 360px; width: 340px; height: 120px; border-radius: 8px; background: #F5F5F7"></div>
+    <div style="position: absolute; left: 400px; top: 360px; width: 360px; height: 120px; border-radius: 8px; background: #F5F5F7"></div>
+  </div>
+  <div aria-hidden="true" style="position: absolute; left: 121px; top: 237px; width: 718px; height: 40px; outline: 2px solid rgba(255,159,10,.35); border-radius: 2px"></div>
+
+  <div role="status" aria-label="섬 — 결과" style="position: absolute; left: 50%; top: 14px; transform: translateX(-50%); width: 500px; box-sizing: border-box; padding: 8px 8px 11px; border-radius: 24px; background: #000000; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 14px 36px rgba(0,0,0,.4); display: flex; flex-direction: column; gap: 8px; overflow: hidden">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div style="width: 74px; height: 40px; border-radius: 16px 7px 7px 16px; background: #FFFFFF; overflow: hidden; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; font-family: 'Noto Sans KR', sans-serif; font-size: 7px; color: #1D1D1F; text-align: center"><span>3/4÷1/8</span><span>3/4×8</span><span>6</span></div>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 2px; white-space: nowrap">
+        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #F7F8FA"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3DD68C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>복사했어요</span>
+        <span style="font-family: 'IBM Plex Mono','IBM Plex Sans KR',monospace; font-size: 11px; color: #8E939E">718×40 · 한글·PPT에 Ctrl+V</span>
+      </div>
+      <button type="button" class="chip" style="background: #F7F8FA; color: #111315; font-weight: 500">저장 <kbd>Ctrl S</kbd></button>
+      <button type="button" class="chip" style="background: #2C2E35; color: #F7F8FA">판서로 <kbd>Alt 1</kbd></button>
+    </div>
+    <span aria-hidden="true" style="position: absolute; left: 24px; right: 24px; bottom: 3px; height: 2px; border-radius: 1px; background: #2C2E35"><span style="display: block; width: 62%; height: 2px; border-radius: 1px; background: #FF9F0A"></span></span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":600}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

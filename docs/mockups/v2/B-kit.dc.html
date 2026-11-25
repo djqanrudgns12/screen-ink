@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>B 아일랜드 — 요소 시트</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap">
+<style>
+body{margin:0}
+.sh{margin:0 0 10px;font-size:12px;color:#666B73}
+.isl{display:inline-flex;align-items:center;gap:10px;height:38px;padding:0 16px;border-radius:19px;background:#000000;color:#F7F8FA;font-size:13px;white-space:nowrap;box-shadow:0 8px 22px rgba(0,0,0,.25)}
+.isl small{color:#8E939E;font-size:12px}
+.isl kbd{font-family:inherit;font-size:11px;color:#F7F8FA;background:#2C2E35;border-radius:6px;padding:1px 7px}
+.tok{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tok div{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#111315;white-space:nowrap}
+.tok i{width:22px;height:22px;border-radius:7px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
+.tok small{color:#666B73;font-size:10.5px}
+</style>
+</helmet>
+<div style="width: 720px; height: 640px; box-sizing: border-box; padding: 28px 32px; background: #F2F3F5; font-family: 'Noto Sans KR', system-ui, sans-serif; color: #111315; display: flex; flex-direction: column; gap: 24px">
+
+  <section>
+    <p class="sh">아일랜드 — 모든 안내가 이 알약 하나에서 늘고 줄어요</p>
+    <div style="display: grid; grid-template-columns: 150px 1fr; row-gap: 12px; align-items: center; font-size: 12px; color: #666B73">
+      <span>판서 중</span>
+      <span class="isl" style="width: fit-content"><span style="width: 12px; height: 12px; border-radius: 50%; background: #FF453A"></span>펜 4px<small>× 1.75</small><small>?</small></span>
+      <span>녹화 중</span>
+      <span class="isl" style="width: fit-content"><span style="width: 8px; height: 8px; border-radius: 50%; background: #FF453A"></span><span style="font-variant-numeric: tabular-nums">00:42</span><small>1920×1080</small><kbd>F3</kbd><small>중지</small></span>
+      <span>결과</span>
+      <span class="isl" style="width: fit-content; padding-left: 6px"><span style="width: 40px; height: 26px; border-radius: 13px 6px 6px 13px; background: #2C2E35"></span>복사했어요<small>718×40</small><span style="height: 26px; padding: 0 12px; border-radius: 13px; background: #F7F8FA; color: #111315; display: inline-flex; align-items: center; font-size: 12px">저장</span></span>
+      <span>문제</span>
+      <span class="isl" style="width: fit-content"><span style="width: 8px; height: 8px; border-radius: 50%; background: #FF9F0A"></span>F1은 Snipaste가 쓰고 있어요<span style="height: 26px; padding: 0 12px; border-radius: 13px; background: #F7F8FA; color: #111315; display: inline-flex; align-items: center; font-size: 12px">해결</span></span>
+      <span>단축키 꺼짐</span>
+      <span class="isl" style="width: fit-content; background: #2C2E35"><span style="width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid #8E939E; box-sizing: border-box"></span>단축키를 잠시 껐어요<kbd>Alt+`</kbd></span>
+    </div>
+  </section>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px">
+    <section>
+      <p class="sh">앱 아이콘</p>
+      <div style="display: flex; align-items: flex-end; gap: 16px">
+        <svg width="84" height="84" viewBox="0 0 64 64" role="img" aria-label="앱 아이콘"><rect width="64" height="64" rx="15" fill="#000"/><rect x="14" y="14" width="36" height="12" rx="6" fill="#F5F5F7"/><circle cx="44" cy="20" r="3" fill="#FFD60A"/><path d="M20 44c4-6 8 2 12-3s6-2 8 0" fill="none" stroke="#F5F5F7" stroke-opacity=".5" stroke-width="3.5" stroke-linecap="round"/></svg>
+        <svg width="42" height="42" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="15" fill="#000"/><rect x="14" y="14" width="36" height="12" rx="6" fill="#F5F5F7"/><circle cx="44" cy="20" r="3" fill="#FFD60A"/><path d="M20 44c4-6 8 2 12-3s6-2 8 0" fill="none" stroke="#F5F5F7" stroke-opacity=".5" stroke-width="3.5" stroke-linecap="round"/></svg>
+      </div>
+    </section>
+    <section>
+      <p class="sh">트레이 아이콘 — 기본 · 녹화 중 · 꺼짐</p>
+      <div style="display: flex; height: 84px; border-radius: 14px; overflow: hidden">
+        <div style="flex: 1; display: flex; align-items: center; justify-content: space-evenly; background: #FFFFFF">
+          <svg width="20" height="20" viewBox="0 0 18 18" role="img" aria-label="기본"><rect x="2.5" y="5.5" width="13" height="7" rx="3.5" fill="none" stroke="#111315" stroke-width="1.6"/><circle cx="12" cy="9" r="1.6" fill="#111315"/></svg>
+          <svg width="20" height="20" viewBox="0 0 18 18" role="img" aria-label="녹화 중"><rect x="2.5" y="5.5" width="13" height="7" rx="3.5" fill="#111315"/><circle cx="12" cy="9" r="1.8" fill="#FF3B30"/></svg>
+          <svg width="20" height="20" viewBox="0 0 18 18" role="img" aria-label="꺼짐"><rect x="2.5" y="5.5" width="13" height="7" rx="3.5" fill="none" stroke="#111315" stroke-opacity=".35" stroke-width="1.6" stroke-dasharray="0"/></svg>
+        </div>
+        <div style="flex: 1; display: flex; align-items: center; justify-content: space-evenly; background: #111214">
+          <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true"><rect x="2.5" y="5.5" width="13" height="7" rx="3.5" fill="none" stroke="#F7F8FA" stroke-width="1.6"/><circle cx="12" cy="9" r="1.6" fill="#F7F8FA"/></svg>
+          <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true"><rect x="2.5" y="5.5" width="13" height="7" rx="3.5" fill="#F7F8FA"/><circle cx="12" cy="9" r="1.8" fill="#FF453A"/></svg>
+          <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true"><rect x="2.5" y="5.5" width="13" height="7" rx="3.5" fill="none" stroke="#F7F8FA" stroke-opacity=".4" stroke-width="1.6"/></svg>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section>
+    <p class="sh">색 — 어두운 면이 기본, 강조는 노랑 한 가지</p>
+    <div class="tok" style="background: #FFFFFF; border-radius: 14px; padding: 14px">
+      <div><i style="background: #111214"></i>바탕 <small>#111214</small></div>
+      <div><i style="background: #1C1D21"></i>면 <small>#1C1D21</small></div>
+      <div><i style="background: #2C2E35"></i>구분선·키 <small>#2C2E35</small></div>
+      <div><i style="background: #F7F8FA"></i>글자 <small>#F7F8FA</small></div>
+      <div><i style="background: #8E939E"></i>보조 글자 <small>#8E939E</small></div>
+      <div><i style="background: #FFD60A"></i>강조 <small>#FFD60A</small></div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":720,"height":640}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

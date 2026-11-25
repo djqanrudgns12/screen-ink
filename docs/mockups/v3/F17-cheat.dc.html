@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>최종 — 단축키 한 장</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap">
+<style>
+body{margin:0}
+.col{display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:14px}
+.ch{margin:0 6px 8px;font-size:11px;font-weight:500;letter-spacing:.04em;color:#8E939E;display:flex;align-items:center;gap:8px}
+.r{display:flex;align-items:center;gap:8px;height:26px;padding:0 6px;font-size:12.5px;color:#F7F8FA}
+.r .l{flex:1;white-space:nowrap}
+.k{display:flex;gap:3px}
+.k kbd{font-family:'IBM Plex Mono','IBM Plex Sans KR',monospace;font-size:10.5px;color:#F7F8FA;background:#2C2E35;border-radius:5px;padding:0 6px;line-height:18px;min-width:9px;text-align:center}
+</style>
+</helmet>
+<div style="width: 960px; height: 600px; position: relative; overflow: hidden; background: #FFFFFF; font-family: 'IBM Plex Sans KR', system-ui, sans-serif">
+  <svg aria-hidden="true" width="960" height="600" viewBox="0 0 960 600" style="position: absolute; left: 0; top: 0"><path d="M120 120h500M120 170h420M120 220h460" stroke="#E5E5EA" stroke-width="14" stroke-linecap="round"/><path d="M640 150c-40-26-118-14-122 26s70 52 112 38" fill="none" stroke="#E5484D" stroke-width="5" stroke-linecap="round"/></svg>
+  <div style="position: absolute; inset: 0; background: rgba(8,8,10,.55)"></div>
+
+  <div role="dialog" aria-label="단축키 한 장" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 820px; box-sizing: border-box; padding: 18px 18px 16px; border-radius: 22px; background: #1C1D21; box-shadow: inset 0 0 0 1px rgba(255,255,255,.07), 0 30px 90px rgba(0,0,0,.55); display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F7F8FA" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6.5 10h.01M10 10h.01M14 10h.01M17.5 10h.01M7.5 14h9"/></svg>
+      <h1 style="margin: 0; flex: 1; font-size: 15px; font-weight: 600; color: #F7F8FA">단축키 한 장</h1>
+      <span style="font-size: 11.5px; color: #8E939E">아무 키나 누르면 닫혀요</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <div class="col">
+        <p class="ch">어디서나</p>
+        <div class="r"><span class="l">범위 캡처</span><span class="k"><kbd>F1</kbd></span></div>
+        <div class="r"><span class="l">창 캡처</span><span class="k"><kbd>F2</kbd></span></div>
+        <div class="r"><span class="l">화면 녹화</span><span class="k"><kbd>F3</kbd></span></div>
+        <div class="r"><span class="l">판서</span><span class="k"><kbd>Alt</kbd><kbd>1</kbd></span></div>
+        <div class="r"><span class="l">실시간 확대</span><span class="k"><kbd>Alt</kbd><kbd>2</kbd></span></div>
+        <div class="r"><span class="l">칠판</span><span class="k"><kbd>Alt</kbd><kbd>3</kbd></span></div>
+        <div class="r"><span class="l">창 항상 위</span><span class="k"><kbd>Alt</kbd><kbd>Shift</kbd><kbd>D</kbd></span></div>
+        <div class="r"><span class="l">단축키 켜기·끄기</span><span class="k"><kbd>Alt</kbd><kbd>`</kbd></span></div>
+      </div>
+      <div class="col" style="background: #26272C; box-shadow: inset 0 0 0 1px rgba(255,159,10,.35)">
+        <p class="ch" style="color: #FFB340"><span style="width: 6px; height: 6px; border-radius: 50%; background: #FF9F0A"></span>판서 화면 — 지금</p>
+        <div class="r"><span class="l">펜 · 형광펜 · 글자</span><span class="k"><kbd>P</kbd><kbd>M</kbd><kbd>T</kbd></span></div>
+        <div class="r"><span class="l">고르기 · 지우개</span><span class="k"><kbd>S</kbd><kbd>D</kbd></span></div>
+        <div class="r"><span class="l">모두 지우기</span><span class="k"><kbd>E</kbd></span></div>
+        <div class="r"><span class="l">색</span><span class="k"><kbd>R</kbd><kbd>Y</kbd><kbd>G</kbd><kbd>O</kbd><kbd>B</kbd><kbd>L</kbd></span></div>
+        <div class="r"><span class="l">흰 · 검은 칠판</span><span class="k"><kbd>W</kbd><kbd>K</kbd></span></div>
+        <div class="r"><span class="l">되돌리기 · 다시</span><span class="k"><kbd>Ctrl</kbd><kbd>Z</kbd><kbd>Y</kbd></span></div>
+        <div class="r"><span class="l">확대 · 굵기</span><span class="k"><kbd>휠</kbd><kbd>Ctrl 휠</kbd></span></div>
+        <div class="r"><span class="l">끝내기 · 보관</span><span class="k"><kbd>Esc</kbd></span></div>
+      </div>
+      <div class="col">
+        <p class="ch">끌어서 도형</p>
+        <div class="r"><span class="l">직선</span><span class="k"><kbd>Shift</kbd></span></div>
+        <div class="r"><span class="l">사각형</span><span class="k"><kbd>Ctrl</kbd></span></div>
+        <div class="r"><span class="l">화살표</span><span class="k"><kbd>Ctrl</kbd><kbd>Shift</kbd></span></div>
+        <div class="r"><span class="l">원</span><span class="k"><kbd>Tab</kbd></span></div>
+        <div class="r"><span class="l">점선으로</span><span class="k"><kbd>+ Alt</kbd></span></div>
+        <div class="r"><span class="l">멈추면 도형</span><span style="font-family: 'IBM Plex Mono','IBM Plex Sans KR',monospace; font-size: 10.5px; color: #8E939E">0.5초</span></div>
+        <div class="r"><span class="l">확대 중 이동</span><span style="font-size: 11px; color: #8E939E">오른쪽 클릭</span></div>
+        <div class="r"><span class="l">커서 가운데로</span><span class="k"><kbd>Space</kbd></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":600}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
