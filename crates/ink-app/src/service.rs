@@ -683,11 +683,13 @@ impl InkService {
         let frames = match captured {
             Ok(f) if !f.is_empty() => f,
             Err(e) if e.starts_with(crate::NO_SCREEN_PERMISSION) => {
+                log::warn!("capture failed: {e}");
                 // 조용히 실패하지 않는다(M10): 어디서 켜는지까지
                 self.island(IslandEvent::new(IslandKind::Problem, "화면 기록 권한이 필요해요").detail("시스템 설정 › 개인정보 보호 및 보안 › 화면 기록에서 켜 주세요"));
                 return;
             }
-            Ok(_) | Err(_) => {
+            other => {
+                log::warn!("capture failed: {}", other.err().as_deref().unwrap_or("no frames"));
                 self.island(IslandEvent::new(IslandKind::Problem, "화면을 가져오지 못했어요"));
                 return;
             }

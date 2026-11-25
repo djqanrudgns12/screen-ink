@@ -320,6 +320,11 @@ fn show_island<R: Runtime>(app: &AppHandle<R>) {
         let y = wa.position.y + (12.0 * m.scale_factor()) as i32;
         let _ = w.set_position(PhysicalPosition::new(x, y));
     }
+    // 맥: 지금 Space(전체 화면 앱 포함)에 바로 올린다(Tauri show는 나중으로 미룬다)
+    #[cfg(target_os = "macos")]
+    if let Ok(ns) = w.ns_window() {
+        ink_platform_macos::window::order_front(ns);
+    }
     let _ = w.show();
     // 캡처 중이면 정지 화면·오버레이 창이 나중에 맨 위로 올라와 있다 → 섬을 그 위로(맨 위 무리의 맨 앞)
     #[cfg(windows)]
@@ -414,6 +419,14 @@ fn toggle_popover<R: Runtime>(app: &AppHandle<R>, tray_rect: Rect) {
         let st = s.state();
         let _ = app.emit(EVT_STATE, &st);
     }
+    // 맥: 활성화하지 않는 패널을 지금 Space(전체 화면 앱 포함)에 올리고 키 창으로만 — 앱을 활성화하면 Space가 넘어간다
+    #[cfg(target_os = "macos")]
+    if let Ok(ns) = w.ns_window() {
+        ink_platform_macos::window::order_front(ns);
+        let _ = w.show();
+        ink_platform_macos::window::make_key(ns);
+        return;
+    }
     let _ = w.show();
     let _ = w.set_focus();
 }
@@ -480,6 +493,7 @@ fn not_ready<R: Runtime>(app: &AppHandle<R>, slot_or_action: &str) {
 }
 
 fn on_hotkey<R: Runtime>(app: &AppHandle<R>, slot: &str, pressed: Instant) {
+    log::debug!("hotkey {slot}");
     let outcome = app.state::<Ink>().lock().on_hotkey_at(slot, pressed);
     if let HotkeyOutcome::Start(slot) = outcome {
         not_ready(app, &slot);
@@ -815,9 +829,10 @@ fn finish_setup<R: Runtime>(app: &AppHandle<R>, initial: InkState, first_run: bo
     #[cfg(target_os = "macos")]
     {
         let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-        if let Some(w) = app.get_webview_window(ISLAND) {
-            if let Ok(ns) = w.ns_window() {
-                ink_platform_macos::window::configure(ns, ink_platform_macos::window::Role::Island);
+        use ink_platform_macos::window::{configure, Role};
+        for (label, role) in [(ISLAND, Role::Island), (POPOVER, Role::Popover)] {
+            if let Some(ns) = app.get_webview_window(label).and_then(|w| w.ns_window().ok()) {
+                configure(ns, role);
             }
         }
     }

@@ -16,6 +16,7 @@ pub fn run() {
                 .level_for("ink_app", ours)
                 .level_for("tauri_plugin_screen_ink", ours)
                 .level_for("ink_platform_windows", ours)
+                .level_for("ink_platform_macos", ours)
                 .max_file_size(2_000_000)
                 .rotation_strategy(RotationStrategy::KeepOne)
                 .build(),

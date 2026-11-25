@@ -271,6 +271,11 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
             }
         }
         self.frames.drop_session(session);
+        // 맥: 설정 창을 쓰는 중이 아니면 포커스를 원래 앱으로(전체 화면 앱에서 키가 계속 먹게)
+        #[cfg(target_os = "macos")]
+        if !self.app.get_webview_window(crate::SETTINGS).is_some_and(|w| w.is_visible().unwrap_or(false)) {
+            ink_platform_macos::window::deactivate();
+        }
     }
 }
 
@@ -281,6 +286,14 @@ fn show_raw<R: Runtime>(w: &tauri::WebviewWindow<R>, show: bool) -> tauri::Resul
         let h = w.hwnd()?;
         ink_platform_windows::events::set_window_shown(h.0 as isize, show);
         Ok(())
+    }
+    // 맥: Tauri show()는 맨 앞으로 올리기를 나중으로 미룬다 → 그 전에 활성화하면 우리 창이 있던 다른 Space로
+    // 넘어간다. 지금 Space에 바로 올린 뒤 Tauri 상태를 맞춘다.
+    #[cfg(target_os = "macos")]
+    if show {
+        if let Ok(ns) = w.ns_window() {
+            ink_platform_macos::window::order_front(ns);
+        }
     }
     #[cfg(not(windows))]
     {
@@ -296,6 +309,11 @@ fn focus_raw<R: Runtime>(w: &tauri::WebviewWindow<R>) {
     #[cfg(windows)]
     if let Ok(h) = w.hwnd() {
         ink_platform_windows::events::focus_window(h.0 as isize);
+        return;
+    }
+    #[cfg(target_os = "macos")]
+    if let Ok(ns) = w.ns_window() {
+        ink_platform_macos::window::make_key(ns);
         return;
     }
     let _ = w.set_focus();
