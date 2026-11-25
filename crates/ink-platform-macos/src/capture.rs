@@ -3,6 +3,7 @@
 //! - 크기 = 계약 모니터 `bounds.w·h`(물리 px), 색 = sRGB, BGRA, 알파 255, 커서 없음.
 //! - 공유 가능한 내용(`SCShareableContent`) 조회가 느려(수십 ms) 한 번 받아 두고, 디스플레이가 바뀌면 다시 받는다.
 //! - 완료 처리기는 SCK 일꾼 큐에서 돈다 → 부른 스레드(메인)는 채널로 기다리기만 한다(교착 없음).
+//! - SCK가 준 그림(`CGImage`)은 정지 화면 창이 그대로 층 내용으로 쓰게 모니터별로 잠시 쥔다([`take_image`]).
 
 use crate::coords::Space;
 use crate::pixels;
@@ -11,19 +12,29 @@ use ink_app::Frame;
 use ink_domain::geometry::MonitorLayout;
 use objc2::rc::Retained;
 use objc2::AnyThread;
+use objc2_core_foundation::CFRetained;
 use objc2_core_graphics::{CGImage, CGPreflightScreenCaptureAccess, CGRequestScreenCaptureAccess};
 use objc2_foundation::{NSArray, NSError};
 use objc2_screen_capture_kit::{SCCaptureResolutionType, SCContentFilter, SCDisplay, SCRunningApplication, SCScreenshotManager, SCShareableContent, SCStreamConfiguration};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::sync::Mutex;
-use std::time::Duration;
+use std::ptr::NonNull;
+use std::time::{Duration, Instant};
 
 /// 권한이 없을 때 돌려주는 오류(서비스가 권한 안내를 띄운다, M10).
 pub use ink_app::NO_SCREEN_PERMISSION as NO_PERMISSION;
 
-/// 한 장의 결과(폭, 높이, BGRA).
-type Shot = Result<(u32, u32, Vec<u8>), String>;
+/// 한 장의 결과.
+struct Shot {
+    w: u32,
+    h: u32,
+    bgra: Vec<u8>,
+    image: Shared<CFRetained<CGImage>>,
+    /// 요청 → 그림 도착, 도착 → BGRA
+    sck_ms: f64,
+    convert_ms: f64,
+}
 
 const WAIT: Duration = Duration::from_secs(3);
 
@@ -39,6 +50,13 @@ struct Content {
 
 static CACHE: Mutex<Option<Shared<Content>>> = Mutex::new(None);
 static ASKED: AtomicBool = AtomicBool::new(false);
+static WARMING: AtomicBool = AtomicBool::new(false);
+/// 마지막 캡처의 모니터별 그림(정지 화면 창이 가져간다).
+static IMAGES: Mutex<Vec<(u32, Shared<CFRetained<CGImage>>)>> = Mutex::new(Vec::new());
+
+fn ms(d: Duration) -> f64 {
+    d.as_secs_f64() * 1000.0
+}
 
 /// 화면 기록 권한이 있는지(묻지 않음).
 pub fn has_permission() -> bool {
@@ -75,7 +93,7 @@ fn fetch_content() -> Result<Content, String> {
     }
 }
 
-fn capture_one(display: &SCDisplay, me: Option<&Retained<SCRunningApplication>>, w: u32, h: u32) -> mpsc::Receiver<Shot> {
+fn capture_one(display: &SCDisplay, me: Option<&Retained<SCRunningApplication>>, w: u32, h: u32) -> mpsc::Receiver<Result<Shot, String>> {
     let (tx, rx) = mpsc::channel();
     // SAFETY: 필터·설정은 만든 뒤 SCK에 넘기기만 한다. 처리기는 'static.
     unsafe {
@@ -91,9 +109,18 @@ fn capture_one(display: &SCDisplay, me: Option<&Retained<SCRunningApplication>>,
         config.setPixelFormat(u32::from_be_bytes(*b"BGRA"));
         config.setColorSpaceName(objc2_core_graphics::kCGColorSpaceSRGB);
         config.setCaptureResolution(SCCaptureResolutionType::Best);
+        let asked = Instant::now();
         let block = RcBlock::new(move |img: *mut CGImage, err: *mut NSError| {
-            let r = match img.as_ref() {
-                Some(img) => pixels::opaque_bgra(img).ok_or_else(|| "unreadable CGImage".to_string()),
+            let r = match NonNull::new(img) {
+                Some(img) => {
+                    let sck_ms = ms(asked.elapsed());
+                    let t = Instant::now();
+                    // SAFETY: SCK가 넘긴 그림은 이 호출 동안 유효하다. retain으로 붙잡는다.
+                    let image = CFRetained::retain(img);
+                    pixels::opaque_bgra(&image)
+                        .map(|(w, h, bgra)| Shot { w, h, bgra, image: Shared(image), sck_ms, convert_ms: ms(t.elapsed()) })
+                        .ok_or_else(|| "unreadable CGImage".to_string())
+                }
                 None => Err(err.as_ref().map(|e| format!("SCScreenshotManager: {}", e.code())).unwrap_or_else(|| "SCScreenshotManager: none".into())),
             };
             let _ = tx.send(r);
@@ -125,16 +152,55 @@ pub fn capture(layout: &MonitorLayout, space: &Space) -> Result<Vec<Frame>, Stri
         })
         .collect::<Result<_, _>>()?;
     let mut out = Vec::with_capacity(jobs.len());
+    let mut images = Vec::with_capacity(jobs.len());
     for (id, b, rx) in jobs {
-        let (w, h, px) = rx.recv_timeout(WAIT).map_err(|_| "capture timeout".to_string())??;
+        let shot = rx.recv_timeout(WAIT).map_err(|_| "capture timeout".to_string())??;
+        let (w, h) = (shot.w, shot.h);
         if (w, h) != (b.w as u32, b.h as u32) {
             // 다음 진입에서 내용 목록을 다시 받게
             *cache = None;
             return Err(format!("frame size {w}x{h} != monitor {}x{}", b.w, b.h));
         }
-        out.push(Frame { monitor_id: id, width: w, height: h, bgra: std::sync::Arc::new(px) });
+        log::debug!("capture monitor {id} {w}x{h}: sck {:.0} ms, convert {:.0} ms", shot.sck_ms, shot.convert_ms);
+        images.push((id, shot.image));
+        out.push(Frame { monitor_id: id, width: w, height: h, bgra: std::sync::Arc::new(shot.bgra) });
     }
+    *IMAGES.lock().unwrap_or_else(|e| e.into_inner()) = images;
     Ok(out)
+}
+
+/// 마지막 캡처의 그 모니터 그림(크기가 같을 때만). 한 번 가져가면 비운다.
+pub(crate) fn take_image(monitor: u32, w: u32, h: u32) -> Option<CFRetained<CGImage>> {
+    let mut g = IMAGES.lock().unwrap_or_else(|e| e.into_inner());
+    let i = g.iter().position(|(id, _)| *id == monitor)?;
+    let img = g.swap_remove(i).1 .0;
+    (CGImage::width(Some(&img)) == w as usize && CGImage::height(Some(&img)) == h as usize).then_some(img)
+}
+
+/// 쥐고 있던 그림을 놓는다(모드 끝).
+pub(crate) fn clear_images() {
+    IMAGES.lock().unwrap_or_else(|e| e.into_inner()).clear();
+}
+
+/// 내용 목록을 미리 받아 둔다(첫 진입이 수십 ms 늦지 않게). 권한이 없거나 이미 있거나 받는 중이면 그대로.
+pub fn warm() {
+    if !has_permission() || CACHE.lock().unwrap_or_else(|e| e.into_inner()).is_some() || WARMING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    std::thread::spawn(|| {
+        let t = Instant::now();
+        match fetch_content() {
+            Ok(c) => {
+                let mut g = CACHE.lock().unwrap_or_else(|e| e.into_inner());
+                if g.is_none() {
+                    *g = Some(Shared(c));
+                }
+                log::debug!("shareable content warmed in {:.0} ms", ms(t.elapsed()));
+            }
+            Err(e) => log::debug!("shareable content warm failed: {e}"),
+        }
+        WARMING.store(false, Ordering::SeqCst);
+    });
 }
 
 /// 디스플레이가 바뀌면 다음 캡처에서 내용 목록을 새로 받는다.

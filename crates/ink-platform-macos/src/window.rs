@@ -9,7 +9,7 @@
 //! 패널 클래스에도 같은 크기의 빈 칸을 붙여 크기를 맞춘다(우리는 그 칸을 읽거나 쓰지 않는다. tao 상태는 그대로).
 //! tao가 덮어쓴 것(키 창 여부·창 끌기)은 여기서 다시 정한다.
 
-use crate::coords::{RectF, Space};
+use crate::coords::{Placed, RectF, Space};
 use ink_domain::geometry::PhysRect;
 use objc2::msg_send;
 use objc2::runtime::{AnyClass, AnyObject, Bool, ClassBuilder, Sel};
@@ -22,7 +22,7 @@ use objc2_foundation::{NSPoint, NSRect, NSSize};
 use std::ffi::c_void;
 
 /// NSWindowCollectionBehavior: 모든 Space · 고정 · 창 순환 제외 · 전체 화면 앱 위.
-const ALL_SPACES: usize = 1 << 0 | 1 << 4 | 1 << 6 | 1 << 8;
+pub(crate) const ALL_SPACES: usize = 1 << 0 | 1 << 4 | 1 << 6 | 1 << 8;
 /// `NSScreenSaverWindowLevel` — 메뉴 막대(24)·Dock(20)·전체 화면 앱 위.
 pub const OVERLAY_LEVEL: isize = 1000;
 /// 섬은 오버레이 위에.
@@ -133,15 +133,19 @@ pub fn exclude_from_capture(ns_window: *mut c_void) -> bool {
 /// 메뉴 막대·Dock 위까지 덮는다(테두리 없는 창은 화면 안으로 밀리지 않는다).
 pub fn place(ns_window: *mut c_void, space: &Space, bounds: PhysRect) -> bool {
     let (Some(w), Some(mtm)) = (window(ns_window), MainThreadMarker::new()) else { return false };
-    let Some(s) = space.screen_of(bounds) else { return false };
-    let Some(primary_h) = NSScreen::screens(mtm).firstObject().map(|p| p.frame().size.height) else { return false };
-    let RectF { x, y, w: pw, h: ph } = s.pt;
-    let frame = NSRect::new(NSPoint::new(x, primary_h - (y + ph)), NSSize::new(pw, ph));
+    let Some(frame) = space.screen_of(bounds).and_then(|s| screen_frame(mtm, s)) else { return false };
     // SAFETY: NSWindow 공개 메서드.
     unsafe {
         let _: () = msg_send![w, setFrame: frame, display: false];
     }
     true
+}
+
+/// 화면 하나를 덮는 창 틀(Cocoa 좌표: 원점 = 주 화면 왼쪽 아래).
+pub(crate) fn screen_frame(mtm: MainThreadMarker, s: &Placed) -> Option<NSRect> {
+    let primary_h = NSScreen::screens(mtm).firstObject().map(|p| p.frame().size.height)?;
+    let RectF { x, y, w, h } = s.pt;
+    Some(NSRect::new(NSPoint::new(x, primary_h - (y + h)), NSSize::new(w, h)))
 }
 
 /// 팝오버를 메뉴 막대 아이콘 바로 아래에 붙인다(CG 전역 포인트 `icon`). `pad` = 카드 둘레 투명 여백,

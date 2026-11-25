@@ -14,6 +14,8 @@ pub mod display;
 #[cfg(target_os = "macos")]
 pub mod events;
 #[cfg(target_os = "macos")]
+pub mod freeze;
+#[cfg(target_os = "macos")]
 mod pixels;
 #[cfg(target_os = "macos")]
 pub mod window;
@@ -75,7 +77,10 @@ mod mac {
 
     impl MonitorProbe for MacScreen {
         fn layout(&self) -> MonitorLayout {
-            refresh_space().layout()
+            let layout = refresh_space().layout();
+            // 첫 진입이 내용 목록 받기(수십 ms)를 기다리지 않게
+            capture::warm();
+            layout
         }
 
         fn cursor(&self) -> PhysPoint {

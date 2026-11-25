@@ -70,27 +70,34 @@ pub fn opaque_bgra(img: &CGImage) -> Option<(u32, u32, Vec<u8>)> {
         && info & BYTE_ORDER_MASK == 2 << 12
         && (alpha == CGImageAlphaInfo::PremultipliedFirst || alpha == CGImageAlphaInfo::NoneSkipFirst || alpha == CGImageAlphaInfo::First)
         && info & FLOAT_COMPONENTS == 0;
-    let mut px = if bgra_like {
+    if bgra_like {
+        // 한 번만 옮긴다(줄 끝 여백 건너뛰기 + 알파 255를 같은 고리에서). 4K 한 장 = 33 MB.
         let data: CFRetained<CFData> = CGDataProvider::data(CGImage::data_provider(Some(img)).as_deref())?;
-        let bytes = data.to_vec();
         let bpr = CGImage::bytes_per_row(Some(img));
-        if bpr == w * 4 && bytes.len() >= w * h * 4 {
-            bytes[..w * h * 4].to_vec()
-        } else {
-            let mut out = Vec::with_capacity(w * h * 4);
-            for row in 0..h {
-                let s = row * bpr;
-                out.extend_from_slice(bytes.get(s..s + w * 4)?);
-            }
-            out
+        // SAFETY: `data`가 이 블록 끝까지 살아 있고 그동안 바뀌지 않는다(복사본).
+        let src = unsafe { data.as_bytes_unchecked() };
+        if bpr < w * 4 || src.len() < bpr * (h - 1) + w * 4 {
+            return None;
         }
-    } else {
-        draw(img, w, h, BGRA_SKIP)?
-    };
+        let mut out = vec![0u8; w * h * 4];
+        for (row, dst) in out.chunks_exact_mut(w * 4).enumerate() {
+            opaque_copy(dst, &src[row * bpr..row * bpr + w * 4]);
+        }
+        return Some((w as u32, h as u32, out));
+    }
+    let mut px = draw(img, w, h, BGRA_SKIP)?;
     for a in px.iter_mut().skip(3).step_by(4) {
         *a = 255;
     }
     Some((w as u32, h as u32, px))
+}
+
+/// 화소 4바이트를 u32 하나로 옮기며 알파를 255로(최적화 빌드에서 벡터화된다).
+fn opaque_copy(dst: &mut [u8], src: &[u8]) {
+    for (o, i) in dst.chunks_exact_mut(4).zip(src.chunks_exact(4)) {
+        let p = u32::from_le_bytes([i[0], i[1], i[2], i[3]]) | 0xFF00_0000;
+        o.copy_from_slice(&p.to_le_bytes());
+    }
 }
 
 /// 그림(커서 등) → 곧은 알파 BGRA, 크기 `w × h`로 그린다.
@@ -122,5 +129,47 @@ pub fn image_from_bgra(w: u32, h: u32, bgra: &[u8]) -> Option<CFRetained<CGImage
         CGDataProviderRelease(provider);
         let img = std::ptr::NonNull::new(img.cast::<CGImage>())?;
         Some(CFRetained::from_raw(img))
+    }
+}
+
+/// 비트맵(sRGB BGRA, 메모리 위→아래)에 그려 받는다. 층 나무를 창 없이 그려 볼 때(시험).
+#[cfg(test)]
+pub(crate) fn render_bgra(w: usize, h: usize, f: impl FnOnce(&objc2_core_graphics::CGContext)) -> Option<Vec<u8>> {
+    let mut out = vec![0u8; w * h * 4];
+    // SAFETY: 버퍼는 이 함수 끝까지 살아 있고, 만든 CG 객체는 모두 놓는다. 문맥 포인터는 CGContext다.
+    unsafe {
+        let cs = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+        let ctx = CGBitmapContextCreate(out.as_mut_ptr().cast(), w, h, 8, w * 4, cs, BGRA_PREMUL);
+        CGColorSpaceRelease(cs);
+        if ctx.is_null() {
+            return None;
+        }
+        f(&*(ctx as *const objc2_core_graphics::CGContext));
+        CGContextRelease(ctx);
+    }
+    Some(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn 화면_그림은_한_번에_불투명_bgra로() {
+        let (w, h) = (3840u32, 2160u32);
+        let mut bgra = vec![0u8; (w * h * 4) as usize];
+        for (i, p) in bgra.chunks_exact_mut(4).enumerate() {
+            p.copy_from_slice(&[(i % 251) as u8, (i % 13) as u8, 0x7F, 0]);
+        }
+        let img = image_from_bgra(w, h, &bgra).expect("CGImage");
+        let t = std::time::Instant::now();
+        let (ow, oh, px) = opaque_bgra(&img).expect("BGRA");
+        eprintln!("opaque_bgra 4K in {:?}", t.elapsed());
+        assert_eq!((ow, oh), (w, h));
+        // 색은 그대로, 알파만 255
+        for i in [0usize, 1, 1234, (w * h - 1) as usize] {
+            let o = &px[i * 4..i * 4 + 4];
+            assert_eq!(o, &[(i % 251) as u8, (i % 13) as u8, 0x7F, 255], "화소 {i}");
+        }
     }
 }

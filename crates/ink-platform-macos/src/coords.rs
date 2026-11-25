@@ -100,6 +100,34 @@ fn unmap(s: &Placed, x: f64, y: f64) -> (f64, f64) {
     (s.pt.x + (x - s.phys.x as f64) / s.scale, s.pt.y + (y - s.phys.y as f64) / s.scale)
 }
 
+impl Placed {
+    /// 이 화면 기준 물리 px 사각형(왼쪽 위 원점) → 이 화면 안 포인트(왼쪽 위 원점). 정지 화면 강조 자리.
+    pub fn local_to_pt(&self, r: PhysRect) -> RectF {
+        let (ox, oy) = (self.phys.x as f64, self.phys.y as f64);
+        let (x0, y0) = unmap(self, ox + r.x as f64, oy + r.y as f64);
+        let (x1, y1) = unmap(self, ox + r.right() as f64, oy + r.bottom() as f64);
+        RectF::new(x0 - self.pt.x, y0 - self.pt.y, x1 - x0, y1 - y0)
+    }
+}
+
+/// `w × h` 판에서 `hole`만 비우고 둘레를 덮는 사각형 4개(위·아래·왼쪽·오른쪽, 왼쪽 위 원점).
+/// 구멍이 없거나 판 밖이면 첫 칸이 판 전체, 나머지는 빈 칸.
+pub fn around(w: f64, h: f64, hole: Option<RectF>) -> [RectF; 4] {
+    let empty = RectF::default();
+    let hole = hole.and_then(|r| {
+        let (x0, y0) = (r.x.clamp(0.0, w), r.y.clamp(0.0, h));
+        let (x1, y1) = (r.right().clamp(0.0, w), r.bottom().clamp(0.0, h));
+        (x1 > x0 && y1 > y0).then(|| RectF::new(x0, y0, x1 - x0, y1 - y0))
+    });
+    let Some(r) = hole else { return [RectF::new(0.0, 0.0, w, h), empty, empty, empty] };
+    [
+        RectF::new(0.0, 0.0, w, r.y),
+        RectF::new(0.0, r.bottom(), w, h - r.bottom()),
+        RectF::new(0.0, r.y, r.x, r.h),
+        RectF::new(r.right(), r.y, w - r.right(), r.h),
+    ]
+}
+
 const TOL: f64 = 0.5;
 
 fn spans_overlap(a0: f64, a1: f64, b0: f64, b1: f64) -> bool {
@@ -378,6 +406,33 @@ mod tests {
         assert_eq!(cocoa_to_cg(RectF::new(0.0, 0.0, 1920.0, 1050.0), 1080.0), RectF::new(0.0, 30.0, 1920.0, 1050.0));
         // 주 화면 위에 놓인 화면(Cocoa y = 1080)은 CG에서 음수
         assert_eq!(cocoa_to_cg(RectF::new(0.0, 1080.0, 1920.0, 1080.0), 1080.0), RectF::new(0.0, -1080.0, 1920.0, 1080.0));
+    }
+
+    #[test]
+    fn 화면_안_물리_px를_포인트로() {
+        let s = Space::new(&[scr(3, 0.0, 0.0, 1920.0, 1080.0, 2.0, true), scr(1, 1920.0, 0.0, 1920.0, 1080.0, 1.0, false)]);
+        // 레티나 화면(배율 2): 화면 기준 200,100 400x300 px → 100,50 200x150 pt
+        assert_eq!(s.screens[0].local_to_pt(PhysRect::new(200, 100, 400, 300)), RectF::new(100.0, 50.0, 200.0, 150.0));
+        // 오른쪽 FHD(배율 1, 물리 원점 3840): 화면 기준 그대로
+        assert_eq!(s.screens[1].local_to_pt(PhysRect::new(10, 20, 30, 40)), RectF::new(10.0, 20.0, 30.0, 40.0));
+    }
+
+    #[test]
+    fn 강조_둘레_네_칸() {
+        let [t, b, l, r] = around(100.0, 80.0, Some(RectF::new(10.0, 20.0, 30.0, 40.0)));
+        assert_eq!(t, RectF::new(0.0, 0.0, 100.0, 20.0));
+        assert_eq!(b, RectF::new(0.0, 60.0, 100.0, 20.0));
+        assert_eq!(l, RectF::new(0.0, 20.0, 10.0, 40.0));
+        assert_eq!(r, RectF::new(40.0, 20.0, 60.0, 40.0));
+        // 네 칸 + 구멍 = 판 전체(겹침 없음)
+        let area: f64 = [t, b, l, r].iter().map(|q| q.w * q.h).sum::<f64>() + 30.0 * 40.0;
+        assert_eq!(area, 100.0 * 80.0);
+        // 판 밖으로 나간 강조는 판 안으로 자른다
+        assert_eq!(around(100.0, 80.0, Some(RectF::new(-10.0, -10.0, 30.0, 30.0)))[3], RectF::new(20.0, 0.0, 80.0, 20.0));
+        // 강조 없음·판 밖 = 전체 어둡게
+        let full = [RectF::new(0.0, 0.0, 100.0, 80.0), RectF::default(), RectF::default(), RectF::default()];
+        assert_eq!(around(100.0, 80.0, None), full);
+        assert_eq!(around(100.0, 80.0, Some(RectF::new(200.0, 0.0, 10.0, 10.0))), full);
     }
 
     #[test]

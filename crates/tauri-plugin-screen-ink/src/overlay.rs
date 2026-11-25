@@ -127,6 +127,8 @@ pub fn ensure_overlays<R: Runtime>(app: &AppHandle<R>, layout: &MonitorLayout) {
         }
         let _ = w.set_background_color(Some(Color(0, 0, 0, 0)));
     }
+    #[cfg(target_os = "macos")]
+    ink_platform_macos::freeze::retain(&layout.monitors.iter().map(|m| m.id).collect::<Vec<_>>());
     let keep: Vec<String> = layout.monitors.iter().map(|m| label(m.id)).collect();
     for (l, w) in app.webview_windows() {
         if l.starts_with(PREFIX) && !keep.contains(&l) {
@@ -177,7 +179,7 @@ impl<R: Runtime> TauriOverlayHost<R> {
         }
     }
 
-    /// 정지 화면을 네이티브 창에 바로 그린다(Windows). 모든 모니터에 그렸으면 true.
+    /// 정지 화면을 네이티브 창에 바로 그린다(Windows GDI·맥 CALayer). 모든 모니터에 그렸으면 true.
     fn paint_native(&mut self, session: &OverlaySession, frames: &[Frame]) -> bool {
         #[cfg(windows)]
         {
@@ -192,11 +194,36 @@ impl<R: Runtime> TauriOverlayHost<R> {
             }
             all
         }
-        #[cfg(not(windows))]
+        #[cfg(target_os = "macos")]
+        {
+            use ink_platform_macos::freeze;
+            let space = ink_platform_macos::space();
+            let mut all = !frames.is_empty();
+            for f in frames {
+                let Some(m) = session.monitors.iter().find(|m| m.id == f.monitor_id) else { continue };
+                let local = session.highlight.and_then(|r| r.intersect(&m.bounds)).map(|r| PhysRect::new(r.x - m.bounds.x, r.y - m.bounds.y, r.w, r.h));
+                all &= freeze::show(m.id, &space, m.bounds, f.width, f.height, &f.bgra, local);
+            }
+            if !all {
+                freeze::hide_all();
+            }
+            all
+        }
+        #[cfg(all(not(windows), not(target_os = "macos")))]
         {
             let _ = (session, frames);
             false
         }
+    }
+}
+
+/// 맥: 정지 화면 창은 메인 스레드에서만 만진다 — 다른 스레드면 메인 대기열로 넘긴다.
+#[cfg(target_os = "macos")]
+fn on_main<R: Runtime>(app: &AppHandle<R>, f: impl FnOnce() + Send + 'static) {
+    if ink_platform_macos::freeze::on_main_thread() {
+        f();
+    } else if let Err(e) = app.run_on_main_thread(f) {
+        log::error!("freeze to main thread failed: {e}");
     }
 }
 
@@ -221,7 +248,16 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
                 self.freeze.set_highlight(m.id, local);
             }
         }
-        #[cfg(not(windows))]
+        #[cfg(target_os = "macos")]
+        if let Some(layout) = self.layout.clone() {
+            on_main(&self.app, move || {
+                for m in &layout.monitors {
+                    let local = rect.and_then(|r| r.intersect(&m.bounds)).map(|r| PhysRect::new(r.x - m.bounds.x, r.y - m.bounds.y, r.w, r.h));
+                    ink_platform_macos::freeze::set_highlight(m.id, local);
+                }
+            });
+        }
+        #[cfg(all(not(windows), not(target_os = "macos")))]
         let _ = rect;
     }
 
@@ -263,6 +299,8 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
     fn hide(&mut self, session: u64) {
         #[cfg(windows)]
         self.freeze.hide_all();
+        #[cfg(target_os = "macos")]
+        on_main(&self.app, ink_platform_macos::freeze::hide_all);
         for (l, w) in self.app.webview_windows() {
             if l.starts_with(PREFIX) {
                 let _ = show_raw(&w, false);
