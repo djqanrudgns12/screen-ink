@@ -49,6 +49,10 @@ pub struct Frame {
     pub bgra: std::sync::Arc<Vec<u8>>,
 }
 
+/// `ScreenSource::capture` 오류가 이 말로 시작하면 운영체제 권한이 없다는 뜻(맥 화면 기록, M10).
+/// 서비스는 "화면을 가져오지 못했어요" 대신 권한 안내를 띄운다.
+pub const NO_SCREEN_PERMISSION: &str = "permission:screen-recording";
+
 /// 정지 캡처(03 §3 `ScreenSource`).
 pub trait ScreenSource: Send {
     fn capture(&mut self, layout: &MonitorLayout) -> Result<Vec<Frame>, String>;

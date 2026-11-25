@@ -55,7 +55,7 @@
    - 금지: 사용자 이름, 메신저, 메일, 학생·교직원 정보, 실제 업무 화면.
    - 로그에는 창 제목·파일 이름·사용자 이름을 쓰지 않는다(05 §9).
 6. **로그로 확인하기**
-   - 앱 로그 파일: Windows `%LOCALAPPDATA%\kr.screenink.desktop\logs\screen-ink.log`, 맥 `~/Library/Logs/kr.screenink.desktop/screen-ink.log`. 맥 경로는 **[확인 필요]**(Tauri 로그 폴더 규칙에 따른 예상).
+   - 앱 로그 파일: Windows `%LOCALAPPDATA%\kr.screenink.desktop\logs\screen-ink.log`, 맥 `~/Library/Logs/kr.screenink.desktop/screen-ink.log`(**확인됨** 2026-11-25, 맥미니). 로그 줄의 시각은 UTC다.
    - `SCREEN_INK_LOG=debug`로 띄우면 강조가 바뀔 때마다 `highlight … path 창 > 상자 > …`와 `vision full monitor … ms`가 남는다.
 7. **F1 직후에는 모니터 전체가 강조된다.** 커서를 **4 px 이상** 움직여야 요소 강조로 바뀐다. 설계대로이며 버그가 아니다. 자동 조작 스크립트는 반드시 4 px 넘게 움직인다.
 
@@ -74,10 +74,10 @@
    npm run app:dev
    ```
 3. 결과별 대처
-   - `cargo test --workspace`가 `ink-platform-windows` 때문에 깨질 때: 그 크레이트 안의 Windows API 사용을 `#[cfg(windows)]`로 막는 것만 한다. 지금 `clipboard·events·uia·freeze·screen` 모듈과 Windows 의존성은 이미 막혀 있다. **[확인 필요]**
+   - `cargo test --workspace`가 `ink-platform-windows` 때문에 깨질 때: 그 크레이트 안의 Windows API 사용을 `#[cfg(windows)]`로 막는 것만 한다. 지금 `clipboard·events·uia·freeze·screen` 모듈과 Windows 의존성은 이미 막혀 있다. **확인됨**(2026-11-25 맥: `cargo check -p ink-platform-windows --all-targets` 통과, 고칠 것 없음)
    - 맥 빌드 설정
-     - 지금 `bundle.targets`는 `["nsis"]`뿐이다. 맥 설치본(`app`·`dmg`)은 Windows 설정을 건드리지 않게 플랫폼별 설정 파일(`tauri.macos.conf.json`)로 더하는 것을 권장한다. **[확인 필요]**
-     - macOS 투명 창(섬·팝오버)에는 Tauri `app.macOSPrivateApi: true`와 `tauri` 크레이트의 `macos-private-api` 기능이 필요하다. 넣은 뒤 Windows 빌드가 깨지지 않는지도 확인한다. **[확인 필요]**
+     - 지금 `bundle.targets`는 `["nsis"]`뿐이다. 맥 설치본(`app`·`dmg`)은 Windows 설정을 건드리지 않게 플랫폼별 설정 파일(`tauri.macos.conf.json`)로 더하는 것을 권장한다. **반영함**(`apps/screen-ink/src-tauri/tauri.macos.conf.json`: `app`·`dmg`, 최소 macOS 14 — ScreenCaptureKit 스크린숏 API). 맥 설치본 빌드는 아직 안 해 봄 **[확인 필요]**
+     - macOS 투명 창(섬·팝오버)에는 Tauri `app.macOSPrivateApi: true`와 `tauri` 크레이트의 `macos-private-api` 기능이 필요하다. 넣은 뒤 Windows 빌드가 깨지지 않는지도 확인한다. **반영함**(`tauri.conf.json` `app.macOSPrivateApi: true` + 앱 크레이트 `tauri` 기능 `macos-private-api`. tauri-build가 설정과 기능이 같은지 보므로 플랫폼별로 나누지 않고 공통에 넣었다). Windows 빌드 확인 **[확인 필요]** → §3.2
 4. **지금 맥에서 보이는 동작** — 아래는 정상이다(아직 빈 어댑터라서).
 
    | 동작 | 이유(코드) |

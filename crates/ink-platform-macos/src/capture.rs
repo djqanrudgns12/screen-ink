@@ -19,8 +19,8 @@ use std::sync::mpsc;
 use std::sync::Mutex;
 use std::time::Duration;
 
-/// 권한이 없을 때 돌려주는 오류(앞부분으로 구별, M10 안내).
-pub const NO_PERMISSION: &str = "permission:screen-recording";
+/// 권한이 없을 때 돌려주는 오류(서비스가 권한 안내를 띄운다, M10).
+pub use ink_app::NO_SCREEN_PERMISSION as NO_PERMISSION;
 
 /// 한 장의 결과(폭, 높이, BGRA).
 type Shot = Result<(u32, u32, Vec<u8>), String>;

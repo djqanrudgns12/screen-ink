@@ -138,6 +138,22 @@ fn 캡처나_표시가_실패하면_모드에_들어가지_않고_알린다() {
 }
 
 #[test]
+fn 화면_기록_권한이_없으면_어디서_켜는지_알린다() {
+    let w = FakeWorld::new();
+    let mut s = service(&w);
+    {
+        let mut sc = w.screen.0.lock().unwrap();
+        sc.capture_fails = true;
+        sc.fail_reason = Some(ink_app::NO_SCREEN_PERMISSION.into());
+    }
+    s.on_hotkey("region");
+    assert_eq!(s.mode(), Mode::Idle);
+    let island = w.last_island().unwrap();
+    assert_eq!((island.kind, island.text.as_str()), (IslandKind::Problem, "화면 기록 권한이 필요해요"));
+    assert!(island.detail.as_deref().is_some_and(|d| d.contains("화면 기록")));
+}
+
+#[test]
 fn 보안_화면에서는_조용히_한_번만_알린다() {
     let w = FakeWorld::new();
     let mut s = service(&w);

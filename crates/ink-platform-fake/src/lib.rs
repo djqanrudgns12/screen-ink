@@ -73,6 +73,8 @@ pub struct Screen {
     pub cursor: PhysPoint,
     pub windows: Vec<RawWindow>,
     pub capture_fails: bool,
+    /// `capture_fails`일 때 돌려줄 오류(없으면 "capture failed")
+    pub fail_reason: Option<String>,
     pub captures: usize,
     /// 진짜 이미지(재생 시험). 없으면 검은 작은 이미지.
     pub frames: Option<Vec<Frame>>,
@@ -98,6 +100,7 @@ impl Default for Screen {
                 ..Default::default()
             }],
             capture_fails: false,
+            fail_reason: None,
             captures: 0,
             frames: None,
             children: HashMap::new(),
@@ -112,7 +115,7 @@ impl ScreenSource for FakeScreen {
     fn capture(&mut self, layout: &MonitorLayout) -> Result<Vec<Frame>, String> {
         let mut s = self.0.lock().unwrap();
         if s.capture_fails {
-            return Err("capture failed".into());
+            return Err(s.fail_reason.clone().unwrap_or_else(|| "capture failed".into()));
         }
         s.captures += 1;
         if let Some(f) = &s.frames {

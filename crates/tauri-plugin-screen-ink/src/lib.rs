@@ -14,9 +14,11 @@ mod tray_art;
 
 use ink_app::{
     HotkeyError, HotkeyOutcome, HotkeyRegistry, ImportPreview, InkService, InkState, IslandEvent, IslandKind, MonitorProbe, Notifier, Ports, PreviewResult, ScreenSource,
-    SetShortcutResult, SystemEvent, SystemProbe, UpdateResult, WindowCatalog,
+    SetShortcutResult, SystemProbe, UpdateResult, WindowCatalog,
 };
-#[cfg(not(windows))]
+#[cfg(windows)]
+use ink_app::SystemEvent;
+#[cfg(all(not(windows), not(target_os = "macos")))]
 use ink_domain::shortcuts::LiveBinding;
 use ink_domain::shortcuts::{catalog, Platform};
 use ink_domain::snapshot::CaptureKind;
@@ -174,25 +176,25 @@ impl ink_app::ElementSource for NoElements {
     fn clear(&self) {}
 }
 
-/// 맥 등 아직 화면 어댑터가 없는 곳 — 캡처는 실패로 알린다(맥 조정은 다른 환경에서).
-#[cfg(not(windows))]
+/// 화면 어댑터가 없는 곳(Windows·맥 밖) — 캡처는 실패로 알린다.
+#[cfg(all(not(windows), not(target_os = "macos")))]
 struct NullScreen;
 
-#[cfg(not(windows))]
+#[cfg(all(not(windows), not(target_os = "macos")))]
 impl ScreenSource for NullScreen {
     fn capture(&mut self, _layout: &ink_domain::geometry::MonitorLayout) -> Result<Vec<ink_app::Frame>, String> {
         Err("screen capture not implemented on this platform yet".into())
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(all(not(windows), not(target_os = "macos")))]
 impl WindowCatalog for NullScreen {
     fn windows(&self) -> Vec<ink_domain::snapshot::RawWindow> {
         Vec::new()
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(all(not(windows), not(target_os = "macos")))]
 impl MonitorProbe for NullScreen {
     fn layout(&self) -> ink_domain::geometry::MonitorLayout {
         ink_domain::geometry::MonitorLayout::default()
@@ -209,7 +211,12 @@ fn screen_ports() -> (Box<dyn ScreenSource>, Box<dyn WindowCatalog>, Box<dyn Mon
         use ink_platform_windows::screen::WindowsScreen;
         (Box::new(WindowsScreen), Box::new(WindowsScreen), Box::new(WindowsScreen))
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        use ink_platform_macos::MacScreen;
+        (Box::new(MacScreen), Box::new(MacScreen), Box::new(MacScreen))
+    }
+    #[cfg(all(not(windows), not(target_os = "macos")))]
     {
         (Box::new(NullScreen), Box::new(NullScreen), Box::new(NullScreen))
     }
@@ -225,15 +232,21 @@ fn exclude_from_capture<R: Runtime>(app: &AppHandle<R>, label: &str) {
             }
         }
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    if let Some(w) = app.get_webview_window(label) {
+        if !w.ns_window().is_ok_and(ink_platform_macos::window::exclude_from_capture) {
+            log::info!("exclude from capture not available for {label}");
+        }
+    }
+    #[cfg(all(not(windows), not(target_os = "macos")))]
     let _ = (app, label);
 }
 
-/// 맥 등 아직 어댑터가 없는 곳 — 아무 앱도 없다고 본다(맥 조정은 다른 환경에서).
-#[cfg(not(windows))]
+/// 어댑터가 없는 곳(Windows·맥 밖) — 아무 앱도 없다고 본다.
+#[cfg(all(not(windows), not(target_os = "macos")))]
 struct NullProbe;
 
-#[cfg(not(windows))]
+#[cfg(all(not(windows), not(target_os = "macos")))]
 impl SystemProbe for NullProbe {
     fn running_apps(&self) -> Vec<String> {
         Vec::new()
@@ -249,7 +262,11 @@ fn probe() -> Box<dyn SystemProbe> {
     {
         Box::new(ink_platform_windows::WindowsProbe::new())
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        Box::new(ink_platform_macos::MacProbe)
+    }
+    #[cfg(all(not(windows), not(target_os = "macos")))]
     {
         Box::new(NullProbe)
     }
@@ -794,6 +811,16 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
 
 fn finish_setup<R: Runtime>(app: &AppHandle<R>, initial: InkState, first_run: bool, autostart: bool, started: Instant) -> tauri::Result<()> {
     build_static_windows(app)?;
+    // 맥: 독 아이콘 없이 메뉴 막대에만(트레이 앱), 섬은 오버레이 위·모든 Space
+    #[cfg(target_os = "macos")]
+    {
+        let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+        if let Some(w) = app.get_webview_window(ISLAND) {
+            if let Ok(ns) = w.ns_window() {
+                ink_platform_macos::window::configure(ns, ink_platform_macos::window::Role::Island);
+            }
+        }
+    }
     exclude_from_capture(app, ISLAND);
     exclude_from_capture(app, POPOVER);
     listen_system_events(app);

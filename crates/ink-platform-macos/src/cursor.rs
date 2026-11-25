@@ -26,3 +26,19 @@ pub fn sprite(space: &Space) -> Option<CursorSprite> {
     let bgra = pixels::straight_bgra(&cg, w, h)?;
     Some(CursorSprite { x: at.x - (hot.x * scale).round() as i32, y: at.y - (hot.y * scale).round() as i32, w: w as u32, h: h as u32, bgra })
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn 지금_커서_모양() {
+        let space = crate::space();
+        match super::sprite(&space) {
+            Some(c) => {
+                eprintln!("cursor sprite {}x{} at {},{}", c.w, c.h, c.x, c.y);
+                assert_eq!(c.bgra.len(), (c.w * c.h * 4) as usize);
+                assert!(c.bgra.chunks_exact(4).any(|p| p[3] > 0), "보이는 화소가 있다");
+            }
+            None => eprintln!("currentSystemCursor = nil (Apple 사용 중단 예고대로)"),
+        }
+    }
+}

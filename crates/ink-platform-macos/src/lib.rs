@@ -31,61 +31,57 @@ mod mac {
     use ink_domain::snapshot::RawWindow;
     use std::sync::Mutex;
 
-    /// `ScreenSource` + `WindowCatalog` + `MonitorProbe` 한 몸. 마지막으로 읽은 배치를 쥐고 모두 같은 변환을 쓴다.
+    /// 마지막으로 읽은 배치. 세 포트(캡처·창 목록·모니터)와 오버레이 창 놓기가 모두 같은 변환을 쓴다.
+    static SPACE: Mutex<Option<Space>> = Mutex::new(None);
+
+    /// 지금 배치(아직 안 읽었으면 새로 읽음).
+    pub fn space() -> Space {
+        let mut g = SPACE.lock().unwrap_or_else(|e| e.into_inner());
+        g.get_or_insert_with(display::space).clone()
+    }
+
+    /// 배치를 다시 읽는다(진입마다·디스플레이 변경). 바뀌었으면 캡처 내용 목록도 버린다.
+    pub fn refresh_space() -> Space {
+        let s = display::space();
+        let mut g = SPACE.lock().unwrap_or_else(|e| e.into_inner());
+        if g.as_ref() != Some(&s) {
+            capture::invalidate();
+            *g = Some(s.clone());
+        }
+        s
+    }
+
+    /// `ScreenSource` + `WindowCatalog` + `MonitorProbe` 한 몸.
     #[derive(Default)]
-    pub struct MacScreen {
-        space: Mutex<Space>,
-    }
-
-    impl MacScreen {
-        /// 지금 배치(비어 있으면 새로 읽음).
-        pub fn space(&self) -> Space {
-            let mut g = self.space.lock().unwrap_or_else(|e| e.into_inner());
-            if g.screens.is_empty() {
-                *g = display::space();
-            }
-            g.clone()
-        }
-
-        fn refresh(&self) -> Space {
-            let s = display::space();
-            let mut g = self.space.lock().unwrap_or_else(|e| e.into_inner());
-            if *g != s {
-                capture::invalidate();
-                *g = s.clone();
-            }
-            s
-        }
-    }
+    pub struct MacScreen;
 
     impl ScreenSource for MacScreen {
         fn capture(&mut self, layout: &MonitorLayout) -> Result<Vec<Frame>, String> {
-            let space = self.space();
-            capture::capture(layout, &space)
+            capture::capture(layout, &space())
         }
 
         fn cursor_sprite(&mut self) -> Option<ink_domain::image::CursorSprite> {
-            cursor::sprite(&self.space())
+            cursor::sprite(&space())
         }
     }
 
     impl WindowCatalog for MacScreen {
         fn windows(&self) -> Vec<RawWindow> {
-            windows::top_windows(&self.space())
+            windows::top_windows(&space())
         }
     }
 
     impl MonitorProbe for MacScreen {
         fn layout(&self) -> MonitorLayout {
-            self.refresh().layout()
+            refresh_space().layout()
         }
 
         fn cursor(&self) -> PhysPoint {
-            display::cursor(&self.space())
+            display::cursor(&space())
         }
 
         fn set_cursor(&self, p: PhysPoint) {
-            display::set_cursor(&self.space(), p)
+            display::set_cursor(&space(), p)
         }
 
         fn alt_down(&self) -> bool {
@@ -143,7 +139,7 @@ mod mac {
 
         #[test]
         fn 이_맥의_모니터와_창() {
-            let s = MacScreen::default();
+            let s = MacScreen;
             let l = s.layout();
             assert!(!l.monitors.is_empty());
             assert_eq!(l.monitors.iter().filter(|m| m.primary).count(), 1);
@@ -153,7 +149,7 @@ mod mac {
                 }
                 assert!(a.work.w > 0 && a.work.h > 0);
             }
-            eprintln!("layout packed={} {:?}", s.space().packed, l.monitors.iter().map(|m| (m.id, m.bounds, m.scale)).collect::<Vec<_>>());
+            eprintln!("layout packed={} {:?}", space().packed, l.monitors.iter().map(|m| (m.id, m.bounds, m.scale)).collect::<Vec<_>>());
             let ws = s.windows();
             assert!(ws.iter().all(|w| !w.exe.contains('/')), "경로 없이 이름만");
             let c = s.cursor();

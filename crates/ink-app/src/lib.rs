@@ -9,7 +9,7 @@ pub mod state;
 pub mod vision;
 
 pub use ports::{
-    Clipboard, Clock, ElementSource, FileSink, Frame, HotkeyError, HotkeyRegistry, Loaded, MonitorProbe, NoVision, Notifier, OverlayHost, Ports, SavedFile, ScreenSource,
+    Clipboard, Clock, ElementSource, FileSink, Frame, HotkeyError, HotkeyRegistry, Loaded, MonitorProbe, NoVision, Notifier, OverlayHost, Ports, SavedFile, ScreenSource, NO_SCREEN_PERMISSION,
     SettingsStore, StoreError, StoreLocation, SystemEvent, SystemProbe, VisionSource, WindowCatalog,
 };
 pub use capture::CaptureInput;

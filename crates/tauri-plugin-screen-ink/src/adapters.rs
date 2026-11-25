@@ -27,6 +27,8 @@ pub fn encode_png(w: u32, h: u32, bgra: &[u8]) -> Result<Vec<u8>, String> {
 
 /// 클립보드 소유 창 = 섬 창(늘 있고, 숨어 있어도 된다).
 pub struct TauriClipboard<R: Runtime> {
+    /// Windows 클립보드 소유 창을 찾을 때만 쓴다
+    #[cfg_attr(not(windows), allow(dead_code))]
     pub app: AppHandle<R>,
 }
 
@@ -44,7 +46,12 @@ impl<R: Runtime> Clipboard for TauriClipboard<R> {
             let png = encode_png(w, h, bgra).ok();
             ink_platform_windows::clipboard::set_image(self.owner(), w, h, bgra, png.as_deref())
         }
-        #[cfg(not(windows))]
+        #[cfg(target_os = "macos")]
+        {
+            let png = encode_png(w, h, bgra).ok();
+            ink_platform_macos::clipboard::set_image(w, h, bgra, png.as_deref())
+        }
+        #[cfg(all(not(windows), not(target_os = "macos")))]
         {
             let _ = (w, h, bgra);
             Err("clipboard image not implemented on this platform yet".into())
@@ -56,7 +63,11 @@ impl<R: Runtime> Clipboard for TauriClipboard<R> {
         {
             ink_platform_windows::clipboard::set_text(self.owner(), text)
         }
-        #[cfg(not(windows))]
+        #[cfg(target_os = "macos")]
+        {
+            ink_platform_macos::clipboard::set_text(text)
+        }
+        #[cfg(all(not(windows), not(target_os = "macos")))]
         {
             let _ = text;
             Err("clipboard text not implemented on this platform yet".into())
@@ -130,9 +141,13 @@ impl Clock for SystemClock {
         {
             ink_platform_windows::screen::local_time()
         }
-        #[cfg(not(windows))]
+        #[cfg(target_os = "macos")]
         {
-            // 맥 조정 전: UTC
+            ink_platform_macos::local_time()
+        }
+        #[cfg(all(not(windows), not(target_os = "macos")))]
+        {
+            // 어댑터 없는 곳: UTC
             let secs = self.unix();
             let (h, m, s) = ((secs / 3600) % 24, (secs / 60) % 60, secs % 60);
             NameContext { year: 1970, month: 1, day: 1, hour: h as u8, minute: m as u8, second: s as u8, app: None, n: 0 }

@@ -4113,6 +4113,7 @@ version = "0.1.0"
 dependencies = [
  "ink-app",
  "ink-domain",
+ "ink-platform-macos",
  "ink-platform-windows",
  "ink-store",
  "log",

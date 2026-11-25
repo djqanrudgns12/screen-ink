@@ -80,6 +80,8 @@ pub fn serve<R: Runtime>(ctx: UriSchemeContext<'_, R>, req: Request<Vec<u8>>) ->
 
 /// 배치에 맞춰 오버레이 창을 만들고(없으면)·옮기고·남는 창을 닫는다. 메인 스레드 대기열에서만 부른다.
 pub fn ensure_overlays<R: Runtime>(app: &AppHandle<R>, layout: &MonitorLayout) {
+    #[cfg(target_os = "macos")]
+    let space = ink_platform_macos::space();
     for m in &layout.monitors {
         let l = label(m.id);
         let w = match app.get_webview_window(&l) {
@@ -109,9 +111,20 @@ pub fn ensure_overlays<R: Runtime>(app: &AppHandle<R>, layout: &MonitorLayout) {
                 }
             },
         };
-        // 위치 먼저(그 모니터 배율을 받게) → 크기
-        let _ = w.set_position(PhysicalPosition::new(m.bounds.x, m.bounds.y));
-        let _ = w.set_size(PhysicalSize::new(m.bounds.w as u32, m.bounds.h as u32));
+        // 맥: 계약 물리 px → 그 화면 포인트로 직접 놓는다(혼합 배율 배치는 Tauri 물리 좌표와 다르다).
+        // 메뉴 막대·Dock 위 층, 모든 Space·전체 화면 앱 위
+        #[cfg(target_os = "macos")]
+        let placed = w.ns_window().is_ok_and(|ns| {
+            ink_platform_macos::window::configure(ns, ink_platform_macos::window::Role::Overlay);
+            ink_platform_macos::window::place(ns, &space, m.bounds)
+        });
+        #[cfg(not(target_os = "macos"))]
+        let placed = false;
+        if !placed {
+            // 위치 먼저(그 모니터 배율을 받게) → 크기
+            let _ = w.set_position(PhysicalPosition::new(m.bounds.x, m.bounds.y));
+            let _ = w.set_size(PhysicalSize::new(m.bounds.w as u32, m.bounds.h as u32));
+        }
         let _ = w.set_background_color(Some(Color(0, 0, 0, 0)));
     }
     let keep: Vec<String> = layout.monitors.iter().map(|m| label(m.id)).collect();

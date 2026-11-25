@@ -682,6 +682,11 @@ impl InkService {
         self.cap.cursor = self.ports.screen.cursor_sprite();
         let frames = match captured {
             Ok(f) if !f.is_empty() => f,
+            Err(e) if e.starts_with(crate::NO_SCREEN_PERMISSION) => {
+                // 조용히 실패하지 않는다(M10): 어디서 켜는지까지
+                self.island(IslandEvent::new(IslandKind::Problem, "화면 기록 권한이 필요해요").detail("시스템 설정 › 개인정보 보호 및 보안 › 화면 기록에서 켜 주세요"));
+                return;
+            }
             Ok(_) | Err(_) => {
                 self.island(IslandEvent::new(IslandKind::Problem, "화면을 가져오지 못했어요"));
                 return;

@@ -24,5 +24,8 @@ png = "0.18"
 [target.'cfg(windows)'.dependencies]
 ink-platform-windows.workspace = true
 
+[target.'cfg(target_os = "macos")'.dependencies]
+ink-platform-macos.workspace = true
+
 [build-dependencies]
 tauri-plugin = { version = "2", features = ["build"] }
