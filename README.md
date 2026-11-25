@@ -57,9 +57,11 @@ apps/screen-ink              단독 앱 셸
 | 앱 실행 | `npm run app:dev` (트레이 상주, 첫 실행은 설정 창 + 안내 시트) |
 | 단축키 자료 다시 만들기 | `npm run shortcuts:data` (입력표 → `docs/shortcuts/catalog-v1.json`) |
 | 진입 시간(M1) 재기 | 앱을 띄운 채 `powershell -ExecutionPolicy Bypass -File bench\m1-overlay.ps1 -Count 100 -Save` |
+| 인식 재생 시험(08 §5.2) | `cargo test -p ink-platform-fake --test replay` · 보고서 `cargo run -p ink-platform-fake --bin recog-replay` · 사례 뜨기는 [bench/recog/README.md](bench/recog/README.md) |
 
 - C 드라이브가 좁으면 Rust 빌드 폴더를 옮긴다: `$env:CARGO_TARGET_DIR='D:\dev-cache\screen-ink\target'`
 - 학교망에서 crates.io 인증서 폐기 확인이 실패하면 그 창에서만 `$env:CARGO_HTTP_CHECK_REVOKE='false'`
+- 진단 로그: `$env:SCREEN_INK_LOG='debug'`로 띄우면 강조가 바뀔 때마다 사슬(종류 이름만)과 V 전처리 시간을 남긴다.
 - 개발 빌드는 로그인 자동 실행을 건드리지 않는다(릴리스 빌드만 `general.autostart`를 따름).
 - 맥은 다른 환경에서 시험·조정한다(현재 맥 어댑터는 빈 탐지기).
 

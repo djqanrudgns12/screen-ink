@@ -9,6 +9,7 @@ publish = false
 
 [dependencies]
 ink-domain.workspace = true
+ink-vision.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

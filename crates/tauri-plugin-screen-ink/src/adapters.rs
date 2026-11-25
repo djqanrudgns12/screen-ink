@@ -102,6 +102,24 @@ impl<R: Runtime> FileSink for TauriFiles<R> {
         let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
         Ok(SavedFile { name, path: path.to_string_lossy().into_owned(), fell_back })
     }
+
+    fn write_case(&mut self, dir: &str, case: &ink_app::case::Case, frames: &[ink_app::Frame]) -> Result<String, String> {
+        write_case(Path::new(dir), case, frames)
+    }
+}
+
+/// 인식 시험 사례: `<id>.json` + 모니터별 무손실 PNG(개발용, `SCREEN_INK_CASE_DIR`).
+pub fn write_case(dir: &Path, case: &ink_app::case::Case, frames: &[ink_app::Frame]) -> Result<String, String> {
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    for m in &case.monitors {
+        let Some(f) = frames.iter().find(|f| f.monitor_id == m.monitor.id) else { continue };
+        let png = encode_png(f.width, f.height, &f.bgra)?;
+        std::fs::write(dir.join(&m.frame), png).map_err(|e| e.to_string())?;
+    }
+    let json = serde_json::to_string_pretty(case).map_err(|e| e.to_string())?;
+    let path = dir.join(format!("{}.json", case.id));
+    std::fs::write(&path, json).map_err(|e| e.to_string())?;
+    Ok(path.to_string_lossy().into_owned())
 }
 
 pub struct SystemClock;
@@ -164,6 +182,33 @@ mod tests {
         let info = r.next_frame(&mut buf).unwrap();
         assert_eq!((info.width, info.height, info.color_type), (64, 64, png::ColorType::Rgb));
         assert_eq!(&buf[0..3], &[255, 0, 0], "BGRA → RGB");
+    }
+
+    #[test]
+    fn 사례는_json과_모니터별_png로_쓴다() {
+        use ink_app::case::{Case, CaseMonitor, CASE_SCHEMA};
+        use ink_domain::geometry::{Monitor, PhysPoint, PhysRect};
+        let d = std::env::temp_dir().join(format!("screen-ink-case-w-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        let mon = Monitor { id: 3, bounds: PhysRect::new(0, 0, 4, 2), work: PhysRect::new(0, 0, 4, 2), scale: 1.0, primary: true };
+        let case = Case {
+            schema: CASE_SCHEMA,
+            id: "c1".into(),
+            note: String::new(),
+            monitors: vec![CaseMonitor { monitor: mon, frame: Case::frame_name("c1", 3) }],
+            cursor: PhysPoint { x: 1, y: 1 },
+            windows: vec![],
+            elements: Default::default(),
+            children: Default::default(),
+            points: vec![],
+        };
+        let frames = [ink_app::Frame { monitor_id: 3, width: 4, height: 2, bgra: std::sync::Arc::new(vec![9; 32]) }];
+        let path = write_case(&d, &case, &frames).unwrap();
+        assert!(path.ends_with("c1.json"));
+        let back: Case = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(back, case);
+        assert!(d.join("c1.m3.png").exists());
+        let _ = std::fs::remove_dir_all(&d);
     }
 
     #[test]

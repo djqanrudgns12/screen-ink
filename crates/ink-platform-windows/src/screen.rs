@@ -231,6 +231,64 @@ pub fn capture_monitor(bounds: PhysRect) -> Result<Vec<u8>, String> {
     }
 }
 
+// ───────────── 커서 모양(` 키·"커서도 찍기") ─────────────
+
+/// 지금 커서를 검은·흰 바탕에 그려 곧은 알파 BGRA로. 숨은 커서면 None.
+pub fn cursor_sprite() -> Option<ink_domain::image::CursorSprite> {
+    use windows_sys::Win32::Graphics::Gdi::{GetObjectW, BITMAP};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{DrawIconEx, GetCursorInfo, GetIconInfo, CURSORINFO, CURSOR_SHOWING, DI_NORMAL, ICONINFO};
+    // SAFETY: 커서 정보 구조체를 채워 받고, 아이콘 비트맵은 다 쓴 뒤 지운다. DIB는 만든 순서 반대로 돌려준다.
+    unsafe {
+        let mut ci: CURSORINFO = std::mem::zeroed();
+        ci.cbSize = std::mem::size_of::<CURSORINFO>() as u32;
+        if GetCursorInfo(&mut ci) == 0 || ci.flags & CURSOR_SHOWING == 0 || ci.hCursor.is_null() {
+            return None;
+        }
+        let mut ii: ICONINFO = std::mem::zeroed();
+        if GetIconInfo(ci.hCursor, &mut ii) == 0 {
+            return None;
+        }
+        // 크기: 색 비트맵이 있으면 그것, 없으면(흑백 커서) 마스크 높이의 반
+        let mut bm: BITMAP = std::mem::zeroed();
+        let src = if !ii.hbmColor.is_null() { ii.hbmColor } else { ii.hbmMask };
+        GetObjectW(src, std::mem::size_of::<BITMAP>() as i32, &mut bm as *mut _ as *mut c_void);
+        let w = bm.bmWidth.max(1);
+        let h = if ii.hbmColor.is_null() { (bm.bmHeight / 2).max(1) } else { bm.bmHeight.max(1) };
+        let (hx, hy) = (ii.xHotspot as i32, ii.yHotspot as i32);
+        if !ii.hbmColor.is_null() {
+            DeleteObject(ii.hbmColor);
+        }
+        if !ii.hbmMask.is_null() {
+            DeleteObject(ii.hbmMask);
+        }
+        let screen = GetDC(null_mut());
+        let draw = |fill: u8| -> Option<Vec<u8>> {
+            let mem = CreateCompatibleDC(screen);
+            let mut bmi: BITMAPINFO = std::mem::zeroed();
+            bmi.bmiHeader = BITMAPINFOHEADER { biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32, biWidth: w, biHeight: -h, biPlanes: 1, biBitCount: 32, biCompression: BI_RGB, ..std::mem::zeroed() };
+            let mut bits: *mut c_void = null_mut();
+            let dib = CreateDIBSection(mem, &bmi, DIB_RGB_COLORS, &mut bits, null_mut(), 0);
+            if dib.is_null() || bits.is_null() {
+                DeleteDC(mem);
+                return None;
+            }
+            let old = SelectObject(mem, dib);
+            std::ptr::write_bytes(bits as *mut u8, fill, (w * h * 4) as usize);
+            DrawIconEx(mem, 0, 0, ci.hCursor, w, h, 0, null_mut(), DI_NORMAL);
+            GdiFlush();
+            let px = std::slice::from_raw_parts(bits as *const u8, (w * h * 4) as usize).to_vec();
+            SelectObject(mem, old);
+            DeleteObject(dib);
+            DeleteDC(mem);
+            Some(px)
+        };
+        let (black, white) = (draw(0), draw(255));
+        ReleaseDC(null_mut(), screen);
+        let bgra = ink_domain::image::alpha_from_two(&black?, &white?);
+        Some(ink_domain::image::CursorSprite { x: ci.ptScreenPos.x - hx, y: ci.ptScreenPos.y - hy, w: w as u32, h: h as u32, bgra })
+    }
+}
+
 // ───────────── H 자식 창 · 커서 · Alt · 지역 시각 ─────────────
 
 unsafe extern "system" fn collect_child(h: HWND, data: LPARAM) -> BOOL {
@@ -312,6 +370,10 @@ impl ScreenSource for WindowsScreen {
             out.push(Frame { monitor_id: id, width: b.w as u32, height: b.h as u32, bgra: std::sync::Arc::new(r?) });
         }
         Ok(out)
+    }
+
+    fn cursor_sprite(&mut self) -> Option<ink_domain::image::CursorSprite> {
+        cursor_sprite()
     }
 }
 

@@ -678,6 +678,8 @@ impl InkService {
             let cap = (captured, ms(t.elapsed()));
             (list.join().unwrap_or_default(), cap)
         });
+        // 커서 모양도 같은 순간에(오버레이가 뜨기 전 — 뜬 뒤엔 십자 커서로 바뀜)
+        self.cap.cursor = self.ports.screen.cursor_sprite();
         let frames = match captured {
             Ok(f) if !f.is_empty() => f,
             Ok(_) | Err(_) => {
@@ -689,6 +691,10 @@ impl InkService {
         self.session_seq += 1;
         let session = self.session_seq;
         let windows = filter_windows(&raw, &layout, std::process::id(), &self.excluded_apps());
+        if self.case_dir_on() {
+            let own = std::process::id();
+            self.cap.raw = raw.into_iter().filter(|w| w.pid != own).collect();
+        }
         let snapshot = Snapshot { id: session, kind, layout: layout.clone(), windows, cursor };
         // 기본 강조: F1·F3 = 커서 모니터 전체(작업 표시줄 포함), F2 = 커서 아래 창(Snapshot::default_highlight)
         let highlight = snapshot.default_highlight();

@@ -1870,6 +1870,7 @@ name = "ink-app"
 version = "0.1.0"
 dependencies = [
  "ink-domain",
+ "ink-vision",
  "log",
  "serde",
  "serde_json",
@@ -1891,6 +1892,8 @@ version = "0.1.0"
 dependencies = [
  "ink-app",
  "ink-domain",
+ "png",
+ "serde",
  "serde_json",
 ]
 

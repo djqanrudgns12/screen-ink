@@ -161,6 +161,10 @@ impl ink_app::ElementSource for UiaIndex {
         UiaIndex::rects(self, window)
     }
 
+    fn elements(&self, window: u64) -> Vec<ElementCand> {
+        self.cache.lock().unwrap_or_else(|e| e.into_inner()).get(&window).cloned().unwrap_or_default()
+    }
+
     fn clear(&self) {
         UiaIndex::clear(self)
     }

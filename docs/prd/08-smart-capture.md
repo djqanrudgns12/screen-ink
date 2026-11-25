@@ -191,7 +191,7 @@ flowchart LR
 | 미리 깨우기(병렬) | 캡처와 겹쳐서 0 ms 추가 | — |
 | 첫 강조(커서 점 A 질의 + V 질의) | 진입 + 30 ms | V만으로 첫 강조, A는 도착하면 갱신 |
 | A 하위 트리 색인 | 60 ms · 1500개 | 거기까지만 쓰고 나머지는 커서 점 질의로 |
-| V 전처리 | ≤ 40 ms(4K) | 커서 주변 1024² 먼저 |
+| V 전처리 | ≤ 40 ms(4K) — 실측(2026-11-25, 합성 UI, dev opt3) 4K 17 ms · 1080p 5 ms · 커서 주변 1024² 4~5 ms · 질의 ≤ 0.7 ms | 커서 주변 1024² 먼저 |
 | 커서 이동 질의 | ≤ 5 ms(메모리 안) | — |
 | 같은 앱에서 색인 150 ms 초과 2회 | — | "느린 앱"(A 끔, W·H·V만)에 자동 추가 + 알림(R-CAP-15) |
 
@@ -231,6 +231,8 @@ flowchart LR
 ### 5.2 스냅숏 재생 시험
 
 진입 순간의 `FrameSnapshot`(시험 문서 화면) · `WindowCatalog` · A 색인을 **이름·제목을 지운 채** 파일로 떠 두고(`bench/recog/cases/*.json` + PNG), `ink-domain` 융합 엔진을 OS 없이 재생한다 → 같은 입력이면 같은 사슬. 로직을 바꿀 때마다 CI에서 Top-1·Top-3·경계 오차를 비교해 떨어지면 실패로 친다.
+
+구현(2026-11-25): 사례 형식 `ink_app::case::Case`(스키마 1) · 재생 `ink-platform-fake::replay`(진짜 서비스·고르기·융합·V 엔진, 점마다 새 진입, 휠 위·아래 3칸) · 기준선 `bench/recog/cases/baseline.json` · 보고서 `cargo run -p ink-platform-fake --bin recog-replay` → `bench/results/recog-replay.csv`. **사람 정답 도구** = 앱을 `SCREEN_INK_CASE_DIR`와 함께 띄우고 F1에서 정답 범위를 확정하면 그 순간이 사례로 써진다(우리 창 제외). 절차는 [bench/recog/README.md](../../bench/recog/README.md).
 
 ### 5.3 지표
 

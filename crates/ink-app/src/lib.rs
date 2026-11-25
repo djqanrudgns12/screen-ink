@@ -2,15 +2,18 @@
 //! UI의 `InkClient` 명령 하나 = `InkService` 메서드 하나.
 
 pub mod capture;
+pub mod case;
 pub mod ports;
 pub mod service;
 pub mod state;
+pub mod vision;
 
 pub use ports::{
     Clipboard, Clock, ElementSource, FileSink, Frame, HotkeyError, HotkeyRegistry, Loaded, MonitorProbe, NoVision, Notifier, OverlayHost, Ports, SavedFile, ScreenSource,
     SettingsStore, StoreError, StoreLocation, SystemEvent, SystemProbe, VisionSource, WindowCatalog,
 };
 pub use capture::CaptureInput;
+pub use vision::VisionEngine;
 pub use service::{HotkeyOutcome, ImportPreview, InkService, PAUSE_SLOT};
 pub use state::{
     CaptureView, ConflictSummary, InkState, IslandButton, IslandEvent, IslandHint, IslandKind, OverlayMonitor, OverlaySession, PreviewResult, RowStatus, SetShortcutResult,

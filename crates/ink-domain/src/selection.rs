@@ -179,6 +179,11 @@ impl Selector {
         }
     }
 
+    /// 강조를 커서로 고르고 있으면 그 자리(드래그·확정 뒤면 None).
+    pub fn hover_point(&self) -> Option<PhysPoint> {
+        matches!(self.state, State::Hover { .. }).then_some(self.cursor)
+    }
+
     pub fn cursor_included(&self) -> bool {
         self.cursor_included
     }

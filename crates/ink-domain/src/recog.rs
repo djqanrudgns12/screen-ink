@@ -33,6 +33,8 @@ pub enum Control {
     Pane,
     Group,
     Custom,
+    /// 제목 표시줄(D6) — 이 위에서는 첫 강조가 창
+    TitleBar,
     Other,
 }
 
@@ -63,6 +65,7 @@ impl Control {
             50030 => Control::Document,
             50033 => Control::Pane,
             50034 | 50035 => Control::Header,
+            50037 => Control::TitleBar,
             _ => Control::Other,
         }
     }
@@ -91,6 +94,7 @@ impl Control {
             Control::TreeItem => "트리 항목",
             Control::Pane => "영역",
             Control::Group => "묶음",
+            Control::TitleBar => "제목 표시줄",
             Control::Custom | Control::Other => "요소",
         }
     }
@@ -101,7 +105,7 @@ impl Control {
             Control::Button | Control::ListItem | Control::DataItem | Control::TabItem | Control::MenuItem | Control::Hyperlink | Control::Image | Control::Edit => 1.0,
             Control::Table | Control::Document | Control::List | Control::Menu | Control::Tree | Control::TreeItem | Control::CheckBox | Control::ComboBox => 0.85,
             Control::Text | Control::Header | Control::ToolBar | Control::Tab => 0.6,
-            Control::Pane | Control::Group | Control::Custom | Control::Other => 0.2,
+            Control::Pane | Control::Group | Control::Custom | Control::TitleBar | Control::Other => 0.2,
         }
     }
 
@@ -364,6 +368,12 @@ pub fn first_level(chain: &[Node], intent: Option<&LevelIntent>) -> usize {
             }
         }
     }
+    // 제목 표시줄 규칙(D6): 커서가 제목 표시줄 안이면 제목 글자가 아니라 창(제목 글자는 휠 아래로)
+    if chain.iter().any(|n| n.kind == NodeKind::Element(Control::TitleBar)) {
+        if let Some(wi) = window_index(chain) {
+            return wi;
+        }
+    }
     if let Some(i) = chain.iter().position(|n| !n.hidden_container && n.score >= FIRST_SCORE && !matches!(n.kind, NodeKind::Window | NodeKind::Monitor | NodeKind::Virtual)) {
         return i;
     }
@@ -462,6 +472,18 @@ mod tests {
         // 행을 골랐으면 옮겨도 행
         let it = LevelIntent::of(&a, 0).unwrap();
         assert_eq!(b[first_level(&b, Some(&it))].rect.y, 380);
+    }
+
+    #[test]
+    fn 제목_표시줄_위에서는_창이_첫_강조() {
+        let p = PhysPoint { x: 400, y: 115 };
+        let els = [
+            ElementCand { rect: PhysRect::new(380, 105, 120, 20), control: Control::Text },
+            ElementCand { rect: PhysRect::new(100, 100, 1200, 32), control: Control::TitleBar },
+        ];
+        let c = build_chain(&ev(p, &els, &[]));
+        assert_eq!(c[first_level(&c, None)].kind, NodeKind::Window);
+        assert_eq!(c[0].kind, NodeKind::Element(Control::Text), "제목 글자는 휠 아래로 남는다");
     }
 
     #[test]

@@ -1,0 +1,31 @@
+# 순수 크레이트·UI 시험 + 인식 스냅숏 재생(08 §5.2). OS 어댑터·Tauri 껍데기는 Windows 개발 PC에서 따로 잰다.
+# 지금은 PR과 손으로 돌리기만(푸시마다 돌리려면 on.push를 더한다).
+name: ci
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: 시험(도메인·유스케이스·V·저장소·가짜·재생)
+        run: cargo test -p ink-domain -p ink-app -p ink-vision -p ink-store -p ink-platform-fake
+      - name: clippy
+        run: cargo clippy -p ink-domain -p ink-app -p ink-vision -p ink-store -p ink-platform-fake --all-targets -- -D warnings
+
+  ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test

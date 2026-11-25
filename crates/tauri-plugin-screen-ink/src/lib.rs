@@ -149,6 +149,19 @@ fn element_source<R: Runtime>(app: &AppHandle<R>) -> Box<dyn ink_app::ElementSou
     }
 }
 
+/// V 근거: 전처리가 끝날 때마다 메인 스레드에서 강조 사슬을 다시 만든다.
+fn vision_source<R: Runtime>(app: &AppHandle<R>) -> Box<dyn ink_app::VisionSource> {
+    let handle = app.clone();
+    Box::new(ink_app::VisionEngine::new(move || {
+        let h = handle.clone();
+        let _ = handle.run_on_main_thread(move || {
+            if let Some(ink) = h.try_state::<Ink>() {
+                ink.lock().on_vision_ready();
+            }
+        });
+    }))
+}
+
 #[cfg(not(windows))]
 struct NoElements;
 
@@ -744,12 +757,17 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         monitors,
         overlay: Box::new(TauriOverlayHost::new(app.clone(), frames, thumbs)),
         elements: element_source(app),
-        vision: Box::new(ink_app::NoVision),
+        vision: vision_source(app),
         clipboard: Box::new(adapters::TauriClipboard { app: app.clone() }),
         files: Box::new(adapters::TauriFiles { app: app.clone() }),
         clock: Box::new(adapters::SystemClock),
     };
     let mut service = InkService::new(ports, Platform::current(), app.package_info().version.to_string());
+    // 개발용 사람 정답 도구: 확정할 때마다 인식 시험 사례를 쓴다(시험 문서 화면에서만, 08 §5.2)
+    if let Ok(dir) = std::env::var("SCREEN_INK_CASE_DIR") {
+        log::warn!("recognition cases will be written on every confirm");
+        service.set_case_dir(Some(dir));
+    }
     let failed = service.start();
     let first_run = service.is_first_run();
     let autostart = service.settings().bool("general.autostart");

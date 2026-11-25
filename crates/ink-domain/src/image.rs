@@ -46,6 +46,59 @@ pub fn crop(frames: &[FrameRef], r: PhysRect) -> (u32, u32, Vec<u8>) {
     (w as u32, h as u32, out)
 }
 
+/// 캡처 순간의 커서 모양(곧은 알파 BGRA)과 화면 위치(왼쪽 위, 물리 px).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CursorSprite {
+    pub x: i32,
+    pub y: i32,
+    pub w: u32,
+    pub h: u32,
+    pub bgra: Vec<u8>,
+}
+
+/// 잘라 낸 이미지(`origin` = 그 범위의 왼쪽 위)에 커서를 알파 합성한다. 범위 밖 부분은 버린다.
+pub fn composite_cursor(dst: &mut [u8], dw: u32, dh: u32, origin: (i32, i32), c: &CursorSprite) {
+    for cy in 0..c.h as i32 {
+        let y = c.y + cy - origin.1;
+        if y < 0 || y >= dh as i32 {
+            continue;
+        }
+        for cx in 0..c.w as i32 {
+            let x = c.x + cx - origin.0;
+            if x < 0 || x >= dw as i32 {
+                continue;
+            }
+            let s = ((cy as u32 * c.w + cx as u32) * 4) as usize;
+            let a = c.bgra[s + 3] as u32;
+            if a == 0 {
+                continue;
+            }
+            let d = ((y as u32 * dw + x as u32) * 4) as usize;
+            for k in 0..3 {
+                dst[d + k] = ((c.bgra[s + k] as u32 * a + dst[d + k] as u32 * (255 - a)) / 255) as u8;
+            }
+            dst[d + 3] = 255;
+        }
+    }
+}
+
+/// 검은 바탕·흰 바탕에 같은 커서를 그린 두 장 → 곧은 알파 BGRA(투명도·그림자 살림).
+pub fn alpha_from_two(black: &[u8], white: &[u8]) -> Vec<u8> {
+    let mut out = vec![0u8; black.len()];
+    for ((o, b), w) in out.chunks_exact_mut(4).zip(black.chunks_exact(4)).zip(white.chunks_exact(4)) {
+        // 바탕 차이만큼 투명: alpha = 255 - (흰 - 검) (채널 평균)
+        let diff = (0..3).map(|k| w[k] as i32 - b[k] as i32).sum::<i32>() / 3;
+        let a = (255 - diff).clamp(0, 255) as u32;
+        if a > 0 {
+            for k in 0..3 {
+                o[k] = ((b[k] as u32 * 255 + a / 2) / a).min(255) as u8;
+            }
+        }
+        o[3] = a as u8;
+    }
+    out
+}
+
 /// 상자 필터로 `max_w×max_h` 안에 들어가게 줄인다(키우지는 않음).
 pub fn thumbnail(w: u32, h: u32, bgra: &[u8], max_w: u32, max_h: u32) -> (u32, u32, Vec<u8>) {
     if w == 0 || h == 0 {
@@ -134,6 +187,23 @@ mod tests {
         assert_eq!((w, h), (120, 30));
         assert_eq!(&t[0..3], &[0, 0, 200]);
         assert_eq!(thumbnail(10, 10, &solid(10, 10, 1, 1, 1), 120, 48).0, 10, "키우지 않는다");
+    }
+
+    #[test]
+    fn 커서는_알파로_합성되고_범위_밖은_버린다() {
+        // 검은 바탕 그림 [불투명 흰, 반투명 회색(= 128·128/255), 투명]
+        let black = [255, 255, 255, 0, 64, 64, 64, 0, 0, 0, 0, 0];
+        let white = [255, 255, 255, 0, 191, 191, 191, 0, 255, 255, 255, 0];
+        let a = alpha_from_two(&black, &white);
+        assert_eq!(a[3], 255);
+        assert!((a[7] as i32 - 128).abs() <= 1);
+        assert_eq!(a[11], 0);
+        let sprite = CursorSprite { x: 9, y: 10, w: 3, h: 1, bgra: a };
+        let mut dst = solid(4, 2, 0, 0, 0);
+        composite_cursor(&mut dst, 4, 2, (8, 10), &sprite);
+        assert_eq!(&dst[4..8], &[255, 255, 255, 255], "(9,10) → 범위 안 x=1");
+        assert!(dst[8] > 50 && dst[8] < 80, "반투명은 섞임");
+        assert_eq!(&dst[12..15], &[0, 0, 0], "투명은 그대로");
     }
 
     #[test]

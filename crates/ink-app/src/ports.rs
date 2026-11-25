@@ -52,6 +52,10 @@ pub struct Frame {
 /// 정지 캡처(03 §3 `ScreenSource`).
 pub trait ScreenSource: Send {
     fn capture(&mut self, layout: &MonitorLayout) -> Result<Vec<Frame>, String>;
+    /// 같은 순간의 커서 모양(` 키·"커서도 찍기"로 결과에 합성).
+    fn cursor_sprite(&mut self) -> Option<ink_domain::image::CursorSprite> {
+        None
+    }
 }
 
 /// Z 순서 창 목록(03 §3 `WindowCatalog`). 창 제목은 읽지 않는다. 캡처와 나란히 찍도록 `Sync`.
@@ -82,7 +86,11 @@ pub trait ElementSource: Send {
     /// 색인에서 그 점을 담는 요소(없으면 빈 목록 — 아직 색인 중이어도 기다리지 않는다).
     fn elements_at(&self, window: u64, p: PhysPoint) -> Vec<ink_domain::recog::ElementCand>;
     /// 그 창 색인의 모든 사각형(드래그 자석 후보).
-    fn rects(&self, _window: u64) -> Vec<ink_domain::geometry::PhysRect> {
+    fn rects(&self, window: u64) -> Vec<ink_domain::geometry::PhysRect> {
+        self.elements(window).into_iter().map(|e| e.rect).collect()
+    }
+    /// 그 창 색인 전부(시험 사례 뜨기). 색인 전이면 빈 목록.
+    fn elements(&self, _window: u64) -> Vec<ink_domain::recog::ElementCand> {
         Vec::new()
     }
     /// 모드가 끝나면 색인을 버린다(창이 바뀌었을 수 있음).
@@ -138,6 +146,10 @@ pub struct SavedFile {
 /// 저장 폴더(03 §3 `FileSink`): 폴더가 없으면 사진 폴더로, 같은 이름이면 ` (2)`, PNG(알파 없음).
 pub trait FileSink: Send {
     fn save_png(&mut self, folder: &str, stem: &str, w: u32, h: u32, bgra: &[u8]) -> Result<SavedFile, String>;
+    /// 인식 시험 사례 쓰기(개발용, `case::Case`): `dir/<id>.json` + 모니터별 PNG(`case.monitors[].frame`). 쓴 JSON 경로.
+    fn write_case(&mut self, _dir: &str, _case: &crate::case::Case, _frames: &[Frame]) -> Result<String, String> {
+        Err("unsupported".into())
+    }
 }
 
 /// 시계: 이름 규칙용 지역 시각과 기록용 유닉스 초.

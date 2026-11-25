@@ -11,6 +11,8 @@ use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::{Arc, Mutex};
 
+pub mod replay;
+
 #[derive(Debug, Default)]
 pub struct HotkeyBook {
     /// 가속기 → 칸
@@ -72,6 +74,10 @@ pub struct Screen {
     pub windows: Vec<RawWindow>,
     pub capture_fails: bool,
     pub captures: usize,
+    /// 진짜 이미지(재생 시험). 없으면 검은 작은 이미지.
+    pub frames: Option<Vec<Frame>>,
+    /// 창 → H 자식 창
+    pub children: HashMap<u64, Vec<PhysRect>>,
 }
 
 impl Default for Screen {
@@ -93,6 +99,8 @@ impl Default for Screen {
             }],
             capture_fails: false,
             captures: 0,
+            frames: None,
+            children: HashMap::new(),
         }
     }
 }
@@ -107,6 +115,9 @@ impl ScreenSource for FakeScreen {
             return Err("capture failed".into());
         }
         s.captures += 1;
+        if let Some(f) = &s.frames {
+            return Ok(f.clone());
+        }
         Ok(layout.monitors.iter().map(|m| Frame { monitor_id: m.id, width: m.bounds.w as u32, height: m.bounds.h as u32, bgra: Arc::new(vec![0; 64]) }).collect())
     }
 }
@@ -114,6 +125,10 @@ impl ScreenSource for FakeScreen {
 impl WindowCatalog for FakeScreen {
     fn windows(&self) -> Vec<RawWindow> {
         self.0.lock().unwrap().windows.clone()
+    }
+
+    fn children(&self, window: u64) -> Vec<PhysRect> {
+        self.0.lock().unwrap().children.get(&window).cloned().unwrap_or_default()
     }
 }
 
@@ -245,8 +260,8 @@ impl ink_app::ElementSource for FakeElements {
         self.0.lock().unwrap().by_window.get(&window).map(|v| v.iter().filter(|e| e.rect.contains(p)).copied().collect()).unwrap_or_default()
     }
 
-    fn rects(&self, window: u64) -> Vec<PhysRect> {
-        self.0.lock().unwrap().by_window.get(&window).map(|v| v.iter().map(|e| e.rect).collect()).unwrap_or_default()
+    fn elements(&self, window: u64) -> Vec<ink_domain::recog::ElementCand> {
+        self.0.lock().unwrap().by_window.get(&window).cloned().unwrap_or_default()
     }
 
     fn clear(&self) {
@@ -287,6 +302,11 @@ impl ink_app::FileSink for FakeDesk {
         self.0.lock().unwrap().saved.push((folder.into(), stem.into(), w, h));
         Ok(ink_app::SavedFile { name: format!("{stem}.png"), path: format!("{folder}\\{stem}.png"), fell_back: folder.is_empty() })
     }
+
+    fn write_case(&mut self, dir: &str, case: &ink_app::case::Case, frames: &[Frame]) -> Result<String, String> {
+        replay::save(std::path::Path::new(dir), case, frames)?;
+        Ok(format!("{dir}/{}.json", case.id))
+    }
 }
 
 /// 고정 시계(2026-03-04 09:05:07).
@@ -314,6 +334,8 @@ pub struct FakeWorld {
     pub overlay: FakeOverlay,
     pub elements: FakeElements,
     pub desk: FakeDesk,
+    /// 진짜 V 엔진(그 자리에서 전처리)을 쓸지
+    pub vision: bool,
 }
 
 impl FakeWorld {
@@ -332,7 +354,7 @@ impl FakeWorld {
             monitors: Box::new(self.screen.clone()),
             overlay: Box::new(self.overlay.clone()),
             elements: Box::new(self.elements.clone()),
-            vision: Box::new(ink_app::NoVision),
+            vision: if self.vision { Box::new(ink_app::VisionEngine::blocking()) } else { Box::new(ink_app::NoVision) },
             clipboard: Box::new(self.desk.clone()),
             files: Box::new(self.desk.clone()),
             clock: Box::new(FixedClock),

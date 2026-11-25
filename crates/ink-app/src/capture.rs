@@ -15,7 +15,7 @@ use ink_domain::naming;
 use ink_domain::recog::{build_chain, Evidence, Node};
 use ink_domain::selection::{Button, Context, Effect, Input, Key, Selector};
 use ink_domain::settings::ExcludedApp;
-use ink_domain::snapshot::Snapshot;
+use ink_domain::snapshot::{RawWindow, Snapshot};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -71,6 +71,14 @@ pub struct CaptureState {
     pub(crate) save_day: (u16, u8, u8),
     /// 실행 파일 → 색인이 느렸던 횟수
     pub(crate) slow: HashMap<String, u32>,
+    /// 진입 순간의 커서 모양
+    pub(crate) cursor: Option<image::CursorSprite>,
+    /// 마지막으로 그린 강조(바뀔 때만 진단 로그)
+    pub(crate) drawn: Option<PhysRect>,
+    /// 개발용: 확정할 때마다 인식 시험 사례를 쓸 폴더(`SCREEN_INK_CASE_DIR`)
+    pub(crate) case_dir: Option<String>,
+    /// 사례용 거르기 전 창 목록(우리 창 뺌) — 사례를 쓸 때만 채운다
+    pub(crate) raw: Vec<RawWindow>,
 }
 
 impl CaptureState {
@@ -200,6 +208,9 @@ impl InkService {
         self.cap.selector = None;
         self.cap.frames.clear();
         self.cap.children.clear();
+        self.cap.cursor = None;
+        self.cap.drawn = None;
+        self.cap.raw.clear();
         self.ports.elements.clear();
         self.ports.vision.clear();
     }
@@ -291,12 +302,67 @@ impl InkService {
     fn redraw(&mut self) {
         let (Some(session), Some(sel)) = (self.session(), self.cap.selector.as_ref()) else { return };
         let rect = sel.rect();
+        if rect != self.cap.drawn && log::log_enabled!(log::Level::Debug) {
+            // 진단: 종류 이름만(창 제목·파일 이름 없음, 05 §9)
+            let v = sel.view();
+            log::debug!("highlight {:?} level {} path {}", rect, v.level, v.path.join(" > "));
+        }
+        self.cap.drawn = rect;
         self.ports.overlay.highlight(session, rect);
         self.emit_capture();
     }
 
+    /// 개발용 사례 폴더(사람 정답 도구). `None`이면 끈다.
+    pub fn set_case_dir(&mut self, dir: Option<String>) {
+        self.cap.case_dir = dir.filter(|d| !d.trim().is_empty());
+    }
+
+    pub(crate) fn case_dir_on(&self) -> bool {
+        self.cap.case_dir.is_some()
+    }
+
+    /// 확정한 범위를 정답으로 진입 순간을 사례로 쓴다(08 §5.2). 점 = 강조를 고른 커서 자리(드래그면 가운데).
+    fn write_case(&mut self, truth: PhysRect) {
+        let (Some(dir), Some(snap)) = (self.cap.case_dir.clone(), self.snapshot.as_ref()) else { return };
+        let t = self.ports.clock.local();
+        let id = format!("case-{:04}{:02}{:02}-{:02}{:02}{:02}-{}", t.year, t.month, t.day, t.hour, t.minute, t.second, snap.id);
+        let at = self.cap.selector.as_ref().and_then(|s| s.hover_point()).unwrap_or(PhysPoint { x: truth.x + truth.w / 2, y: truth.y + truth.h / 2 });
+        let label = self.cap.selector.as_ref().map(|s| s.view().path.last().cloned().unwrap_or_default()).unwrap_or_default();
+        let mut elements = std::collections::BTreeMap::new();
+        for w in &self.cap.raw {
+            let els = self.ports.elements.elements(w.handle);
+            if !els.is_empty() {
+                elements.insert(w.handle, els);
+            }
+        }
+        let case = crate::case::Case {
+            schema: crate::case::CASE_SCHEMA,
+            id: id.clone(),
+            note: String::new(),
+            monitors: snap
+                .layout
+                .monitors
+                .iter()
+                .filter(|m| self.cap.frames.iter().any(|f| f.monitor_id == m.id))
+                .map(|m| crate::case::CaseMonitor { monitor: m.clone(), frame: crate::case::Case::frame_name(&id, m.id) })
+                .collect(),
+            cursor: snap.cursor,
+            windows: self.cap.raw.clone(),
+            elements,
+            children: self.cap.children.iter().map(|(k, v)| (*k, v.clone())).collect(),
+            points: vec![crate::case::CasePoint { at, truth, label }],
+        };
+        match self.ports.files.write_case(&dir, &case, &self.cap.frames) {
+            Ok(path) => log::info!("case written {path}"),
+            Err(e) => log::warn!("case not written: {e}"),
+        }
+    }
+
     /// 범위 확정 → 자르기 → (복사 | 저장) → 기록 → 모드 끝 → 결과 섬.
     fn finish(&mut self, rect: PhysRect, save: bool, _quick: bool) {
+        if self.cap.case_dir.is_some() {
+            self.write_case(rect);
+        }
         let Some(snap) = self.snapshot.as_ref() else { return };
         let mode_name = self.cap.selector.as_ref().map(|s| s.mode_name()).unwrap_or("drag");
         let refs: Vec<FrameRef> = self
@@ -305,7 +371,14 @@ impl InkService {
             .iter()
             .filter_map(|f| snap.layout.monitors.iter().find(|m| m.id == f.monitor_id).map(|m| FrameRef { bounds: m.bounds, w: f.width, h: f.height, bgra: &f.bgra }))
             .collect();
-        let (w, h, px) = image::crop(&refs, rect);
+        let (w, h, mut px) = image::crop(&refs, rect);
+        // 커서 포함 = 설정("커서도 찍기") XOR 이번에 ` 키
+        let toggled = self.cap.selector.as_ref().is_some_and(|s| s.cursor_included());
+        if self.settings.bool("capture.cursor") != toggled {
+            if let Some(c) = self.cap.cursor.as_ref() {
+                image::composite_cursor(&mut px, w, h, (rect.x, rect.y), c);
+            }
+        }
         let center = PhysPoint { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
         let app = snap.window_at(center, true).map(|w| w.exe.trim_end_matches(".exe").to_string()).filter(|s| !s.is_empty());
         let hex = image::uniform_color(w, h, &px).map(|c| format!("#{:02X}{:02X}{:02X}", c[0], c[1], c[2]));
