@@ -3,7 +3,7 @@
 발표자를 위한 **화면 필기·확대·스마트 캡처** 데스크톱 앱. 아이캔 줌잇(판서·확대)과 Snipaste(스마트 캡처)의 장점을 한 앱으로 합친다.
 Windows 먼저, 이어서 macOS. 한국어 우선 + English. 무료(이후 MS Store).
 
-> 상태: **1차 프로토타입 목표 확정, 코드 없음** (2026-11-25)
+> 상태: **PRD v0.2(벤치마크 반영) 검토 대기, 코드 없음** (2026-11-25) → [docs/PRD.md](docs/PRD.md)
 > 원본 문서(구글 독스): https://docs.google.com/document/d/1Uuzck1KYOipR9-J85CR14jo1mxsjXSucKD38nU61EB8/edit
 
 ## 1차 프로토타입 — 핵심만
@@ -37,6 +37,9 @@ Windows: UI Automation · Windows.Graphics.Capture · Magnification API · Media
 
 ## 문서
 
+- [docs/PRD.md](docs/PRD.md) — **1차 프로토타입 PRD v0.2**: 요구사항 ID·합격 기준·측정 목표·기술 근거·벤치마크 대조표
+- [docs/benchmark/](docs/benchmark/README.md) — 벤치마킹 방법(클린룸·지표·시나리오 카드)과 대상별 분석: [Snipaste 2.11.3](docs/benchmark/snipaste-2.11.3.md) · [아이캔 줌잇 0.7.2.2](docs/benchmark/icanzoomit-0.7.2.2.md) · [ZoomIt 0.94.1](docs/benchmark/zoomit-powertoys-0.94.1.md)
+- [bench/](bench/) — 측정 스크립트(`snipaste-log-stats.ps1` · `sample-process.ps1`)와 결과 CSV
 - [docs/WINDOWS-SETUP.md](docs/WINDOWS-SETUP.md) — Windows PC 개발 환경 준비
-- [docs/아이디어-고도화-1차.md](docs/아이디어-고도화-1차.md) — 벤치마크·기회·기능 아이디어·플랫폼·배포·**13절 프로토타입 목표**(구글 독스 사본)
-- [docs/research/](docs/research/) — 조사 원문(Antigravity 딥서칭 · Codex 아이디어 · Claude 사실 확인)
+- [docs/아이디어-고도화-1차.md](docs/아이디어-고도화-1차.md) — 벤치마크·기회·기능 아이디어·플랫폼·배포·13절 프로토타입 목표 v0.1(구글 독스 사본)
+- [docs/research/](docs/research/) — 조사 원문(Antigravity 딥서칭 · Codex 아이디어 · Claude 사실 확인 · 오픈소스 조사)
