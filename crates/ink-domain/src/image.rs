@@ -89,9 +89,10 @@ pub fn alpha_from_two(black: &[u8], white: &[u8]) -> Vec<u8> {
         // 바탕 차이만큼 투명: alpha = 255 - (흰 - 검) (채널 평균)
         let diff = (0..3).map(|k| w[k] as i32 - b[k] as i32).sum::<i32>() / 3;
         let a = (255 - diff).clamp(0, 255) as u32;
-        if a > 0 {
-            for k in 0..3 {
-                o[k] = ((b[k] as u32 * 255 + a / 2) / a).min(255) as u8;
+        for k in 0..3 {
+            // a = 0이면 None → 색 0 그대로(완전 투명)
+            if let Some(v) = (b[k] as u32 * 255 + a / 2).checked_div(a) {
+                o[k] = v.min(255) as u8;
             }
         }
         o[3] = a as u8;

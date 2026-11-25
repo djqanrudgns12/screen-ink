@@ -6,6 +6,7 @@ members = [
   "crates/ink-store",
   "crates/ink-platform-fake",
   "crates/ink-platform-windows",
+  "crates/ink-platform-macos",
   "crates/ink-vision",
   "crates/tauri-plugin-screen-ink",
   "apps/screen-ink/src-tauri",
@@ -27,11 +28,15 @@ ink-app = { path = "crates/ink-app" }
 ink-store = { path = "crates/ink-store" }
 ink-platform-fake = { path = "crates/ink-platform-fake" }
 ink-platform-windows = { path = "crates/ink-platform-windows" }
+ink-platform-macos = { path = "crates/ink-platform-macos" }
 ink-vision = { path = "crates/ink-vision" }
 tauri-plugin-screen-ink = { path = "crates/tauri-plugin-screen-ink" }
 
 # 개발 빌드에서도 픽셀을 만지는 작은 크레이트는 최적화한다(진입 시간 측정이 릴리스와 가깝게).
 [profile.dev.package.ink-platform-windows]
+opt-level = 3
+
+[profile.dev.package.ink-platform-macos]
 opt-level = 3
 
 [profile.dev.package.ink-domain]

@@ -1,0 +1,73 @@
+[package]
+name = "ink-platform-macos"
+description = "screen-ink macOS 어댑터: 모니터 배치(포인트 → 물리 px)·ScreenCaptureKit 정지 캡처·창 목록·커서·클립보드·창 층"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+ink-app.workspace = true
+ink-domain.workspace = true
+log.workspace = true
+
+# 좌표 변환(`coords`)은 순수 코드라 모든 OS에서 컴파일·시험한다. 나머지는 맥에서만.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+libc = "0.2"
+block2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSString", "NSValue", "NSGeometry", "NSDictionary", "NSData", "NSError", "NSURL", "NSNotification", "NSOperation", "NSThread", "NSEnumerator", "block2"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = [
+  "std",
+  "libc",
+  "objc2-core-foundation",
+  "objc2-core-graphics",
+  "NSScreen",
+  "NSCursor",
+  "NSImage",
+  "NSImageRep",
+  "NSBitmapImageRep",
+  "NSGraphics",
+  "NSGraphicsContext",
+  "NSPasteboard",
+  "NSPasteboardItem",
+  "NSRunningApplication",
+  "NSWorkspace",
+  "NSWindow",
+  "NSResponder",
+  "NSApplication",
+  "NSEvent",
+] }
+objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFArray", "CFDictionary", "CFNumber", "CFString", "CFCGTypes", "CFData"] }
+objc2-core-graphics = { version = "0.3", default-features = false, features = [
+  "std",
+  "objc2",
+  "CGWindow",
+  "CGDirectDisplay",
+  "CGDisplayConfiguration",
+  "CGRemoteOperation",
+  "CGEvent",
+  "CGEventSource",
+  "CGEventTypes",
+  "CGImage",
+  "CGContext",
+  "CGBitmapContext",
+  "CGColorSpace",
+  "CGDataProvider",
+  "CGGeometry",
+  "CGError",
+  "CGWindowLevel",
+  "libc",
+] }
+objc2-screen-capture-kit = { version = "0.3", default-features = false, features = [
+  "std",
+  "libc",
+  "block2",
+  "objc2-core-foundation",
+  "objc2-core-graphics",
+  "SCShareableContent",
+  "SCScreenshotManager",
+  "SCStream",
+  "SCError",
+] }

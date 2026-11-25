@@ -214,8 +214,9 @@ $env:CARGO_HTTP_CHECK_REVOKE='false'
 | 2026-11-25 | Windows 정지 화면은 네이티브 창(`freeze.rs`)이 그리고, 맥은 `nativeFrame=false`로 시작 | 웹뷰 BMP 전송 ~160 ms(03 §4) |
 | 2026-11-25 | V 엔진은 `ink-app::VisionEngine`(앱은 배경 스레드, 재생은 `blocking`) | 재생 시험이 앱과 같은 코드를 쓰게 |
 | 2026-11-25 | CI는 PR·수동 실행만, 순수 크레이트 + UI만(ubuntu) | OS 어댑터는 각 OS 개발 PC에서 |
-| (맥) | 좌표 변환·혼합 배율 배치 방식 | §2.1 좌표 주의 |
-| (맥) | `RawWindow.class`에 넣을 값 | §2.1 M4 |
+| 2026-11-25 (맥) | 좌표 변환은 `ink-platform-macos/src/coords.rs`의 `map`·`unmap` 두 함수뿐. 화면 사실값은 CG 전역 포인트(왼쪽 위 원점)로 모으고(`NSScreen.visibleFrame`만 Cocoa → `cocoa_to_cg`), 물리 크기 = 포인트 × `backingScaleFactor`(`CGDisplayMode` 픽셀 폭 ÷ 폭) | Cocoa·CG·물리 세 좌표가 섞이면 어긋남을 찾기 어렵다 |
+| 2026-11-25 (맥) | 혼합 배율 배치: 주 화면에서 시작해 **맞닿은 이웃을 맞닿은 채로 민다**(크기 = 그 화면 물리 px, 맞닿은 모서리를 따라 어긋난 만큼은 안쪽 모서리를 가진 화면 배율로 잼). 이웃으로 안 이어지거나 밀어도 겹치면 모든 원점을 `포인트 × 가장 큰 배율`(겹침 없음, 틈 생김). 창 사각형은 가운데가 있는 화면 배율로 잰다. 이 맥미니(4K@2 주 + 오른쪽 FHD@1): `0,0 3840x2160` + `3840,0 1920x1080` | Windows 물리 배치와 같은 성질(겹침 없음·맞닿음 유지). 시험 8개(`coords::tests`) |
+| 2026-11-25 (맥) | `RawWindow.class` = 번들 ID(없으면 빈 문자열), `exe` = 실행 파일 이름 소문자. `topmost`·`tool` = 층 > 0, `layered_alpha` = 창 알파 < 1일 때만. WindowServer(메뉴 막대)·Dock 소유 창은 목록에서 뺀다 | 맥에서 앱 가족은 번들 ID가 가장 안정적. 메뉴 막대·Dock은 앱 창이 아니라 화면 장식(M4 완료 기준) |
 
 ---
 
