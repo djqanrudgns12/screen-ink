@@ -4,7 +4,8 @@ import { mount } from 'svelte';
 import { createTauriClient } from '@screen-ink/client/tauri';
 import App from './App.svelte';
 
-const view = new URLSearchParams(location.search).get('view') ?? 'settings';
+const params = new URLSearchParams(location.search);
+const view = params.get('view') ?? 'settings';
 document.documentElement.dataset.view = view;
 
-mount(App, { target: document.getElementById('app'), props: { client: createTauriClient(), view } });
+mount(App, { target: document.getElementById('app'), props: { client: createTauriClient(), view, firstRun: params.get('first') === '1' } });

@@ -29,9 +29,9 @@ impl Canvas {
         let i = ((y * SIZE + x) * 4) as usize;
         let dst_a = self.px[i + 3] as f32 / 255.0;
         let out_a = a + dst_a * (1.0 - a);
-        for c in 0..3 {
+        for (c, &src) in rgb.iter().enumerate() {
             let d = self.px[i + c] as f32;
-            self.px[i + c] = ((rgb[c] as f32 * a + d * dst_a * (1.0 - a)) / out_a.max(1e-6)).round() as u8;
+            self.px[i + c] = ((src as f32 * a + d * dst_a * (1.0 - a)) / out_a.max(1e-6)).round() as u8;
         }
         self.px[i + 3] = (out_a * 255.0).round() as u8;
     }

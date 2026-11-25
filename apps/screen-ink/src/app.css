@@ -22,13 +22,3 @@ html[data-view='settings'] body {
   background: var(--ink-bg);
   overflow: hidden;
 }
-
-/* 설정 창: 장식 없는 창이라 맨 위 얇은 띠로 끌어 옮긴다(닫기 단추 자리 비움) */
-.app-drag-strip {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 56px;
-  height: 12px;
-  z-index: 100;
-}

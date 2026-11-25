@@ -32,6 +32,8 @@ pub const ISLAND: &str = "ink-island";
 const TRAY_ID: &str = "screen-ink";
 const EVT_STATE: &str = "screen-ink://state";
 const EVT_ISLAND: &str = "screen-ink://island";
+/// 설정 창에 첫 실행 시트(S06)를 다시 띄우라는 신호(앱 셸이 듣는다)
+const EVT_FIRST_RUN: &str = "screen-ink://first-run";
 /// 섬 창을 UI가 닫아 주지 않을 때의 안전 시간
 const ISLAND_FALLBACK: Duration = Duration::from_secs(8);
 
@@ -278,6 +280,11 @@ fn toggle_popover<R: Runtime>(app: &AppHandle<R>, tray_rect: Rect) {
 
 /// 설정 창(S02~S05). 이미 있으면 앞으로(05 §11-1 단일 창).
 pub fn open_settings<R: Runtime>(app: &AppHandle<R>) {
+    open_settings_with(app, false);
+}
+
+/// `first_run`이면 첫 실행 시트(S06)를 위에 띄운다.
+fn open_settings_with<R: Runtime>(app: &AppHandle<R>, first_run: bool) {
     if let Some(p) = app.get_webview_window(POPOVER) {
         let _ = p.hide();
     }
@@ -287,7 +294,8 @@ pub fn open_settings<R: Runtime>(app: &AppHandle<R>) {
         let _ = w.set_focus();
         return;
     }
-    let built = WebviewWindowBuilder::new(app, SETTINGS, WebviewUrl::App("index.html?view=settings".into()))
+    let url = if first_run { "index.html?view=settings&first=1" } else { "index.html?view=settings" };
+    let built = WebviewWindowBuilder::new(app, SETTINGS, WebviewUrl::App(url.into()))
         .title("screen-ink 설정")
         .inner_size(900.0, 600.0)
         .resizable(false)
@@ -498,7 +506,16 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
         }
     };
     match action.as_str() {
-        "settings.open" | "snipaste.howto" | "firstRun.open" => open_settings(&app),
+        "settings.open" | "snipaste.howto" => open_settings(&app),
+        "firstRun.open" => {
+            // 일반 > 첫 실행 안내 [다시 보기]: 열린 설정 창이면 그 창에 시트를 띄우라고 알린다
+            if app.get_webview_window(SETTINGS).is_some() {
+                open_settings(&app);
+                let _ = app.emit_to(SETTINGS, EVT_FIRST_RUN, ());
+            } else {
+                open_settings_with(&app, true);
+            }
+        }
         "settings.close" => {
             if let Some(w) = app.get_webview_window(SETTINGS) {
                 let _ = w.close();
@@ -607,7 +624,7 @@ fn finish_setup<R: Runtime>(app: &AppHandle<R>, initial: InkState, first_run: bo
     log::info!("launch time {} ms", started.elapsed().as_millis());
     if first_run {
         app.state::<Ink>().lock().update_setting("onboarding.done", &Value::Bool(true));
-        open_settings(app);
+        open_settings_with(app, true);
     }
     Ok(())
 }

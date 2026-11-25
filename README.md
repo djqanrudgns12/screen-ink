@@ -35,6 +35,33 @@ Windows: UI Automation · Windows.Graphics.Capture · Magnification API · Media
 - 난이도 **중상**, 약 15~18작업일 [추정]. 어려운 곳: F3 녹화, 맥 실시간 확대, 배율 섞인 듀얼 모니터.
 - 개발 순서: **Windows 먼저**(학교 PC) → macOS(맥미니 4K+FHD 듀얼).
 
+## 개발
+
+```
+crates/ink-domain            순수 규칙(단축키 판정·설정 v3·이름 규칙·좌표) — 시험 31
+crates/ink-app               유스케이스(InkService: 바로 반영·단축키 등록 트랜잭션·되돌리기) — 포트만 앎
+crates/ink-store             설정 파일(원자적 쓰기·백업 교대·손상 복구·포터블)
+crates/ink-platform-windows  실행 중인 앱 이름·PowerToys 설정 키·작업 표시줄 밝기
+crates/ink-platform-fake     가짜 어댑터 + 유스케이스 흐름 시험 18
+crates/tauri-plugin-screen-ink  명령·이벤트·트레이·팝오버/설정/섬 창 — install(builder) 한 줄로 붙임
+packages/ink-client          InkClient 계약(Tauri·가짜) — UI가 만나는 유일한 문
+packages/ink-ui              디자인 시스템(토큰·아이콘·부품)·화면(S01~S06·S16·S17)·미리보기
+apps/screen-ink              단독 앱 셸
+```
+
+| 할 일 | 명령 |
+|---|---|
+| 의존성 | `npm install` |
+| 시험 | `cargo test --workspace --exclude screen-ink --exclude tauri-plugin-screen-ink` · `npm test` · `npm run check` |
+| 화면 미리보기(가짜 클라이언트) | `npm run ui:dev` → http://localhost:5180/?screen=tray · settings · island · board · first · cheat |
+| 앱 실행 | `npm run app:dev` (트레이 상주, 첫 실행은 설정 창 + 안내 시트) |
+| 단축키 자료 다시 만들기 | `npm run shortcuts:data` (입력표 → `docs/shortcuts/catalog-v1.json`) |
+
+- C 드라이브가 좁으면 Rust 빌드 폴더를 옮긴다: `$env:CARGO_TARGET_DIR='D:\dev-cache\screen-ink\target'`
+- 학교망에서 crates.io 인증서 폐기 확인이 실패하면 그 창에서만 `$env:CARGO_HTTP_CHECK_REVOKE='false'`
+- 개발 빌드는 로그인 자동 실행을 건드리지 않는다(릴리스 빌드만 `general.autostart`를 따름).
+- 맥은 다른 환경에서 시험·조정한다(현재 맥 어댑터는 빈 탐지기).
+
 ## 후속(1차에서 뺀 것)
 
 캡처 핀 · 캡처 주석 편집 · 스크롤 캡처 · OCR·QR · 라이브 판서(클릭 통과) · 판서 보존·스크롤 따라가기 · 타이머·교실 위젯 · 명령 팔레트 · 시스템 소리 녹음 · GIF · MS Store·공증 배포.

@@ -1,14 +1,18 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
+  import { listen } from '@tauri-apps/api/event';
   import { IslandHost, SettingsWindow, TrayPopoverScreen, applyTheme, watchSystemTheme } from '@screen-ink/ui';
 
-  /** @type {{ client: import('@screen-ink/client').InkClient, view: 'popover'|'settings'|'island' }} */
-  let { client, view } = $props();
+  /** @type {{ client: import('@screen-ink/client').InkClient, view: 'popover'|'settings'|'island', firstRun?: boolean }} */
+  let { client, view, firstRun = false } = $props();
 
   let pref = $state('system');
   let systemDark = $state(typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
   let shell = $state(null);
+  // 첫 실행 시트: 창을 열 때 ?first=1, 이미 열린 창이면 이벤트로 다시(일반 > [다시 보기])
+  let showFirstRun = $state(untrack(() => firstRun));
+  let firstRunKey = $state(0);
 
   $effect(() => {
     client.getState().then((s) => (pref = s.theme));
@@ -24,6 +28,15 @@
 
   $effect(() => {
     applyTheme(document.documentElement, pref, systemDark);
+  });
+
+  onMount(() => {
+    if (view !== 'settings') return;
+    const un = listen('screen-ink://first-run', () => {
+      showFirstRun = true;
+      firstRunKey += 1;
+    });
+    return () => un.then((f) => f());
   });
 
   // 팝오버: 카드 크기에 창을 맞춘다(투명 여백 8px).
@@ -62,8 +75,9 @@
     <IslandHost {client} />
   </div>
 {:else}
-  <div class="app-drag-strip" data-tauri-drag-region></div>
-  <SettingsWindow {client} onClose={() => client.run('settings.close')} />
+  {#key firstRunKey}
+    <SettingsWindow {client} firstRun={showFirstRun} onClose={() => client.run('settings.close')} />
+  {/key}
 {/if}
 
 <style>
