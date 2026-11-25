@@ -494,6 +494,14 @@
     if (e.button === 2) {
       e.preventDefault();
     }
+    // 끌어서 옆 모니터로 나가도 이동·놓기를 이 창이 계속 받는다(모니터를 넘는 범위)
+    if (e.button === 0) {
+      try {
+        rootEl?.setPointerCapture?.(e.pointerId);
+      } catch {
+        // 포인터가 이미 없어짐 — 창 안에서만 끌린다
+      }
+    }
     const localX = rect ? e.clientX - rect.left : e.clientX;
     const localY = rect ? e.clientY - rect.top : e.clientY;
     cursorCss = { x: localX, y: localY };

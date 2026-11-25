@@ -625,7 +625,19 @@ fn overlay_ready(ink: State<'_, Ink>, session: u64, load_ms: Option<f64>, paint_
 
 /// 오버레이 입력 한 건(포인터·휠·키). 판단은 서비스의 고르기 상태 기계가 한다.
 #[tauri::command]
-fn capture_input(ink: State<'_, Ink>, input: ink_app::CaptureInput) {
+fn capture_input<R: Runtime>(window: tauri::WebviewWindow<R>, ink: State<'_, Ink>, input: ink_app::CaptureInput) {
+    // 맥: 모니터를 넘어 끌면 누른 모니터의 웹뷰가 창 밖 점을 자기 배율로 환산해 보낸다 → 배율이 다른 옆 모니터에서 어긋남.
+    // 자기 모니터 밖 점은 실제 커서(좌표 변환 함수 하나)로 바꾼다.
+    #[cfg(target_os = "macos")]
+    let input = {
+        let space = ink_platform_macos::space();
+        match overlay::monitor_of(window.label()).and_then(|id| space.screens.iter().find(|s| s.id == id)) {
+            Some(s) => overlay::pointer_inside(input, s.phys, || ink_platform_macos::display::cursor(&space)),
+            None => input,
+        }
+    };
+    #[cfg(not(target_os = "macos"))]
+    let _ = &window;
     ink.lock().capture_input(input);
 }
 

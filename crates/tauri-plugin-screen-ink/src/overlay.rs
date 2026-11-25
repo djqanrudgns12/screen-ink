@@ -21,6 +21,32 @@ pub fn label(monitor: u32) -> String {
     format!("{PREFIX}{monitor}")
 }
 
+/// 오버레이 창 이름 → 모니터 id(`label`의 반대). 오버레이 창이 아니면 None.
+pub fn monitor_of(label: &str) -> Option<u32> {
+    label.strip_prefix(PREFIX)?.parse().ok()
+}
+
+/// 오버레이가 보낸 포인터 점이 자기 모니터 밖이면 `outside()`(실제 커서 등)로 바꾼다.
+/// 맥은 누른 모니터의 웹뷰가 창 밖 이동까지 받고 자기 배율로 환산하므로, 배율이 다른 옆 모니터에서는 점이 어긋난다.
+pub fn pointer_inside(input: ink_app::CaptureInput, monitor: PhysRect, outside: impl FnOnce() -> ink_domain::geometry::PhysPoint) -> ink_app::CaptureInput {
+    use ink_app::CaptureInput as I;
+    let (x, y) = match &input {
+        I::Move { x, y } | I::Down { x, y, .. } | I::Up { x, y, .. } | I::Dblclick { x, y } => (*x, *y),
+        _ => return input,
+    };
+    if monitor.contains(ink_domain::geometry::PhysPoint { x, y }) {
+        return input;
+    }
+    let p = outside();
+    match input {
+        I::Move { .. } => I::Move { x: p.x, y: p.y },
+        I::Down { button, .. } => I::Down { x: p.x, y: p.y, button },
+        I::Up { button, .. } => I::Up { x: p.x, y: p.y, button },
+        I::Dblclick { .. } => I::Dblclick { x: p.x, y: p.y },
+        other => other,
+    }
+}
+
 /// 웹뷰에서 쓸 이미지 주소(Windows WebView2는 `http://<scheme>.localhost/`로 사용자 프로토콜을 연다).
 pub fn frame_url(session: u64, monitor: u32) -> String {
     if cfg!(windows) || cfg!(target_os = "android") {
@@ -360,6 +386,24 @@ fn focus_raw<R: Runtime>(w: &tauri::WebviewWindow<R>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn 자기_모니터_밖_점만_실제_커서로() {
+        use ink_app::CaptureInput as I;
+        use ink_domain::geometry::PhysPoint;
+        let mon = PhysRect::new(0, 0, 3840, 2160);
+        let cursor = || PhysPoint { x: 3940, y: 300 };
+        // 모니터 안: 그대로(커서를 읽지 않는다)
+        let kept = pointer_inside(I::Down { x: 3000, y: 1000, button: 0 }, mon, || panic!("안쪽 점은 커서를 읽지 않는다"));
+        assert!(matches!(kept, I::Down { x: 3000, y: 1000, button: 0 }));
+        // 4K(2배) 웹뷰가 옆 FHD(1배) 점을 자기 배율로 환산한 값 → 실제 커서
+        assert!(matches!(pointer_inside(I::Move { x: 4040, y: 600 }, mon, cursor), I::Move { x: 3940, y: 300 }));
+        assert!(matches!(pointer_inside(I::Up { x: 4040, y: 600, button: 0 }, mon, cursor), I::Up { x: 3940, y: 300, button: 0 }));
+        // 점이 없는 입력은 그대로
+        assert!(matches!(pointer_inside(I::Wheel { dy: 1 }, mon, || panic!("점 없음")), I::Wheel { dy: 1 }));
+        assert_eq!(monitor_of(&label(1)), Some(1));
+        assert_eq!(monitor_of("ink-island"), None);
+    }
 
     #[test]
     fn 이미지_주소와_창_이름() {
