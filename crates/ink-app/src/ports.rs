@@ -57,12 +57,93 @@ pub trait ScreenSource: Send {
 /// Z 순서 창 목록(03 §3 `WindowCatalog`). 창 제목은 읽지 않는다. 캡처와 나란히 찍도록 `Sync`.
 pub trait WindowCatalog: Send + Sync {
     fn windows(&self) -> Vec<RawWindow>;
+    /// H 근거: 그 창의 보이는 자식 창 사각형(깊이 4, 물리 px). 다른 앱에 메시지를 보내지 않는 질의만.
+    fn children(&self, _window: u64) -> Vec<ink_domain::geometry::PhysRect> {
+        Vec::new()
+    }
 }
 
 /// 모니터 배치·배율·커서(03 §3 `MonitorProbe`).
 pub trait MonitorProbe: Send {
     fn layout(&self) -> MonitorLayout;
     fn cursor(&self) -> PhysPoint;
+    /// WASD 1 px 이동(S07).
+    fn set_cursor(&self, _p: PhysPoint) {}
+    /// Alt를 누르고 있는지(드래그 자석 끔).
+    fn alt_down(&self) -> bool {
+        false
+    }
+}
+
+/// A 근거(UIA): 창 하나의 하위 트리를 일꾼 스레드에서 색인해 두고, 커서 질의는 메모리에서만(08 §4.1-3, D17·D18).
+pub trait ElementSource: Send {
+    /// 색인을 부탁(이미 있거나 진행 중이면 무시). 끝나면 어댑터가 서비스의 `on_elements_ready`를 부른다.
+    fn request(&self, window: u64, exe: &str);
+    /// 색인에서 그 점을 담는 요소(없으면 빈 목록 — 아직 색인 중이어도 기다리지 않는다).
+    fn elements_at(&self, window: u64, p: PhysPoint) -> Vec<ink_domain::recog::ElementCand>;
+    /// 그 창 색인의 모든 사각형(드래그 자석 후보).
+    fn rects(&self, _window: u64) -> Vec<ink_domain::geometry::PhysRect> {
+        Vec::new()
+    }
+    /// 모드가 끝나면 색인을 버린다(창이 바뀌었을 수 있음).
+    fn clear(&self);
+}
+
+/// V 근거(정지 이미지에서 사각형 찾기). 좌표는 가상 화면 물리 px.
+pub trait VisionSource: Send {
+    /// 모니터 이미지 전처리를 시작(배경). 커서 모니터부터.
+    fn prepare(&mut self, frames: &[Frame], layout: &MonitorLayout, cursor: PhysPoint);
+    fn query(&self, _p: PhysPoint) -> Vec<ink_domain::recog::VisionCand> {
+        Vec::new()
+    }
+    /// 경계 지지율(전처리 전이면 None).
+    fn support(&self, _r: ink_domain::geometry::PhysRect) -> Option<f32> {
+        None
+    }
+    /// ±3 px 경계 맞춤.
+    fn snap(&self, r: ink_domain::geometry::PhysRect) -> ink_domain::geometry::PhysRect {
+        r
+    }
+    /// 드래그 자석용 근처 곧은 경계(세로 x들, 가로 y들).
+    fn edges_near(&self, _p: PhysPoint) -> (Vec<i32>, Vec<i32>) {
+        (Vec::new(), Vec::new())
+    }
+    fn clear(&mut self);
+}
+
+/// 비어 있는 V — 엔진이 없거나 끈 경우.
+pub struct NoVision;
+
+impl VisionSource for NoVision {
+    fn prepare(&mut self, _frames: &[Frame], _layout: &MonitorLayout, _cursor: PhysPoint) {}
+    fn clear(&mut self) {}
+}
+
+/// 클립보드(03 §3): 이미지는 CF_DIB + PNG, 글은 유니코드. 잠겨 있으면 어댑터가 3번 다시 해 본다(50 ms).
+pub trait Clipboard: Send {
+    fn set_image(&mut self, w: u32, h: u32, bgra: &[u8]) -> Result<(), String>;
+    fn set_text(&mut self, text: &str) -> Result<(), String>;
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SavedFile {
+    /// 화면에 보일 파일 이름(경로 없이)
+    pub name: String,
+    pub path: String,
+    /// 설정 폴더가 없어 사진 폴더로 바꿔 저장함(R-OUT-2)
+    pub fell_back: bool,
+}
+
+/// 저장 폴더(03 §3 `FileSink`): 폴더가 없으면 사진 폴더로, 같은 이름이면 ` (2)`, PNG(알파 없음).
+pub trait FileSink: Send {
+    fn save_png(&mut self, folder: &str, stem: &str, w: u32, h: u32, bgra: &[u8]) -> Result<SavedFile, String>;
+}
+
+/// 시계: 이름 규칙용 지역 시각과 기록용 유닉스 초.
+pub trait Clock: Send {
+    fn local(&self) -> ink_domain::naming::NameContext;
+    fn unix(&self) -> u64;
 }
 
 /// 모니터별 오버레이 창(03 §3 `OverlayHost`). 미리 만들어 숨겨 두고, 보일 때마다 투명도를 다시 지정한다(R-SYS-6).
@@ -75,6 +156,10 @@ pub trait OverlayHost: Send {
     /// 강조(어둡게 한 바탕에서 밝게 뚫을 사각형, 가상 화면 물리 px)를 옮긴다.
     fn highlight(&mut self, session: u64, rect: Option<ink_domain::geometry::PhysRect>);
     fn hide(&mut self, session: u64);
+    /// 결과 섬 썸네일을 쥐고 주소를 돌려준다(작은 BGRA).
+    fn thumbnail(&mut self, _w: u32, _h: u32, _bgra: Vec<u8>) -> Option<String> {
+        None
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
@@ -111,6 +196,8 @@ pub trait SettingsStore: Send {
 pub trait Notifier: Send + Sync {
     fn state(&self, state: &InkState);
     fn island(&self, event: &IslandEvent);
+    /// 고르기 상태(`screen-ink://capture`) — 모든 오버레이·섬이 같은 것을 그린다.
+    fn capture(&self, _view: &crate::state::CaptureView) {}
 }
 
 pub struct Ports {
@@ -122,6 +209,11 @@ pub struct Ports {
     pub windows: Box<dyn WindowCatalog>,
     pub monitors: Box<dyn MonitorProbe>,
     pub overlay: Box<dyn OverlayHost>,
+    pub elements: Box<dyn ElementSource>,
+    pub vision: Box<dyn VisionSource>,
+    pub clipboard: Box<dyn Clipboard>,
+    pub files: Box<dyn FileSink>,
+    pub clock: Box<dyn Clock>,
 }
 
 /// 시스템 사건(03 §3 `SystemEvents`, 02 §7).

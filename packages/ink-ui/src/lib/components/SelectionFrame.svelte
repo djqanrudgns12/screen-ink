@@ -9,6 +9,7 @@
    *   height: number,
    *   state?: 'picking' | 'confirmed' | 'recording' | 'afterimage',
    *   scrim?: boolean,
+   *   instant?: boolean,
    *   label?: string,
    *   class?: string,
    * }}
@@ -20,14 +21,18 @@
     height = 100,
     state: frameState = 'picking',
     scrim = true,
+    instant = false,
     label = '고른 범위',
     class: className = '',
   } = $props();
 
   let pad = 8;
-  let svgW = $derived(width + pad * 2);
-  let svgH = $derived(height + pad * 2);
-  let arm = $derived(Math.min(14, Math.floor(Math.min(width, height) / 3)));
+  let safeW = $derived(Math.max(0, width));
+  let safeH = $derived(Math.max(0, height));
+  let svgW = $derived(safeW + pad * 2);
+  let svgH = $derived(safeH + pad * 2);
+  let arm = $derived(Math.min(14, Math.floor(Math.min(safeW, safeH) / 3)));
+  let borderInset = $derived(Math.min(0.75, safeW / 2, safeH / 2));
 </script>
 
 <div
@@ -35,10 +40,11 @@
   class="ink-sel-frame {className}"
   data-state={frameState}
   data-scrim={scrim && frameState !== 'afterimage' ? 'true' : undefined}
+  data-instant={instant ? 'true' : undefined}
   style:left={`${x}px`}
   style:top={`${y}px`}
-  style:width={`${width}px`}
-  style:height={`${height}px`}
+  style:width={`${safeW}px`}
+  style:height={`${safeH}px`}
 >
   {#if frameState !== 'afterimage'}
     <svg
@@ -50,14 +56,27 @@
       style:left={`${-pad}px`}
       style:top={`${-pad}px`}
     >
-      <path
-        d={`M1 ${1 + arm}V1h${arm}M${svgW - 1 - arm} 1h${arm}v${arm}M${svgW - 1} ${svgH - 1 - arm}v${arm}h${-arm}M${1 + arm} ${svgH - 1}H1v${-arm}`}
-        fill="none"
-        stroke={frameState === 'recording' ? 'var(--ink-danger)' : 'var(--ink-accent)'}
-        stroke-width="2.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
+      {#if (frameState === 'picking' || frameState === 'confirmed') && safeW > 0 && safeH > 0}
+        <rect
+          x={pad + borderInset}
+          y={pad + borderInset}
+          width={Math.max(0, safeW - borderInset * 2)}
+          height={Math.max(0, safeH - borderInset * 2)}
+          fill="none"
+          stroke="var(--ink-accent)"
+          stroke-width="1.5"
+        />
+      {/if}
+      {#if arm > 0}
+        <path
+          d={`M1 ${1 + arm}V1h${arm}M${svgW - 1 - arm} 1h${arm}v${arm}M${svgW - 1} ${svgH - 1 - arm}v${arm}h${-arm}M${1 + arm} ${svgH - 1}H1v${-arm}`}
+          fill="none"
+          stroke={frameState === 'recording' ? 'var(--ink-danger)' : 'var(--ink-accent)'}
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      {/if}
     </svg>
   {/if}
 
@@ -81,9 +100,8 @@
       height 70ms ease-out;
   }
 
-  .ink-sel-frame[data-state='picking'],
-  .ink-sel-frame[data-state='confirmed'] {
-    outline: 1.5px solid var(--ink-accent);
+  .ink-sel-frame[data-instant='true'] {
+    transition: none;
   }
 
   .ink-sel-frame[data-state='picking'][data-scrim='true'],

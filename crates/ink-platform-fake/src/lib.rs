@@ -8,7 +8,7 @@ use ink_domain::geometry::{Monitor, MonitorLayout, PhysPoint, PhysRect};
 use ink_domain::shortcuts::LiveBinding;
 use ink_domain::snapshot::RawWindow;
 use serde_json::Value;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Default)]
@@ -222,6 +222,87 @@ impl Notifier for RecordingNotifier {
     }
 }
 
+/// UIA 색인 흉내: 창 → 요소들. 부탁받은 창을 기록한다.
+#[derive(Debug, Default)]
+pub struct ElementScene {
+    pub by_window: HashMap<u64, Vec<ink_domain::recog::ElementCand>>,
+    pub requested: Vec<u64>,
+    pub cleared: usize,
+}
+
+#[derive(Clone, Default)]
+pub struct FakeElements(pub Arc<Mutex<ElementScene>>);
+
+impl ink_app::ElementSource for FakeElements {
+    fn request(&self, window: u64, _exe: &str) {
+        let mut s = self.0.lock().unwrap();
+        if !s.requested.contains(&window) {
+            s.requested.push(window);
+        }
+    }
+
+    fn elements_at(&self, window: u64, p: PhysPoint) -> Vec<ink_domain::recog::ElementCand> {
+        self.0.lock().unwrap().by_window.get(&window).map(|v| v.iter().filter(|e| e.rect.contains(p)).copied().collect()).unwrap_or_default()
+    }
+
+    fn rects(&self, window: u64) -> Vec<PhysRect> {
+        self.0.lock().unwrap().by_window.get(&window).map(|v| v.iter().map(|e| e.rect).collect()).unwrap_or_default()
+    }
+
+    fn clear(&self) {
+        self.0.lock().unwrap().cleared += 1;
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct Desk {
+    pub images: Vec<(u32, u32)>,
+    pub texts: Vec<String>,
+    pub saved: Vec<(String, String, u32, u32)>,
+    pub clipboard_locked: bool,
+}
+
+/// 클립보드·저장 폴더 흉내.
+#[derive(Clone, Default)]
+pub struct FakeDesk(pub Arc<Mutex<Desk>>);
+
+impl ink_app::Clipboard for FakeDesk {
+    fn set_image(&mut self, w: u32, h: u32, _bgra: &[u8]) -> Result<(), String> {
+        let mut d = self.0.lock().unwrap();
+        if d.clipboard_locked {
+            return Err("locked".into());
+        }
+        d.images.push((w, h));
+        Ok(())
+    }
+
+    fn set_text(&mut self, text: &str) -> Result<(), String> {
+        self.0.lock().unwrap().texts.push(text.into());
+        Ok(())
+    }
+}
+
+impl ink_app::FileSink for FakeDesk {
+    fn save_png(&mut self, folder: &str, stem: &str, w: u32, h: u32, _bgra: &[u8]) -> Result<ink_app::SavedFile, String> {
+        self.0.lock().unwrap().saved.push((folder.into(), stem.into(), w, h));
+        Ok(ink_app::SavedFile { name: format!("{stem}.png"), path: format!("{folder}\\{stem}.png"), fell_back: folder.is_empty() })
+    }
+}
+
+/// 고정 시계(2026-03-04 09:05:07).
+#[derive(Clone, Default)]
+pub struct FixedClock;
+
+impl ink_app::Clock for FixedClock {
+    fn local(&self) -> ink_domain::naming::NameContext {
+        ink_domain::naming::NameContext { year: 2026, month: 3, day: 4, hour: 9, minute: 5, second: 7, app: None, n: 0 }
+    }
+
+    fn unix(&self) -> u64 {
+        1_772_582_707
+    }
+}
+
 /// 한 장면에 필요한 가짜 넷을 함께 만들고, 손잡이를 돌려준다.
 #[derive(Clone, Default)]
 pub struct FakeWorld {
@@ -231,6 +312,8 @@ pub struct FakeWorld {
     pub notifier: RecordingNotifier,
     pub screen: FakeScreen,
     pub overlay: FakeOverlay,
+    pub elements: FakeElements,
+    pub desk: FakeDesk,
 }
 
 impl FakeWorld {
@@ -248,6 +331,11 @@ impl FakeWorld {
             windows: Box::new(self.screen.clone()),
             monitors: Box::new(self.screen.clone()),
             overlay: Box::new(self.overlay.clone()),
+            elements: Box::new(self.elements.clone()),
+            vision: Box::new(ink_app::NoVision),
+            clipboard: Box::new(self.desk.clone()),
+            files: Box::new(self.desk.clone()),
+            clock: Box::new(FixedClock),
         }
     }
 

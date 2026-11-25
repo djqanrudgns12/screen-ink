@@ -11,6 +11,7 @@ const COMMANDS: &[&str] = &[
     "apply_import",
     "reset_all",
     "overlay_ready",
+    "capture_input",
 ];
 
 fn main() {

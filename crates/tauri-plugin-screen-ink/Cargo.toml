@@ -19,6 +19,7 @@ tauri = { version = "2.10", features = ["tray-icon"] }
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-dialog = "2"
+png = "0.18"
 
 [target.'cfg(windows)'.dependencies]
 ink-platform-windows.workspace = true

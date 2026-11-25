@@ -16,6 +16,7 @@ screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있
 - `allow-apply-import`
 - `allow-reset-all`
 - `allow-overlay-ready`
+- `allow-capture-input`
 
 ## Permission Table
 
@@ -48,6 +49,32 @@ Enables the apply_import command without any pre-configured scope.
 <td>
 
 Denies the apply_import command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-capture-input`
+
+</td>
+<td>
+
+Enables the capture_input command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-capture-input`
+
+</td>
+<td>
+
+Denies the capture_input command without any pre-configured scope.
 
 </td>
 </tr>

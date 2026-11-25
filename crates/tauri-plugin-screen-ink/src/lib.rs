@@ -8,6 +8,7 @@
 //! 스레드 규칙: 서비스는 메인 스레드에서만 만진다(동기 명령·트레이·단축키 처리). 창을 새로 만드는
 //! 명령(`run`)만 비동기로 두고(Windows WebView2 교착 회피) 서비스 일은 메인 스레드로 넘긴다.
 
+mod adapters;
 mod overlay;
 mod tray_art;
 
@@ -38,6 +39,7 @@ pub const ISLAND: &str = "ink-island";
 const TRAY_ID: &str = "screen-ink";
 const EVT_STATE: &str = "screen-ink://state";
 const EVT_ISLAND: &str = "screen-ink://island";
+const EVT_CAPTURE: &str = "screen-ink://capture";
 /// 설정 창에 첫 실행 시트(S06)를 다시 띄우라는 신호(앱 셸이 듣는다)
 const EVT_FIRST_RUN: &str = "screen-ink://first-run";
 /// 섬 창을 UI가 닫아 주지 않을 때의 안전 시간
@@ -120,6 +122,43 @@ impl<R: Runtime> Notifier for TauriNotifier<R> {
         }
         let _ = self.app.emit(EVT_ISLAND, event);
     }
+
+    fn capture(&self, view: &ink_app::CaptureView) {
+        let _ = self.app.emit(EVT_CAPTURE, view);
+    }
+}
+
+/// A 근거 어댑터: Windows = UIA 색인 일꾼(끝나면 메인 스레드에서 서비스에 알림), 그 밖 = 없음.
+fn element_source<R: Runtime>(app: &AppHandle<R>) -> Box<dyn ink_app::ElementSource> {
+    #[cfg(windows)]
+    {
+        let handle = app.clone();
+        Box::new(ink_platform_windows::uia::UiaIndex::spawn(move |window, exe, took| {
+            let h = handle.clone();
+            let _ = handle.run_on_main_thread(move || {
+                if let Some(ink) = h.try_state::<Ink>() {
+                    ink.lock().on_elements_ready(window, &exe, took);
+                }
+            });
+        }))
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+        Box::new(NoElements)
+    }
+}
+
+#[cfg(not(windows))]
+struct NoElements;
+
+#[cfg(not(windows))]
+impl ink_app::ElementSource for NoElements {
+    fn request(&self, _window: u64, _exe: &str) {}
+    fn elements_at(&self, _window: u64, _p: ink_domain::geometry::PhysPoint) -> Vec<ink_domain::recog::ElementCand> {
+        Vec::new()
+    }
+    fn clear(&self) {}
 }
 
 /// 맥 등 아직 화면 어댑터가 없는 곳 — 캡처는 실패로 알린다(맥 조정은 다른 환경에서).
@@ -498,6 +537,12 @@ fn overlay_ready(ink: State<'_, Ink>, session: u64, load_ms: Option<f64>, paint_
     ink.lock().overlay_ready_with(session, load_ms, paint_ms);
 }
 
+/// 오버레이 입력 한 건(포인터·휠·키). 판단은 서비스의 고르기 상태 기계가 한다.
+#[tauri::command]
+fn capture_input(ink: State<'_, Ink>, input: ink_app::CaptureInput) {
+    ink.lock().capture_input(input);
+}
+
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ImportPick {
@@ -622,10 +667,23 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             }
         }
         "capture.history.clear" => {
-            // 범위 기록은 단계 3(F1)에서 생긴다 — 지금은 지울 것이 없다
             let h = app.clone();
-            app.run_on_main_thread(move || h.state::<Ink>().lock().island(IslandEvent::new(IslandKind::Info, "지울 기록이 없어요")))
-                .map_err(|e| e.to_string())?;
+            app.run_on_main_thread(move || {
+                let ink = h.state::<Ink>();
+                let mut s = ink.lock();
+                let n = s.clear_ranges();
+                let text = if n == 0 { "지울 기록이 없어요".to_string() } else { format!("캡처 기록 {n}개를 지웠어요") };
+                s.island(IslandEvent::new(IslandKind::Info, text));
+            })
+            .map_err(|e| e.to_string())?;
+        }
+        "capture.saveLast" => {
+            let h = app.clone();
+            app.run_on_main_thread(move || h.state::<Ink>().lock().save_last()).map_err(|e| e.to_string())?;
+        }
+        "capture.copyHex" => {
+            let h = app.clone();
+            app.run_on_main_thread(move || h.state::<Ink>().lock().copy_last_hex()).map_err(|e| e.to_string())?;
         }
         "app.quit" => {
             let _ = app.global_shortcut().unregister_all();
@@ -670,6 +728,8 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
     app.manage(HotkeySlots::default());
     let frames = FrameStore::default();
     app.manage(frames.clone());
+    let thumbs = adapters::ThumbStore::default();
+    app.manage(thumbs.clone());
 
     let exe_dir = std::env::current_exe()?.parent().map(|p| p.to_path_buf()).unwrap_or_default();
     let (dir, portable) = ink_store::resolve_dir(&exe_dir, &app.path().config_dir()?.join("screen-ink"));
@@ -682,7 +742,12 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         screen,
         windows,
         monitors,
-        overlay: Box::new(TauriOverlayHost::new(app.clone(), frames)),
+        overlay: Box::new(TauriOverlayHost::new(app.clone(), frames, thumbs)),
+        elements: element_source(app),
+        vision: Box::new(ink_app::NoVision),
+        clipboard: Box::new(adapters::TauriClipboard { app: app.clone() }),
+        files: Box::new(adapters::TauriFiles { app: app.clone() }),
+        clock: Box::new(adapters::SystemClock),
     };
     let mut service = InkService::new(ports, Platform::current(), app.package_info().version.to_string());
     let failed = service.start();
@@ -798,7 +863,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             preview_import,
             apply_import,
             reset_all,
-            overlay_ready
+            overlay_ready,
+            capture_input
         ])
         .register_uri_scheme_protocol(overlay::SCHEME, |ctx, req| overlay::serve(ctx, req))
         .setup(|app, _api| setup(app))

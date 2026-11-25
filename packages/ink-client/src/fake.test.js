@@ -61,6 +61,26 @@ test('캡처 진입은 오버레이 세션·모드 섬, 취소는 끝 섬과 idl
   assert.equal(seen.at(-1).island.kind, 'end');
 });
 
+test('고르기 흉내: 휠은 단계, 클릭은 확정, Enter는 결과 섬', async () => {
+  const c = createFakeClient();
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+  await c.run('capture.region');
+  await c.captureInput({ type: 'move', x: 800, y: 500 });
+  let v = seen.filter((e) => e.type === 'capture').at(-1).view;
+  assert.deepEqual(v.path, ['화면', '창', '표', '2행']);
+  assert.equal(v.rect.h, 40);
+  await c.captureInput({ type: 'wheel', dy: -1 });
+  v = seen.filter((e) => e.type === 'capture').at(-1).view;
+  assert.equal(v.level, 2);
+  await c.captureInput({ type: 'down', x: 800, y: 500, button: 0 });
+  await c.captureInput({ type: 'up', x: 800, y: 500, button: 0 });
+  assert.equal(seen.filter((e) => e.type === 'capture').at(-1).view.phase, 'confirmed');
+  await c.captureInput({ type: 'key', key: 'Enter', code: 'Enter', ctrl: false, shift: false, alt: false });
+  assert.equal(seen.at(-1).island.kind, 'result');
+  assert.equal((await c.getState()).mode.mode, 'idle');
+});
+
 test('키캡은 Windows에서 Shift, 맥에서 기호', () => {
   assert.deepEqual(keycaps('Alt+Shift+D'), ['Alt', 'Shift', 'D']);
   assert.deepEqual(keycaps('Option+Shift+1', 'macos'), ['⌥', '⇧', '1']);

@@ -15,4 +15,5 @@ permissions = [
   "allow-apply-import",
   "allow-reset-all",
   "allow-overlay-ready",
+  "allow-capture-input",
 ]

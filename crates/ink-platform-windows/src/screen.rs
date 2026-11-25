@@ -231,6 +231,68 @@ pub fn capture_monitor(bounds: PhysRect) -> Result<Vec<u8>, String> {
     }
 }
 
+// ───────────── H 자식 창 · 커서 · Alt · 지역 시각 ─────────────
+
+unsafe extern "system" fn collect_child(h: HWND, data: LPARAM) -> BOOL {
+    let list = &mut *(data as *mut Vec<HWND>);
+    if list.len() < 400 {
+        list.push(h);
+    }
+    TRUE
+}
+
+/// 보이는 자식 창 사각형(DWM 없이 GetWindowRect — 자식은 물리 px). 다른 앱에 메시지를 보내지 않는다.
+pub fn child_rects(parent: u64) -> Vec<PhysRect> {
+    use windows_sys::Win32::UI::WindowsAndMessaging::EnumChildWindows;
+    let mut handles: Vec<HWND> = Vec::new();
+    // SAFETY: 콜백은 이 호출 동안만 `handles`를 쓴다.
+    unsafe {
+        EnumChildWindows(parent as HWND, Some(collect_child), &mut handles as *mut _ as LPARAM);
+    }
+    let mut out: Vec<PhysRect> = Vec::new();
+    for h in handles {
+        // SAFETY: 읽기 전용 질의.
+        unsafe {
+            if IsWindowVisible(h) == 0 {
+                continue;
+            }
+            let mut r = RECT { left: 0, top: 0, right: 0, bottom: 0 };
+            if GetWindowRect(h, &mut r) == 0 {
+                continue;
+            }
+            let pr = rect(&r);
+            if pr.w >= 8 && pr.h >= 8 && !out.contains(&pr) {
+                out.push(pr);
+            }
+        }
+    }
+    out
+}
+
+pub fn set_cursor(p: PhysPoint) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::SetCursorPos;
+    // SAFETY: 커서 위치만 바꾼다.
+    unsafe { SetCursorPos(p.x, p.y) };
+}
+
+pub fn alt_down() -> bool {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_MENU};
+    // SAFETY: 키 상태 읽기.
+    unsafe { (GetAsyncKeyState(VK_MENU as i32) as u16 & 0x8000) != 0 }
+}
+
+/// 지역 시각(이름 규칙 {yyyy}…{ss}).
+pub fn local_time() -> ink_domain::naming::NameContext {
+    use windows_sys::Win32::System::SystemInformation::GetLocalTime;
+    // SAFETY: 출력 구조체 하나.
+    let t = unsafe {
+        let mut t = std::mem::zeroed();
+        GetLocalTime(&mut t);
+        t
+    };
+    ink_domain::naming::NameContext { year: t.wYear, month: t.wMonth as u8, day: t.wDay as u8, hour: t.wHour as u8, minute: t.wMinute as u8, second: t.wSecond as u8, app: None, n: 0 }
+}
+
 /// `ScreenSource` + `WindowCatalog` + `MonitorProbe` 한 몸.
 #[derive(Default)]
 pub struct WindowsScreen;
@@ -257,6 +319,10 @@ impl WindowCatalog for WindowsScreen {
     fn windows(&self) -> Vec<RawWindow> {
         top_windows()
     }
+
+    fn children(&self, window: u64) -> Vec<PhysRect> {
+        child_rects(window)
+    }
 }
 
 impl MonitorProbe for WindowsScreen {
@@ -266,6 +332,14 @@ impl MonitorProbe for WindowsScreen {
 
     fn cursor(&self) -> PhysPoint {
         cursor_pos()
+    }
+
+    fn set_cursor(&self, p: PhysPoint) {
+        set_cursor(p)
+    }
+
+    fn alt_down(&self) -> bool {
+        alt_down()
     }
 }
 

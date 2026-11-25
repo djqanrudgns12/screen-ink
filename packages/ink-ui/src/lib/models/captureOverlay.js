@@ -118,6 +118,232 @@ export function resolveMonitorHighlight(highlight, monitor) {
 }
 
 /**
+ * CaptureView(우선) 또는 진입 첫 강조를 이 모니터의 SelectionFrame 속성으로 바꾼다.
+ * view가 한 번 도착한 뒤에는 view.rect가 null이어도 옛 highlight로 되돌아가지 않는다.
+ * @param {import('@screen-ink/client').CaptureView | null | undefined} view
+ * @param {{ x: number, y: number, w: number, h: number } | null | undefined} sessionHighlight
+ * @param {{ bounds: { x: number, y: number, w: number, h: number }, scale?: number } | null | undefined} monitor
+ * @returns {{ x: number, y: number, width: number, height: number, state: 'picking' | 'confirmed', instant: boolean } | null}
+ */
+export function resolveCaptureFrame(view, sessionHighlight, monitor) {
+  if (!monitor) return null;
+  if (view) {
+    const css = resolveMonitorHighlight(view.rect, monitor);
+    if (!css) return null;
+    return {
+      ...css,
+      state: view.phase === 'confirmed' ? 'confirmed' : 'picking',
+      instant: view.phase === 'drag',
+    };
+  }
+  const hl = resolveMonitorHighlight(sessionHighlight, monitor);
+  if (!hl) return null;
+  return { ...hl, state: 'picking', instant: false };
+}
+
+/**
+ * 물리 px 사각형 크기를 고정폭 배지 문자열(`718×40`)로 바꾼다.
+ * @param {{ w: number, h: number } | null | undefined} rect
+ * @returns {string}
+ */
+export function formatRectSize(rect) {
+  if (!rect || !Number.isFinite(rect.w) || !Number.isFinite(rect.h)) return '';
+  const w = Math.round(rect.w);
+  const h = Math.round(rect.h);
+  if (w <= 0 || h <= 0) return '';
+  return `${w}×${h}`;
+}
+
+/**
+ * 물리 px 안내선 선분을 이 모니터 영역([bx, bx+bw] × [by, by+bh], 경계 포함)으로 자르고 논리 CSS 좌표로 바꾼다.
+ * 겹치지 않거나 길이가 0이면 null.
+ * @param {{ x1: number, y1: number, x2: number, y2: number } | null | undefined} guide
+ * @param {{ bounds: { x: number, y: number, w: number, h: number }, scale?: number } | null | undefined} monitor
+ * @returns {{ x1: number, y1: number, x2: number, y2: number } | null}
+ */
+export function clipGuideToMonitor(guide, monitor) {
+  if (!guide || !monitor?.bounds) return null;
+  const { x: bx, y: by, w: bw, h: bh } = monitor.bounds;
+  if (bw <= 0 || bh <= 0) return null;
+
+  const { x1, y1, x2, y2 } = guide;
+  if (![x1, y1, x2, y2].every(Number.isFinite)) return null;
+
+  const minX = bx;
+  const maxX = bx + bw;
+  const minY = by;
+  const maxY = by + bh;
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  let t0 = 0;
+  let t1 = 1;
+
+  const clip = (p, q) => {
+    if (p === 0) return q >= 0;
+    const r = q / p;
+    if (p < 0) {
+      if (r > t1) return false;
+      if (r > t0) t0 = r;
+    } else {
+      if (r < t0) return false;
+      if (r < t1) t1 = r;
+    }
+    return true;
+  };
+
+  if (
+    !clip(-dx, x1 - minX) ||
+    !clip(dx, maxX - x1) ||
+    !clip(-dy, y1 - minY) ||
+    !clip(dy, maxY - y1)
+  ) {
+    return null;
+  }
+
+  const cx1 = x1 + t0 * dx;
+  const cy1 = y1 + t0 * dy;
+  const cx2 = x1 + t1 * dx;
+  const cy2 = y1 + t1 * dy;
+
+  if (Math.abs(cx2 - cx1) < 1e-6 && Math.abs(cy2 - cy1) < 1e-6) {
+    return null;
+  }
+
+  const p1 = physicalToClient(cx1, cy1, monitor);
+  const p2 = physicalToClient(cx2, cy2, monitor);
+  return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
+}
+
+/**
+ * 자석 안내선 배열에서 이 모니터와 겹치는 부분만 골라 논리 CSS 선분 배열로 바꾼다.
+ * @param {{ x1: number, y1: number, x2: number, y2: number }[] | null | undefined} guides
+ * @param {{ bounds: { x: number, y: number, w: number, h: number }, scale?: number } | null | undefined} monitor
+ * @returns {{ x1: number, y1: number, x2: number, y2: number }[]}
+ */
+export function resolveMonitorGuides(guides, monitor) {
+  if (!Array.isArray(guides) || !monitor) return [];
+  const out = [];
+  for (const g of guides) {
+    const clipped = clipGuideToMonitor(g, monitor);
+    if (clipped) out.push(clipped);
+  }
+  return out;
+}
+
+/**
+ * 포인터·마우스 이벤트를 CaptureInput('move'|'down'|'up'|'dblclick')으로 바꾼다.
+ * 좌클릭(0)·우클릭(2) 외 버튼은 무시한다.
+ * @param {'move' | 'down' | 'up' | 'dblclick'} type
+ * @param {{ clientX: number, clientY: number, button?: number } | null | undefined} event
+ * @param {{ bounds: { x: number, y: number, w: number, h: number }, scale?: number } | null | undefined} monitor
+ * @param {{ left: number, top: number } | null | undefined} [rootRect]
+ * @returns {import('@screen-ink/client').CaptureInput | null}
+ */
+export function toCapturePointerInput(type, event, monitor, rootRect = null) {
+  if (!event || !monitor) return null;
+  if (!Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) return null;
+  const localX = rootRect ? event.clientX - rootRect.left : event.clientX;
+  const localY = rootRect ? event.clientY - rootRect.top : event.clientY;
+  const { x, y } = clientToPhysical(localX, localY, monitor);
+
+  if (type === 'move') {
+    return { type: 'move', x, y };
+  }
+  if (event.button !== 0 && event.button !== 2) {
+    return null;
+  }
+  return { type, x, y, button: event.button };
+}
+
+/**
+ * 휠 이벤트를 CaptureInput('wheel')으로 바꾼다. 위(deltaY < 0) = -1(넓히기), 아래 = 1(좁히기).
+ * @param {{ deltaY?: number } | null | undefined} event
+ * @returns {{ type: 'wheel', dy: -1 | 1 } | null}
+ */
+export function toCaptureWheelInput(event) {
+  if (!event || !Number.isFinite(event.deltaY) || event.deltaY === 0) return null;
+  return { type: 'wheel', dy: event.deltaY < 0 ? -1 : 1 };
+}
+
+const CAPTURE_ALWAYS_PREVENT_CODES = new Set([
+  'Escape',
+  'Tab',
+  'Enter',
+  'NumpadEnter',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'AltLeft',
+  'AltRight',
+]);
+
+const CAPTURE_PLAIN_PREVENT_CODES = new Set([
+  'KeyW',
+  'KeyA',
+  'KeyS',
+  'KeyD',
+  'KeyR',
+  'KeyC',
+  'Comma',
+  'Period',
+  'Backquote',
+  'Slash',
+]);
+
+const CAPTURE_CTRL_PREVENT_CODES = new Set(['KeyA', 'KeyC', 'KeyS']);
+
+const CAPTURE_PLAIN_PREVENT_KEYS = new Set(['Escape', 'Tab', 'Enter', '?', ',', '.', '`']);
+
+/**
+ * 캡처 오버레이 keydown에서 브라우저 기본 동작(Tab 포커스·Ctrl+A/C/S·방향키 스크롤·Alt 메뉴 등)을 막을지 판정한다.
+ * @param {{ key?: string, code?: string, ctrlKey?: boolean, shiftKey?: boolean, altKey?: boolean, metaKey?: boolean } | null | undefined} event
+ * @returns {boolean}
+ */
+export function shouldPreventCaptureKey(event) {
+  if (!event) return false;
+  const code = event.code || '';
+  const key = event.key || '';
+
+  if (CAPTURE_ALWAYS_PREVENT_CODES.has(code) || key === 'Escape' || key === 'Tab' || key === 'Enter' || key === 'Alt') {
+    return true;
+  }
+  if (event.ctrlKey && !event.altKey && !event.metaKey) {
+    if (CAPTURE_CTRL_PREVENT_CODES.has(code)) return true;
+    if (/^[acsACS]$/.test(key)) return true;
+    return false;
+  }
+  if (!event.ctrlKey && !event.altKey && !event.metaKey) {
+    if (CAPTURE_PLAIN_PREVENT_CODES.has(code) || CAPTURE_PLAIN_PREVENT_KEYS.has(key)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * 키보드 이벤트를 CaptureInput('key')으로 바꾼다.
+ * 한글 IME 조합 중에도 물리 code를 그대로 넘겨 Rust가 판단할 수 있게 한다.
+ * @param {{ key?: string, code?: string, ctrlKey?: boolean, shiftKey?: boolean, altKey?: boolean } | null | undefined} event
+ * @returns {{ type: 'key', key: string, code: string, ctrl: boolean, shift: boolean, alt: boolean } | null}
+ */
+export function toCaptureKeyInput(event) {
+  if (!event) return null;
+  const key = typeof event.key === 'string' ? event.key : '';
+  const code = typeof event.code === 'string' ? event.code : '';
+  if (!key && !code) return null;
+  return {
+    type: 'key',
+    key,
+    code,
+    ctrl: Boolean(event.ctrlKey),
+    shift: Boolean(event.shiftKey),
+    alt: Boolean(event.altKey),
+  };
+}
+
+/**
  * 뷰포트 CSS 좌표를 오프스크린 정지 이미지의 정수 픽셀 좌표로 바꾼다.
  * 실제 오버레이 창(뷰포트 = 물리/scale, 이미지 = 물리)에서는 clientX*scale과 1:1이다.
  * @param {number} clientX

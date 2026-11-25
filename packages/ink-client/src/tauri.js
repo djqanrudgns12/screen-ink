@@ -19,11 +19,13 @@ export function createTauriClient() {
     applyImport: (path) => cmd('apply_import', { path }),
     resetAll: () => cmd('reset_all'),
     overlayReady: (session, ui) => cmd('overlay_ready', { session, loadMs: ui?.loadMs, paintMs: ui?.paintMs }),
+    captureInput: (input) => cmd('capture_input', { input }),
     subscribe(handler) {
       const offs = [
         listen('screen-ink://state', (e) => handler({ type: 'state', state: e.payload })),
         listen('screen-ink://island', (e) => handler({ type: 'island', island: e.payload })),
         listen('screen-ink://overlay', (e) => handler({ type: 'overlay', overlay: e.payload })),
+        listen('screen-ink://capture', (e) => handler({ type: 'capture', view: e.payload })),
       ];
       return () => offs.forEach((p) => p.then((off) => off()));
     },

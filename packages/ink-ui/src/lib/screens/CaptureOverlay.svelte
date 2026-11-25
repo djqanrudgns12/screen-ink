@@ -10,7 +10,12 @@
     findMonitorForOverlay,
     isPhysicalPointInMonitor,
     physicalToClient,
-    resolveMonitorHighlight,
+    resolveCaptureFrame,
+    resolveMonitorGuides,
+    shouldPreventCaptureKey,
+    toCaptureKeyInput,
+    toCapturePointerInput,
+    toCaptureWheelInput,
     toggleColorFormat,
   } from '../models/captureOverlay.js';
 
@@ -46,6 +51,8 @@
   let nativeFrame = $state(false);
   /** @type {import('@screen-ink/client').PhysRect | null} */
   let sessionHighlight = $state(null);
+  /** @type {import('@screen-ink/client').CaptureView | null} */
+  let captureView = $state(null);
   /** @type {import('@screen-ink/client').OverlayMonitor | null} */
   let monitor = $state(null);
   let frameUrl = $state('');
@@ -140,6 +147,7 @@
     activeSession = null;
     nativeFrame = false;
     sessionHighlight = null;
+    captureView = null;
     monitor = null;
     frameUrl = '';
     deferredLoad = false;
@@ -343,6 +351,7 @@
         sessionKind = e.overlay.kind;
         nativeFrame = isNative;
         sessionHighlight = e.overlay.highlight ?? null;
+        captureView = null;
         monitor = mon;
         frameUrl = nextUrl;
         readyScheduledSession = null;
@@ -370,6 +379,10 @@
             loadMs: 0,
             paintStartAt: sessionReceivedAt,
           });
+        }
+      } else if (e.type === 'capture') {
+        if (activeSession !== null && e.view?.session === activeSession) {
+          captureView = e.view;
         }
       } else if (e.type === 'state') {
         const mode = e.state?.mode;
@@ -431,6 +444,12 @@
     }
   });
 
+  /** @param {import('@screen-ink/client').CaptureInput | null} input */
+  function sendCaptureInput(input) {
+    if (!input || activeSession === null || typeof client.captureInput !== 'function') return;
+    client.captureInput(input);
+  }
+
   function flushPointerMove() {
     moveRaf = 0;
     const pt = pendingPointer;
@@ -451,6 +470,8 @@
     if (magnifierReady && offscreenCtx) {
       sampleAtCss(localX, localY);
     }
+
+    sendCaptureInput(toCapturePointerInput('move', pt, monitor, rect));
   }
 
   /** @param {PointerEvent} e */
@@ -463,6 +484,66 @@
       flushPointerMove();
     }
   }
+
+  /** @param {PointerEvent} e */
+  function handlePointerDown(e) {
+    if (activeSession === null || !monitor) return;
+    const rect = rootEl?.getBoundingClientRect();
+    const input = toCapturePointerInput('down', e, monitor, rect);
+    if (!input) return;
+    if (e.button === 2) {
+      e.preventDefault();
+    }
+    const localX = rect ? e.clientX - rect.left : e.clientX;
+    const localY = rect ? e.clientY - rect.top : e.clientY;
+    cursorCss = { x: localX, y: localY };
+    cursorPhys = { x: input.x, y: input.y };
+    if (magnifierReady && offscreenCtx) {
+      sampleAtCss(localX, localY);
+    }
+    sendCaptureInput(input);
+  }
+
+  /** @param {PointerEvent} e */
+  function handlePointerUp(e) {
+    if (activeSession === null || !monitor) return;
+    if (pendingPointer) {
+      if (moveRaf && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(moveRaf);
+        moveRaf = 0;
+      }
+      flushPointerMove();
+    }
+    const rect = rootEl?.getBoundingClientRect();
+    const input = toCapturePointerInput('up', e, monitor, rect);
+    if (!input) return;
+    sendCaptureInput(input);
+  }
+
+  /** @param {MouseEvent} e */
+  function handleDblClick(e) {
+    if (activeSession === null || !monitor) return;
+    const rect = rootEl?.getBoundingClientRect();
+    const input = toCapturePointerInput('dblclick', e, monitor, rect);
+    if (!input) return;
+    sendCaptureInput(input);
+  }
+
+  /** @param {WheelEvent} e */
+  function handleWheel(e) {
+    if (activeSession === null || !monitor) return;
+    const input = toCaptureWheelInput(e);
+    if (!input) return;
+    e.preventDefault();
+    sendCaptureInput(input);
+  }
+
+  $effect(() => {
+    const el = rootEl;
+    if (!el) return;
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  });
 
   function handlePointerLeave() {
     if (moveRaf && typeof cancelAnimationFrame === 'function') {
@@ -478,20 +559,18 @@
   function handleContextMenu(e) {
     if (activeSession === null) return;
     e.preventDefault();
-    client.run('capture.cancel');
   }
 
   /** @param {KeyboardEvent} e */
   function handleKeydown(e) {
     if (activeSession === null) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      client.run('capture.cancel');
-      return;
-    }
     if (e.key === 'Shift' && !e.repeat && !e.ctrlKey && !e.altKey && !e.metaKey) {
       colorFormat = toggleColorFormat(colorFormat);
     }
+    if (shouldPreventCaptureKey(e)) {
+      e.preventDefault();
+    }
+    sendCaptureInput(toCaptureKeyInput(e));
   }
 
   function handleResize() {
@@ -508,18 +587,13 @@
         width: selection.width,
         height: selection.height,
         state: selection.state ?? 'picking',
+        instant: false,
       };
     }
-    const hl = resolveMonitorHighlight(sessionHighlight, monitor);
-    if (!hl) return null;
-    return {
-      x: hl.x,
-      y: hl.y,
-      width: hl.width,
-      height: hl.height,
-      state: /** @type {'picking'} */ ('picking'),
-    };
+    return resolveCaptureFrame(captureView, sessionHighlight, monitor);
   });
+
+  let activeGuides = $derived(resolveMonitorGuides(captureView?.guides, monitor));
 
   let magBoxW = $derived(colorFormat === 'rgb' ? 214 : 186);
   let magPos = $derived(
@@ -537,11 +611,15 @@
     class="ink-overlay {className}"
     data-kind={sessionKind}
     data-session={activeSession}
+    data-phase={captureView?.phase ?? 'hover'}
     data-native-frame={nativeFrame ? 'true' : undefined}
     role="application"
     aria-label="캡처 화면"
+    onpointerdown={handlePointerDown}
     onpointermove={handlePointerMove}
+    onpointerup={handlePointerUp}
     onpointerleave={handlePointerLeave}
+    ondblclick={handleDblClick}
     oncontextmenu={handleContextMenu}
   >
     {#if !nativeFrame && frameUrl}
@@ -579,10 +657,27 @@
         width={activeFrame.width}
         height={activeFrame.height}
         state={activeFrame.state}
+        instant={activeFrame.instant}
         scrim={!nativeFrame}
       />
     {:else if !nativeFrame}
       <div class="ink-overlay-scrim" aria-hidden="true"></div>
+    {/if}
+
+    {#if activeGuides.length > 0}
+      <svg class="ink-overlay-guides" aria-hidden="true">
+        {#each activeGuides as g, i (i)}
+          <line
+            x1={g.x1}
+            y1={g.y1}
+            x2={g.x2}
+            y2={g.y2}
+            stroke="var(--ink-guide)"
+            stroke-width="1"
+            shape-rendering="crispEdges"
+          />
+        {/each}
+      </svg>
     {/if}
 
     {#if magnifierReady && cursorCss && cursorPhys}
@@ -641,6 +736,15 @@
     position: absolute;
     inset: 0;
     background: var(--ink-scrim);
+    pointer-events: none;
+  }
+
+  .ink-overlay-guides {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
     pointer-events: none;
   }
 

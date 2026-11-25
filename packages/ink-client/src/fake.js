@@ -37,6 +37,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   let hotkeysEnabled = true;
   let mode = { mode: 'idle' };
   let sessionSeq = 0;
+  /** @type {any} 가짜 고르기 상태(세션마다 새로) */
+  let capture = null;
   const readyLog = [];
 
   const judge = (slot, combo) => {
@@ -135,6 +137,51 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       island(enabled ? { kind: 'info', text: '단축키를 다시 켰어요' } : { kind: 'off', text: '단축키를 잠시 껐어요', detail: 'Alt+`' });
       return state();
     },
+    // 고르기 흉내: 커서 주변에 큰 것 → 작은 것 사슬(화면 › 창 › 표 › 2행)을 만들고 휠로 단계를 바꾼다.
+    async captureInput(input) {
+      if (mode.mode !== 'capture') return;
+      const s = (capture ??= { phase: 'hover', level: 3, p: { x: 760, y: 420 }, rect: null, down: null, help: false });
+      const chainAt = (p) => [
+        { name: '화면', r: { x: 0, y: 0, w: 1920, h: 1080 } },
+        { name: '창', r: { x: 240, y: 120, w: 1440, h: 820 } },
+        { name: '표', r: { x: Math.max(240, p.x - 360), y: Math.max(120, p.y - 120), w: 720, h: 240 } },
+        { name: '2행', r: { x: Math.max(240, p.x - 360), y: p.y - 20, w: 720, h: 40 } },
+      ];
+      if (input.type === 'move') {
+        s.p = { x: input.x, y: input.y };
+        if (s.down) {
+          s.phase = 'drag';
+          s.rect = { x: Math.min(s.down.x, s.p.x), y: Math.min(s.down.y, s.p.y), w: Math.abs(s.p.x - s.down.x) + 1, h: Math.abs(s.p.y - s.down.y) + 1 };
+        }
+      } else if (input.type === 'wheel' && s.phase === 'hover') {
+        s.level = Math.max(0, Math.min(3, s.level + input.dy));
+      } else if (input.type === 'down' && input.button === 0) {
+        s.down = { x: input.x, y: input.y };
+      } else if (input.type === 'up' && input.button === 0) {
+        if (s.phase === 'hover') { s.rect = chainAt(s.p)[s.level].r; }
+        s.phase = 'confirmed';
+        s.down = null;
+      } else if (input.type === 'down' && input.button === 2) {
+        if (s.phase === 'hover') return this.run('capture.cancel');
+        s.phase = 'hover'; s.rect = null;
+      } else if (input.type === 'key' && input.key === 'Escape') {
+        return this.run('capture.cancel');
+      } else if (input.type === 'key' && input.key === '?') {
+        s.help = !s.help;
+      }
+      if ((input.type === 'key' && input.key === 'Enter') || input.type === 'dblclick') {
+        const r = s.rect ?? chainAt(s.p)[s.level].r;
+        await this.run('capture.cancel');
+        island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${r.w}×${r.h}`, detail: '한글·PPT에 Ctrl+V', thumbUrl: frameUrl, button: { label: '저장', action: 'capture.saveLast' }, buttonKey: 'Ctrl+S', chip: { label: '#FFFFFF 복사', action: 'capture.copyHex' } });
+        return;
+      }
+      const chain = chainAt(s.p);
+      const rect = s.phase === 'hover' ? chain[s.level].r : s.rect;
+      emit({
+        type: 'capture',
+        view: { session: mode.session, phase: s.phase, rect, path: chain.map((c) => c.name), level: s.phase === 'hover' ? s.level : -1, guides: [], magnet: !input.alt, cursorIncluded: false, help: s.help },
+      });
+    },
     async overlayReady(session) {
       if (mode.mode === 'capture' && mode.session === session) readyLog.push(session);
     },
@@ -164,6 +211,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       if (action === 'capture.cancel') {
         if (mode.mode !== 'capture') return;
         mode = { mode: 'idle' };
+        capture = null;
         changed();
         island({ kind: 'end', text: '' });
         return;

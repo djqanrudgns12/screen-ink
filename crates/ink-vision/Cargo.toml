@@ -1,0 +1,11 @@
+[package]
+name = "ink-vision"
+description = "screen-ink V 근거: 정지 화면에서 사각형 찾기(경사·곧은 경계·적분 영상·상자 사다리·평탄 영역·경계 지지율) — 08 §4.3"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+ink-domain.workspace = true

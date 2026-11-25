@@ -73,6 +73,8 @@
  * @property {string} [mode]       모드 섬의 모드 이름(region·window·record) — 키 안내 둘째 줄 횟수 세기
  * @property {string} [value]      고정폭 값(크기 등)
  * @property {{key: string, label: string}[]} [hints]  둘째 줄 키 안내
+ * @property {string} [thumbUrl]    결과 섬 썸네일(ink://thumb/…, 작은 BMP)
+ * @property {string} [buttonKey]   단추 옆 키캡(예: 'Ctrl+S')
  *
  * @typedef {{x: number, y: number, w: number, h: number}} PhysRect  물리 px, 가상 화면 좌표
  *
@@ -91,7 +93,25 @@
  * @property {{x: number, y: number}} cursor  단축키 순간 커서(물리 px)
  * @property {boolean} nativeFrame  true = 네이티브 창이 이미 정지 화면(50% 어둡게 + 강조만 밝게)을 그림 →
  *   UI는 이미지·어둡게를 깔지 않고 투명 층(테두리·꺾쇠·확대경·크기)만. 이미지는 확대경용으로 늦게 읽음
- * @property {PhysRect} [highlight] 첫 강조(물리 px) — 단계 2는 커서 아래 창
+ * @property {PhysRect} [highlight] 첫 강조(물리 px) — 진입 순간 = 커서 모니터 전체(F1·F3), F2 = 커서 아래 창
+ *
+ * @typedef {Object} CaptureView  고르기 상태(Rust가 정함 → 모든 오버레이·섬이 같은 것을 그림)
+ * @property {number} session
+ * @property {'hover'|'drag'|'confirmed'} phase   hover = 인식 강조 · drag = 직접 그리기 · confirmed = 클릭으로 확정(손잡이·방향키)
+ * @property {PhysRect|null} rect                  지금 범위(물리 px). 네이티브 정지 화면은 이미 이 자리를 밝게 뚫어 둠
+ * @property {string[]} path                        사슬 이름(큰 것 → 작은 것, 예: ['창','표','2행']) — 창 제목·글자는 담지 않음
+ * @property {number} level                         path 중 지금 단계(흰색으로)
+ * @property {{x1:number,y1:number,x2:number,y2:number}[]} guides  자석이 붙은 변의 안내선(물리 px)
+ * @property {boolean} magnet                       false = Alt로 자석 끔(섬에 "자석 끔")
+ * @property {boolean} cursorIncluded               ` 키 — 크기 배지에 "커서 포함"
+ * @property {boolean} help                         ? 키 — 섬 키 안내 둘째 줄을 강제로 보임
+ *
+ * @typedef {{type:'move', x:number, y:number}
+ *   | {type:'wheel', dy:-1|1}
+ *   | {type:'down'|'up'|'dblclick', x:number, y:number, button:0|2}
+ *   | {type:'key', key:string, code:string, ctrl:boolean, shift:boolean, alt:boolean}} CaptureInput
+ *   좌표는 물리 px(가상 화면) = monitor.bounds + client × scale. wheel dy = -1 위(넓히기·부모) / 1 아래(좁히기·자식).
+ *   key는 e.key와 e.code를 같이(한글 입력 중에도 code로 판단). Esc·우클릭·Enter 등 판단은 모두 Rust가 한다.
  */
 
 /**
@@ -108,7 +128,8 @@
  * @property {(path: string) => Promise<{ok: boolean, error?: string, state: InkState}>} applyImport  시트 [가져오기] — 되돌리기 1건
  * @property {() => Promise<InkState>} resetAll   모두 처음으로(확인 시트 뒤)
  * @property {(session: number, ui?: {loadMs?: number, paintMs?: number}) => Promise<void>} overlayReady  오버레이가 정지 이미지를 **그린 뒤**(load + 다음 프레임) — 진입 계측 M1. ui = 세션 알림→load, load→그림(선택)
- * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession}) => void) => () => void} subscribe
+ * @property {(input: CaptureInput) => Promise<void>} captureInput  오버레이 입력 전달(포인터 이동은 rAF로 묶어 프레임당 한 번). 결과는 'capture' 이벤트로
+ * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView}) => void) => () => void} subscribe
  */
 
 export const SHORTCUT_GROUPS = [

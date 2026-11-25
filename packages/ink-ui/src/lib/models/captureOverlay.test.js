@@ -9,6 +9,14 @@ import {
   isPhysicalRectOverlappingMonitor,
   physicalRectToClient,
   resolveMonitorHighlight,
+  resolveCaptureFrame,
+  formatRectSize,
+  clipGuideToMonitor,
+  resolveMonitorGuides,
+  toCapturePointerInput,
+  toCaptureWheelInput,
+  shouldPreventCaptureKey,
+  toCaptureKeyInput,
   clientToImagePixel,
   computeSampleRect,
   buildMagnifierPatch,
@@ -168,4 +176,145 @@ test('converts physical highlight rect to logical CSS rect across DPI scales and
 
   // Non-overlapping highlight resolves to null
   assert.equal(resolveMonitorHighlight({ x: 100, y: 100, w: 400, h: 300 }, scaled), null);
+});
+
+test('converts pointer, wheel, and keyboard events into CaptureInput contracts across DPI and IME', () => {
+  const scaled = { bounds: { x: -1920, y: 120, w: 1920, h: 1080 }, scale: 1.5 };
+  const rootRect = { left: 10, top: 20 };
+
+  assert.deepEqual(
+    toCapturePointerInput('move', { clientX: 410, clientY: 320 }, scaled, rootRect),
+    { type: 'move', x: -1320, y: 570 },
+  );
+  assert.deepEqual(
+    toCapturePointerInput('down', { clientX: 110, clientY: 220, button: 0 }, scaled, rootRect),
+    { type: 'down', x: -1770, y: 420, button: 0 },
+  );
+  assert.deepEqual(
+    toCapturePointerInput('up', { clientX: 110, clientY: 220, button: 2 }, scaled, rootRect),
+    { type: 'up', x: -1770, y: 420, button: 2 },
+  );
+  assert.deepEqual(
+    toCapturePointerInput('dblclick', { clientX: 110, clientY: 220, button: 0 }, scaled, rootRect),
+    { type: 'dblclick', x: -1770, y: 420, button: 0 },
+  );
+  // Middle / auxiliary mouse buttons are ignored
+  assert.equal(toCapturePointerInput('down', { clientX: 110, clientY: 220, button: 1 }, scaled, rootRect), null);
+  assert.equal(toCapturePointerInput('up', { clientX: 110, clientY: 220, button: 3 }, scaled, rootRect), null);
+
+  // Wheel: up = -1 (widen), down = 1 (narrow), zero = null
+  assert.deepEqual(toCaptureWheelInput({ deltaY: -120 }), { type: 'wheel', dy: -1 });
+  assert.deepEqual(toCaptureWheelInput({ deltaY: 100 }), { type: 'wheel', dy: 1 });
+  assert.equal(toCaptureWheelInput({ deltaY: 0 }), null);
+
+  // Keyboard: passes key + physical code + modifier flags (works under Korean IME too)
+  assert.deepEqual(
+    toCaptureKeyInput({ key: 'Process', code: 'KeyR', ctrlKey: false, shiftKey: false, altKey: false }),
+    { type: 'key', key: 'Process', code: 'KeyR', ctrl: false, shift: false, alt: false },
+  );
+  assert.deepEqual(
+    toCaptureKeyInput({ key: 's', code: 'KeyS', ctrlKey: true, shiftKey: true, altKey: false }),
+    { type: 'key', key: 's', code: 'KeyS', ctrl: true, shift: true, alt: false },
+  );
+
+  // Default prevention covers all capture keys while leaving F12 / Ctrl+R alone
+  for (const ev of [
+    { key: 'Escape', code: 'Escape' },
+    { key: 'Tab', code: 'Tab' },
+    { key: 'Enter', code: 'Enter' },
+    { key: 'ArrowUp', code: 'ArrowUp', ctrlKey: true },
+    { key: 'Process', code: 'KeyW' },
+    { key: 'r', code: 'KeyR' },
+    { key: ',', code: 'Comma' },
+    { key: '.', code: 'Period' },
+    { key: '`', code: 'Backquote' },
+    { key: '?', code: 'Slash', shiftKey: true },
+    { key: 'a', code: 'KeyA', ctrlKey: true },
+    { key: 'c', code: 'KeyC', ctrlKey: true },
+    { key: 's', code: 'KeyS', ctrlKey: true },
+    { key: 'Alt', code: 'AltLeft', altKey: true },
+  ]) {
+    assert.equal(shouldPreventCaptureKey(ev), true, `should prevent ${ev.code}`);
+  }
+  assert.equal(shouldPreventCaptureKey({ key: 'F12', code: 'F12' }), false);
+  assert.equal(shouldPreventCaptureKey({ key: 'r', code: 'KeyR', ctrlKey: true }), false);
+});
+
+test('resolves CaptureView phase and rect into SelectionFrame state without falling back to stale highlight', () => {
+  const mon = { bounds: { x: 0, y: 0, w: 1920, h: 1080 }, scale: 2 };
+  const initialHl = { x: 0, y: 0, w: 1920, h: 1080 };
+
+  // Before first capture view: uses initial session highlight
+  assert.deepEqual(resolveCaptureFrame(null, initialHl, mon), {
+    x: 0,
+    y: 0,
+    width: 960,
+    height: 540,
+    state: 'picking',
+    instant: false,
+  });
+
+  // Drag phase disables transition lag (instant: true)
+  assert.deepEqual(
+    resolveCaptureFrame(
+      { session: 1, phase: 'drag', rect: { x: 200, y: 100, w: 400, h: 200 }, path: [], level: -1, guides: [], magnet: true, cursorIncluded: false, help: false },
+      initialHl,
+      mon,
+    ),
+    { x: 100, y: 50, width: 200, height: 100, state: 'picking', instant: true },
+  );
+
+  // Confirmed phase renders corner handles (state: 'confirmed')
+  assert.deepEqual(
+    resolveCaptureFrame(
+      { session: 1, phase: 'confirmed', rect: { x: 200, y: 100, w: 400, h: 200 }, path: [], level: -1, guides: [], magnet: true, cursorIncluded: false, help: false },
+      initialHl,
+      mon,
+    ),
+    { x: 100, y: 50, width: 200, height: 100, state: 'confirmed', instant: false },
+  );
+
+  // Explicit null rect in CaptureView clears highlight instead of reverting to sessionHighlight
+  assert.equal(
+    resolveCaptureFrame(
+      { session: 1, phase: 'hover', rect: null, path: [], level: -1, guides: [], magnet: true, cursorIncluded: false, help: false },
+      initialHl,
+      mon,
+    ),
+    null,
+  );
+});
+
+test('clips magnetic snap guides to monitor bounds (including monitor edges) and converts to logical CSS', () => {
+  const mon1 = { bounds: { x: 1920, y: 0, w: 2560, h: 1440 }, scale: 1.5 };
+
+  // Horizontal guide spanning across monitor 0 and monitor 1 -> clipped to monitor 1
+  assert.deepEqual(
+    clipGuideToMonitor({ x1: 1000, y1: 300, x2: 3420, y2: 300 }, mon1),
+    { x1: 0, y1: 200, x2: 1000, y2: 200 },
+  );
+
+  // Vertical guide right on monitor 1's left boundary -> kept
+  assert.deepEqual(
+    clipGuideToMonitor({ x1: 1920, y1: 150, x2: 1920, y2: 750 }, mon1),
+    { x1: 0, y1: 100, x2: 0, y2: 500 },
+  );
+
+  // Guide completely on monitor 0 -> filtered out
+  assert.equal(clipGuideToMonitor({ x1: 500, y1: 0, x2: 500, y2: 1080 }, mon1), null);
+
+  // Batch resolution filters and clips
+  const resolved = resolveMonitorGuides(
+    [
+      { x1: 500, y1: 0, x2: 500, y2: 1080 },
+      { x1: 2220, y1: -100, x2: 2220, y2: 600 },
+    ],
+    mon1,
+  );
+  assert.deepEqual(resolved, [{ x1: 200, y1: 0, x2: 200, y2: 400 }]);
+
+  // Rect size badge formatting
+  assert.equal(formatRectSize({ w: 718, h: 40 }), '718×40');
+  assert.equal(formatRectSize({ w: 0, h: 40 }), '');
+  assert.equal(formatRectSize(null), '');
 });

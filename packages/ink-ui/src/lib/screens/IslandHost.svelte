@@ -3,6 +3,7 @@
   import Island from '../components/Island.svelte';
   import {
     ISLAND_SPRING,
+    applyCaptureView,
     clearModeIsland,
     createIslandState,
     dismissIsland,
@@ -25,6 +26,8 @@
   let { client, position = 'fixed', class: className = '' } = $props();
 
   let queue = $state(createIslandState());
+  /** @type {number | null} */
+  let captureSession = $state(null);
   let platform = $state('windows');
   let reducedMotion = $state(false);
   /** @type {HTMLDivElement | null} */
@@ -57,13 +60,18 @@
       if (alive && s?.platform) platform = s.platform;
     });
     const off = client.subscribe((e) => {
-      if (e.type === 'state' && e.state?.platform) {
-        platform = e.state.platform;
+      if (e.type === 'state') {
+        if (e.state?.platform) platform = e.state.platform;
+        if (e.state?.mode?.mode !== 'capture') captureSession = null;
       } else if (e.type === 'island') {
+        if (e.island?.kind === 'end') captureSession = null;
         queue =
           e.island?.kind === 'end'
             ? clearModeIsland(queue)
             : pushIsland(queue, e.island, { now: Date.now(), reducedMotion });
+      } else if (e.type === 'capture') {
+        captureSession = e.view?.session ?? null;
+        queue = applyCaptureView(queue, e.view);
       }
     });
     return () => {
@@ -113,6 +121,7 @@
   });
 
   function handleKeydown(e) {
+    if (e.defaultPrevented || captureSession !== null) return;
     const tag = e.target?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable) return;
     if (e.key === '?' && queue.current?.hints?.length) {
@@ -146,7 +155,7 @@
     current?.button
       ? {
           label: current.button.label,
-          key: current.button.key,
+          key: current.buttonKey || current.button.key,
           stop: current.button.stop,
           onClick: async () => {
             const act = current.button.action;
@@ -187,7 +196,11 @@
                 lead={current.lead || ''}
                 detail={current.detail || ''}
                 value={current.value || ''}
-                valueMuted={Boolean(current.valueMuted)}
+                valueMuted={Boolean(current.valueMuted ?? current.kind === 'result')}
+                path={current.path}
+                level={current.level ?? -1}
+                tags={current.tags}
+                thumbUrl={current.thumbUrl || ''}
                 combo={current.combo || ''}
                 keys={current.keys}
                 {platform}

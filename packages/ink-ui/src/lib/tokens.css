@@ -28,6 +28,7 @@
   --ink-danger: #E5484D;
   --ink-island: #000000;
   --ink-scrim: rgba(12, 12, 14, 0.5);
+  --ink-guide: #38BDF8;
 
   /* 시안(F01~F07·F18) 세부 면·상태 토큰 */
   --ink-window-bg: #F4F4F1;
@@ -342,6 +343,7 @@
   --color-ink-ok: var(--ink-ok);
   --color-ink-danger: var(--ink-danger);
   --color-ink-island: var(--ink-island);
+  --color-ink-guide: var(--ink-guide);
 
   --radius-ink-key: var(--ink-r-key);
   --radius-ink-row: var(--ink-r-row);
@@ -458,6 +460,7 @@ body {
   [data-theme='dark'] {
     --ink-accent: Highlight;
     --ink-accent-text: Highlight;
+    --ink-guide: Highlight;
     --ink-line: CanvasText;
     --ink-line-strong: CanvasText;
     --ink-hair: GrayText;

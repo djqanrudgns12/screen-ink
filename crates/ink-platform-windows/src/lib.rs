@@ -4,7 +4,11 @@
 
 pub mod powertoys;
 #[cfg(windows)]
+pub mod clipboard;
+#[cfg(windows)]
 pub mod events;
+#[cfg(windows)]
+pub mod uia;
 #[cfg(windows)]
 pub mod freeze;
 #[cfg(windows)]

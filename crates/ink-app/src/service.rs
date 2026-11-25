@@ -33,13 +33,13 @@ const KNOWN_APPS: [(&str, &str); 5] = [
 ];
 
 #[derive(Clone, Debug)]
-struct Failure {
+pub(crate) struct Failure {
     reason: String,
     owner: Option<String>,
 }
 
 #[derive(Clone, Debug)]
-enum Undo {
+pub(crate) enum Undo {
     Setting { path: String, prev: Value },
     Shortcut { id: String, prev: String },
     Batch(Vec<Undo>),
@@ -75,33 +75,35 @@ fn ms(d: std::time::Duration) -> f64 {
 }
 
 pub struct InkService {
-    ports: Ports,
-    platform: Platform,
-    version: String,
-    settings: Settings,
-    env: Environment,
-    hotkeys_enabled: bool,
+    pub(crate) ports: Ports,
+    pub(crate) platform: Platform,
+    pub(crate) version: String,
+    pub(crate) settings: Settings,
+    pub(crate) env: Environment,
+    pub(crate) hotkeys_enabled: bool,
     /// 칸 → 등록한 가속기
-    registered: BTreeMap<String, String>,
+    pub(crate) registered: BTreeMap<String, String>,
     /// 등록하지 못한 전역 칸과 이유
-    failures: BTreeMap<String, Failure>,
+    pub(crate) failures: BTreeMap<String, Failure>,
     /// 실패한 줄마다 보여 준 첫 추천 — 다른 줄과 겹치지 않게
-    offered: BTreeMap<String, String>,
-    history: Vec<Undo>,
-    readonly: bool,
-    notices: Vec<String>,
-    pinned_count: u32,
+    pub(crate) offered: BTreeMap<String, String>,
+    pub(crate) history: Vec<Undo>,
+    pub(crate) readonly: bool,
+    pub(crate) notices: Vec<String>,
+    pub(crate) pinned_count: u32,
     // ── 모드·캡처(단계 2) ──
-    epoch: Instant,
-    mode: Mode,
-    session_seq: u64,
+    pub(crate) epoch: Instant,
+    pub(crate) mode: Mode,
+    pub(crate) session_seq: u64,
     /// 지난번 오버레이를 맞춘 배치 — 지문이 다르면 다시 맞춘다
-    prepared: Option<MonitorLayout>,
-    snapshot: Option<Snapshot>,
+    pub(crate) prepared: Option<MonitorLayout>,
+    pub(crate) snapshot: Option<Snapshot>,
     /// (단축키 시각, 진입 계측) — UI가 그렸다고 알리면 마감
-    pending: Option<(Instant, EntryTiming)>,
-    ready_samples: VecDeque<f64>,
-    secure_notified: bool,
+    pub(crate) pending: Option<(Instant, EntryTiming)>,
+    pub(crate) ready_samples: VecDeque<f64>,
+    pub(crate) secure_notified: bool,
+    // ── 고르기·결과(단계 3) ──
+    pub(crate) cap: crate::capture::CaptureState,
 }
 
 /// 모드 섬 둘째 줄(처음 3번과 `?`일 때만 보임 — 섬 호스트가 정함).
@@ -127,6 +129,13 @@ fn failure_of(a: &Analysis) -> Failure {
 impl InkService {
     pub fn new(mut ports: Ports, platform: Platform, version: impl Into<String>) -> Self {
         let loaded = ports.store.load();
+        // 범위 기록(05 §4) — 설정과 같은 파일의 history 구역
+        let ranges = loaded
+            .file
+            .as_ref()
+            .and_then(|f| f.pointer("/sections/history/data"))
+            .and_then(|v| serde_json::from_value::<ink_domain::history::History>(v.clone()).ok())
+            .unwrap_or_default();
         let mut notices: Vec<String> = loaded.notice.into_iter().collect();
         let mut readonly = ports.store.location().read_only;
         let mut first_run = false;
@@ -178,6 +187,7 @@ impl InkService {
             pending: None,
             ready_samples: VecDeque::new(),
             secure_notified: false,
+            cap: crate::capture::CaptureState::with_ranges(ranges),
         };
         svc.refresh_environment();
         svc.prepare_overlays();
@@ -696,6 +706,8 @@ impl InkService {
         };
 
         let t = Instant::now();
+        // 자르기·V 전처리용으로 쥐어 둔다(픽셀은 Arc라 복사 없음)
+        let kept = frames.clone();
         let painted_at = match self.ports.overlay.show(&overlay, frames) {
             Ok(at) => at,
             Err(e) => {
@@ -722,6 +734,8 @@ impl InkService {
         self.mode = Mode::Capture { session, kind, started_ms: self.now_ms() };
         self.island(capture_island(kind));
         self.emit_state();
+        // 고르기 시작: 상태 기계 + 커서 아래 창 UIA 색인(미리 깨우기, D9) + V 전처리 — 모두 진입 뒤(진입 시간에 안 들어감)
+        self.start_selection(kept, cursor);
     }
 
     /// UI가 정지 화면을 그렸다(첫 모니터만 센다) → 계측 한 줄(M1).
@@ -761,6 +775,7 @@ impl InkService {
         self.ports.overlay.hide(session);
         self.mode = Mode::Idle;
         self.snapshot = None;
+        self.end_selection();
         // UI가 알리기 전에 끝났어도 네이티브 정지 화면 시간은 남긴다
         if let Some((_, timing)) = self.pending.take() {
             if timing.frame_ms.is_some() {

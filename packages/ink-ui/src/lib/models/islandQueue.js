@@ -212,3 +212,109 @@ export function shouldShowHintLine(state, modeKey) {
   const uses = state.modeUses[key] || 0;
   return uses <= HINT_MAX_AUTO_SHOW;
 }
+
+/**
+ * 인식 사슬(path)과 현재 단계(level)를 섬 표시용 조각 배열로 다듬는다.
+ * - level 항목만 active=true(흰색), 나머지는 보조색
+ * - 길이가 maxChars 또는 maxItems를 넘으면 앞쪽부터 줄여 '…'를 붙인다(현재 단계는 항상 유지)
+ * @param {string[] | null | undefined} path
+ * @param {number} level
+ * @param {{ maxChars?: number, maxItems?: number }} [opts]
+ * @returns {{ label: string, active: boolean, ellipsis?: boolean }[]}
+ */
+export function formatCapturePath(path, level, { maxChars = 20, maxItems = 4 } = {}) {
+  if (!Array.isArray(path) || path.length === 0) return [];
+  if (!Number.isInteger(level) || level < 0 || level >= path.length) return [];
+
+  let start = 0;
+  let end = path.length;
+
+  const measure = (s, e) => {
+    const count = e - s + (s > 0 ? 1 : 0) + (e < path.length ? 1 : 0);
+    let chars = 0;
+    if (s > 0) chars += 1;
+    for (let i = s; i < e; i += 1) {
+      chars += String(path[i] ?? '').length;
+    }
+    if (e < path.length) chars += 1;
+    if (count > 1) chars += (count - 1) * 3; // ' › '
+    return { count, chars };
+  };
+
+  while (start < level) {
+    const { count, chars } = measure(start, end);
+    if (count <= maxItems && chars <= maxChars) break;
+    start += 1;
+  }
+
+  while (end > level + 1) {
+    const { count, chars } = measure(start, end);
+    if (count <= maxItems && chars <= maxChars) break;
+    end -= 1;
+  }
+
+  /** @type {{ label: string, active: boolean, ellipsis?: boolean }[]} */
+  const out = [];
+  if (start > 0) {
+    out.push({ label: '…', active: false, ellipsis: true });
+  }
+  for (let i = start; i < end; i += 1) {
+    out.push({ label: String(path[i] ?? ''), active: i === level });
+  }
+  if (end < path.length) {
+    out.push({ label: '…', active: false, ellipsis: true });
+  }
+  return out;
+}
+
+/**
+ * CaptureView에서 모드 섬에 반영할 필드(경로·크기·상태 태그·도움말)를 뽑는다.
+ * @param {import('@screen-ink/client').CaptureView | null | undefined} view
+ * @returns {{ path: string[], level: number, value: string, tags: string[], help: boolean } | null}
+ */
+export function buildCaptureIslandPatch(view) {
+  if (!view) return null;
+  const rect = view.rect;
+  const value =
+    rect && Number.isFinite(rect.w) && Number.isFinite(rect.h) && rect.w > 0 && rect.h > 0
+      ? `${Math.round(rect.w)}×${Math.round(rect.h)}`
+      : '';
+  const tags = [];
+  if (view.magnet === false) tags.push('자석 끔');
+  if (view.cursorIncluded) tags.push('커서 포함');
+  return {
+    path: Array.isArray(view.path) ? view.path : [],
+    level: typeof view.level === 'number' ? view.level : -1,
+    value,
+    tags,
+    help: Boolean(view.help),
+  };
+}
+
+/**
+ * 활성 모드 섬을 새로 만들지 않고(seq 유지) CaptureView 정보로 그 자리에서 갱신한다.
+ * 일시 결과 섬이 위에 떠 있으면 activeMode만 배경에서 갱신한다.
+ * @param {IslandQueueState} state
+ * @param {import('@screen-ink/client').CaptureView | null | undefined} view
+ * @returns {IslandQueueState}
+ */
+export function applyCaptureView(state, view) {
+  if (!state || !state.activeMode || !view) return state;
+  const patch = buildCaptureIslandPatch(view);
+  if (!patch) return state;
+
+  const nextMode = {
+    ...state.activeMode,
+    path: patch.path,
+    level: patch.level,
+    value: patch.value,
+    tags: patch.tags,
+  };
+  const showingMode = Boolean(state.current && state.current.kind === 'mode');
+  return {
+    ...state,
+    activeMode: nextMode,
+    current: showingMode ? nextMode : state.current,
+    helpOpen: patch.help,
+  };
+}

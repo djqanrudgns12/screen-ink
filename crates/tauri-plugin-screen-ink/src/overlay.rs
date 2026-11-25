@@ -59,7 +59,13 @@ pub fn serve<R: Runtime>(ctx: UriSchemeContext<'_, R>, req: Request<Vec<u8>>) ->
     let not_found = || Response::builder().status(404).body(Vec::new()).unwrap();
     let path = req.uri().path().trim_start_matches('/');
     let mut parts = path.split('/');
-    let (Some("frame"), Some(s), Some(m)) = (parts.next(), parts.next(), parts.next()) else { return not_found() };
+    let first = parts.next();
+    if first == Some("thumb") {
+        let Some(id) = parts.next().and_then(|s| s.parse::<u64>().ok()) else { return not_found() };
+        let Some(bmp) = ctx.app_handle().try_state::<crate::adapters::ThumbStore>().and_then(|t| t.bmp(id)) else { return not_found() };
+        return Response::builder().header("Content-Type", "image/bmp").header("Cache-Control", "no-store").header("Access-Control-Allow-Origin", "*").body(bmp).unwrap_or_else(|_| not_found());
+    }
+    let (Some("frame"), Some(s), Some(m)) = (first, parts.next(), parts.next()) else { return not_found() };
     let (Ok(session), Ok(monitor)) = (s.parse::<u64>(), m.parse::<u32>()) else { return not_found() };
     let Some(store) = ctx.app_handle().try_state::<FrameStore>() else { return not_found() };
     let Some(f) = store.get(session, monitor) else { return not_found() };
@@ -134,16 +140,27 @@ pub struct TauriOverlayHost<R: Runtime> {
     pub freeze: ink_platform_windows::freeze::Freeze,
     /// 지금 세션의 모니터 배치(강조를 모니터별로 나눌 때)
     layout: Option<MonitorLayout>,
+    thumbs: crate::adapters::ThumbStore,
+}
+
+/// 썸네일 주소(`frame_url`과 같은 규칙).
+pub fn thumb_url(id: u64) -> String {
+    if cfg!(windows) || cfg!(target_os = "android") {
+        format!("http://{SCHEME}.localhost/thumb/{id}")
+    } else {
+        format!("{SCHEME}://localhost/thumb/{id}")
+    }
 }
 
 impl<R: Runtime> TauriOverlayHost<R> {
-    pub fn new(app: AppHandle<R>, frames: FrameStore) -> Self {
+    pub fn new(app: AppHandle<R>, frames: FrameStore, thumbs: crate::adapters::ThumbStore) -> Self {
         Self {
             app,
             frames,
             #[cfg(windows)]
             freeze: Default::default(),
             layout: None,
+            thumbs,
         }
     }
 
@@ -176,6 +193,10 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
         self.freeze.retain(&layout.monitors.iter().map(|m| m.id).collect::<Vec<_>>());
         let layout = layout.clone();
         defer(&self.app, move |app| ensure_overlays(app, &layout));
+    }
+
+    fn thumbnail(&mut self, w: u32, h: u32, bgra: Vec<u8>) -> Option<String> {
+        (w > 0 && h > 0).then(|| thumb_url(self.thumbs.put(w, h, bgra)))
     }
 
     fn highlight(&mut self, session: u64, rect: Option<PhysRect>) {

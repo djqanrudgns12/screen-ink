@@ -3,8 +3,13 @@
 
 pub mod bmp;
 pub mod geometry;
+pub mod history;
+pub mod image;
+pub mod magnet;
 pub mod mode;
 pub mod naming;
+pub mod recog;
+pub mod selection;
 pub mod settings;
 pub mod shortcuts;
 pub mod snapshot;

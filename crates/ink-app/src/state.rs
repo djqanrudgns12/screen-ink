@@ -125,6 +125,15 @@ pub struct IslandHint {
     pub label: String,
 }
 
+/// 고르기 상태(UI로) — `SelectionView` + 세션.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CaptureView {
+    pub session: u64,
+    #[serde(flatten)]
+    pub selection: ink_domain::selection::SelectionView,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct IslandEvent {
     pub kind: IslandKind,
@@ -145,11 +154,26 @@ pub struct IslandEvent {
     /// 둘째 줄 키 안내
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub hints: Vec<IslandHint>,
+    /// 결과 섬 썸네일 주소
+    #[serde(rename = "thumbUrl", skip_serializing_if = "Option::is_none")]
+    pub thumb_url: Option<String>,
+    /// 단추 옆 키캡(예: "Ctrl+S")
+    #[serde(rename = "buttonKey", skip_serializing_if = "Option::is_none")]
+    pub button_key: Option<String>,
+    /// 추천 칩 하나(02 §1.6 — 지금 할 수 있을 때만)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chip: Option<IslandButton>,
 }
 
 impl IslandEvent {
     pub fn new(kind: IslandKind, text: impl Into<String>) -> Self {
-        Self { kind, text: text.into(), detail: None, button: None, variant: None, mode: None, value: None, hints: Vec::new() }
+        Self { kind, text: text.into(), detail: None, button: None, variant: None, mode: None, value: None, hints: Vec::new(), thumb_url: None, button_key: None, chip: None }
+    }
+
+    pub fn button(mut self, label: &str, action: &str, key: Option<&str>) -> Self {
+        self.button = Some(IslandButton { label: label.into(), action: action.into() });
+        self.button_key = key.map(String::from);
+        self
     }
 
     pub fn variant(mut self, v: &str) -> Self {

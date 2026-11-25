@@ -78,6 +78,7 @@
       overlayLastTiming = ui ?? null;
       return client.overlayReady(session, ui);
     },
+    captureInput: (input) => client.captureInput(input),
     subscribe(handler) {
       return client.subscribe((e) => {
         if (e.type === 'overlay') {
@@ -310,7 +311,7 @@
     <div class="pv-stage">
       <div class="pv-overlay-launcher">
         <h2>캡처 오버레이</h2>
-        <p class="pv-overlay-sub">Shift 색 표기 전환 · Esc 또는 우클릭 취소</p>
+        <p class="pv-overlay-sub">움직임(인식) · 휠(넓히기·좁히기) · 클릭(확정) · 드래그 · Enter(복사) · ?(안내) · 우클릭·Esc(다시/취소)</p>
         <div class="pv-bar-group" role="group" aria-label="오버레이 렌더 방식">
           <button
             type="button"
@@ -385,7 +386,7 @@
       <div class="pv-island-grid">
         <div class="pv-isl-item">
           <p>범위 캡처<small class="ink-mono">F1</small></p>
-          <Island variant="region" text="범위 캡처" detail="창 › 표 › 2행" value="718×40" />
+          <Island variant="region" text="범위 캡처" path={['창', '표', '2행']} level={2} value="718×40" />
         </div>
         <div class="pv-isl-item">
           <p>결과<small class="ink-mono">Enter · 1.2초</small></p>
@@ -393,8 +394,12 @@
             variant="result"
             text="복사했어요"
             value="718×40"
+            detail="한글·PPT에 Ctrl+V"
             valueMuted={true}
-            button={{ label: '저장' }}
+            button={{ label: '저장', key: 'Ctrl+S' }}
+            secondaryButton={{ label: '판서로', key: 'Alt+1' }}
+            progressDurationMs={1200}
+            paused={true}
           >
             {#snippet thumbnail()}
               <span class="pv-thumb-sample"></span>
@@ -454,7 +459,8 @@
         <Island
           variant="region"
           text="범위 캡처"
-          detail="창 › 표 › 2행"
+          path={['창', '표', '2행']}
+          level={2}
           value="718×40"
           showHints={true}
           hints={[

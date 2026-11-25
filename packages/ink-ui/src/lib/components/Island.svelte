@@ -1,9 +1,11 @@
 <script>
+  import { keycaps } from '@screen-ink/client';
   import Icon from '../icons/Icon.svelte';
+  import { formatCapturePath } from '../models/islandQueue.js';
   import Keycap from './Keycap.svelte';
 
   /**
-   * 화면 위 검은 알약 섬(S17 / F18).
+   * 화면 위 검은 알약 섬(S17 / F09 / F10 / F18).
    * @type {{
    *   variant?: 'region' | 'window' | 'record' | 'draw' | 'zoom' | 'board' | 'result' | 'delay' | 'pin' | 'problem' | 'off' | 'security' | 'info',
    *   text: string,
@@ -11,6 +13,10 @@
    *   detail?: string,
    *   value?: string,
    *   valueMuted?: boolean,
+   *   path?: string[],
+   *   level?: number,
+   *   tags?: string[],
+   *   thumbUrl?: string,
    *   keys?: string[],
    *   combo?: string,
    *   platform?: 'windows' | 'macos',
@@ -38,6 +44,10 @@
     detail = '',
     value = '',
     valueMuted = false,
+    path = undefined,
+    level = -1,
+    tags = undefined,
+    thumbUrl = '',
     keys = undefined,
     combo = '',
     platform = 'windows',
@@ -58,9 +68,18 @@
     class: className = '',
   } = $props();
 
+  let thumbFailed = $state(false);
+  $effect(() => {
+    void thumbUrl;
+    thumbFailed = false;
+  });
+
   let mutedSurface = $derived(variant === 'off' || variant === 'security');
   let hasSecondLine = $derived(showHints && Array.isArray(hints) && hints.length > 0);
-  let hasThumb = $derived(Boolean(thumbnail));
+  let hasThumb = $derived(Boolean(thumbnail || (thumbUrl && !thumbFailed)));
+  let pathItems = $derived(formatCapturePath(path, level));
+  let isResultCard = $derived(variant === 'result' && Boolean(detail));
+  let resultMeta = $derived([value, detail].filter(Boolean).join(' · '));
   let iconName = $derived.by(() => {
     if (variant === 'region') return 'region';
     if (variant === 'window') return 'window';
@@ -72,6 +91,13 @@
     if (variant === 'result') return 'check';
     return '';
   });
+
+  /** @param {string | undefined} raw */
+  function formatButtonKey(raw) {
+    if (!raw) return '';
+    const parts = keycaps(raw, platform);
+    return parts.join(platform === 'macos' ? '' : ' ');
+  }
 </script>
 
 <div
@@ -82,69 +108,111 @@
   data-muted={mutedSurface ? 'true' : undefined}
   data-twoline={hasSecondLine ? 'true' : undefined}
   data-thumb={hasThumb ? 'true' : undefined}
+  data-result-card={isResultCard ? 'true' : undefined}
   {onmouseenter}
   {onmouseleave}
 >
   <div class="ink-island-row">
     {#if thumbnail}
       <div class="ink-island-thumb">{@render thumbnail()}</div>
+    {:else if thumbUrl && !thumbFailed}
+      <div class="ink-island-thumb">
+        <img
+          class="ink-island-thumb-img"
+          src={thumbUrl}
+          alt=""
+          draggable="false"
+          onerror={() => (thumbFailed = true)}
+        />
+      </div>
     {/if}
 
-    {#if variant === 'delay' && countdown !== null}
-      <span class="ink-island-countdown ink-mono">{countdown}</span>
-    {:else if variant === 'record'}
-      <span class="ink-island-rec-dot" aria-hidden="true"></span>
-    {:else if variant === 'draw'}
-      <span
-        class="ink-island-pen-dot"
-        style:background={`var(--ink-pen-${penColor})`}
-        aria-hidden="true"
-      ></span>
-    {:else if variant === 'off'}
-      <span class="ink-island-off-dot" aria-hidden="true"></span>
-    {:else if iconName}
-      <span
-        class="ink-island-icon"
-        data-tone={variant === 'result' ? 'ok' : variant === 'pin' || variant === 'problem' ? 'accent' : variant === 'security' ? 'sub' : 'light'}
-      >
-        <Icon name={iconName} size={16} inverted={true} />
-      </span>
-    {/if}
-
-    <span class="ink-island-main">
-      {#if lead}
-        <strong>{lead}</strong>{text}
-      {:else if variant === 'region' || variant === 'window' || variant === 'delay' || variant === 'zoom' || variant === 'board'}
-        <strong>{text}</strong>
-      {:else}
-        {text}
+    {#if isResultCard}
+      <div class="ink-island-result-body">
+        <span class="ink-island-result-title">
+          <span class="ink-island-icon" data-tone="ok">
+            <Icon name="check" size={14} inverted={true} />
+          </span>
+          <strong>{text}</strong>
+        </span>
+        {#if resultMeta}
+          <span class="ink-island-result-meta ink-mono">{resultMeta}</span>
+        {/if}
+      </div>
+    {:else}
+      {#if variant === 'delay' && countdown !== null}
+        <span class="ink-island-countdown ink-mono">{countdown}</span>
+      {:else if variant === 'record'}
+        <span class="ink-island-rec-dot" aria-hidden="true"></span>
+      {:else if variant === 'draw'}
+        <span
+          class="ink-island-pen-dot"
+          style:background={`var(--ink-pen-${penColor})`}
+          aria-hidden="true"
+        ></span>
+      {:else if variant === 'off'}
+        <span class="ink-island-off-dot" aria-hidden="true"></span>
+      {:else if iconName}
+        <span
+          class="ink-island-icon"
+          data-tone={variant === 'result' ? 'ok' : variant === 'pin' || variant === 'problem' ? 'accent' : variant === 'security' ? 'sub' : 'light'}
+        >
+          <Icon name={iconName} size={16} inverted={true} />
+        </span>
       {/if}
-    </span>
 
-    {#if penWidth}
-      <span class="ink-island-val ink-mono" data-muted="true">{penWidth}</span>
-    {/if}
-
-    {#if detail}
-      <span class="ink-island-detail">{detail}</span>
-    {/if}
-
-    {#if value}
-      <span class="ink-island-val ink-mono" data-muted={valueMuted ? 'true' : undefined}>{value}</span>
-    {/if}
-
-    {#if variant === 'record' && micOff}
-      <span class="ink-island-icon" data-tone="sub">
-        <Icon name="mic-off" size={16} label="마이크 꺼짐" />
+      <span class="ink-island-main">
+        {#if lead}
+          <strong>{lead}</strong>{text}
+        {:else if variant === 'region' || variant === 'window' || variant === 'delay' || variant === 'zoom' || variant === 'board'}
+          <strong>{text}</strong>
+        {:else}
+          {text}
+        {/if}
       </span>
-    {/if}
 
-    {#if combo || (keys && keys.length)}
-      <Keycap {combo} {keys} {platform} variant="island" />
-    {/if}
+      {#if pathItems.length > 0}
+        <span class="ink-island-path">
+          {#each pathItems as seg, i (i)}
+            {#if i > 0}
+              <span class="ink-island-sep" aria-hidden="true">›</span>
+            {/if}
+            <span class="ink-island-seg" data-active={seg.active ? 'true' : undefined}>{seg.label}</span>
+          {/each}
+        </span>
+      {/if}
 
-    {#if keyHint}
-      <span class="ink-island-detail">{keyHint}</span>
+      {#if penWidth}
+        <span class="ink-island-val ink-mono" data-muted="true">{penWidth}</span>
+      {/if}
+
+      {#if detail}
+        <span class="ink-island-detail">{detail}</span>
+      {/if}
+
+      {#if value}
+        <span class="ink-island-val ink-mono" data-muted={valueMuted ? 'true' : undefined}>{value}</span>
+      {/if}
+
+      {#if Array.isArray(tags) && tags.length > 0}
+        {#each tags as tag (tag)}
+          <span class="ink-island-tag">{tag}</span>
+        {/each}
+      {/if}
+
+      {#if variant === 'record' && micOff}
+        <span class="ink-island-icon" data-tone="sub">
+          <Icon name="mic-off" size={16} label="마이크 꺼짐" />
+        </span>
+      {/if}
+
+      {#if combo || (keys && keys.length)}
+        <Keycap {combo} {keys} {platform} variant="island" />
+      {/if}
+
+      {#if keyHint}
+        <span class="ink-island-detail">{keyHint}</span>
+      {/if}
     {/if}
 
     {#if button}
@@ -158,7 +226,7 @@
         {/if}
         <span>{button.label}</span>
         {#if button.key}
-          <span class="ink-island-btn-key ink-mono">{button.key}</span>
+          <kbd class="ink-island-btn-key ink-mono">{formatButtonKey(button.key)}</kbd>
         {/if}
       </button>
     {/if}
@@ -171,7 +239,7 @@
       >
         <span>{secondaryButton.label}</span>
         {#if secondaryButton.key}
-          <span class="ink-island-btn-key ink-mono">{secondaryButton.key}</span>
+          <kbd class="ink-island-btn-key ink-mono">{formatButtonKey(secondaryButton.key)}</kbd>
         {/if}
       </button>
     {/if}
@@ -229,6 +297,15 @@
     padding: 5px 6px 5px 5px;
   }
 
+  .ink-island[data-result-card='true'] {
+    border-radius: 22px;
+    padding: 8px 10px 11px 14px;
+  }
+
+  .ink-island[data-result-card='true'][data-thumb='true'] {
+    padding: 8px 8px 11px 8px;
+  }
+
   .ink-island[data-muted='true'] {
     background: var(--ink-island-muted);
     color: var(--ink-island-text-2);
@@ -249,6 +326,10 @@
     min-height: 30px;
   }
 
+  .ink-island[data-result-card='true'] .ink-island-row {
+    min-height: 36px;
+  }
+
   .ink-island-thumb {
     width: 44px;
     height: 28px;
@@ -258,6 +339,73 @@
     flex: none;
     display: grid;
     place-items: center;
+  }
+
+  .ink-island[data-result-card='true'] .ink-island-thumb {
+    width: 74px;
+    height: 40px;
+    border-radius: 16px 7px 7px 16px;
+  }
+
+  .ink-island-thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .ink-island-result-body {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .ink-island-result-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--ink-island-text);
+  }
+
+  .ink-island-result-title strong {
+    font-weight: 600;
+  }
+
+  .ink-island-result-meta {
+    font-size: 11px;
+    color: var(--ink-island-sub);
+  }
+
+  .ink-island-path {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--ink-island-sub);
+  }
+
+  .ink-island-sep {
+    color: var(--ink-island-sub);
+  }
+
+  .ink-island-seg[data-active='true'] {
+    color: var(--ink-island-text);
+    font-weight: 500;
+  }
+
+  .ink-island-tag {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--ink-island-key-bg);
+    color: var(--ink-island-text-2);
+    font-size: 11px;
+    font-weight: 500;
+    flex: none;
   }
 
   .ink-island-icon {
