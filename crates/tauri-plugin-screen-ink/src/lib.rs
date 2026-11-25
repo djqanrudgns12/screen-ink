@@ -1,0 +1,668 @@
+//! tauri-plugin-screen-ink — 앱 핵심(InkService)을 Tauri에 붙인다(03 §2·§6).
+//!
+//! - 명령 `plugin:screen-ink|…` = `InkClient` 메서드(packages/ink-client/src/tauri.js와 1:1)
+//! - 이벤트 `screen-ink://state` · `screen-ink://island`
+//! - 창: `ink-popover`(트레이 팝오버 S01) · `ink-settings`(S02~S05) · `ink-island`(섬 S17)
+//! - 전역 단축키 = tauri-plugin-global-shortcut 어댑터, 트레이 아이콘 = 코드로 그림(tray_art)
+//!
+//! 스레드 규칙: 서비스는 메인 스레드에서만 만진다(동기 명령·트레이·단축키 처리). 창을 새로 만드는
+//! 명령(`run`)만 비동기로 두고(Windows WebView2 교착 회피) 서비스 일은 메인 스레드로 넘긴다.
+
+mod tray_art;
+
+use ink_app::{HotkeyError, HotkeyOutcome, HotkeyRegistry, ImportPreview, InkService, InkState, IslandEvent, IslandKind, Notifier, Ports, PreviewResult, SetShortcutResult, SystemProbe, UpdateResult};
+#[cfg(not(windows))]
+use ink_domain::shortcuts::LiveBinding;
+use ink_domain::shortcuts::{catalog, Platform};
+use serde_json::Value;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Mutex, MutexGuard};
+use std::time::{Duration, Instant};
+use tauri::image::Image;
+use tauri::plugin::{Builder as PluginBuilder, TauriPlugin};
+use tauri::tray::{MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Rect, RunEvent, Runtime, State, WebviewUrl, WebviewWindowBuilder, WindowEvent};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+use tray_art::TrayMode;
+
+pub const POPOVER: &str = "ink-popover";
+pub const SETTINGS: &str = "ink-settings";
+pub const ISLAND: &str = "ink-island";
+const TRAY_ID: &str = "screen-ink";
+const EVT_STATE: &str = "screen-ink://state";
+const EVT_ISLAND: &str = "screen-ink://island";
+/// 섬 창을 UI가 닫아 주지 않을 때의 안전 시간
+const ISLAND_FALLBACK: Duration = Duration::from_secs(8);
+
+/// 관리 상태: 서비스 하나.
+pub struct Ink(Mutex<InkService>);
+
+impl Ink {
+    fn lock(&self) -> MutexGuard<'_, InkService> {
+        self.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+}
+
+/// 팝오버가 포커스를 잃어 막 닫혔는지(트레이 아이콘 클릭이 곧바로 다시 여는 것 막기).
+#[derive(Default)]
+struct PopoverClock(Mutex<Option<Instant>>);
+
+/// 섬 창 세대 — 새 섬이 오면 이전 안전 타이머는 무시.
+#[derive(Default)]
+struct IslandGen(AtomicU64);
+
+// ───────────────────────── 어댑터 ─────────────────────────
+
+/// 단축키 ID → 칸. 전역 단축키 플러그인 처리기가 읽는다(관리 상태라 플러그인 순서와 무관).
+#[derive(Default)]
+struct HotkeySlots(Mutex<HashMap<u32, String>>);
+
+struct TauriHotkeys<R: Runtime> {
+    app: AppHandle<R>,
+}
+
+impl<R: Runtime> HotkeyRegistry for TauriHotkeys<R> {
+    fn register(&mut self, slot: &str, accelerator: &str) -> Result<(), HotkeyError> {
+        let sc: Shortcut = accelerator.parse().map_err(|_| HotkeyError::Unsupported)?;
+        self.app.global_shortcut().register(sc).map_err(|e| {
+            log::info!("hotkey refused: {accelerator} ({e})");
+            HotkeyError::Taken
+        })?;
+        self.app.state::<HotkeySlots>().0.lock().unwrap_or_else(|e| e.into_inner()).insert(sc.id(), slot.to_string());
+        Ok(())
+    }
+
+    fn unregister(&mut self, accelerator: &str) {
+        if let Ok(sc) = accelerator.parse::<Shortcut>() {
+            let _ = self.app.global_shortcut().unregister(sc);
+            self.app.state::<HotkeySlots>().0.lock().unwrap_or_else(|e| e.into_inner()).remove(&sc.id());
+        }
+    }
+}
+
+struct TauriNotifier<R: Runtime> {
+    app: AppHandle<R>,
+    tray_mode: Mutex<Option<TrayMode>>,
+}
+
+impl<R: Runtime> Notifier for TauriNotifier<R> {
+    fn state(&self, state: &InkState) {
+        let _ = self.app.emit(EVT_STATE, state);
+        let mode = if state.recording.active {
+            TrayMode::Recording
+        } else if state.hotkeys_enabled {
+            TrayMode::Ready
+        } else {
+            TrayMode::Off
+        };
+        let mut last = self.tray_mode.lock().unwrap_or_else(|e| e.into_inner());
+        if *last != Some(mode) {
+            *last = Some(mode);
+            set_tray_icon(&self.app, mode, state);
+        }
+    }
+
+    fn island(&self, event: &IslandEvent) {
+        show_island(&self.app);
+        let _ = self.app.emit(EVT_ISLAND, event);
+    }
+}
+
+/// 맥 등 아직 어댑터가 없는 곳 — 아무 앱도 없다고 본다(맥 조정은 다른 환경에서).
+#[cfg(not(windows))]
+struct NullProbe;
+
+#[cfg(not(windows))]
+impl SystemProbe for NullProbe {
+    fn running_apps(&self) -> Vec<String> {
+        Vec::new()
+    }
+
+    fn live_bindings(&self) -> Option<Vec<LiveBinding>> {
+        Some(Vec::new())
+    }
+}
+
+fn probe() -> Box<dyn SystemProbe> {
+    #[cfg(windows)]
+    {
+        Box::new(ink_platform_windows::WindowsProbe::new())
+    }
+    #[cfg(not(windows))]
+    {
+        Box::new(NullProbe)
+    }
+}
+
+fn light_taskbar() -> bool {
+    #[cfg(windows)]
+    {
+        ink_platform_windows::taskbar_is_light()
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
+// ───────────────────────── 트레이 · 창 ─────────────────────────
+
+fn tray_image(mode: TrayMode) -> Image<'static> {
+    let (rgba, w, h) = tray_art::render(mode, light_taskbar());
+    Image::new_owned(rgba, w, h)
+}
+
+fn tooltip(state: &InkState) -> String {
+    let mut t = String::from("screen-ink");
+    if !state.hotkeys_enabled {
+        t.push_str(" · 단축키 꺼짐");
+    } else if state.conflicts.count > 0 {
+        t.push_str(&format!(" · 키 {}개 겹침", state.conflicts.count));
+    }
+    if state.pinned_count > 0 {
+        t.push_str(&format!(" · 고정한 창 {}", state.pinned_count));
+    }
+    t
+}
+
+fn set_tray_icon<R: Runtime>(app: &AppHandle<R>, mode: TrayMode, state: &InkState) {
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        let _ = tray.set_icon(Some(tray_image(mode)));
+        let _ = tray.set_tooltip(Some(tooltip(state)));
+    }
+}
+
+fn show_island<R: Runtime>(app: &AppHandle<R>) {
+    let Some(w) = app.get_webview_window(ISLAND) else { return };
+    // 커서가 있는 모니터의 위 가운데(02 §7: 단축키 순간 커서 모니터가 대상)
+    let monitor = app.cursor_position().ok().and_then(|p| w.monitor_from_point(p.x, p.y).ok().flatten()).or_else(|| w.primary_monitor().ok().flatten());
+    if let (Some(m), Ok(size)) = (monitor, w.outer_size()) {
+        let wa = m.work_area();
+        let x = wa.position.x + (wa.size.width as i32 - size.width as i32) / 2;
+        let y = wa.position.y + (12.0 * m.scale_factor()) as i32;
+        let _ = w.set_position(PhysicalPosition::new(x, y));
+    }
+    let _ = w.show();
+    let gen = app.state::<IslandGen>().0.fetch_add(1, Ordering::SeqCst) + 1;
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(ISLAND_FALLBACK);
+        if app.state::<IslandGen>().0.load(Ordering::SeqCst) == gen {
+            if let Some(w) = app.get_webview_window(ISLAND) {
+                let _ = w.hide();
+            }
+        }
+    });
+}
+
+fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
+    let popover = WebviewWindowBuilder::new(app, POPOVER, WebviewUrl::App("index.html?view=popover".into()))
+        .title("screen-ink")
+        .inner_size(304.0, 460.0)
+        .resizable(false)
+        .decorations(false)
+        .transparent(true)
+        .shadow(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .visible(false)
+        .build()?;
+    let handle = app.clone();
+    popover.on_window_event(move |e| {
+        if let WindowEvent::Focused(false) = e {
+            if let Some(w) = handle.get_webview_window(POPOVER) {
+                let _ = w.hide();
+            }
+            *handle.state::<PopoverClock>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some(Instant::now());
+        }
+    });
+
+    WebviewWindowBuilder::new(app, ISLAND, WebviewUrl::App("index.html?view=island".into()))
+        .title("screen-ink island")
+        .inner_size(560.0, 88.0)
+        .resizable(false)
+        .decorations(false)
+        .transparent(true)
+        .shadow(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .focusable(false)
+        .focused(false)
+        .visible(false)
+        .build()?;
+    Ok(())
+}
+
+/// 트레이 아이콘 위(작업 표시줄이 위면 아래)에, 모니터 작업 영역 안으로 가둬서 연다.
+fn toggle_popover<R: Runtime>(app: &AppHandle<R>, tray_rect: Rect) {
+    let Some(w) = app.get_webview_window(POPOVER) else { return };
+    if w.is_visible().unwrap_or(false) {
+        let _ = w.hide();
+        return;
+    }
+    let just_closed = app.state::<PopoverClock>().0.lock().unwrap_or_else(|e| e.into_inner()).is_some_and(|t| t.elapsed() < Duration::from_millis(250));
+    if just_closed {
+        return;
+    }
+    let scale = w.scale_factor().unwrap_or(1.0);
+    let pos = tray_rect.position.to_physical::<i32>(scale);
+    let size = tray_rect.size.to_physical::<i32>(scale);
+    if let Ok(win) = w.outer_size() {
+        let (ww, wh) = (win.width as i32, win.height as i32);
+        let gap = (6.0 * scale) as i32;
+        let mut x = pos.x + size.width / 2 - ww / 2;
+        let mut y = pos.y - wh - gap;
+        if let Ok(Some(m)) = w.monitor_from_point(pos.x as f64, pos.y as f64) {
+            let wa = m.work_area();
+            let (left, top) = (wa.position.x, wa.position.y);
+            let (right, bottom) = (left + wa.size.width as i32, top + wa.size.height as i32);
+            if y < top {
+                y = pos.y + size.height + gap; // 작업 표시줄이 위
+            }
+            x = x.clamp(left + gap, (right - ww - gap).max(left));
+            y = y.clamp(top, (bottom - wh).max(top));
+        }
+        let _ = w.set_position(PhysicalPosition::new(x, y));
+    }
+    {
+        let ink = app.state::<Ink>();
+        let mut s = ink.lock();
+        s.refresh_environment();
+        let st = s.state();
+        let _ = app.emit(EVT_STATE, &st);
+    }
+    let _ = w.show();
+    let _ = w.set_focus();
+}
+
+/// 설정 창(S02~S05). 이미 있으면 앞으로(05 §11-1 단일 창).
+pub fn open_settings<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(p) = app.get_webview_window(POPOVER) {
+        let _ = p.hide();
+    }
+    if let Some(w) = app.get_webview_window(SETTINGS) {
+        let _ = w.unminimize();
+        let _ = w.show();
+        let _ = w.set_focus();
+        return;
+    }
+    let built = WebviewWindowBuilder::new(app, SETTINGS, WebviewUrl::App("index.html?view=settings".into()))
+        .title("screen-ink 설정")
+        .inner_size(900.0, 600.0)
+        .resizable(false)
+        .maximizable(false)
+        .decorations(false)
+        .center()
+        .build();
+    match built {
+        Ok(_) => {
+            let handle = app.clone();
+            let _ = app.run_on_main_thread(move || handle.state::<Ink>().lock().begin_settings_session());
+        }
+        Err(e) => log::error!("settings window: {e}"),
+    }
+}
+
+fn output_folder<R: Runtime>(app: &AppHandle<R>) -> Option<std::path::PathBuf> {
+    let configured = app.state::<Ink>().lock().settings().str("output.folder").to_string();
+    if !configured.is_empty() {
+        return Some(configured.into());
+    }
+    app.path().picture_dir().ok().map(|p| p.join("screen-ink"))
+}
+
+fn open_folder(path: &std::path::Path) {
+    let _ = std::fs::create_dir_all(path);
+    #[cfg(windows)]
+    let cmd = "explorer";
+    #[cfg(target_os = "macos")]
+    let cmd = "open";
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    let cmd = "xdg-open";
+    if let Err(e) = std::process::Command::new(cmd).arg(path).spawn() {
+        log::warn!("open folder failed: {e}");
+    }
+}
+
+/// 아직 만들지 않은 모드(단계 2 이후) — 눌린 것은 알려 준다.
+fn not_ready<R: Runtime>(app: &AppHandle<R>, slot_or_action: &str) {
+    let label = catalog().slot(slot_or_action).map(|s| s.label.clone()).unwrap_or_else(|| slot_or_action.to_string());
+    app.state::<Ink>().lock().island(IslandEvent::new(IslandKind::Info, "준비 중이에요").detail(label));
+}
+
+fn on_hotkey<R: Runtime>(app: &AppHandle<R>, slot: &str) {
+    let outcome = app.state::<Ink>().lock().on_hotkey(slot);
+    if let HotkeyOutcome::Start(slot) = outcome {
+        not_ready(app, &slot);
+    }
+}
+
+#[cfg(not(debug_assertions))]
+fn sync_autostart<R: Runtime>(app: &AppHandle<R>, on: bool) {
+    use tauri_plugin_autostart::ManagerExt;
+    let m = app.autolaunch();
+    let now = m.is_enabled().unwrap_or(false);
+    let r = match (on, now) {
+        (true, false) => m.enable(),
+        (false, true) => m.disable(),
+        _ => Ok(()),
+    };
+    if let Err(e) = r {
+        log::warn!("autostart sync failed: {e}");
+    }
+}
+
+/// 개발 빌드는 이 PC 로그인 항목을 건드리지 않는다.
+#[cfg(debug_assertions)]
+fn sync_autostart<R: Runtime>(_app: &AppHandle<R>, on: bool) {
+    log::debug!("autostart sync skipped in debug build (want {on})");
+}
+
+// ───────────────────────── 명령 ─────────────────────────
+
+#[tauri::command]
+fn get_state(ink: State<'_, Ink>) -> InkState {
+    ink.lock().state()
+}
+
+#[tauri::command]
+fn update_setting<R: Runtime>(app: AppHandle<R>, ink: State<'_, Ink>, path: String, value: Value) -> UpdateResult {
+    let r = ink.lock().update_setting(&path, &value);
+    if r.ok && path == "general.autostart" {
+        sync_autostart(&app, value.as_bool().unwrap_or(false));
+    }
+    r
+}
+
+#[tauri::command]
+fn preview_shortcut(ink: State<'_, Ink>, id: String, combo: String) -> PreviewResult {
+    ink.lock().preview_shortcut(&id, &combo)
+}
+
+#[tauri::command]
+fn set_shortcut(ink: State<'_, Ink>, id: String, combo: String) -> SetShortcutResult {
+    ink.lock().set_shortcut(&id, &combo)
+}
+
+#[tauri::command]
+fn reset_shortcut_group(ink: State<'_, Ink>, group: String) -> InkState {
+    ink.lock().reset_shortcut_group(&group)
+}
+
+#[tauri::command]
+fn undo(ink: State<'_, Ink>) -> UpdateResult {
+    ink.lock().undo()
+}
+
+#[tauri::command]
+fn set_hotkeys_enabled(ink: State<'_, Ink>, enabled: bool) -> InkState {
+    ink.lock().set_hotkeys_enabled(enabled)
+}
+
+#[tauri::command]
+fn reset_all(ink: State<'_, Ink>) -> InkState {
+    ink.lock().reset_all()
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ImportPick {
+    /// 사용자가 파일 고르기를 취소함
+    cancelled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    path: Option<String>,
+    #[serde(flatten)]
+    preview: Option<ImportPreview>,
+}
+
+fn read_json_file(path: &std::path::Path) -> Result<Value, String> {
+    let bytes = std::fs::read(path).map_err(|_| "파일을 읽을 수 없어요".to_string())?;
+    let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes);
+    serde_json::from_slice(bytes).map_err(|_| "이 파일은 screen-ink 설정이 아니에요".to_string())
+}
+
+/// 가져오기 1단계: 파일 고르기 → 무엇이 바뀌는지(시트). 저장은 하지 않는다.
+#[tauri::command]
+async fn preview_import<R: Runtime>(app: AppHandle<R>) -> Result<ImportPick, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let Some(picked) = app.dialog().file().add_filter("screen-ink 설정", &["json"]).blocking_pick_file() else {
+        return Ok(ImportPick { cancelled: true, path: None, preview: None });
+    };
+    let path = picked.into_path().map_err(|e| e.to_string())?;
+    let preview = match read_json_file(&path) {
+        Ok(file) => app.state::<Ink>().lock().preview_import(&file),
+        Err(e) => ImportPreview { ok: false, error: Some(e), changes: vec![], warnings: vec![] },
+    };
+    Ok(ImportPick { cancelled: false, path: Some(path.to_string_lossy().into_owned()), preview: Some(preview) })
+}
+
+/// 가져오기 2단계: 시트에서 [가져오기]를 눌렀을 때.
+#[tauri::command]
+fn apply_import(ink: State<'_, Ink>, path: String) -> UpdateResult {
+    match read_json_file(std::path::Path::new(&path)) {
+        Ok(file) => ink.lock().apply_import(&file),
+        Err(e) => UpdateResult { ok: false, error: Some(e), state: ink.lock().state() },
+    }
+}
+
+/// UTC 날짜(내보내기 파일 이름용) — 1970-01-01부터의 날 수 → 연·월·일(Hinnant).
+fn today() -> String {
+    let days = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() / 86_400).unwrap_or(0) as i64;
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + if m <= 2 { 1 } else { 0 };
+    format!("{y:04}-{m:02}-{d:02}")
+}
+
+async fn export_settings<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
+    use tauri_plugin_dialog::DialogExt;
+    let name = format!("screen-ink-settings-{}.json", today());
+    let Some(picked) = app.dialog().file().add_filter("screen-ink 설정", &["json"]).set_file_name(&name).blocking_save_file() else {
+        return Ok(());
+    };
+    let path = picked.into_path().map_err(|e| e.to_string())?;
+    let body = serde_json::to_string_pretty(&app.state::<Ink>().lock().export_file()).map_err(|e| e.to_string())?;
+    let ok = std::fs::write(&path, body).is_ok();
+    let h = app.clone();
+    app.run_on_main_thread(move || {
+        let ev = if ok { IslandEvent::new(IslandKind::Result, "설정을 내보냈어요") } else { IslandEvent::new(IslandKind::Problem, "내보내지 못했어요") };
+        h.state::<Ink>().lock().island(ev);
+    })
+    .map_err(|e| e.to_string())
+}
+
+async fn pick_output_folder<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
+    use tauri_plugin_dialog::DialogExt;
+    let Some(picked) = app.dialog().file().blocking_pick_folder() else { return Ok(()) };
+    let path = picked.into_path().map_err(|e| e.to_string())?.to_string_lossy().into_owned();
+    let h = app.clone();
+    app.run_on_main_thread(move || {
+        h.state::<Ink>().lock().update_setting("output.folder", &Value::String(path));
+    })
+    .map_err(|e| e.to_string())
+}
+
+/// 화면 동작(`InkAction`). 창을 만들 수 있어 비동기, 서비스 일은 메인 스레드로.
+#[tauri::command]
+async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String> {
+    let hide = |label: &str| {
+        if let Some(w) = app.get_webview_window(label) {
+            let _ = w.hide();
+        }
+    };
+    match action.as_str() {
+        "settings.open" | "snipaste.howto" | "firstRun.open" => open_settings(&app),
+        "settings.close" => {
+            if let Some(w) = app.get_webview_window(SETTINGS) {
+                let _ = w.close();
+            }
+        }
+        "popover.close" => hide(POPOVER),
+        "island.hidden" => hide(ISLAND),
+        "folder.open" => {
+            hide(POPOVER);
+            if let Some(p) = output_folder(&app) {
+                open_folder(&p);
+            }
+        }
+        "folder.pick" => pick_output_folder(&app).await?,
+        "settings.export" => export_settings(&app).await?,
+        "logs.open" => {
+            if let Ok(dir) = app.path().app_log_dir() {
+                open_folder(&dir);
+            }
+        }
+        "capture.history.clear" => {
+            // 범위 기록은 단계 3(F1)에서 생긴다 — 지금은 지울 것이 없다
+            let h = app.clone();
+            app.run_on_main_thread(move || h.state::<Ink>().lock().island(IslandEvent::new(IslandKind::Info, "지울 기록이 없어요")))
+                .map_err(|e| e.to_string())?;
+        }
+        "app.quit" => {
+            let _ = app.global_shortcut().unregister_all();
+            app.exit(0);
+        }
+        "undo" => {
+            let h = app.clone();
+            app.run_on_main_thread(move || {
+                h.state::<Ink>().lock().undo();
+            })
+            .map_err(|e| e.to_string())?;
+        }
+        other => {
+            hide(POPOVER);
+            let h = app.clone();
+            let other = other.to_string();
+            app.run_on_main_thread(move || not_ready(&h, &other)).map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+// ───────────────────────── 조립 ─────────────────────────
+
+fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error>> {
+    let started = Instant::now();
+    app.manage(PopoverClock::default());
+    app.manage(IslandGen::default());
+    app.manage(HotkeySlots::default());
+
+    let exe_dir = std::env::current_exe()?.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+    let (dir, portable) = ink_store::resolve_dir(&exe_dir, &app.path().config_dir()?.join("screen-ink"));
+    let ports = Ports {
+        hotkeys: Box::new(TauriHotkeys { app: app.clone() }),
+        probe: probe(),
+        store: Box::new(ink_store::JsonFileStore::new(dir, portable)),
+        notifier: Box::new(TauriNotifier { app: app.clone(), tray_mode: Mutex::new(None) }),
+    };
+    let mut service = InkService::new(ports, Platform::current(), app.package_info().version.to_string());
+    let failed = service.start();
+    let first_run = service.is_first_run();
+    let autostart = service.settings().bool("general.autostart");
+    let initial = service.state();
+    log::info!("screen-ink ready: {} hotkey(s) not registered", failed);
+    app.manage(Ink(Mutex::new(service)));
+
+    // 창·트레이는 플러그인 초기화가 끝난 뒤 이벤트 루프에서 만든다. 플러그인 setup은 플러그인 목록
+    // 잠금을 쥔 채 돌고, 창을 만들면 창 생성 훅이 같은 잠금을 잡아 교착된다. 다른 스레드에서
+    // run_on_main_thread를 부르면 즉시 실행이 아니라 이벤트 루프 대기열로 들어간다.
+    let handle = app.clone();
+    std::thread::spawn(move || {
+        let h = handle.clone();
+        if let Err(e) = handle.run_on_main_thread(move || {
+            if let Err(e) = finish_setup(&h, initial, first_run, autostart, started) {
+                log::error!("screen-ink setup failed: {e}");
+            }
+        }) {
+            log::error!("screen-ink setup could not be scheduled: {e}");
+        }
+    });
+    Ok(())
+}
+
+fn finish_setup<R: Runtime>(app: &AppHandle<R>, initial: InkState, first_run: bool, autostart: bool, started: Instant) -> tauri::Result<()> {
+    build_static_windows(app)?;
+    let mode = if initial.hotkeys_enabled { TrayMode::Ready } else { TrayMode::Off };
+    TrayIconBuilder::with_id(TRAY_ID)
+        .icon(tray_image(mode))
+        .tooltip(tooltip(&initial))
+        .show_menu_on_left_click(false)
+        .on_tray_icon_event(|tray, event| {
+            // 왼쪽·오른쪽 클릭 모두 같은 팝오버(S01, Windows 관례)
+            if let TrayIconEvent::Click { button_state: MouseButtonState::Up, rect, .. } = event {
+                toggle_popover(tray.app_handle(), rect);
+            }
+        })
+        .build(app)?;
+
+    sync_autostart(app, autostart);
+    // 계측 줄(05 §9): 창 제목·파일 이름 없이 시간만
+    log::info!("launch time {} ms", started.elapsed().as_millis());
+    if first_run {
+        app.state::<Ink>().lock().update_setting("onboarding.done", &Value::Bool(true));
+        open_settings(app);
+    }
+    Ok(())
+}
+
+/// 전역 단축키 플러그인(처리기 = 눌린 칸을 서비스로). screen-ink 플러그인보다 **먼저** 붙여야 한다.
+pub fn global_shortcut<R: Runtime>() -> TauriPlugin<R> {
+    tauri_plugin_global_shortcut::Builder::new()
+        .with_handler(|app, shortcut, event| {
+            if event.state() != ShortcutState::Pressed {
+                return;
+            }
+            let Some(slots) = app.try_state::<HotkeySlots>() else { return };
+            let slot = slots.0.lock().unwrap_or_else(|e| e.into_inner()).get(&shortcut.id()).cloned();
+            if let Some(slot) = slot {
+                let h = app.clone();
+                let _ = app.run_on_main_thread(move || on_hotkey(&h, &slot));
+            }
+        })
+        .build()
+}
+
+/// 앱에 붙이는 문 — 필요한 플러그인을 순서대로 붙인다(플러그인 setup 안에서 `app.plugin()`을 부르면
+/// 플러그인 목록 잠금을 다시 잡아 교착되므로 Builder 단계에서). Tidy도 같은 한 줄로 붙인다.
+pub fn install<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
+    builder
+        .plugin(global_shortcut())
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(init())
+}
+
+/// screen-ink 플러그인 자체. 보통은 [`install`]을 쓴다.
+pub fn init<R: Runtime>() -> TauriPlugin<R> {
+    PluginBuilder::new("screen-ink")
+        .invoke_handler(tauri::generate_handler![
+            get_state,
+            update_setting,
+            preview_shortcut,
+            set_shortcut,
+            reset_shortcut_group,
+            undo,
+            set_hotkeys_enabled,
+            run,
+            preview_import,
+            apply_import,
+            reset_all
+        ])
+        .setup(|app, _api| setup(app))
+        .on_event(|_app, event| {
+            // 트레이 상주 앱: 마지막 창을 닫아도 끝나지 않는다(끝내기는 팝오버 [끝내기] = exit(0))
+            if let RunEvent::ExitRequested { api, code, .. } = event {
+                if code.is_none() {
+                    api.prevent_exit();
+                }
+            }
+        })
+        .build()
+}

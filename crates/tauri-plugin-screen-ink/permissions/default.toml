@@ -1,0 +1,17 @@
+"$schema" = "schemas/schema.json"
+
+[default]
+description = "screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있게 한다."
+permissions = [
+  "allow-get-state",
+  "allow-update-setting",
+  "allow-preview-shortcut",
+  "allow-set-shortcut",
+  "allow-reset-shortcut-group",
+  "allow-undo",
+  "allow-set-hotkeys-enabled",
+  "allow-run",
+  "allow-preview-import",
+  "allow-apply-import",
+  "allow-reset-all",
+]

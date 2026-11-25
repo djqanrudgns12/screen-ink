@@ -1,0 +1,27 @@
+[package]
+name = "tauri-plugin-screen-ink"
+description = "screen-ink Tauri 2 플러그인: 명령·이벤트·트레이·팝오버/설정/섬 창·전역 단축키 어댑터"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+links = "tauri-plugin-screen-ink"
+
+[dependencies]
+ink-app.workspace = true
+ink-domain.workspace = true
+ink-store.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+log.workspace = true
+tauri = { version = "2.10", features = ["tray-icon"] }
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-dialog = "2"
+
+[target.'cfg(windows)'.dependencies]
+ink-platform-windows.workspace = true
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }

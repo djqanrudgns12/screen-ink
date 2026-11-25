@@ -1,0 +1,26 @@
+{
+  "name": "@screen-ink/app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "tauri": "tauri",
+    "check": "svelte-check --threshold warning"
+  },
+  "dependencies": {
+    "@screen-ink/client": "*",
+    "@screen-ink/ui": "*",
+    "@tauri-apps/api": "^2.10.1"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@tailwindcss/vite": "^4.2.2",
+    "@tauri-apps/cli": "^2.10.1",
+    "svelte": "^5.53.12",
+    "svelte-check": "^4.7.6",
+    "tailwindcss": "^4.2.2",
+    "vite": "^8.0.1"
+  }
+}

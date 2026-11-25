@@ -7,3 +7,6 @@ src-tauri/gen/
 .DS_Store
 output/
 .playwright-mcp/
+target/
+apps/screen-ink/src-tauri/gen/
+packages/*/dist/

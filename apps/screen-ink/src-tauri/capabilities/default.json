@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "screen-ink 창 세 개: 트레이 팝오버 · 설정 · 섬",
+  "windows": ["ink-popover", "ink-settings", "ink-island"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-hide",
+    "core:window:allow-close",
+    "core:window:allow-set-size",
+    "core:window:allow-start-dragging",
+    "core:window:allow-minimize",
+    "screen-ink:default"
+  ]
+}

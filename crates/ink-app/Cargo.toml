@@ -1,0 +1,15 @@
+[package]
+name = "ink-app"
+description = "screen-ink 유스케이스: 설정 바로 반영·단축키 등록 트랜잭션·되돌리기 (포트만 안다)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+ink-domain.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+log.workspace = true

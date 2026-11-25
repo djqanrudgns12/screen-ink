@@ -1,0 +1,13 @@
+[package]
+name = "ink-store"
+description = "screen-ink 설정 파일: 원자적 JSON 구역·백업 교대·손상 복구·포터블 위치 (05 공통 규칙)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+ink-app.workspace = true
+serde_json.workspace = true
+log.workspace = true

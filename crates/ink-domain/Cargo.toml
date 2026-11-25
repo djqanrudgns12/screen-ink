@@ -1,0 +1,13 @@
+[package]
+name = "ink-domain"
+description = "screen-ink 순수 규칙: 단축키 판정·설정 스키마·이름 규칙·좌표"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

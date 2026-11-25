@@ -1,0 +1,17 @@
+{
+  "name": "@screen-ink/client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./fake": "./src/fake.js",
+    "./tauri": "./src/tauri.js"
+  },
+  "scripts": {
+    "test": "node --test src/*.test.js"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.10.1"
+  }
+}

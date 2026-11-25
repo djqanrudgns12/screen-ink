@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-reset-shortcut-group"
+description = "Enables the reset_shortcut_group command without any pre-configured scope."
+commands.allow = ["reset_shortcut_group"]
+
+[[permission]]
+identifier = "deny-reset-shortcut-group"
+description = "Denies the reset_shortcut_group command without any pre-configured scope."
+commands.deny = ["reset_shortcut_group"]

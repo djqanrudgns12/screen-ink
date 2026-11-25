@@ -1,0 +1,34 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/ink-domain",
+  "crates/ink-app",
+  "crates/ink-store",
+  "crates/ink-platform-fake",
+  "crates/ink-platform-windows",
+  "crates/tauri-plugin-screen-ink",
+  "apps/screen-ink/src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+license = "UNLICENSED"
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2"
+log = "0.4"
+ink-domain = { path = "crates/ink-domain" }
+ink-app = { path = "crates/ink-app" }
+ink-store = { path = "crates/ink-store" }
+ink-platform-fake = { path = "crates/ink-platform-fake" }
+ink-platform-windows = { path = "crates/ink-platform-windows" }
+tauri-plugin-screen-ink = { path = "crates/tauri-plugin-screen-ink" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

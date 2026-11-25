@@ -1,0 +1,2447 @@
+{
+  "schema": "screen-ink.shortcuts.catalog",
+  "version": 1,
+  "generatedFrom": "docs/shortcuts/shortcut-picker.html",
+  "rules": {
+    "modOrder": {
+      "win": [
+        "Ctrl",
+        "Alt",
+        "Shift",
+        "Win"
+      ],
+      "mac": [
+        "Ctrl",
+        "Option",
+        "Shift",
+        "Cmd"
+      ]
+    },
+    "imeKeys": [
+      "한/영",
+      "한자",
+      "Caps Lock"
+    ],
+    "specialAlone": [
+      "PrtScn",
+      "Pause",
+      "ScrLk",
+      "Insert"
+    ],
+    "modeCheckSources": [
+      "win",
+      "ime",
+      "mac"
+    ],
+    "defaultKeep": {
+      "snipaste": false,
+      "icanzoomit": false,
+      "zoomit": false,
+      "powertoys": true,
+      "powertoysAot": false
+    }
+  },
+  "slots": [
+    {
+      "id": "region",
+      "scope": "global",
+      "group": "capture",
+      "label": "범위 캡처",
+      "required": true,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "window",
+      "scope": "global",
+      "group": "capture",
+      "label": "창 캡처",
+      "required": true,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "record",
+      "scope": "global",
+      "group": "capture",
+      "label": "화면 녹화 시작·중지",
+      "required": true,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "draw",
+      "scope": "global",
+      "group": "tools",
+      "label": "판서",
+      "required": true,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "zoom",
+      "scope": "global",
+      "group": "tools",
+      "label": "실시간 확대",
+      "required": true,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "board",
+      "scope": "global",
+      "group": "tools",
+      "label": "칠판",
+      "required": true,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "last",
+      "scope": "global",
+      "group": "capture",
+      "label": "직전 범위 바로 캡처",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "full",
+      "scope": "global",
+      "group": "capture",
+      "label": "모니터 전체 바로 캡처",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "active",
+      "scope": "global",
+      "group": "capture",
+      "label": "활성 창 바로 캡처",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "delay",
+      "scope": "global",
+      "group": "capture",
+      "label": "지연 캡처",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "restore",
+      "scope": "global",
+      "group": "quick",
+      "label": "직전 판서 열기",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "pause",
+      "scope": "global",
+      "group": "quick",
+      "label": "단축키 켜기·끄기",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "topmost",
+      "scope": "global",
+      "group": "tools",
+      "label": "창 항상 위",
+      "required": false,
+      "later": false,
+      "windowsOnly": true
+    },
+    {
+      "id": "pin",
+      "scope": "global",
+      "group": "quick",
+      "label": "화면에 붙이기",
+      "required": false,
+      "later": true,
+      "windowsOnly": false
+    },
+    {
+      "id": "pinToggle",
+      "scope": "global",
+      "group": "quick",
+      "label": "핀 숨기기·보이기",
+      "required": false,
+      "later": true,
+      "windowsOnly": false
+    },
+    {
+      "id": "timer",
+      "scope": "global",
+      "group": "quick",
+      "label": "타이머",
+      "required": false,
+      "later": true,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-detect",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "창 ↔ UI 요소 찾기 전환",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-copy",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "복사하고 끝내기",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-save",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "저장",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-quick",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "빠른 저장(묻지 않고 저장 폴더로)",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-cancel",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "취소",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-last",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "직전 범위로",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-prev",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "지난 범위(앞)",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-next",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "지난 범위(뒤)",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-full",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "모니터 전체 고르기",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-cursor",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "마우스 커서 넣기·빼기",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-color",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "확대경 색 복사",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-pen",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "펜",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-marker",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "형광펜",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-text",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "글자",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-select",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "고르기·옮기기",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-eraser",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "지우개(획 단위)",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-clear",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "모두 지우기",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-red",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "색: 빨강",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-yellow",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "색: 노랑",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-green",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "색: 초록",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-orange",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "색: 주황",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-blue",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "색: 파랑",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-lime",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "색: 연두",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-white",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "흰 칠판으로",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-black",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "검은 칠판으로",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-undo",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "되돌리기",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-redo",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "다시 하기",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-copy",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "판서한 화면 복사",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-save",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "판서한 화면 저장",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-restore",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "직전 판서 불러오기",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-center",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "커서를 화면 가운데로",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-zin",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "확대",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-zout",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "축소",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-wup",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "펜 굵게",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-wdown",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "펜 가늘게",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-help",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "단축키 한 장 보기",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-exit",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "판서 끝내기",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-spot",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "화면 강조(스포트라이트)",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-check",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "체크 도장",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-number",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "번호 도장(1, 2, 3…)",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "z-in",
+      "scope": "zoom",
+      "group": "zoom-mode",
+      "label": "더 확대",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "z-out",
+      "scope": "zoom",
+      "group": "zoom-mode",
+      "label": "덜 확대",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "z-exit",
+      "scope": "zoom",
+      "group": "zoom-mode",
+      "label": "실시간 확대 끝내기",
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    }
+  ],
+  "sources": {
+    "win": {
+      "label": "Windows",
+      "level": "block",
+      "keepKey": null
+    },
+    "ime": {
+      "label": "한글 입력",
+      "level": "block",
+      "keepKey": null
+    },
+    "winapp": {
+      "label": "앱 기능",
+      "level": "warn",
+      "keepKey": null
+    },
+    "hwp": {
+      "label": "한글(HWP)",
+      "level": "warn",
+      "keepKey": null
+    },
+    "ppt": {
+      "label": "슬라이드 쇼",
+      "level": "warn",
+      "keepKey": null
+    },
+    "pt": {
+      "label": "PowerToys",
+      "level": "keep",
+      "keepKey": "powertoys"
+    },
+    "ptaot": {
+      "label": "PowerToys 항상 위",
+      "level": "keep",
+      "keepKey": "powertoysAot"
+    },
+    "snip": {
+      "label": "Snipaste",
+      "level": "keep",
+      "keepKey": "snipaste"
+    },
+    "icz": {
+      "label": "아이캔 줌잇",
+      "level": "keep",
+      "keepKey": "icanzoomit"
+    },
+    "zi": {
+      "label": "ZoomIt",
+      "level": "keep",
+      "keepKey": "zoomit"
+    },
+    "mac": {
+      "label": "macOS",
+      "level": "block",
+      "keepKey": null
+    },
+    "macapp": {
+      "label": "맥 앱 기능",
+      "level": "warn",
+      "keepKey": null
+    }
+  },
+  "refs": [
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Shift+S",
+      "what": "캡처 도구 — 영역 캡처",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "PrtScn",
+      "what": "캡처 도구 열기(Windows 11 기본 · 설정 > 접근성 > 키보드에서 끌 수 있음)",
+      "level": "warn"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+PrtScn",
+      "what": "전체 화면을 사진 폴더에 저장",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Alt+PrtScn",
+      "what": "활성 창을 클립보드로",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Shift+R",
+      "what": "캡처 도구 화면 녹화(최신 Windows 11)",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+G",
+      "what": "Xbox Game Bar",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Alt+R",
+      "what": "Game Bar 녹화 시작·중지",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Alt+G",
+      "what": "Game Bar 방금 전 구간 녹화",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Alt+PrtScn",
+      "what": "Game Bar 스크린샷",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Plus",
+      "what": "돋보기 켜기·확대",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Minus",
+      "what": "돋보기 축소",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Esc",
+      "what": "돋보기 끄기",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+M",
+      "what": "돋보기 보기 바꾸기(돋보기가 켜져 있을 때)",
+      "level": "warn"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+F",
+      "what": "돋보기 전체 화면 보기(켜져 있을 때)",
+      "level": "warn"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+L",
+      "what": "돋보기 렌즈 보기(켜져 있을 때)",
+      "level": "warn"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+D",
+      "what": "돋보기 고정 보기(켜져 있을 때)",
+      "level": "warn"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Win+Enter",
+      "what": "내레이터",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+V",
+      "what": "클립보드 기록",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+.",
+      "what": "이모지",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+H",
+      "what": "음성 입력",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+L",
+      "what": "화면 잠금",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+Delete",
+      "what": "보안 화면",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Shift+Esc",
+      "what": "작업 관리자",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Alt+Tab",
+      "what": "창 전환",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Alt+F4",
+      "what": "창 닫기",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Alt+Esc",
+      "what": "창 순서대로 전환",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Esc",
+      "what": "시작 메뉴",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Alt+Space",
+      "what": "창 메뉴(이 PC에서는 PowerToys Run이 씀)",
+      "level": "warn"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+D",
+      "what": "바탕 화면 보기",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+M",
+      "what": "모두 최소화",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+E",
+      "what": "파일 탐색기",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+R",
+      "what": "실행",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+I",
+      "what": "설정",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+A",
+      "what": "빠른 설정",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+N",
+      "what": "알림",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+S",
+      "what": "검색",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+X",
+      "what": "빠른 링크 메뉴",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Tab",
+      "what": "작업 보기",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+W",
+      "what": "위젯",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Win+D",
+      "what": "새 가상 데스크톱",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Win+Left",
+      "what": "이전 데스크톱",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Win+Right",
+      "what": "다음 데스크톱",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Win+F4",
+      "what": "데스크톱 닫기",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Up",
+      "what": "창 최대화",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Down",
+      "what": "창 복원·최소화",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Left",
+      "what": "왼쪽 반에 맞추기",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Right",
+      "what": "오른쪽 반에 맞추기",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Shift+Win+Left",
+      "what": "창을 다른 모니터로",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Shift+Win+Right",
+      "what": "창을 다른 모니터로",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Z",
+      "what": "스냅 레이아웃",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+P",
+      "what": "디스플레이 모드(복제·확장) — 교실 TV 연결 때 자주 씀",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+K",
+      "what": "무선 디스플레이 연결",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+1~9",
+      "what": "작업 표시줄 앱 열기",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+T",
+      "what": "작업 표시줄 순환",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+B",
+      "what": "알림 영역",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Space",
+      "what": "입력 언어 바꾸기",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Shift+Win+B",
+      "what": "그래픽 드라이버 다시 시작",
+      "level": null
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Shift+F10",
+      "what": "오른쪽 클릭 메뉴",
+      "level": "warn"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+Up",
+      "what": "화면 회전(일부 Intel 그래픽 드라이버)",
+      "level": "warn"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+Down",
+      "what": "화면 회전(일부 Intel 그래픽 드라이버)",
+      "level": "warn"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+Left",
+      "what": "화면 회전(일부 Intel 그래픽 드라이버)",
+      "level": "warn"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+Right",
+      "what": "화면 회전(일부 Intel 그래픽 드라이버)",
+      "level": "warn"
+    },
+    {
+      "src": "ime",
+      "platform": "win",
+      "combo": "한/영",
+      "what": "한/영 전환",
+      "level": null
+    },
+    {
+      "src": "ime",
+      "platform": "win",
+      "combo": "한자",
+      "what": "한자 변환",
+      "level": null
+    },
+    {
+      "src": "ime",
+      "platform": "win",
+      "combo": "Shift+Space",
+      "what": "한/영 전환(입력기 설정에 따라)",
+      "level": "warn"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F1",
+      "what": "도움말(거의 모든 앱)",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F2",
+      "what": "이름 바꾸기(탐색기) · 셀 편집(엑셀)",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F3",
+      "what": "찾기(탐색기·브라우저)",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F4",
+      "what": "주소 표시줄(탐색기) · 참조 바꾸기(엑셀)",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F5",
+      "what": "새로 고침 · PowerPoint 쇼 처음부터",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Shift+F5",
+      "what": "PowerPoint 지금 슬라이드부터 쇼",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F6",
+      "what": "창 영역 옮겨 가기 · 주소 표시줄",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F7",
+      "what": "맞춤법(Office) · 캐럿 탐색(브라우저)",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F8",
+      "what": "엑셀 선택 넓히기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F9",
+      "what": "엑셀 다시 계산",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F10",
+      "what": "메뉴 막대",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F11",
+      "what": "전체 화면(브라우저·탐색기)",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F12",
+      "what": "다른 이름으로 저장(Office) · 개발자 도구(브라우저)",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+1~8",
+      "what": "브라우저 탭 옮기기 · 엑셀 Ctrl+1 셀 서식",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+9",
+      "what": "브라우저 마지막 탭",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Shift+1~8",
+      "what": "탐색기 보기 바꾸기 · 엑셀 표시 형식(숫자·시간·날짜·통화·%)",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Alt+1~9",
+      "what": "Office(워드·엑셀·PowerPoint) 빠른 실행 도구 모음 단추",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Shift+S",
+      "what": "Edge 웹 캡처",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Shift+T",
+      "what": "브라우저 닫은 탭 다시 열기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Shift+N",
+      "what": "시크릿 창 · 탐색기 새 폴더",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Shift+Delete",
+      "what": "인터넷 사용 기록 삭제",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+C",
+      "what": "복사",
+      "level": "block"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+V",
+      "what": "붙여넣기",
+      "level": "block"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+X",
+      "what": "잘라내기",
+      "level": "block"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Z",
+      "what": "되돌리기",
+      "level": "block"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Y",
+      "what": "다시 하기",
+      "level": "block"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+A",
+      "what": "모두 선택",
+      "level": "block"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+S",
+      "what": "저장",
+      "level": "block"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+F",
+      "what": "찾기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+P",
+      "what": "인쇄",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+N",
+      "what": "새 문서·새 창",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+O",
+      "what": "열기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+W",
+      "what": "탭·문서 닫기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+T",
+      "what": "브라우저 새 탭",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+D",
+      "what": "브라우저 즐겨찾기 추가",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+H",
+      "what": "브라우저 기록 · 워드 바꾸기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+R",
+      "what": "새로 고침 · 오른쪽 정렬",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+L",
+      "what": "주소 표시줄 · 왼쪽 정렬",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+E",
+      "what": "가운데 정렬 · 브라우저 검색",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+B",
+      "what": "굵게",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+I",
+      "what": "기울임",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+U",
+      "what": "밑줄",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+K",
+      "what": "링크 넣기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Shift+V",
+      "what": "서식 없이 붙여넣기(브라우저·Office)",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Shift+P",
+      "what": "브라우저 InPrivate·시크릿 창",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+F1",
+      "what": "Office 리본 접기·펴기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Shift+F1",
+      "what": "워드 서식 보기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Alt+F1",
+      "what": "엑셀 차트 바로 만들기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+F2",
+      "what": "Office 인쇄 미리 보기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Shift+F2",
+      "what": "엑셀 메모 편집",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Shift+F3",
+      "what": "워드 대/소문자 바꾸기 · 엑셀 함수 넣기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+F4",
+      "what": "문서·탭 닫기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+F5",
+      "what": "브라우저 강력 새로 고침",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Alt+F8",
+      "what": "Office 매크로",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Alt+F11",
+      "what": "Office VBA 편집기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Shift+F11",
+      "what": "엑셀 새 시트",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Shift+F12",
+      "what": "Office 저장",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Alt+Shift+D",
+      "what": "워드 날짜 넣기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Alt+Shift+T",
+      "what": "워드 시간 넣기",
+      "level": null
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Alt+Shift+P",
+      "what": "워드 쪽 번호 넣기",
+      "level": null
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "F3",
+      "what": "블록 지정",
+      "level": null
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "F5",
+      "what": "표 셀 블록",
+      "level": null
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "F6",
+      "what": "스타일",
+      "level": null
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "F7",
+      "what": "편집 용지",
+      "level": null
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "Alt+L",
+      "what": "글자 모양",
+      "level": null
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "Alt+T",
+      "what": "문단 모양",
+      "level": null
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "Alt+S",
+      "what": "저장",
+      "level": null
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "Alt+V",
+      "what": "다른 이름으로 저장",
+      "level": null
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "Alt+P",
+      "what": "인쇄",
+      "level": null
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "Ctrl+F10",
+      "what": "문자표",
+      "level": null
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "Ctrl+P",
+      "what": "쇼 중 펜",
+      "level": null
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "Ctrl+A",
+      "what": "쇼 중 화살표 포인터",
+      "level": null
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "Ctrl+E",
+      "what": "쇼 중 지우개",
+      "level": null
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "Ctrl+I",
+      "what": "쇼 중 형광펜",
+      "level": null
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "Ctrl+L",
+      "what": "쇼 중 레이저 포인터",
+      "level": null
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "Ctrl+M",
+      "what": "쇼 중 잉크 보이기·숨기기",
+      "level": null
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "Ctrl+H",
+      "what": "쇼 중 포인터 숨기기",
+      "level": null
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "B",
+      "what": "쇼 중 검은 화면",
+      "level": null
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "W",
+      "what": "쇼 중 흰 화면",
+      "level": null
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "E",
+      "what": "쇼 중 잉크 모두 지우기",
+      "level": null
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "G",
+      "what": "쇼 중 모든 슬라이드 보기",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Shift+Win+V",
+      "what": "고급 붙여넣기",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Ctrl+Alt+Win+V",
+      "what": "일반 텍스트로 붙여넣기",
+      "level": null
+    },
+    {
+      "src": "ptaot",
+      "platform": "win",
+      "combo": "Alt+Shift+D",
+      "what": "창 항상 위에 두기(이 PC에서 바꾼 값 · 기본은 Win+Ctrl+T)",
+      "level": null
+    },
+    {
+      "src": "ptaot",
+      "platform": "win",
+      "combo": "Ctrl+Win+=",
+      "what": "고정한 창 더 불투명하게(기본값)",
+      "level": null
+    },
+    {
+      "src": "ptaot",
+      "platform": "win",
+      "combo": "Ctrl+Win+-",
+      "what": "고정한 창 더 투명하게(기본값)",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Shift+Win+C",
+      "what": "색 선택기",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Ctrl+Shift+Win+R",
+      "what": "Crop And Lock 창 잘라 붙이기",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Ctrl+Shift+Win+T",
+      "what": "Crop And Lock 썸네일",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Shift+Win+`",
+      "what": "FancyZones 편집기",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Win+PgDn",
+      "what": "FancyZones 다음 창",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Win+PgUp",
+      "what": "FancyZones 이전 창",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Shift+Win+F",
+      "what": "마우스 찾기",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Ctrl+Shift+Win+M",
+      "what": "화면 눈금자",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Shift+Win+H",
+      "what": "마우스 강조",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Ctrl+Space",
+      "what": "Peek 미리 보기",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Alt+Space",
+      "what": "PowerToys Run",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Shift+Win+/",
+      "what": "단축키 가이드",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Ctrl+Win+`",
+      "what": "Workspaces",
+      "level": null
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Alt+Win+Space",
+      "what": "Command Palette(기본값 · 설정 파일에서 확인 못 함)",
+      "level": null
+    },
+    {
+      "src": "snip",
+      "platform": "win",
+      "combo": "F1",
+      "what": "캡처",
+      "level": null
+    },
+    {
+      "src": "snip",
+      "platform": "win",
+      "combo": "Ctrl+F1",
+      "what": "캡처 후 복사",
+      "level": null
+    },
+    {
+      "src": "snip",
+      "platform": "win",
+      "combo": "Shift+F1",
+      "what": "커스텀 캡처",
+      "level": null
+    },
+    {
+      "src": "snip",
+      "platform": "win",
+      "combo": "F3",
+      "what": "붙이기(핀)",
+      "level": null
+    },
+    {
+      "src": "snip",
+      "platform": "win",
+      "combo": "Shift+F3",
+      "what": "모든 이미지 보이기·숨기기",
+      "level": null
+    },
+    {
+      "src": "snip",
+      "platform": "win",
+      "combo": "Ctrl+F3",
+      "what": "다른 이미지 그룹 전환",
+      "level": null
+    },
+    {
+      "src": "icz",
+      "platform": "win",
+      "combo": "Ctrl+1",
+      "what": "확대하기",
+      "level": null
+    },
+    {
+      "src": "icz",
+      "platform": "win",
+      "combo": "Ctrl+2",
+      "what": "판서하기",
+      "level": null
+    },
+    {
+      "src": "icz",
+      "platform": "win",
+      "combo": "Ctrl+3",
+      "what": "타이머",
+      "level": null
+    },
+    {
+      "src": "icz",
+      "platform": "win",
+      "combo": "Ctrl+4",
+      "what": "실시간 확대",
+      "level": null
+    },
+    {
+      "src": "icz",
+      "platform": "win",
+      "combo": "Ctrl+Shift+F12",
+      "what": "화면 색 반전",
+      "level": null
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+1",
+      "what": "확대",
+      "level": null
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+2",
+      "what": "그리기",
+      "level": null
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+3",
+      "what": "쉬는 시간 타이머",
+      "level": null
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+4",
+      "what": "LiveZoom",
+      "level": null
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+Shift+4",
+      "what": "LiveDraw",
+      "level": null
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+5",
+      "what": "녹화",
+      "level": null
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+6",
+      "what": "스닙(영역 복사)",
+      "level": null
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+Shift+6",
+      "what": "스닙 저장",
+      "level": null
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+Alt+6",
+      "what": "글자 인식 스닙",
+      "level": null
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+7",
+      "what": "DemoType",
+      "level": null
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+Shift+7",
+      "what": "DemoType 처음으로",
+      "level": null
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+8",
+      "what": "파노라마",
+      "level": null
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+Shift+8",
+      "what": "파노라마 저장",
+      "level": null
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+9",
+      "what": "미러",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Shift+Cmd+3",
+      "what": "전체 화면 캡처",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Shift+Cmd+4",
+      "what": "영역 캡처(Space = 창)",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Shift+Cmd+5",
+      "what": "캡처·녹화 도구",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Shift+Cmd+6",
+      "what": "Touch Bar 캡처",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Shift+Cmd+3",
+      "what": "전체 화면을 클립보드로",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Shift+Cmd+4",
+      "what": "영역을 클립보드로",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+Space",
+      "what": "Spotlight",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+Cmd+Space",
+      "what": "Finder 검색 창",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Space",
+      "what": "입력 소스 바꾸기(한/영)",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Option+Space",
+      "what": "다음 입력 소스",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+Tab",
+      "what": "앱 전환",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+`",
+      "what": "같은 앱 창 전환",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+Q",
+      "what": "앱 끝내기",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+W",
+      "what": "창 닫기",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+H",
+      "what": "앱 가리기",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+Cmd+H",
+      "what": "다른 앱 가리기",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+M",
+      "what": "창 최소화",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+Cmd+Esc",
+      "what": "강제 종료",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Cmd+Q",
+      "what": "화면 잠금",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Shift+Cmd+Q",
+      "what": "로그아웃",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Cmd+F",
+      "what": "전체 화면 켜기·끄기",
+      "level": "warn"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Up",
+      "what": "Mission Control",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Down",
+      "what": "앱 윈도우",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Left",
+      "what": "왼쪽 데스크톱",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Right",
+      "what": "오른쪽 데스크톱",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+1~9",
+      "what": "데스크톱 1~9로(설정에서 켠 경우)",
+      "level": "warn"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+Cmd+8",
+      "what": "확대/축소 켜기(손쉬운 사용에서 켠 경우)",
+      "level": "warn"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+Cmd+=",
+      "what": "화면 확대(켠 경우)",
+      "level": "warn"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+Cmd+-",
+      "what": "화면 축소(켠 경우)",
+      "level": "warn"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+Cmd+F5",
+      "what": "손쉬운 사용 단축키",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+F5",
+      "what": "VoiceOver",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Cmd+Space",
+      "what": "이모지·기호",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+1~9",
+      "what": "특수 문자 입력(¡ ™ £ ¢ ∞ § ¶ • ª) — 가로채면 이 글자를 못 침",
+      "level": "warn"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+0",
+      "what": "특수 문자 입력(º)",
+      "level": "warn"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "F1~12",
+      "what": "기본은 밝기·음량 등 — F키로 쓰려면 fn을 함께",
+      "level": "warn"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+F1",
+      "what": "디스플레이 미러링 켜기·끄기",
+      "level": null
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+F1",
+      "what": "키보드 탐색 켜기·끄기",
+      "level": "warn"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+F2",
+      "what": "메뉴 막대로(키보드 탐색을 켠 경우)",
+      "level": "warn"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+F3",
+      "what": "Dock으로(켠 경우)",
+      "level": "warn"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Caps Lock",
+      "what": "한/영 전환(설정에 따라)",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+C",
+      "what": "복사",
+      "level": "block"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+V",
+      "what": "붙여넣기",
+      "level": "block"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+X",
+      "what": "잘라내기",
+      "level": "block"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+Z",
+      "what": "되돌리기",
+      "level": "block"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Shift+Cmd+Z",
+      "what": "다시 하기",
+      "level": "block"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+A",
+      "what": "모두 선택",
+      "level": "block"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+S",
+      "what": "저장",
+      "level": "block"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+F",
+      "what": "찾기",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+P",
+      "what": "인쇄",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+N",
+      "what": "새 문서·새 창",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+O",
+      "what": "열기",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+T",
+      "what": "브라우저 새 탭",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+R",
+      "what": "새로 고침",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+L",
+      "what": "주소 표시줄",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+D",
+      "what": "즐겨찾기 추가",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+B",
+      "what": "굵게",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+I",
+      "what": "기울임",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+U",
+      "what": "밑줄",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+K",
+      "what": "링크 넣기",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Ctrl+A",
+      "what": "글 칸에서 줄 처음으로",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Ctrl+E",
+      "what": "글 칸에서 줄 끝으로",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Ctrl+K",
+      "what": "글 칸에서 줄 끝까지 지우기",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Ctrl+D",
+      "what": "글 칸에서 앞 글자 지우기",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Ctrl+H",
+      "what": "글 칸에서 뒤 글자 지우기",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+1~9",
+      "what": "브라우저 탭 · Finder 보기 바꾸기",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Shift+Cmd+/",
+      "what": "도움말 메뉴",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+,",
+      "what": "앱 설정",
+      "level": null
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Shift+Cmd+T",
+      "what": "브라우저 닫은 탭 다시 열기",
+      "level": null
+    }
+  ]
+}

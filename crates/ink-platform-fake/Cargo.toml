@@ -1,0 +1,13 @@
+[package]
+name = "ink-platform-fake"
+description = "screen-ink 가짜 어댑터 — 유스케이스 시험·미리보기용(메모리 단축키·저장소·알림)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+ink-app.workspace = true
+ink-domain.workspace = true
+serde_json.workspace = true
