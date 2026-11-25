@@ -171,6 +171,24 @@ pub fn place_below(ns_window: *mut c_void, space: &Space, icon: RectF, pad: f64,
     true
 }
 
+/// 섬을 커서(CG 전역 포인트)가 있는 화면의 작업 영역 위 가운데에 붙인다. `gap` = 작업 영역 윗변 아래 여백(pt).
+/// Tauri 물리 좌표는 창이 지금 있는 화면 배율로 환산돼, 혼합 배율에서는 옆 화면에 걸쳐 놓인다(2026-11-26 확인).
+pub fn place_top_center(ns_window: *mut c_void, space: &Space, cursor: (f64, f64), gap: f64) -> bool {
+    let (Some(w), Some(mtm)) = (window(ns_window), MainThreadMarker::new()) else { return false };
+    let Some(primary_h) = NSScreen::screens(mtm).firstObject().map(|p| p.frame().size.height) else { return false };
+    let (cx, cy) = cursor;
+    let Some(s) = space.screens.iter().find(|s| cx >= s.pt.x && cx < s.pt.right() && cy >= s.pt.y && cy < s.pt.bottom()).or(space.screens.first()) else { return false };
+    // SAFETY: NSWindow 공개 메서드.
+    let frame: NSRect = unsafe { msg_send![w, frame] };
+    let x = s.pt.x + (s.pt.w - frame.size.width) / 2.0;
+    let top = s.pt.y + f64::from(s.work.y - s.phys.y) / s.scale + gap;
+    // SAFETY: NSWindow 공개 메서드(Cocoa 좌표: 윗변 = 주 화면 높이 − CG y).
+    unsafe {
+        let _: () = msg_send![w, setFrameTopLeftPoint: NSPoint::new(x, primary_h - top)];
+    }
+    true
+}
+
 /// 활성화하지 않고 **지금 Space** 맨 앞으로 바로(비동기 아님). 전체 화면 앱 위에서도 그 자리에 뜬다.
 pub fn order_front(ns_window: *mut c_void) {
     let Some(w) = window(ns_window) else { return };

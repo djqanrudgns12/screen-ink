@@ -332,8 +332,13 @@ fn set_tray_icon<R: Runtime>(app: &AppHandle<R>, mode: TrayMode, state: &InkStat
 fn show_island<R: Runtime>(app: &AppHandle<R>) {
     let Some(w) = app.get_webview_window(ISLAND) else { return };
     // 커서가 있는 모니터의 위 가운데(02 §7: 단축키 순간 커서 모니터가 대상)
+    // 맥: 혼합 배율에서 Tauri 물리 좌표는 옆 화면에 걸쳐 놓인다 → 포인트로 직접 놓는다
+    #[cfg(target_os = "macos")]
+    let placed = w.ns_window().is_ok_and(|ns| ink_platform_macos::window::place_top_center(ns, &ink_platform_macos::space(), ink_platform_macos::display::cursor_pt(), 12.0));
+    #[cfg(not(target_os = "macos"))]
+    let placed = false;
     let monitor = app.cursor_position().ok().and_then(|p| w.monitor_from_point(p.x, p.y).ok().flatten()).or_else(|| w.primary_monitor().ok().flatten());
-    if let (Some(m), Ok(size)) = (monitor, w.outer_size()) {
+    if let (false, Some(m), Ok(size)) = (placed, monitor, w.outer_size()) {
         let wa = m.work_area();
         let x = wa.position.x + (wa.size.width as i32 - size.width as i32) / 2;
         let y = wa.position.y + (12.0 * m.scale_factor()) as i32;
