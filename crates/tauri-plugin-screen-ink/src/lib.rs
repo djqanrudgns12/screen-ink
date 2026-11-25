@@ -16,7 +16,7 @@ use ink_app::{
     HotkeyError, HotkeyOutcome, HotkeyRegistry, ImportPreview, InkService, InkState, IslandEvent, IslandKind, MonitorProbe, Notifier, Ports, PreviewResult, ScreenSource,
     SetShortcutResult, SystemProbe, UpdateResult, WindowCatalog,
 };
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "macos"))]
 use ink_app::SystemEvent;
 #[cfg(all(not(windows), not(target_os = "macos")))]
 use ink_domain::shortcuts::LiveBinding;
@@ -860,7 +860,18 @@ fn listen_system_events<R: Runtime>(app: &AppHandle<R>) {
             });
         });
     }
-    #[cfg(not(windows))]
+    #[cfg(target_os = "macos")]
+    {
+        let handle = app.clone();
+        ink_platform_macos::events::listen(move |ev: SystemEvent| {
+            let h = handle.clone();
+            let _ = handle.run_on_main_thread(move || {
+                log::info!("system event {ev:?}");
+                h.state::<Ink>().lock().on_system_event(ev);
+            });
+        });
+    }
+    #[cfg(all(not(windows), not(target_os = "macos")))]
     let _ = app;
 }
 

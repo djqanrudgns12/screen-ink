@@ -12,6 +12,8 @@ pub mod cursor;
 #[cfg(target_os = "macos")]
 pub mod display;
 #[cfg(target_os = "macos")]
+pub mod events;
+#[cfg(target_os = "macos")]
 mod pixels;
 #[cfg(target_os = "macos")]
 pub mod window;
@@ -109,6 +111,10 @@ mod mac {
 
         fn live_bindings(&self) -> Option<Vec<LiveBinding>> {
             Some(Vec::new())
+        }
+
+        fn secure_desktop(&self) -> bool {
+            crate::events::screen_locked()
         }
     }
 

@@ -115,6 +115,25 @@
 | M10 | 권한 | 화면 기록·손쉬운 사용 권한이 없으면 **조용히 실패하지 말고** 섬과 첫 실행 시트에서 안내 | `CGPreflightScreenCaptureAccess`·`CGRequestScreenCaptureAccess`, `AXIsProcessTrustedWithOptions`<br>`app:dev`로 띄우면 권한이 터미널 앱에 붙을 수 있음 **[확인 필요]** | 권한을 끈 채 F1 → 안내 문구, 켜면 바로 동작 |
 | M11 | `SystemProbe`·사건·시계 | `running_apps`(소문자 이름), `live_bindings` → `Some(빈 목록)`(PowerToys는 Windows 전용), `secure_desktop`(화면 잠김)<br>사건: 잠금·해제·절전·깨어남·디스플레이 변경·테마<br>`Clock::local` = 지역 시각 | `NSWorkspace` 알림, `NSApplicationDidChangeScreenParametersNotification`, `localtime_r` | 모니터를 바꾸면 오버레이가 다시 맞춰짐, 파일 이름이 지역 시각 |
 
+**맥 진행 상황 (2026-11-25, 맥미니 4K@2 + FHD@1, macOS 27)** — 코드는 `crates/ink-platform-macos`
+
+| # | 상태 | 확인한 것 | 남은 확인 |
+|---|---|---|---|
+| M1 | **완료** | `coords::tests` 8개, 실제 배치 `0,0 3840x2160` + `3840,0 1920x1080`(겹침 없음) | 세로 배치·3대는 시험으로만 |
+| M2 | 코드·연결 완료 | 컴파일·clippy. ScreenCaptureKit, 우리 앱 제외 필터, sRGB·BGRA, 크기 = bounds | **[확인 필요]** 화면 기록 권한을 켠 뒤 F1 → 정지 화면·50% 어둡게 |
+| M3 | 코드 완료 | 시험: 커서 스프라이트 56x80(배율 2). `NSCursor.currentSystemCursor`는 사용 중단 예고(나중에 nil이면 None) | **[확인 필요]** `` ` `` 켜고 확정 → 결과에 커서 |
+| M4 | 코드 완료 | 시험: 창 목록(경로 없는 이름). 권한 없이도 경계·소유자는 읽힘 | **[확인 필요]** 창 위에서 F2 → 그 창 강조 |
+| M5 | 코드 완료(도메인 규칙 그대로) | — | **[확인 필요]** 알림을 띄운 채 F1 |
+| M6 | **완료(앱 붙여 넣기 빼고)** | 시험: 임시 판에 TIFF(크기·색)·PNG·글 | **[확인 필요]** 미리보기·키노트·Pages에 붙여 넣기 |
+| M7 | 코드·연결 완료 | 오버레이 층 1000(메뉴 막대·Dock 위), 모든 Space·전체 화면 앱 위, 포인트로 직접 놓기. 측정 스크립트 `bench/m1-overlay-mac.sh` | **[확인 필요]** `overlay ready` 맥 p50/p95 |
+| M8 | 코드·연결 완료 | 섬·팝오버 `sharingType = none`, 섬 층 1001 | **[확인 필요]** 섬을 띄운 채 시스템 스크린숏 |
+| M9 | 못 함 | — | 손쉬운 사용 권한도 필요 |
+| M10 | 일부 | 화면 기록 권한이 없으면 첫 F1에서 시스템 요청 한 번 + 섬 안내("화면 기록 권한이 필요해요", 가짜 시험 1개) | 첫 실행 시트 안내, 손쉬운 사용 권한 |
+| M11 | 코드 완료 | 시험: 화면 잠김 판정. 디스플레이 변경(CG 콜백)·절전·깨어남(NSWorkspace)·잠금·해제·테마(분산 알림) → 서비스. 지역 시각 | **[확인 필요]** 모니터를 뺐다 꽂으면 오버레이가 다시 맞춰짐 |
+
+- `npm run app:dev`로 띄우면 앱이 **띄운 프로세스의 권한**을 쓴다(이 맥에서 확인: Claude Code에서 띄우면 Claude, 터미널에서 띄우면 터미널). 확인됨(2026-11-25).
+- 맥 앱은 Dock 아이콘 없이 메뉴 막대에만 둔다(`ActivationPolicy::Accessory`).
+
 **좌표 주의 (M1)**
 - 맥은 포인트 단위이고 Cocoa는 원점이 왼쪽 아래다. CG 전역 좌표는 왼쪽 위 원점이다. 변환은 **한 함수**에서만 한다.
 - 모니터마다 배율이 다르면(Retina 2.0 + 외장 1.0) `포인트 × 배율`만으로는 물리 배치가 **겹치거나 틈이 생긴다.**
@@ -216,6 +235,8 @@ $env:CARGO_HTTP_CHECK_REVOKE='false'
 | 2026-11-25 | CI는 PR·수동 실행만, 순수 크레이트 + UI만(ubuntu) | OS 어댑터는 각 OS 개발 PC에서 |
 | 2026-11-25 (맥) | 좌표 변환은 `ink-platform-macos/src/coords.rs`의 `map`·`unmap` 두 함수뿐. 화면 사실값은 CG 전역 포인트(왼쪽 위 원점)로 모으고(`NSScreen.visibleFrame`만 Cocoa → `cocoa_to_cg`), 물리 크기 = 포인트 × `backingScaleFactor`(`CGDisplayMode` 픽셀 폭 ÷ 폭) | Cocoa·CG·물리 세 좌표가 섞이면 어긋남을 찾기 어렵다 |
 | 2026-11-25 (맥) | 혼합 배율 배치: 주 화면에서 시작해 **맞닿은 이웃을 맞닿은 채로 민다**(크기 = 그 화면 물리 px, 맞닿은 모서리를 따라 어긋난 만큼은 안쪽 모서리를 가진 화면 배율로 잼). 이웃으로 안 이어지거나 밀어도 겹치면 모든 원점을 `포인트 × 가장 큰 배율`(겹침 없음, 틈 생김). 창 사각형은 가운데가 있는 화면 배율로 잰다. 이 맥미니(4K@2 주 + 오른쪽 FHD@1): `0,0 3840x2160` + `3840,0 1920x1080` | Windows 물리 배치와 같은 성질(겹침 없음·맞닿음 유지). 시험 8개(`coords::tests`) |
+| 2026-11-25 (맥) | 오버레이 창 층 1000(`NSScreenSaverWindowLevel`), 섬 1001, 둘 다 모든 Space·전체 화면 앱 위·창 순환 제외. 오버레이는 Tauri 물리 좌표가 아니라 `window::place`로 그 화면 포인트에 직접 놓는다 | 혼합 배율에서 Tauri 물리 좌표(포인트 × 창 배율)는 우리 배치와 다르다 |
+| 2026-11-25 (맥) | 캡처 권한 오류는 `ink_app::NO_SCREEN_PERMISSION`으로 시작하는 문자열(포트 모양은 그대로) | 서비스가 일반 실패와 권한 없음을 나눠 안내(M10) |
 | 2026-11-25 (맥) | `RawWindow.class` = 번들 ID(없으면 빈 문자열), `exe` = 실행 파일 이름 소문자. `topmost`·`tool` = 층 > 0, `layered_alpha` = 창 알파 < 1일 때만. WindowServer(메뉴 막대)·Dock 소유 창은 목록에서 뺀다 | 맥에서 앱 가족은 번들 ID가 가장 안정적. 메뉴 막대·Dock은 앱 창이 아니라 화면 장식(M4 완료 기준) |
 
 ---
