@@ -10,7 +10,9 @@ use serde_json::json;
 
 const DT: f64 = 1.0 / 60.0;
 const FHD: PhysRect = PhysRect::new(0, 0, 1920, 1080);
-const ZOOM_KEYS: [&str; 3] = ["ArrowUp", "ArrowDown", "Escape"];
+/// 확대 중 잡는 전역 키는 Esc(끝) 하나 — 방향키는 아래 앱(PPT 넘기기)으로 가야 한다(사용자 결정)
+const ZOOM_KEYS: [&str; 1] = ["Escape"];
+const ARROWS: [&str; 2] = ["ArrowUp", "ArrowDown"];
 
 fn service(w: &FakeWorld) -> InkService {
     let mut s = InkService::new(w.ports(), Platform::Win, "test");
@@ -32,7 +34,7 @@ fn zooming(s: &InkService) -> bool {
 }
 
 #[test]
-fn 쉬다가_alt2는_커서_모니터에_돋보기와_확대_섬을_띄우고_확대_키를_잠시_잡는다() {
+fn 쉬다가_alt2는_커서_모니터에_돋보기와_확대_섬을_띄우고_esc만_잠시_잡는다() {
     let w = FakeWorld::new();
     let mut s = service(&w);
     let globals = w.registered_count();
@@ -53,7 +55,8 @@ fn 쉬다가_alt2는_커서_모니터에_돋보기와_확대_섬을_띄우고_�
     assert_eq!(keys, ["휠", "Alt 1", "Esc"]);
 
     assert!(ZOOM_KEYS.iter().all(|k| w.is_registered(k)));
-    assert_eq!(w.registered_count(), globals + 3);
+    assert!(ARROWS.iter().all(|k| !w.is_registered(k)), "방향키는 잡지 않는다");
+    assert_eq!(w.registered_count(), globals + 1);
 
     let hud = w.last_zoom().flatten().expect("HUD 상태");
     assert_eq!((hud.monitor_label.as_str(), hud.scale_label.as_str(), hud.show_minimap), ("모니터 1", "×2.0", true));
@@ -87,7 +90,7 @@ fn 같은_키나_esc로_끝내면_돋보기와_확대_키를_푼다() {
 }
 
 #[test]
-fn 휠과_확대_키는_단계를_오르내리고_커서_아래_점이_제자리() {
+fn 휠은_단계를_오르내리고_커서_아래_점이_제자리() {
     let w = FakeWorld::new();
     let mut s = service(&w);
     s.on_hotkey("zoom");
@@ -100,11 +103,15 @@ fn 휠과_확대_키는_단계를_오르내리고_커서_아래_점이_제자리
     let after = at(&w);
     assert!((after.x - before.x).abs() <= 2.5 && (after.y - before.y).abs() <= 2.5, "{before:?} → {after:?}");
 
-    assert_eq!(s.on_hotkey("z-in"), HotkeyOutcome::Zoom);
+    s.zoom_input(ZoomInput::Wheel { dy: -1 });
     assert_eq!(running(&w).unwrap().2, 3.0);
     let after = at(&w);
     assert!((after.x - before.x).abs() <= 3.0 && (after.y - before.y).abs() <= 3.0, "{before:?} → {after:?}");
-    assert_eq!(s.on_hotkey("z-out"), HotkeyOutcome::Zoom);
+    s.zoom_input(ZoomInput::Wheel { dy: 1 });
+    assert_eq!(running(&w).unwrap().2, 2.5);
+    // 없어진 칸(z-in·z-out)과 확대 화면 안 다른 키 이름은 아무 일도 안 한다
+    assert_eq!(s.on_hotkey("z-in"), HotkeyOutcome::Ignored);
+    s.zoom_input(ZoomInput::Key { slot: "z-in".into() });
     assert_eq!(running(&w).unwrap().2, 2.5);
 
     for _ in 0..10 {
@@ -145,12 +152,12 @@ fn 틱은_부드럽게_따라가고_죽은_영역에서는_멈추고_설정은_�
     assert!(s.tick_zoom_with(DT));
     assert_eq!(sent(), n, "바뀐 것이 없으면 HUD에 다시 보내지 않는다");
 
-    // 바깥 — 남은 거리의 0.35
+    // 바깥 — 죽은 영역을 넘은 만큼(440 − 48)의 0.35
     cursor(&w, 1400, 540);
     s.tick_zoom_with(DT);
     let v = s.zoom_view().unwrap();
-    assert!((v.center_x - (960.0 + 440.0 * 0.35)).abs() < 1e-9, "{}", v.center_x);
-    assert_eq!(running(&w).unwrap().1.x, 634);
+    assert!((v.center_x - (960.0 + 392.0 * 0.35)).abs() < 1e-9, "{}", v.center_x);
+    assert_eq!(running(&w).unwrap().1.x, 617);
 
     // 바로 따라가기로 바꾸면 다음 틱부터
     s.update_setting("zoom.follow", &json!("instant"));
@@ -181,7 +188,7 @@ fn 이중_진입_트레이로_다시_시작해도_돋보기와_확대_키는_하
     let m = w.magnifier.0.lock().unwrap();
     assert_eq!((m.starts, m.stops, m.running.is_some()), (2, 1, true));
     drop(m);
-    assert_eq!(w.registered_count(), globals + 3, "확대 키는 한 벌만");
+    assert_eq!(w.registered_count(), globals + 1, "확대 키(Esc)는 한 벌만");
 
     // 단축키로 끄고 켜기 반복
     for _ in 0..3 {
@@ -189,7 +196,7 @@ fn 이중_진입_트레이로_다시_시작해도_돋보기와_확대_키는_하
         s.on_hotkey("zoom");
     }
     assert!(zooming(&s));
-    assert_eq!(w.registered_count(), globals + 3);
+    assert_eq!(w.registered_count(), globals + 1);
 }
 
 #[test]
@@ -325,14 +332,15 @@ fn 이어받기_값은_그_모니터_판서_초기_변환과_같다() {
 }
 
 #[test]
-fn 다른_앱이_esc를_잡고_있으면_그_키만_빼고_확대한다() {
+fn 다른_앱이_esc를_잡고_있어도_확대는_되고_alt2로_끝낸다() {
     let w = FakeWorld::new();
     w.taken(&["Escape"]);
     let mut s = service(&w);
     let globals = w.registered_count();
     s.on_hotkey("zoom");
     assert!(zooming(&s));
-    assert!(w.is_registered("ArrowUp") && w.is_registered("ArrowDown") && !w.is_registered("Escape"));
+    assert!(!w.is_registered("Escape") && ARROWS.iter().all(|k| !w.is_registered(k)));
+    assert_eq!(w.registered_count(), globals);
     assert_eq!(s.on_hotkey("z-exit"), HotkeyOutcome::Ignored, "잡지 못한 키는 우리 것이 아니다");
     assert!(zooming(&s));
     s.on_hotkey("zoom");

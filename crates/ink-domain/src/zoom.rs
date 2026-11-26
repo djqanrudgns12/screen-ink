@@ -24,11 +24,10 @@ const EPS: f64 = 1e-9;
 
 /// 전역 칸(Alt+2).
 pub const ZOOM_SLOT: &str = "zoom";
-/// 확대 화면 안 키(R-KEY-6) — 확대 중에만 잠시 잡는다.
-pub const ZOOM_IN_SLOT: &str = "z-in";
-pub const ZOOM_OUT_SLOT: &str = "z-out";
+/// 확대 화면 안 키(R-KEY-6) — 확대 중에만 잠시 전역으로 잡는다. **끝내기(Esc) 하나뿐**:
+/// 배율은 휠로만 바꾸고, 방향키는 아래 앱(PPT 넘기기 등)으로 가야 한다(2026-11-26 사용자 결정 — z-in·z-out 칸 삭제).
 pub const ZOOM_EXIT_SLOT: &str = "z-exit";
-pub const ZOOM_KEYS: [&str; 3] = [ZOOM_IN_SLOT, ZOOM_OUT_SLOT, ZOOM_EXIT_SLOT];
+pub const ZOOM_KEYS: [&str; 1] = [ZOOM_EXIT_SLOT];
 
 /// 확대 중 누르면 확대를 끝내고 그 키를 원래대로 처리하는 칸(다른 모드를 여는 키, 03 §3).
 /// 핀·타이머·창 항상 위처럼 화면을 바꾸지 않는 키는 확대를 그대로 둔다.
@@ -135,8 +134,14 @@ pub fn next_zoom_step(current: f64, dy: i32, steps: &[f64]) -> f64 {
     s
 }
 
+/// 죽은 영역을 넘은 양(안이면 0): `d − clamp(d, −half, half)`.
+fn beyond(d: f64, half: f64) -> f64 {
+    d - d.clamp(-half, half)
+}
+
 /// 프레임 하나 따라가기(02 §4). 커서가 이 모니터 밖이면 그대로 둔다.
-/// `Smooth`: 중심 ±5%(죽은 영역) 밖이면 `중심 += (커서 − 중심) × α`, α는 60 Hz에서 0.35와 같은 프레임 독립 감쇠.
+/// `Smooth`: 축마다 커서가 중심 ±5%(죽은 영역)를 **넘은 만큼만** `× α`로 따라간다 — 커서가 죽은 영역 가장자리에
+/// 오도록 부드럽게 수렴하고, 경계에서 멈췄다 한꺼번에 튀지 않는다. α는 60 Hz에서 0.35와 같은 프레임 독립 감쇠.
 pub fn step_follow(view: &mut LiveZoomView, cursor: PhysPoint, mode: FollowMode, dt_sec: f64) {
     if !view.monitor_bounds.contains(cursor) {
         return;
@@ -149,12 +154,13 @@ pub fn step_follow(view: &mut LiveZoomView, cursor: PhysPoint, mode: FollowMode,
             view.center_y = cy;
         }
         FollowMode::Smooth => {
-            let (dx, dy) = (cx - view.center_x, cy - view.center_y);
-            if dx.abs() > w * DEAD_ZONE / 2.0 || dy.abs() > h * DEAD_ZONE / 2.0 {
+            let ex = beyond(cx - view.center_x, w * DEAD_ZONE / 2.0);
+            let ey = beyond(cy - view.center_y, h * DEAD_ZONE / 2.0);
+            if ex != 0.0 || ey != 0.0 {
                 let dt = if dt_sec.is_finite() { dt_sec.clamp(0.0, MAX_DT) } else { 0.0 };
                 let a = 1.0 - (1.0 - FOLLOW_ALPHA).powf(dt * 60.0);
-                view.center_x += dx * a;
-                view.center_y += dy * a;
+                view.center_x += ex * a;
+                view.center_y += ey * a;
             }
         }
     }
@@ -242,10 +248,6 @@ pub enum ZoomCommand {
     SwitchFromCapture,
     /// 확대 중 Alt+2 · `z-exit`
     End,
-    /// `z-in`
-    StepIn,
-    /// `z-out`
-    StepOut,
     /// 확대 중 다른 모드 키 — 확대를 끝내고 그 키를 원래대로 처리(5.3 전까지는 Alt+1도 여기)
     EndThenPass,
 }
@@ -268,8 +270,6 @@ pub fn on_hotkey(mode: &Mode, slot: &str) -> Option<ZoomCommand> {
         return None;
     }
     match slot {
-        ZOOM_IN_SLOT => Some(ZoomCommand::StepIn),
-        ZOOM_OUT_SLOT => Some(ZoomCommand::StepOut),
         ZOOM_EXIT_SLOT => Some(ZoomCommand::End),
         s if ENDS_ZOOM.contains(&s) => Some(ZoomCommand::EndThenPass),
         _ => None,
@@ -328,9 +328,9 @@ mod tests {
         // 원본 960×540 → 죽은 영역 ±48 × ±27
         step_follow(&mut v, p(960 + 47, 540 - 26), FollowMode::Smooth, 1.0 / 60.0);
         assert_eq!(v, before, "죽은 영역 안 손떨림에는 움직이지 않는다");
-        // 바깥 → 한 프레임에 남은 거리의 0.35
-        step_follow(&mut v, p(960 + 200, 540), FollowMode::Smooth, 1.0 / 60.0);
-        assert!((v.center_x - (960.0 + 200.0 * 0.35)).abs() < 1e-9, "{}", v.center_x);
+        // 바깥 → 한 프레임에 죽은 영역을 넘은 만큼(200 − 48)의 0.35, 넘지 않은 축은 그대로
+        step_follow(&mut v, p(960 + 200, 540 + 10), FollowMode::Smooth, 1.0 / 60.0);
+        assert!((v.center_x - (960.0 + 152.0 * 0.35)).abs() < 1e-9, "{}", v.center_x);
         assert_eq!(v.center_y, 540.0);
         // 프레임 독립: 30 Hz 한 번 = 60 Hz 두 번
         let mut a = before;
@@ -339,15 +339,33 @@ mod tests {
         step_follow(&mut b, p(1400, 540), FollowMode::Smooth, 1.0 / 60.0);
         step_follow(&mut b, p(1400, 540), FollowMode::Smooth, 1.0 / 60.0);
         assert!((a.center_x - b.center_x).abs() < 1e-6, "{} vs {}", a.center_x, b.center_x);
-        // 오래 따라가면 죽은 영역 가장자리 안으로 수렴하고 멈춘다
+        // 오래 따라가면 커서가 죽은 영역 가장자리(중심 + 48)에 오도록 수렴한다
         let mut c = before;
         for _ in 0..120 {
             step_follow(&mut c, p(1300, 540), FollowMode::Smooth, 1.0 / 60.0);
         }
-        assert!((1300.0 - c.center_x).abs() <= 48.0, "{}", c.center_x);
-        let settled = c;
-        step_follow(&mut c, p(1300, 540), FollowMode::Smooth, 1.0 / 60.0);
-        assert_eq!(c, settled);
+        assert!((c.center_x - (1300.0 - 48.0)).abs() < 1e-6, "{}", c.center_x);
+    }
+
+    #[test]
+    fn 죽은영역_경계에서_멈췄다_튀지_않는다() {
+        // 경계에 붙은 뒤 커서가 2 px 더 나가면 중심도 그만큼의 0.35만 — 한꺼번에 뛰지 않는다
+        let mut v = LiveZoomView::new(0, FHD, 2.0, p(960, 540));
+        for _ in 0..200 {
+            step_follow(&mut v, p(1300, 540), FollowMode::Smooth, 1.0 / 60.0);
+        }
+        let mut prev = v.center_x;
+        for x in [1302, 1304, 1306, 1305, 1307] {
+            step_follow(&mut v, p(x, 540), FollowMode::Smooth, 1.0 / 60.0);
+            let moved = v.center_x - prev;
+            let want = 0.35 * (x as f64 - prev - 48.0).max(0.0);
+            assert!((moved - want).abs() < 1e-9 && moved < 2.0, "{x}: {moved} vs {want}");
+            prev = v.center_x;
+        }
+        // 안쪽으로 돌아오면(죽은 영역 안) 멈춘다
+        let still = v;
+        step_follow(&mut v, p(1290, 540), FollowMode::Smooth, 1.0 / 60.0);
+        assert_eq!(v, still);
     }
 
     #[test]
@@ -458,12 +476,12 @@ mod tests {
         assert_eq!(on_hotkey(&idle, "zoom"), Some(ZoomCommand::Start));
         assert_eq!(on_hotkey(&cap, "zoom"), Some(ZoomCommand::SwitchFromCapture));
         assert_eq!(on_hotkey(&zoom, "zoom"), Some(ZoomCommand::End));
-        assert_eq!(on_hotkey(&zoom, "z-in"), Some(ZoomCommand::StepIn));
-        assert_eq!(on_hotkey(&zoom, "z-out"), Some(ZoomCommand::StepOut));
         assert_eq!(on_hotkey(&zoom, "z-exit"), Some(ZoomCommand::End));
-        // 확대 밖에서는 확대 안 키가 아무 일도 안 한다
+        assert_eq!(ZOOM_KEYS, ["z-exit"], "확대 중 잡는 키는 Esc(끝) 하나 — 방향키는 아래 앱으로");
+        // 확대 밖에서는 확대 안 키가 아무 일도 안 한다, 없어진 칸(z-in·z-out)은 언제나 무관
         assert_eq!(on_hotkey(&idle, "z-exit"), None);
-        assert_eq!(on_hotkey(&cap, "z-in"), None);
+        assert_eq!(on_hotkey(&zoom, "z-in"), None);
+        assert_eq!(on_hotkey(&zoom, "z-out"), None);
         // 다른 모드 키는 확대를 끝내고 넘긴다, 핀·타이머는 확대를 그대로 둔다
         for s in ["region", "window", "record", "draw", "board", "last", "full", "active", "delay", "restore"] {
             assert_eq!(on_hotkey(&zoom, s), Some(ZoomCommand::EndThenPass), "{s}");

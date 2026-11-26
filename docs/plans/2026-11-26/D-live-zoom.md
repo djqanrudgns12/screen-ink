@@ -13,7 +13,7 @@
 | `R-ZOOM-3` | P0 | 실시간 확대 중 `Alt+1` → **그 순간 확대 화면·배율 그대로 정지 판서로 전환 ≤ 150 ms** |
 | `R-ZOOM-4` | P0 | `MagSetWindowFilterList(MW_FILTERMODE_EXCLUDE)`로 자기 창(섬·위치 지도·후광 창)을 돋보기 원본에서 제외(무한 거울 0) |
 | `R-ZOOM-6` | P1 | 커서 주황 후광(44 px) + 오른쪽 아래 `MiniMap`(112×70, 모니터 이름), 설정 `zoom.minimap`으로 끌 수 있음 |
-| `R-KEY-6` | P0 | 확대 화면 안 키 3칸(`z-in` Up, `z-out` Down, `z-exit` Esc) 설정값 반영 |
+| `R-KEY-6` | P0 | 확대 화면 안 키 1칸(`z-exit` Esc) 설정값 반영 — **2026-11-26 사용자 결정: `z-in`·`z-out`(↑↓) 칸 삭제**, 배율은 휠로만(Ctrl+휠도 배율, Shift+휠은 아래 앱), 방향키는 아래 앱(PPT 등)으로 |
 
 > 후속(1차 제외): `R-ZOOM-5`(움직이는 화면 위 LiveDraw 판서), macOS `SCStream → Metal` 실시간 확대.
 
@@ -100,6 +100,7 @@ pub trait Magnifier: Send {
   - **휠 처리 결정**: Windows에서 클릭 통과 창은 일반 `WM_MOUSEWHEEL`을 못 받는다. 대안 두 가지:
     1. **1안 (권장 — `Ctrl+휠` 또는 돋보기 활성 중 일시적 `WH_MOUSE_LL` 휠만 읽기, 키보드 훅 X)**: `R-KEY-1`이 금지하는 것은 저수준 *키보드* 훅이며, 확대 중 마우스 휠을 가로채려면 `WH_MOUSE_LL`에서 `WM_MOUSEWHEEL`만 소비(또는 `Ctrl` 조합 없이 확대 중 모든 휠을 배율로, `Alt+2` 종료 즉시 `UnhookWindowsHookEx`로 0 ms 해제)하는 것이 ZoomIt·아이캔 줌잇과 같은 유일한 표준 경로다. `[확인 필요]` 확대 중 일반 웹페이지 스크롤을 원할 때 `Shift+휠`로 통과시킬지 여부.
     2. **2안 (훅 완전 0)**: `z-in`(`Up`)·`z-out`(`Down`)·`z-exit`(`Esc`)를 모드 활성 중 임시 `RegisterHotKey`로만 받고, 휠 확대는 `Shift+휠` 등 불가 → **R-ZOOM-2("휠 = 배율 1.25~8배") 미충족**. 따라서 1안(확대 활성 중에만 `WH_MOUSE_LL` 휠 수신 + `z-in`/`z-out`/`z-exit` 임시 등록)을 채택한다.
+- **2026-11-26 결정(구현 반영)**: 확대 중 잠시 잡는 전역 키는 `z-exit`(Esc) 하나. ↑↓는 잡지 않는다. 휠은 `WH_MOUSE_LL`(확대 모니터 안·Shift 없을 때만 먹음).
 - **확대 섬 (`04 S13`)**:
   - 1줄: 확대 아이콘 · **실시간 확대** · `움직이는 화면 그대로` · `×2.0` (주황 고정폭)
   - 2줄(처음 3회·`?`): `휠` 배율 · `Alt 1` 멈추고 쓰기 · `Esc` 끝

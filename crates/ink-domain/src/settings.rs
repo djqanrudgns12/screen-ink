@@ -356,8 +356,8 @@ mod tests {
             assert_eq!(validate(f.path, &f.default).as_ref(), Ok(&f.default), "{}", f.path);
         }
         let s = Settings::defaults(Platform::Win);
-        assert_eq!(s.shortcuts.len(), 59);
-        assert_eq!(Settings::defaults(Platform::Mac).shortcuts.len(), 58);
+        assert_eq!(s.shortcuts.len(), 57);
+        assert_eq!(Settings::defaults(Platform::Mac).shortcuts.len(), 56);
     }
 
     #[test]

@@ -277,8 +277,6 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     async zoomInput(input) {
       if (mode.mode !== 'liveZoom' || !input) return;
       if (input.type === 'wheel') stepZoom(input.dy);
-      else if (input.type === 'key' && input.slot === 'z-in') stepZoom(-1);
-      else if (input.type === 'key' && input.slot === 'z-out') stepZoom(1);
       else if ((input.type === 'key' && input.slot === 'z-exit') || input.type === 'exit') endZoom();
     },
     async overlayReady(session) {
