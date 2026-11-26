@@ -854,3 +854,32 @@ test('세션에서_문서_만들기와_렌더_변경_표시', () => {
   key(e, 'KeyK');
   assert.equal(calls, n, '구독 해제');
 });
+
+test('도구막대_도형도구_굵기64px_배경전환_영어알림', () => {
+  const e = engine({ settings: { 'draw.width': 4, 'general.lang': 'en' } });
+  assert.equal(e.lang, 'en');
+
+  // 도형 도구 선택 후 드래그 → shape 생성 (수정 키 없이도)
+  e.setShapeTool('rect');
+  assert.equal(e.tool, 'pen');
+  assert.equal(e.shapeTool, 'rect');
+  drag(e, line(100, 100, 300, 220, 4));
+  assert.equal(e.items[0].kind, 'shape');
+  assert.equal(/** @type {any} */ (e.items[0]).shape, 'rect');
+
+  // 다른 도구로 전환하면 shapeTool 초기화
+  e.setTool('marker');
+  assert.equal(e.shapeTool, null);
+
+  // 패널에서 64px까지 설정 가능(엔진 내부), setBackground 직접 전환
+  assert.equal(e.setWidth(50), true);
+  assert.equal(e.widthPx, 50);
+  assert.equal(e.setBackground('white'), true);
+  assert.equal(e.background, 'white');
+  assert.equal(e.setBackground('frame'), true);
+  assert.equal(e.background, 'frame');
+
+  // 영어 알림 문구
+  const fx = e.runAction('d-clear');
+  assert.deepEqual(fx, [{ type: 'notice', text: 'Cleared all drawings', action: 'undo' }]);
+});

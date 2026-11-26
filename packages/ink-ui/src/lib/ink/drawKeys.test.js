@@ -2,13 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DRAW_KEY_IDS,
+  DRAW_TOOLBAR_TOGGLE_CODE,
+  DRAW_TOOLBAR_TOGGLE_KEY,
   IME_GUARD_MS,
   LATER_DRAW_KEYS,
   buildDrawKeymap,
   createImeGuard,
   defaultDrawCombo,
   isComposingEvent,
+  isDrawToolbarToggleKey,
   matchDrawKey,
+  matchDrawSizeBracketKey,
   normalizeCombo,
 } from './drawKeys.js';
 import catalog from '../../../../../docs/shortcuts/catalog-v1.json' with { type: 'json' };
@@ -110,4 +114,23 @@ test('조합_문자열_정규화_순서와_별칭', () => {
   assert.equal(normalizeCombo(''), '');
   assert.equal(normalizeCombo('Ctrl+'), '');
   assert.equal(normalizeCombo(null), '');
+});
+
+test('도구막대_숨기기_V키와_크기조절_대괄호키_사용자키_우선', () => {
+  assert.equal(DRAW_TOOLBAR_TOGGLE_CODE, 'KeyV');
+  assert.equal(DRAW_TOOLBAR_TOGGLE_KEY, 'V');
+
+  const defaultMap = buildDrawKeymap(null);
+  assert.equal(isDrawToolbarToggleKey({ code: 'KeyV' }, defaultMap), true);
+  assert.equal(isDrawToolbarToggleKey({ code: 'KeyV', shiftKey: true }, defaultMap), false);
+  assert.equal(isDrawToolbarToggleKey({ code: 'KeyV', ctrlKey: true }, defaultMap), false);
+  assert.equal(isDrawToolbarToggleKey({ code: 'KeyV', isComposing: true }, defaultMap), false);
+
+  const customMap = buildDrawKeymap([{ id: 'd-pen', combo: 'V' }]);
+  assert.equal(isDrawToolbarToggleKey({ code: 'KeyV' }, customMap), false, '사용자가 V를 묶었으면 양보');
+
+  assert.deepEqual(matchDrawSizeBracketKey({ code: 'BracketLeft' }, defaultMap), { dir: -1, large: false });
+  assert.deepEqual(matchDrawSizeBracketKey({ code: 'BracketRight', shiftKey: true }, defaultMap), { dir: 1, large: true });
+  assert.equal(matchDrawSizeBracketKey({ code: 'BracketLeft', ctrlKey: true }, defaultMap), null);
+  assert.equal(matchDrawSizeBracketKey({ code: 'KeyP' }, defaultMap), null);
 });

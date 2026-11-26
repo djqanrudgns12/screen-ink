@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { docToView } from '../ink/coords.js';
   import { TEXT_LINE_HEIGHT } from '../ink/inkEngine.js';
   import {
@@ -10,26 +10,50 @@
     renderItems,
     resolveInkColor,
   } from '../ink/canvasRender.js';
+  import {
+    DRAW_TOOLBAR_TOGGLE_KEY,
+    isDrawToolbarToggleKey,
+    matchDrawSizeBracketKey,
+  } from '../ink/drawKeys.js';
   import { createPenLatencyMeter } from '../ink/penMetrics.js';
+  import { setLang, setOs, t } from '../i18n/index.svelte.js';
+  import { comboMap } from '../models/captureToolbar.js';
   import { computeCursorRing } from '../models/drawUi.js';
+  import {
+    DRAW_TOOLBAR_IDLE_MS,
+    DRAW_TOOLBAR_PROXIMITY_PX,
+    activeDrawToolId,
+    drawToolSizeToEngineWidth,
+    engineWidthToDrawToolSize,
+    isNearRect,
+    panelToolIdForDraw,
+    placeDrawColorPanel,
+    resolveDrawToolbarVisibility,
+  } from '../models/drawToolbar.js';
+  import { normalizeColorValue, pushRecentColor, rgbToHex } from '../models/palette.js';
+  import {
+    clampToolSize,
+    createDefaultAnnotateStyle,
+    getToolSizeSpec,
+    stepSize,
+  } from '../models/inkSize.js';
+  import ColorWidthPanel from './ColorWidthPanel.svelte';
+  import DrawToolbar from './DrawToolbar.svelte';
 
   /**
-   * 판서 캔버스(A §3.1·§3.5, 4.2) — 3층 canvas(0 배경 · 1 굳힌 판서 · 2 지금 획) + DOM 층(글자 입력 상자 · 펜 고리).
-   * 상태는 모두 InkEngine이 갖는다. 이 부품은 DOM 사건 → 엔진 입력(화면 CSS 좌표 + event.timeStamp),
-   * 엔진 상태 → 그리기(rAF 한 번에 tick·배경·증분·dirty rect)만 한다.
-   * - 포인터: getCoalescedEvents 표본 전부 · 펜 필압 · 우클릭 메뉴 막기 · 포인터 캡처
-   * - 휠: passive:false로 받아 확대 단계 / Ctrl(맥 Cmd)+휠 굵기(브라우저 확대 막음)
-   * - 키: keyboard=true면 window keydown/keyup을 엔진에(처리한 키만 preventDefault)
-   * - M5: 그리는 중 사건 시각을 모아 그린 직후 performance.now()와 비교 → flushPenMetrics()·화면을 떠날 때 onPenMetrics
-   * - 글자 크기 측정: 마운트 때 engine.measureText를 캔버스 측정기로 바꾼다
-   * - desynchronized: 맨 위(지금 획) 층 getContext 옵션 — 마운트 때 한 번 읽는다
+   * 그리기·칠판 캔버스(A §3.1·§3.5, 4.2 · R2-DRAW-TB · R2-ANN-5):
+   * - 3층 canvas(0 배경 · 1 굳힌 그리기 · 2 지금 획) + DOM 층(글자 입력 상자 · 펜 고리)
+   * - 아래 가운데 유리 알약 도구 막대(DrawToolbar) + 색·굵기 패널(ColorWidthPanel) + 화면 색 따기(스포이트)
    * @type {{
    *   engine: import('../ink/inkEngine.js').InkEngine,
    *   backgroundImage?: CanvasImageSource | null,
    *   desynchronized?: boolean,
    *   keyboard?: boolean,
    *   cursorRing?: boolean,
+   *   toolbar?: boolean,
    *   initialCursor?: { x: number, y: number } | null,
+   *   styleState?: import('../models/inkSize.js').AnnotateStyleState | null,
+   *   onStyleChange?: (next: import('../models/inkSize.js').AnnotateStyleState, meta: { kind: 'color' | 'size', toolId: string, color?: string, size?: number }) => void,
    *   onEffect?: (effect: import('../ink/inkEngine.js').InkEffect) => void,
    *   onPenMetrics?: (summary: import('../ink/penMetrics.js').PenLatencySummary) => void,
    *   onFirstPaint?: (at: number) => void,
@@ -42,7 +66,10 @@
     desynchronized = true,
     keyboard = true,
     cursorRing = true,
+    toolbar = true,
     initialCursor = null,
+    styleState = null,
+    onStyleChange,
     onEffect,
     onPenMetrics,
     onFirstPaint,
@@ -61,6 +88,8 @@
   let ringEl = $state(null);
   /** @type {HTMLTextAreaElement | null} */
   let taEl = $state(null);
+  /** @type {any} */
+  let toolbarRef = $state(null);
 
   // DOM 층이 쓰는 엔진 상태(바뀔 때만 다시 넣는다)
   /** @type {import('../ink/inkEngine.js').InkEngine['editing']} */
@@ -68,13 +97,45 @@
   let viewState = $state.raw({ s: 1, tx: 0, ty: 0 });
   /** @type {import('../ink/inkEngine.js').InkTool} */
   let toolState = $state('pen');
+  /** @type {string | null} */
+  let shapeToolState = $state(null);
   let widthPx = $state(4);
   let colorCode = $state('R');
   /** @type {import('../ink/inkEngine.js').InkBackground} */
   let bgState = $state('frame');
   let eraserCss = $state(16);
+  let canUndo = $state(false);
+  let canRedo = $state(false);
+  let hasItems = $state(false);
+  let platformState = $state(/** @type {'windows' | 'macos'} */ ('windows'));
+  /** @type {Record<string, string>} */
+  let shortcutsMap = $state.raw({});
   let ringVisible = $state(false);
   let pressing = $state(false);
+
+  // 도구 막대 · 색·굵기 패널 상태(R2-DRAW-TB · R2-ANN-5)
+  let toolbarHidden = $state(false);
+  let toolbarIdleDim = $state(false);
+  let overToolbar = $state(false);
+  let overPanel = $state(false);
+  let nearToolbar = $state(false);
+  let panelOpen = $state(false);
+  let eyedropperActive = $state(false);
+  let canEyedropper = $state(false);
+  /** @type {number | null} */
+  let styleAnchorX = $state(null);
+  let panelW = $state(284);
+  let panelH = $state(216);
+  let viewportW = $state(1280);
+  let viewportH = $state(720);
+  let barTick = $state(0);
+  let localStyle = $state(createDefaultAnnotateStyle());
+  /** @type {import('../models/inkSize.js').AnnotateStyleState | null} */
+  let appliedExternalStyle = null;
+  /** @type {unknown} */
+  let lastShortcutsRef = null;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let toolbarIdleTimer = null;
 
   // 그리기 상태(반응형 아님 — rAF 안에서만)
   /** @type {CanvasRenderingContext2D | null} */
@@ -126,6 +187,21 @@
     if (engine.needsTick()) schedule();
   }
 
+  function refreshEyedropperCapability() {
+    if (!bgCtx || bgState !== 'frame' || !backgroundImage || canvasW <= 0 || canvasH <= 0) {
+      canEyedropper = false;
+      if (eyedropperActive) eyedropperActive = false;
+      return;
+    }
+    try {
+      bgCtx.getImageData(0, 0, 1, 1);
+      canEyedropper = true;
+    } catch {
+      canEyedropper = false;
+      if (eyedropperActive) eyedropperActive = false;
+    }
+  }
+
   function paint() {
     if (!bgCtx || !bakedCtx || !activeCtx || canvasW === 0) return;
     const e = engine;
@@ -146,6 +222,7 @@
     };
     if (viewChanged || bgChanged || image !== drawn.image) {
       drawBackground(bgCtx, { background: bg, image, view: e.view, dpr, docSize: e.doc.docSize, canvasW, canvasH });
+      refreshEyedropperCapability();
     }
     const docChanged = e.revs.doc !== drawn.doc;
     const hiddenChanged = e.revs.hidden !== drawn.hidden;
@@ -177,10 +254,34 @@
     if (e.editing !== editing) editing = e.editing;
     if (e.view !== viewState) viewState = e.view;
     toolState = e.tool;
+    shapeToolState = e.shapeTool;
     widthPx = e.widthPx;
     colorCode = e.color;
     bgState = e.background;
     eraserCss = e.eraserRadius * e.view.s * 2;
+    canUndo = e.canUndo;
+    canRedo = e.canRedo;
+    hasItems = e.items.length > 0;
+    platformState = e.platform;
+    if (e.shortcuts !== lastShortcutsRef) {
+      lastShortcutsRef = e.shortcuts;
+      shortcutsMap = comboMap(e.shortcuts);
+    }
+    setOs(e.platform);
+    if (e.lang) setLang(e.lang);
+
+    const uiId = activeDrawToolId(e.tool, e.shapeTool);
+    const pId = panelToolIdForDraw(uiId);
+    const syncedSize = engineWidthToDrawToolSize(pId, e.widthPx);
+    if (localStyle.tools[pId]?.size !== syncedSize) {
+      untrack(() => {
+        const prevEntry = localStyle.tools[pId] ?? { size: syncedSize };
+        localStyle = {
+          ...localStyle,
+          tools: { ...localStyle.tools, [pId]: { ...prevEntry, size: syncedSize } },
+        };
+      });
+    }
   }
 
   function resize() {
@@ -190,6 +291,9 @@
     dpr = window.devicePixelRatio || 1;
     cssW = r.width;
     cssH = r.height;
+    viewportW = cssW;
+    viewportH = cssH;
+    barTick += 1;
     canvasW = Math.max(1, Math.round(cssW * dpr));
     canvasH = Math.max(1, Math.round(cssH * dpr));
     for (const c of [bgEl, bakedEl, activeEl]) {
@@ -200,6 +304,37 @@
     sizeDirty = true;
     if (cssW > 0 && cssH > 0) engine.setViewport({ w: cssW, h: cssH });
     schedule();
+  }
+
+  function resetToolbarIdle() {
+    if (toolbarIdleTimer !== null) clearTimeout(toolbarIdleTimer);
+    toolbarIdleDim = false;
+    if (!toolbar || toolbarHidden || overToolbar || overPanel || panelOpen || nearToolbar) return;
+    toolbarIdleTimer = setTimeout(() => {
+      toolbarIdleTimer = null;
+      if (!overToolbar && !overPanel && !panelOpen && !nearToolbar) {
+        toolbarIdleDim = true;
+      }
+    }, DRAW_TOOLBAR_IDLE_MS);
+  }
+
+  /** @param {number} clientX @param {number} clientY */
+  function updateToolbarProximity(clientX, clientY) {
+    if (!toolbar || toolbarHidden) {
+      nearToolbar = false;
+      return;
+    }
+    const rect = toolbarRef?.getBarRect?.() ?? null;
+    const next = isNearRect({ x: clientX, y: clientY }, rect, DRAW_TOOLBAR_PROXIMITY_PX);
+    if (next !== nearToolbar) {
+      nearToolbar = next;
+      resetToolbarIdle();
+    }
+  }
+
+  /** @param {EventTarget | null} target */
+  function isUiTarget(target) {
+    return typeof Element === 'function' && target instanceof Element && Boolean(target.closest('.ink-draw-ui'));
   }
 
   /** @param {ReadonlyArray<import('../ink/inkEngine.js').InkEffect>} effects */
@@ -236,10 +371,40 @@
     ringEl.style.transform = `translate(${ringX}px, ${ringY}px)`;
   }
 
+  /** @param {number} clientX @param {number} clientY */
+  function pickEyedropperAt(clientX, clientY) {
+    if (!bgCtx || !canEyedropper || canvasW <= 0 || canvasH <= 0) return false;
+    const x = clientX - rootRect.left;
+    const y = clientY - rootRect.top;
+    const px = Math.max(0, Math.min(canvasW - 1, Math.round(x * dpr)));
+    const py = Math.max(0, Math.min(canvasH - 1, Math.round(y * dpr)));
+    try {
+      const data = bgCtx.getImageData(px, py, 1, 1).data;
+      const hex = rgbToHex([data[0], data[1], data[2]]);
+      handlePanelColor(hex, { recordRecent: true });
+      eyedropperActive = false;
+      return true;
+    } catch {
+      canEyedropper = false;
+      eyedropperActive = false;
+      return false;
+    }
+  }
+
   /** @param {PointerEvent} ev */
   function handlePointerDown(ev) {
-    if (ev.target === taEl) return;
+    if (ev.target === taEl || isUiTarget(ev.target)) return;
     if (rootEl) rootRect = rootEl.getBoundingClientRect();
+    if (eyedropperActive) {
+      ev.preventDefault();
+      if (ev.button === 2) {
+        eyedropperActive = false;
+      } else if (ev.button === 0) {
+        pickEyedropperAt(ev.clientX, ev.clientY);
+      }
+      resetToolbarIdle();
+      return;
+    }
     if (ev.button === 0 || ev.button === 2) {
       try {
         rootEl?.setPointerCapture(ev.pointerId);
@@ -258,18 +423,26 @@
 
   /** @param {PointerEvent} ev */
   function handlePointerMove(ev) {
+    updateToolbarProximity(ev.clientX, ev.clientY);
+    if (isUiTarget(ev.target) && !engine.gesture) {
+      ringVisible = false;
+      return;
+    }
     if (ev.target === taEl && !engine.gesture) return;
     const list = typeof ev.getCoalescedEvents === 'function' ? ev.getCoalescedEvents() : [];
     const samples = list.length ? list : [ev];
     for (const s of samples) emit(engine.pointerMove(sampleOf(s, ev)));
     if (engine.gesture?.kind === 'draw') meter.mark(ev.timeStamp);
     moveRing(ev);
+    if (!overToolbar && !overPanel && !eyedropperActive) ringVisible = true;
     if (engine.needsTick()) schedule();
   }
 
   /** @param {PointerEvent} ev */
   function handlePointerUp(ev) {
     pressing = false;
+    resetToolbarIdle();
+    if (isUiTarget(ev.target) && !engine.gesture) return;
     if (ev.target === taEl && !engine.gesture) return;
     emit(engine.pointerUp(sampleOf(ev)));
     try {
@@ -283,24 +456,28 @@
   function handlePointerCancel() {
     pressing = false;
     engine.pointerCancel();
+    resetToolbarIdle();
     schedule();
   }
 
   function handlePointerLeave() {
     engine.pointerLeave();
+    nearToolbar = false;
     ringVisible = false;
+    resetToolbarIdle();
   }
 
   /** @param {PointerEvent} ev */
   function handlePointerEnter(ev) {
     if (rootEl) rootRect = rootEl.getBoundingClientRect();
+    updateToolbarProximity(ev.clientX, ev.clientY);
     moveRing(ev);
-    ringVisible = true;
+    if (!isUiTarget(ev.target) && !eyedropperActive) ringVisible = true;
   }
 
   /** @param {MouseEvent} ev */
   function handleDblClick(ev) {
-    if (ev.target === taEl) return;
+    if (ev.target === taEl || isUiTarget(ev.target)) return;
     emit(
       engine.doubleClick({
         x: ev.clientX - rootRect.left,
@@ -319,6 +496,7 @@
 
   /** @param {WheelEvent} ev */
   function handleWheel(ev) {
+    if (isUiTarget(ev.target)) return;
     ev.preventDefault();
     if (rootEl) rootRect = rootEl.getBoundingClientRect();
     const k = ev.deltaMode === 1 ? 16 : ev.deltaMode === 2 ? cssH || 800 : 1;
@@ -350,12 +528,60 @@
     };
   }
 
+  function toggleToolbarHidden() {
+    toolbarHidden = !toolbarHidden;
+    if (toolbarHidden) {
+      panelOpen = false;
+      eyedropperActive = false;
+      overToolbar = false;
+      overPanel = false;
+      emit([{ type: 'notice', text: t('draw.notice.toolbarHidden', { key: DRAW_TOOLBAR_TOGGLE_KEY }) }]);
+    } else {
+      barTick += 1;
+      resetToolbarIdle();
+    }
+  }
+
   /** @param {KeyboardEvent} ev */
   function handleKeyDown(ev) {
     if (!keyboard) return;
+    if (toolbar && !ev.isComposing) {
+      const esc = ev.code === 'Escape' || ev.key === 'Escape';
+      if (eyedropperActive && esc && !ev.ctrlKey && !ev.altKey && !ev.metaKey && !ev.shiftKey) {
+        ev.preventDefault();
+        eyedropperActive = false;
+        resetToolbarIdle();
+        return;
+      }
+      if (panelOpen && esc && !ev.ctrlKey && !ev.altKey && !ev.metaKey && !ev.shiftKey) {
+        ev.preventDefault();
+        panelOpen = false;
+        overPanel = false;
+        resetToolbarIdle();
+        return;
+      }
+      if (!engine.editing && !engine.gesture && isDrawToolbarToggleKey(ev, engine.keymap, engine.platform)) {
+        ev.preventDefault();
+        toggleToolbarHidden();
+        return;
+      }
+      if (!engine.editing && !engine.gesture) {
+        const bracket = matchDrawSizeBracketKey(ev, engine.keymap, engine.platform);
+        if (bracket) {
+          ev.preventDefault();
+          const pId = panelToolIdForDraw(activeDrawToolId(engine.tool, engine.shapeTool));
+          const spec = getToolSizeSpec(pId);
+          const cur = localStyle.tools[pId]?.size ?? engineWidthToDrawToolSize(pId, engine.widthPx);
+          handlePanelSize(stepSize(cur, bracket.dir, spec, { large: bracket.large }));
+          resetToolbarIdle();
+          return;
+        }
+      }
+    }
     const r = engine.keyDown(keyInput(ev));
     if (r.handled || ev.code === 'Tab') ev.preventDefault();
     emit(r.effects);
+    resetToolbarIdle();
     schedule();
   }
 
@@ -377,8 +603,131 @@
     engine.textInput(/** @type {HTMLTextAreaElement} */ (ev.currentTarget).value);
   }
 
+  // ── 도구 막대 · 색·굵기 패널 동작 ──
+
+  /** @param {any} toolItem */
+  function handleToolbarTool(toolItem) {
+    eyedropperActive = false;
+    if (toolItem.kind === 'shape' && toolItem.shape) {
+      if (engine.tool === 'pen' && engine.shapeTool === toolItem.shape) {
+        engine.setShapeTool(null);
+      } else {
+        engine.setShapeTool(toolItem.shape);
+      }
+    } else if (toolItem.tool) {
+      engine.setTool(toolItem.tool);
+    }
+    const nextUiId = activeDrawToolId(engine.tool, engine.shapeTool);
+    const pId = panelToolIdForDraw(nextUiId);
+    const savedSize = localStyle.tools[pId]?.size;
+    if (typeof savedSize === 'number') {
+      engine.setWidth(drawToolSizeToEngineWidth(pId, savedSize));
+    }
+    engine.notify();
+    schedule();
+    resetToolbarIdle();
+  }
+
+  function handleStyleToggle() {
+    panelOpen = !panelOpen;
+    if (panelOpen) {
+      barTick += 1;
+    } else {
+      eyedropperActive = false;
+      overPanel = false;
+    }
+    resetToolbarIdle();
+  }
+
   /**
-   * M5 펜 지연 요약을 내보내고 비운다(판서를 끝내기 직전 DrawOverlay가 부른다 → drawPenMetrics).
+   * @param {string} codeOrHex
+   * @param {{ recordRecent?: boolean }} [opts]
+   */
+  function handlePanelColor(codeOrHex, { recordRecent = false } = {}) {
+    const norm = normalizeColorValue(codeOrHex);
+    if (!norm) return;
+    engine.setColor(norm);
+    engine.notify();
+    const pId = panelToolIdForDraw(activeDrawToolId(engine.tool, engine.shapeTool));
+    const key = pId === 'eraser' ? 'pen' : pId;
+    const prev = localStyle.tools[key] ?? { size: getToolSizeSpec(key).defaultVal };
+    const recentColors =
+      recordRecent || norm.startsWith('#') ? pushRecentColor(localStyle.recentColors, norm) : localStyle.recentColors;
+    const nextStyle = {
+      ...localStyle,
+      lastColor: norm,
+      recentColors,
+      tools: { ...localStyle.tools, [key]: { ...prev, color: norm } },
+    };
+    localStyle = nextStyle;
+    onStyleChange?.(nextStyle, { kind: 'color', toolId: activeDrawToolId(engine.tool, engine.shapeTool), color: norm });
+    schedule();
+    resetToolbarIdle();
+  }
+
+  /** @param {number} val */
+  function handlePanelSize(val) {
+    const uiId = activeDrawToolId(engine.tool, engine.shapeTool);
+    const pId = panelToolIdForDraw(uiId);
+    const spec = getToolSizeSpec(pId);
+    const clamped = clampToolSize(val, spec);
+    engine.setWidth(drawToolSizeToEngineWidth(pId, clamped));
+    engine.notify();
+    const prev = localStyle.tools[pId] ?? { size: spec.defaultVal };
+    const nextStyle = {
+      ...localStyle,
+      tools: { ...localStyle.tools, [pId]: { ...prev, size: clamped } },
+    };
+    localStyle = nextStyle;
+    onStyleChange?.(nextStyle, { kind: 'size', toolId: uiId, size: clamped });
+    schedule();
+    resetToolbarIdle();
+  }
+
+  function handleEyedropperToggle() {
+    if (!canEyedropper) return;
+    eyedropperActive = !eyedropperActive;
+    resetToolbarIdle();
+  }
+
+  /** @param {'frame' | 'white' | 'black'} nextBg */
+  function handleBoardToggle(nextBg) {
+    eyedropperActive = false;
+    engine.setBackground(nextBg);
+    schedule();
+    resetToolbarIdle();
+  }
+
+  function handleToolbarUndo() {
+    emit(engine.runAction('d-undo'));
+    engine.notify();
+    schedule();
+    resetToolbarIdle();
+  }
+
+  function handleToolbarRedo() {
+    emit(engine.runAction('d-redo'));
+    engine.notify();
+    schedule();
+    resetToolbarIdle();
+  }
+
+  function handleToolbarClear() {
+    emit(engine.runAction('d-clear'));
+    engine.notify();
+    schedule();
+    resetToolbarIdle();
+  }
+
+  function handleToolbarClose() {
+    panelOpen = false;
+    overPanel = false;
+    eyedropperActive = false;
+    emit([{ type: 'exit', reason: 'esc' }]);
+  }
+
+  /**
+   * M5 펜 지연 요약을 내보내고 비운다(그리기를 끝내기 직전 DrawOverlay가 부른다 → drawPenMetrics).
    * @returns {import('../ink/penMetrics.js').PenLatencySummary}
    */
   export function flushPenMetrics() {
@@ -402,7 +751,7 @@
 
   onMount(() => {
     if (!bgEl || !bakedEl || !activeEl || !rootEl) return;
-    bgCtx = bgEl.getContext('2d', { alpha: false });
+    bgCtx = bgEl.getContext('2d', { alpha: false, willReadFrequently: true });
     bakedCtx = bakedEl.getContext('2d', { alpha: true });
     activeCtx = activeEl.getContext('2d', { alpha: true, desynchronized });
     const measureCtx = createCanvas(1, 1).getContext('2d');
@@ -429,11 +778,16 @@
     };
     watchDpr();
     resize();
+    resetToolbarIdle();
     return () => {
       unsubscribe();
       root.removeEventListener('wheel', handleWheel);
       ro?.disconnect();
       dprQuery?.removeEventListener('change', onDpr);
+      if (toolbarIdleTimer !== null) {
+        clearTimeout(toolbarIdleTimer);
+        toolbarIdleTimer = null;
+      }
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
       flushPenMetrics();
@@ -443,6 +797,13 @@
   $effect(() => {
     void backgroundImage;
     schedule();
+  });
+
+  $effect(() => {
+    if (styleState && styleState !== appliedExternalStyle) {
+      appliedExternalStyle = styleState;
+      localStyle = styleState;
+    }
   });
 
   // 글자 입력 상자가 열리면 값을 넣고 포커스(고치기면 원래 글자, 커서는 끝으로)
@@ -499,6 +860,41 @@
       eraserCss,
     }),
   );
+
+  let activeUiTool = $derived(activeDrawToolId(toolState, shapeToolState));
+  let panelToolId = $derived(panelToolIdForDraw(activeUiTool));
+  let panelSpec = $derived(getToolSizeSpec(panelToolId));
+  let activeToolSize = $derived(engineWidthToDrawToolSize(panelToolId, widthPx));
+  let toolbarDrawing = $derived(
+    pressing && (toolState === 'pen' || toolState === 'marker' || toolState === 'eraser'),
+  );
+  let toolbarVis = $derived(
+    resolveDrawToolbarVisibility({
+      hidden: toolbarHidden,
+      drawing: toolbarDrawing,
+      idleDim: toolbarIdleDim,
+      hovering: overToolbar || overPanel,
+      panelOpen,
+      nearToolbar,
+    }),
+  );
+  let panelPos = $derived.by(() => {
+    void barTick;
+    void panelOpen;
+    const vw = viewportW || 1280;
+    const vh = viewportH || 720;
+    const rect = toolbarRef?.getBarRect?.();
+    const barRect = rect && rect.width > 0
+      ? { left: rect.left - rootRect.left, top: rect.top - rootRect.top, width: rect.width, height: rect.height }
+      : { left: Math.max(8, (vw - 440) / 2), top: Math.max(8, vh - 60), width: 440, height: 42 };
+    const anchor = typeof styleAnchorX === 'number' ? styleAnchorX - rootRect.left : null;
+    return placeDrawColorPanel(
+      barRect,
+      { w: panelW || 284, h: panelH || 216 },
+      { w: vw, h: vh },
+      anchor,
+    );
+  });
 </script>
 
 <svelte:window onkeydown={handleKeyDown} onkeyup={handleKeyUp} onblur={handleBlur} />
@@ -507,10 +903,12 @@
   bind:this={rootEl}
   class="ink-draw {className}"
   data-tool={toolState}
-  data-ring={cursorRing && ring ? 'true' : undefined}
+  data-shape={shapeToolState ?? undefined}
+  data-eyedropper={eyedropperActive ? 'true' : undefined}
+  data-ring={cursorRing && ring && !overToolbar && !overPanel && !eyedropperActive ? 'true' : undefined}
   data-pressing={pressing ? 'true' : undefined}
   role="application"
-  aria-label="판서 화면"
+  aria-label={t('draw.canvas.label')}
   onpointerdown={handlePointerDown}
   onpointermove={handlePointerMove}
   onpointerup={handlePointerUp}
@@ -528,7 +926,7 @@
     <textarea
       bind:this={taEl}
       class="ink-draw-text"
-      aria-label="판서 글자"
+      aria-label={t('draw.canvas.textLabel')}
       spellcheck="false"
       autocomplete="off"
       rows="1"
@@ -545,7 +943,7 @@
     ></textarea>
   {/if}
 
-  {#if cursorRing && ring}
+  {#if cursorRing && ring && !overToolbar && !overPanel && !eyedropperActive}
     <div
       bind:this={ringEl}
       class="ink-draw-ring"
@@ -570,6 +968,98 @@
       {/if}
     </div>
   {/if}
+
+  {#if toolbar}
+    {#if toolbarVis.visible}
+      <DrawToolbar
+        bind:this={toolbarRef}
+        activeTool={activeUiTool}
+        color={colorCode}
+        sizeValue={activeToolSize}
+        sizeUnit={panelSpec.unit}
+        background={bgState}
+        mode={engine.doc.mode}
+        {canUndo}
+        {canRedo}
+        {hasItems}
+        {panelOpen}
+        dimmed={toolbarVis.dimmed}
+        interactive={toolbarVis.interactive}
+        platform={platformState}
+        combos={shortcutsMap}
+        onTool={handleToolbarTool}
+        onStyleToggle={handleStyleToggle}
+        onUndo={handleToolbarUndo}
+        onRedo={handleToolbarRedo}
+        onBoardToggle={handleBoardToggle}
+        onClear={handleToolbarClear}
+        onClose={handleToolbarClose}
+        onHover={(v) => {
+          overToolbar = v;
+          if (v) ringVisible = false;
+          resetToolbarIdle();
+        }}
+        onStyleAnchorChange={(cx) => (styleAnchorX = cx)}
+      />
+
+      {#if panelOpen}
+        <div
+          class="ink-draw-panel-wrap ink-draw-ui"
+          role="presentation"
+          onpointerdown={(e) => e.stopPropagation()}
+          onpointermove={(e) => e.stopPropagation()}
+          onpointerup={(e) => e.stopPropagation()}
+          ondblclick={(e) => e.stopPropagation()}
+          onwheel={(e) => e.stopPropagation()}
+        >
+          <ColorWidthPanel
+            toolId={panelToolId}
+            color={colorCode}
+            size={activeToolSize}
+            recentColors={localStyle.recentColors}
+            {eyedropperActive}
+            showEyedropper={canEyedropper}
+            displayScale={engine.doc.scale || 1}
+            zoomScale={viewState.s}
+            x={panelPos.x}
+            y={panelPos.y}
+            side={panelPos.side}
+            arrowX={panelPos.arrowX}
+            bind:boxWidth={panelW}
+            bind:boxHeight={panelH}
+            onColor={handlePanelColor}
+            onSize={handlePanelSize}
+            onEyedropper={handleEyedropperToggle}
+            onHover={(v) => {
+              overPanel = v;
+              if (v) ringVisible = false;
+              resetToolbarIdle();
+            }}
+          />
+        </div>
+      {/if}
+    {:else}
+      <button
+        type="button"
+        class="ink-draw-restore-chip ink-draw-ui"
+        aria-label={`${t('draw.toolbar.show')} (${DRAW_TOOLBAR_TOGGLE_KEY})`}
+        onpointerdown={(e) => e.stopPropagation()}
+        onclick={(e) => {
+          e.stopPropagation();
+          toggleToolbarHidden();
+        }}
+      >
+        <span>{t('draw.toolbar.show')}</span>
+        <span class="ink-draw-restore-key ink-mono">{DRAW_TOOLBAR_TOGGLE_KEY}</span>
+      </button>
+    {/if}
+
+    {#if eyedropperActive}
+      <div class="ink-draw-eye-hint ink-draw-ui" aria-live="polite">
+        {t('draw.eyedropper.hint')}
+      </div>
+    {/if}
+  {/if}
 </div>
 
 <style>
@@ -587,6 +1077,10 @@
 
   .ink-draw[data-ring='true'] {
     cursor: none;
+  }
+
+  .ink-draw[data-eyedropper='true'] {
+    cursor: crosshair;
   }
 
   .ink-draw[data-tool='text'] {
@@ -664,5 +1158,73 @@
     border-radius: 50%;
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
     transform: translate(-50%, -50%);
+  }
+
+  .ink-draw-panel-wrap {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 24;
+  }
+
+  .ink-draw-panel-wrap :global(.ink-cw-panel) {
+    z-index: 25;
+  }
+
+  .ink-draw-restore-chip {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(20, 21, 25, 0.72);
+    color: #f7f8fa;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    opacity: 0.48;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transition: opacity 150ms ease-out;
+    z-index: 22;
+  }
+
+  .ink-draw-restore-chip:hover,
+  .ink-draw-restore-chip:focus-visible {
+    opacity: 1;
+  }
+
+  .ink-draw-restore-chip:focus-visible {
+    outline: 2px solid var(--ink-accent);
+    outline-offset: 2px;
+  }
+
+  .ink-draw-restore-key {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.14);
+    font-size: 10.5px;
+  }
+
+  .ink-draw-eye-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 70px;
+    transform: translateX(-50%);
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(16, 17, 20, 0.84);
+    color: #f7f8fa;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    font-size: 12px;
+    line-height: 1.3;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 26;
   }
 </style>

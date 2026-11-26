@@ -179,6 +179,44 @@ export function matchDrawKey(event, keymap, platform = 'windows') {
   return keymap.get(combo) ?? null;
 }
 
+/** 도구 막대 숨기기/보이기 기본 물리 키(29칸 외 보조 키 — 사용자 단축키가 같은 키에 묶여 있지 않을 때만 동작). */
+export const DRAW_TOOLBAR_TOGGLE_CODE = 'KeyV';
+export const DRAW_TOOLBAR_TOGGLE_KEY = 'V';
+
+/**
+ * 도구 막대 숨기기/보이기 키(`V`)인지 판정한다.
+ * 사용자가 `V`를 다른 판서 동작에 직접 묶어 두었으면 그쪽을 우선한다.
+ * @param {KeyEventLike | null | undefined} event
+ * @param {Map<string, string> | null | undefined} [keymap]
+ * @param {Platform} [platform='windows']
+ * @returns {boolean}
+ */
+export function isDrawToolbarToggleKey(event, keymap, platform = 'windows') {
+  if (!event || isComposingEvent(event)) return false;
+  if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return false;
+  if (event.code !== DRAW_TOOLBAR_TOGGLE_CODE) return false;
+  const combo = eventToCombo(event, platform);
+  if (combo && keymap?.has(combo)) return false;
+  return true;
+}
+
+/**
+ * `[` `]` (또는 `⇧+[` `⇧+]`) 굵기 조절 키 판정. 사용자 단축키가 묶여 있으면 양보한다.
+ * @param {KeyEventLike | null | undefined} event
+ * @param {Map<string, string> | null | undefined} [keymap]
+ * @param {Platform} [platform='windows']
+ * @returns {{ dir: -1 | 1, large: boolean } | null}
+ */
+export function matchDrawSizeBracketKey(event, keymap, platform = 'windows') {
+  if (!event || isComposingEvent(event)) return null;
+  if (event.ctrlKey || event.altKey || event.metaKey) return null;
+  const dir = event.code === 'BracketLeft' ? -1 : event.code === 'BracketRight' ? 1 : 0;
+  if (!dir) return null;
+  const combo = eventToCombo(event, platform);
+  if (combo && keymap?.has(combo)) return null;
+  return { dir: /** @type {-1 | 1} */ (dir), large: Boolean(event.shiftKey) };
+}
+
 /**
  * 조합 상태 추적 — compositionstart~compositionend와 끝난 뒤 40 ms 동안 도구·색 키를 막는다.
  */

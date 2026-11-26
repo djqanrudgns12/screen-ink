@@ -3,8 +3,12 @@
   import CheatSheet from './CheatSheet.svelte';
   import DrawCanvas from '../components/DrawCanvas.svelte';
   import MiniMap from '../components/MiniMap.svelte';
+  import { syncLang } from '../i18n/index.svelte.js';
   import { InkEngine, documentOptionsFromSession } from '../ink/inkEngine.js';
   import { renderDocument } from '../ink/canvasRender.js';
+  import { BASIC_COLOR_CODES } from '../models/palette.js';
+  import { parseAnnotateStyle, serializeAnnotateStyle } from '../models/inkSize.js';
+  import { clampDrawSettingWidth, drawIslandColor } from '../models/drawToolbar.js';
   import {
     DRAW_IDLE_DIM_MS,
     DRAW_MINIMAP_MARGIN_PX,
@@ -61,6 +65,9 @@
   let readySent = false;
   let stateApplied = false;
   let lastPatchKey = '';
+  let lastSyncedStyleRaw = '';
+  /** @type {import('../models/inkSize.js').AnnotateStyleState | null} */
+  let drawStyle = $state.raw(null);
   let idleDim = false;
   let cursorAvoid = false;
   /** @type {ReturnType<typeof setTimeout> | null} */
@@ -84,7 +91,7 @@
       bgImage = img;
     };
     img.onerror = () => {
-      // 배경을 못 읽어도 판서는 이어 간다(빈 바탕) — 진입 계측은 지금 시각으로
+      // 배경을 못 읽어도 그리기는 이어 간다(빈 바탕) — 진입 계측은 지금 시각으로
       bgFailed = true;
       sendReady(nowMs());
     };
@@ -107,24 +114,59 @@
   /** @param {any} state */
   function applyState(state) {
     if (!state) return;
+    syncLang(state);
     const platform = state.platform === 'macos' ? 'macos' : 'windows';
     if (engine.platform !== platform) engine.platform = platform;
     if (Array.isArray(state.shortcuts)) engine.setShortcuts(state.shortcuts);
-    // 처음 한 번은 펜 색·굵기도 설정값으로(그 뒤에는 판서 중 바꾼 값을 지킨다)
-    if (state.settings) engine.setSettings(state.settings, { initial: !stateApplied });
+    // 처음 한 번은 펜 색·굵기도 설정값으로(그 뒤에는 그리는 중 바꾼 값을 지킨다)
+    if (state.settings) {
+      engine.setSettings(state.settings, { initial: !stateApplied });
+      const rawStyle = typeof state.settings['annotate.style'] === 'string' ? state.settings['annotate.style'] : '';
+      if (rawStyle && rawStyle !== lastSyncedStyleRaw) {
+        lastSyncedStyleRaw = rawStyle;
+        drawStyle = parseAnnotateStyle(rawStyle);
+      }
+    }
     stateApplied = true;
     pushIsland();
   }
 
-  // ───────────── 판서 섬 ─────────────
+  /**
+   * 도구 막대·색 굵기 패널 변경을 설정에 저장한다.
+   * Rust 설정 `draw.width`는 1~30, `draw.color`는 기본 8색으로 제한한다(R2-ANN-5).
+   * @param {import('../models/inkSize.js').AnnotateStyleState} next
+   * @param {{ kind: 'color' | 'size', toolId: string, color?: string, size?: number }} meta
+   */
+  function handleStyleChange(next, meta) {
+    drawStyle = next;
+    const raw = serializeAnnotateStyle(next);
+    if (raw !== lastSyncedStyleRaw && typeof client?.updateSetting === 'function') {
+      lastSyncedStyleRaw = raw;
+      Promise.resolve(client.updateSetting('annotate.style', raw)).catch(() => {});
+    }
+    if (typeof client?.updateSetting !== 'function') return;
+    if (
+      meta?.kind === 'size' &&
+      typeof meta.size === 'number' &&
+      (meta.toolId === 'pen' || meta.toolId === 'line' || meta.toolId === 'rect' || meta.toolId === 'ellipse')
+    ) {
+      Promise.resolve(client.updateSetting('draw.width', clampDrawSettingWidth(meta.size))).catch(() => {});
+    }
+    if (meta?.kind === 'color' && meta.color && BASIC_COLOR_CODES.includes(meta.color)) {
+      Promise.resolve(client.updateSetting('draw.color', meta.color)).catch(() => {});
+    }
+  }
+
+  // ───────────── 그리기 섬 ─────────────
 
   function patchOf() {
     const p = engine.islandPatch;
+    const color = drawIslandColor(p.color);
     return {
       session: sessionId,
-      color: p.color,
+      ...(color ? { color } : {}),
       tool: p.tool,
-      widthPx: p.widthPx,
+      widthPx: clampDrawSettingWidth(p.widthPx),
       zoom: p.zoom,
       background: p.background,
       pageIndex: p.pageIndex,
@@ -335,6 +377,8 @@
       {engine}
       backgroundImage={bgImage}
       {initialCursor}
+      styleState={drawStyle}
+      onStyleChange={handleStyleChange}
       onEffect={handleEffect}
       onPenMetrics={(sample) => client.drawPenMetrics(sample)}
       onFirstPaint={sendReady}

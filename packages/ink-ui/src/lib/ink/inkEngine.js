@@ -642,8 +642,10 @@ export class InkEngine {
    */
   setSettings(settings, opts = {}) {
     const s = settings ?? {};
-    if (s['general.lang'] === 'ko' || s['general.lang'] === 'en') {
+    let langChanged = false;
+    if ((s['general.lang'] === 'ko' || s['general.lang'] === 'en') && s['general.lang'] !== this.lang) {
       this.lang = s['general.lang'];
+      langChanged = true;
     }
     if (s['draw.smoothing'] === 'off' || s['draw.smoothing'] === 'light' || s['draw.smoothing'] === 'strong') {
       this.config.smoothing = s['draw.smoothing'];
@@ -658,6 +660,7 @@ export class InkEngine {
       if (INK_COLOR_CODES.includes(s['draw.color'])) this.color = s['draw.color'];
       if (typeof s['draw.width'] === 'number') this.widthPx = clamp(Math.round(s['draw.width']), MIN_WIDTH_PX, DRAW_SETTING_MAX_PX);
     }
+    if (!opts.initial && langChanged && this.listeners?.size) this.notify();
   }
 
   /**
@@ -667,6 +670,7 @@ export class InkEngine {
   setShortcuts(shortcuts) {
     this.shortcuts = shortcuts;
     this.keymap = buildDrawKeymap(shortcuts, this.platform);
+    if (this.listeners?.size) this.notify();
   }
 
   /**
@@ -1063,7 +1067,10 @@ export class InkEngine {
 
   /** @param {InkTool} tool */
   setTool(tool) {
-    if (tool !== 'pan') this.dropSuggestion();
+    if (tool !== 'pan') {
+      this.dropSuggestion();
+      this.shapeTool = null;
+    }
     if (this.editing) this.commitText();
     if (tool !== 'select' && tool !== 'pan' && this.selection.length) this.selection = [];
     if (tool === 'pan') {
@@ -1075,12 +1082,58 @@ export class InkEngine {
     this.revs.active++;
   }
 
+  /**
+   * 도구 막대 도형 도구('line' · 'rect' · 'ellipse' · 'arrow') 고르기(null이면 일반 펜).
+   * @param {'line' | 'rect' | 'ellipse' | 'arrow' | null} shape
+   */
+  setShapeTool(shape) {
+    this.setTool('pen');
+    this.shapeTool = shape;
+    this.revs.active++;
+  }
+
+  /** 지금 획에 적용할 도형 종류(수정 키가 도구 막대 선택보다 우선). */
+  activeShapeKind() {
+    return this.shapeKindFromMods() ?? (this.tool === 'pen' ? this.shapeTool : null);
+  }
+
+  /**
+   * 굵기 직접 설정(1~MAX_WIDTH_PX 64 — 패널 도구별 범위 지원).
+   * 판서 설정 `draw.width` 저장은 바깥(DrawOverlay)에서 DRAW_SETTING_MAX_PX(30)로 가둔다.
+   * @param {number} px
+   */
+  setWidth(px) {
+    if (!Number.isFinite(px)) return false;
+    const w = clamp(px, MIN_WIDTH_PX, MAX_WIDTH_PX);
+    if (Math.abs(w - this.widthPx) < EPS) return false;
+    this.widthPx = w;
+    if (this.editing) {
+      this.editing = { ...this.editing, fontSize: (w * TEXT_SIZE_MUL) / this.view.s };
+    }
+    this.revs.active++;
+    return true;
+  }
+
   /** @param {InkColor} color */
   setColor(color) {
     this.color = color;
     if (this.editing) this.editing = { ...this.editing, color };
     if (this.selection.length) this.setAttrSelected((it) => (it.kind !== 'mosaic' && it.color !== color ? { color } : null));
     this.revs.active++;
+  }
+
+  /**
+   * 바탕 직접 전환('frame' · 'white' · 'black', 도구 막대 칠판 ↔ 화면 전환).
+   * @param {InkBackground} target
+   */
+  setBackground(target) {
+    if (target !== 'frame' && target !== 'white' && target !== 'black') return false;
+    if (this.doc.mode === 'board' && target === 'frame') return false;
+    const cur = this.background;
+    if (target === cur) return false;
+    this.push({ type: 'setBg', page: this.doc.activePage, before: cur, after: target });
+    this.notify();
+    return true;
   }
 
   /**
@@ -1452,7 +1505,7 @@ export class InkEngine {
    * @param {any} g
    */
   freehandHoldEligible(g) {
-    return g.tool === 'pen' && this.config.shapeOnHold && !this.shapeKindFromMods();
+    return g.tool === 'pen' && this.config.shapeOnHold && !this.activeShapeKind();
   }
 
   /**
@@ -1542,7 +1595,7 @@ export class InkEngine {
     const g = this.gesture;
     if (g?.kind !== 'draw') return null;
     const dashed = this.mods.alt;
-    const kind = this.shapeKindFromMods();
+    const kind = this.activeShapeKind();
     if (kind) {
       const { raw, snapped } = shapeFromDrag(kind, g.start, g.end, { straighten: this.config.straighten });
       return this.makeShape(g, snapped ?? raw, 'preview', dashed);
@@ -1573,7 +1626,7 @@ export class InkEngine {
     const page = this.doc.activePage;
     /** @type {InkEffect[]} */
     const fx = [];
-    const kind = this.shapeKindFromMods();
+    const kind = this.activeShapeKind();
     if (kind) {
       const { raw, snapped } = shapeFromDrag(kind, g.start, g.end, { straighten: this.config.straighten });
       if (Math.abs(raw.x2 - raw.x1) * this.view.s < 1 && Math.abs(raw.y2 - raw.y1) * this.view.s < 1) return fx;
@@ -1581,7 +1634,7 @@ export class InkEngine {
       this.push({ type: 'add', page, item });
       if (snapped) {
         this.push({ type: 'correct', page, before: item, after: this.makeShape(g, snapped, item.id, dashed) });
-        fx.push({ type: 'notice', text: raw.y2 !== snapped.y2 ? INK_NOTICES.horizontal : INK_NOTICES.vertical });
+        fx.push({ type: 'notice', text: this.noticeOf(raw.y2 !== snapped.y2 ? 'horizontal' : 'vertical') });
       }
       return fx;
     }
@@ -1598,10 +1651,10 @@ export class InkEngine {
       if (this.config.shapeApply === 'auto') {
         // 바로 바꾸기: add → correct 2명령(A §2.3)
         this.push({ type: 'correct', page, before: stroke, after: shaped });
-        fx.push({ type: 'notice', text: `${INK_NOTICES[name]} · ${this.undoLabel}로 원래 획` });
+        fx.push({ type: 'notice', text: this.undoNoticeOf(name) });
       } else {
         // 제안형(기본): 손획은 그대로, Enter·섬 클릭으로 수락할 때까지 제안만 띄운다
-        const text = `${SHAPE_TO[name]} 바꿀까요? · Enter`;
+        const text = this.suggestOf(name);
         this.suggestion = { strokeId: stroke.id, page, shaped, name, text, expiresAt: e.t + SUGGEST_TIMEOUT_MS };
         this.revs.active++;
         fx.push({ type: 'suggest', text, shape: name });
@@ -1889,7 +1942,7 @@ export class InkEngine {
         if (!this.items.length) return [];
         this.selection = [];
         this.push({ type: 'clear', page: this.doc.activePage, items: this.items.slice() });
-        return [{ type: 'notice', text: INK_NOTICES.cleared, action: 'undo' }];
+        return [{ type: 'notice', text: this.noticeOf('cleared'), action: 'undo' }];
       case 'd-white':
         this.toggleBackground('white');
         return [];
@@ -2004,7 +2057,7 @@ export class InkEngine {
    * @returns {InkEffect[]}
    */
   restoreKept(kept, status) {
-    if (status === 'differentMonitor') return [{ type: 'notice', text: INK_NOTICES.differentMonitor }];
+    if (status === 'differentMonitor') return [{ type: 'notice', text: this.noticeOf('differentMonitor') }];
     const src = kept && 'document' in kept ? kept.document : /** @type {InkDocument | null | undefined} */ (kept);
     if (status === 'none' || !src || !Array.isArray(src.pages)) return [];
     let pages = createInkDocument(src).pages;
@@ -2012,7 +2065,7 @@ export class InkEngine {
       const k = this.doc.docSize.w / src.docSize.w;
       pages = rescaleDocument(createInkDocument(src), k).pages;
     }
-    // 실행 취소할 수 있는 명령 하나로(그 전 기록은 그대로) — Ctrl+Z 1번 = 복원 전 판서
+    // 실행 취소할 수 있는 명령 하나로(그 전 기록은 그대로) — Ctrl+Z 1번 = 복원 전 그리기
     if (this.editing) this.commitText();
     this.cancelGesture();
     this.selection = [];
@@ -2028,7 +2081,7 @@ export class InkEngine {
     this.syncIdCounters();
     this.revs.active++;
     this.notify();
-    return [...this.takeEffects(), { type: 'notice', text: status === 'rescaled' ? INK_NOTICES.rescaled : INK_NOTICES.restored }];
+    return [...this.takeEffects(), { type: 'notice', text: this.noticeOf(status === 'rescaled' ? 'rescaled' : 'restored') }];
   }
 }
 
