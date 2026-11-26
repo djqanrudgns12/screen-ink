@@ -24,6 +24,7 @@ const COMMANDS: &[&str] = &[
     "zoom_input",
     "capture_annotations",
     "capture_commit_annotated",
+    "ui_log",
 ];
 
 fn main() {

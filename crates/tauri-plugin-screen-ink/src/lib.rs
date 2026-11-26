@@ -766,6 +766,17 @@ fn capture_commit_annotated(ink: State<'_, Ink>, request: tauri::ipc::Request<'_
 }
 
 /// 판서 배경을 그렸다 → 진입 계측(M4) `mode enter draw [N ms]` 한 줄.
+/// 화면(웹뷰)에서 난 오류를 앱 로그로(진단용 — 사용자 문제를 로그 하나로 볼 수 있게). 400자까지, 창 이름만 붙인다.
+#[tauri::command]
+fn ui_log<R: Runtime>(window: tauri::WebviewWindow<R>, level: String, message: String) {
+    let msg: String = message.chars().take(400).collect();
+    if level == "error" {
+        log::error!("ui {}: {msg}", window.label());
+    } else {
+        log::warn!("ui {}: {msg}", window.label());
+    }
+}
+
 #[tauri::command]
 fn draw_ready(ink: State<'_, Ink>, session: u64, paint_ms: Option<f64>) {
     ink.lock().draw_ready(session, paint_ms);
@@ -1408,7 +1419,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             draw_pen_metrics,
             zoom_input,
             capture_annotations,
-            capture_commit_annotated
+            capture_commit_annotated,
+            ui_log
         ])
         .register_uri_scheme_protocol(overlay::SCHEME, |ctx, req| overlay::serve(ctx, req))
         .setup(|app, _api| setup(app))

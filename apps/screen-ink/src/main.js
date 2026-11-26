@@ -2,7 +2,18 @@
 import './app.css';
 import { mount } from 'svelte';
 import { createTauriClient } from '@screen-ink/client/tauri';
+import { invoke } from '@tauri-apps/api/core';
 import App from './App.svelte';
+
+// 화면 오류를 앱 로그로(진단 — 개발 도구를 못 여는 사용자 PC에서도 로그 하나로 본다)
+const uiLog = (level, message) => invoke('plugin:screen-ink|ui_log', { level, message: String(message).slice(0, 400) }).catch(() => {});
+window.addEventListener('error', (e) => uiLog('error', `${e.message} @ ${e.filename?.split('/').pop() ?? ''}:${e.lineno ?? 0}`));
+window.addEventListener('unhandledrejection', (e) => uiLog('error', `unhandled: ${e.reason?.stack ?? e.reason}`));
+const consoleError = console.error.bind(console);
+console.error = (...args) => {
+  consoleError(...args);
+  uiLog('warn', args.map((a) => (a instanceof Error ? a.stack ?? a.message : String(a))).join(' '));
+};
 
 const params = new URLSearchParams(location.search);
 const view = params.get('view') ?? 'settings';

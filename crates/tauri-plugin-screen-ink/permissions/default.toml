@@ -28,4 +28,5 @@ permissions = [
   "allow-zoom-input",
   "allow-capture-annotations",
   "allow-capture-commit-annotated",
+  "allow-ui-log",
 ]

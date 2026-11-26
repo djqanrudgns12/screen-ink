@@ -2,6 +2,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { encodeAnnotatedCommit } from './index.js';
+import { createEventHub } from './hub.js';
 
 const cmd = (name, args, options) => invoke(`plugin:screen-ink|${name}`, args, options);
 
@@ -23,6 +24,8 @@ function exportRequest(action, bytes, meta) {
 
 /** @returns {import('./index.js').InkClient} */
 export function createTauriClient() {
+  /** @type {ReturnType<typeof createEventHub> | null} */
+  let hub = null;
   return {
     getState: () => cmd('get_state'),
     updateSetting: (path, value) => cmd('update_setting', { path, value }),
@@ -54,18 +57,9 @@ export function createTauriClient() {
     // 원본 바이트 IPC(tauri::ipc::Request body) — base64 없음
     captureCommitAnnotated: (meta, rgba) => invoke('plugin:screen-ink|capture_commit_annotated', encodeAnnotatedCommit(meta, rgba)),
     subscribe(handler) {
-      const offs = [
-        listen('screen-ink://state', (e) => handler({ type: 'state', state: e.payload })),
-        listen('screen-ink://island', (e) => handler({ type: 'island', island: e.payload })),
-        listen('screen-ink://overlay', (e) => handler({ type: 'overlay', overlay: e.payload })),
-        listen('screen-ink://capture', (e) => handler({ type: 'capture', view: e.payload })),
-        listen('screen-ink://draw', (e) => handler({ type: 'draw', draw: e.payload })),
-        listen('screen-ink://draw-command', (e) => handler({ type: 'drawCommand', ...e.payload })),
-        listen('screen-ink://afterimage', (e) => handler({ type: 'afterimage', afterimage: e.payload })),
-        listen('screen-ink://zoom', (e) => handler({ type: 'zoom', zoom: e.payload ?? null })),
-        listen('screen-ink://capture-commit', (e) => handler({ type: 'captureCommit', request: e.payload })),
-      ];
-      return () => offs.forEach((p) => p.then((off) => off()));
+      // 창마다 듣기는 한 번만(hub.js — 구독마다 listen을 걸면 등록 전에 온 사건을 놓친다)
+      hub ??= createEventHub(listen);
+      return hub.add(handler);
     },
   };
 }

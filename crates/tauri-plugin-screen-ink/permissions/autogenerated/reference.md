@@ -29,6 +29,7 @@ screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있
 - `allow-zoom-input`
 - `allow-capture-annotations`
 - `allow-capture-commit-annotated`
+- `allow-ui-log`
 
 ## Permission Table
 
@@ -607,6 +608,32 @@ Enables the set_shortcut command without any pre-configured scope.
 <td>
 
 Denies the set_shortcut command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-ui-log`
+
+</td>
+<td>
+
+Enables the ui_log command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-ui-log`
+
+</td>
+<td>
+
+Denies the ui_log command without any pre-configured scope.
 
 </td>
 </tr>
