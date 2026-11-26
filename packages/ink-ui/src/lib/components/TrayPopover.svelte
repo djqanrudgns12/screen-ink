@@ -19,7 +19,7 @@
    */
   let {
     open = $bindable(true),
-    label = 'screen-ink 메뉴',
+    label = '슉쇽 메뉴',
     onClose = undefined,
     onOpenChange = undefined,
     trigger = undefined,

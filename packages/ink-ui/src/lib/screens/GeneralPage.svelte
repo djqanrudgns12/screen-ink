@@ -56,7 +56,7 @@
     const res = await client.previewImport();
     if (!res || res.cancelled) return;
     if (!res.ok) {
-      importError = res.error || '이 파일은 screen-ink 설정이 아니에요';
+      importError = res.error || '이 파일은 슉쇽 설정이 아니에요';
       return;
     }
     importPreview = res;

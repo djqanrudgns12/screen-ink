@@ -1,7 +1,8 @@
-# screen-ink (가칭)
+# 슉쇽 (shookshok)
 
 발표자를 위한 **화면 필기·확대·스마트 캡처** 데스크톱 앱. 아이캔 줌잇(판서·확대)과 Snipaste(스마트 캡처)의 장점을 한 앱으로 합친다.
 Windows 먼저, 이어서 macOS. 한국어 우선 + English. 무료(이후 MS Store).
+만든 이: 찰떡쌤 · MIT License. 저장소·크레이트·패키지 이름은 옛 이름 `screen-ink`를 그대로 쓴다([docs/brand/](docs/brand/README.md)).
 
 > 상태: **PRD v3.0 최종**(단축키 확정 · 스마트 캡처 v2 · 디자인 확정: 그래파이트 + 다크 아일랜드 · 마스터플랜 약 27일), 코드 없음 (2026-11-25) → [docs/PRD.md](docs/PRD.md)
 > 원본 문서(구글 독스): https://docs.google.com/document/d/1Uuzck1KYOipR9-J85CR14jo1mxsjXSucKD38nU61EB8/edit

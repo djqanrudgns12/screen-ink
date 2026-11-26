@@ -56,7 +56,7 @@ impl Platform {
 #[serde(rename_all = "lowercase")]
 pub enum Level {
     Ok,
-    /// screen-ink가 대신할 앱과 겹침 — 그 앱을 계속 쓰지 않으면 괜찮다.
+    /// 슉쇽이 대신할 앱과 겹침 — 그 앱을 계속 쓰지 않으면 괜찮다.
     Repl,
     Warn,
     Block,

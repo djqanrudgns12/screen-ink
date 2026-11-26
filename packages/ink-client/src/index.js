@@ -61,7 +61,7 @@
  * @property {boolean} cancelled
  * @property {string} [path]
  * @property {boolean} [ok]
- * @property {string} [error]   "이 파일은 screen-ink 설정이 아니에요"
+ * @property {string} [error]   "이 파일은 슉쇽 설정이 아니에요"
  * @property {SettingChange[]} [changes]
  * @property {string[]} [warnings]
  *

@@ -40,6 +40,12 @@ pub const POPOVER: &str = "ink-popover";
 pub const SETTINGS: &str = "ink-settings";
 pub const ISLAND: &str = "ink-island";
 const TRAY_ID: &str = "screen-ink";
+/// 화면에 보이는 앱 이름(docs/brand/README.md). 내부 식별자(플러그인·이벤트·트레이 ID)는 `screen-ink` 그대로.
+pub const APP_NAME: &str = "슉쇽";
+/// 폴더·파일 이름에 쓰는 영문 이름(사진\shookshok, %APPDATA%\shookshok).
+pub const APP_DIR: &str = "shookshok";
+/// 이름을 바꾸기 전 설정 폴더 — 새 폴더가 없으면 한 번 옮긴다.
+const LEGACY_DIR: &str = "screen-ink";
 const EVT_STATE: &str = "screen-ink://state";
 const EVT_ISLAND: &str = "screen-ink://island";
 const EVT_CAPTURE: &str = "screen-ink://capture";
@@ -314,7 +320,7 @@ fn tray_image(mode: TrayMode) -> Image<'static> {
 }
 
 fn tooltip(state: &InkState) -> String {
-    let mut t = String::from("screen-ink");
+    let mut t = String::from(APP_NAME);
     if !state.hotkeys_enabled {
         t.push_str(" · 단축키 꺼짐");
     } else if state.conflicts.count > 0 {
@@ -373,7 +379,7 @@ fn show_island<R: Runtime>(app: &AppHandle<R>) {
 
 fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let popover = WebviewWindowBuilder::new(app, POPOVER, WebviewUrl::App("index.html?view=popover".into()))
-        .title("screen-ink")
+        .title(APP_NAME)
         .inner_size(304.0, 460.0)
         .resizable(false)
         .decorations(false)
@@ -399,7 +405,7 @@ fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     });
 
     WebviewWindowBuilder::new(app, ISLAND, WebviewUrl::App("index.html?view=island".into()))
-        .title("screen-ink island")
+        .title("shookshok island")
         .inner_size(560.0, 88.0)
         .resizable(false)
         .decorations(false)
@@ -500,7 +506,7 @@ fn open_settings_with<R: Runtime>(app: &AppHandle<R>, first_run: bool) {
     }
     let url = if first_run { "index.html?view=settings&first=1" } else { "index.html?view=settings" };
     let built = WebviewWindowBuilder::new(app, SETTINGS, WebviewUrl::App(url.into()))
-        .title("screen-ink 설정")
+        .title(format!("{APP_NAME} 설정"))
         .inner_size(900.0, 600.0)
         .resizable(false)
         .maximizable(false)
@@ -521,7 +527,7 @@ fn output_folder<R: Runtime>(app: &AppHandle<R>) -> Option<std::path::PathBuf> {
     if !configured.is_empty() {
         return Some(configured.into());
     }
-    app.path().picture_dir().ok().map(|p| p.join("screen-ink"))
+    app.path().picture_dir().ok().map(|p| p.join(APP_DIR))
 }
 
 fn open_folder(path: &std::path::Path) {
@@ -703,14 +709,14 @@ struct ImportPick {
 fn read_json_file(path: &std::path::Path) -> Result<Value, String> {
     let bytes = std::fs::read(path).map_err(|_| "파일을 읽을 수 없어요".to_string())?;
     let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes);
-    serde_json::from_slice(bytes).map_err(|_| "이 파일은 screen-ink 설정이 아니에요".to_string())
+    serde_json::from_slice(bytes).map_err(|_| format!("이 파일은 {APP_NAME} 설정이 아니에요"))
 }
 
 /// 가져오기 1단계: 파일 고르기 → 무엇이 바뀌는지(시트). 저장은 하지 않는다.
 #[tauri::command]
 async fn preview_import<R: Runtime>(app: AppHandle<R>) -> Result<ImportPick, String> {
     use tauri_plugin_dialog::DialogExt;
-    let Some(picked) = app.dialog().file().add_filter("screen-ink 설정", &["json"]).blocking_pick_file() else {
+    let Some(picked) = app.dialog().file().add_filter(format!("{APP_NAME} 설정"), &["json"]).blocking_pick_file() else {
         return Ok(ImportPick { cancelled: true, path: None, preview: None });
     };
     let path = picked.into_path().map_err(|e| e.to_string())?;
@@ -747,8 +753,8 @@ fn today() -> String {
 
 async fn export_settings<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
     use tauri_plugin_dialog::DialogExt;
-    let name = format!("screen-ink-settings-{}.json", today());
-    let Some(picked) = app.dialog().file().add_filter("screen-ink 설정", &["json"]).set_file_name(&name).blocking_save_file() else {
+    let name = format!("{APP_DIR}-settings-{}.json", today());
+    let Some(picked) = app.dialog().file().add_filter(format!("{APP_NAME} 설정"), &["json"]).set_file_name(&name).blocking_save_file() else {
         return Ok(());
     };
     let path = picked.into_path().map_err(|e| e.to_string())?;
@@ -903,7 +909,14 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
     });
 
     let exe_dir = std::env::current_exe()?.parent().map(|p| p.to_path_buf()).unwrap_or_default();
-    let (dir, portable) = ink_store::resolve_dir(&exe_dir, &app.path().config_dir()?.join("screen-ink"));
+    let config_dir = app.path().config_dir()?;
+    let user_dir = config_dir.join(APP_DIR);
+    let legacy = config_dir.join(LEGACY_DIR);
+    if !user_dir.exists() && legacy.is_dir() {
+        // 이름 바꾸기 전에 쓰던 설정을 그대로 가져간다. 실패하면 새 폴더에서 처음부터.
+        let _ = std::fs::rename(&legacy, &user_dir);
+    }
+    let (dir, portable) = ink_store::resolve_dir(&exe_dir, &user_dir);
     let (screen, windows, monitors) = screen_ports();
     let ports = Ports {
         hotkeys: Box::new(TauriHotkeys { app: app.clone() }),
@@ -931,7 +944,7 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
     let first_run = service.is_first_run();
     let autostart = service.settings().bool("general.autostart");
     let initial = service.state();
-    log::info!("screen-ink ready: {} hotkey(s) not registered", failed);
+    log::info!("shookshok ready: {} hotkey(s) not registered", failed);
     app.manage(Ink(Mutex::new(service)));
 
     // 창·트레이는 플러그인 초기화가 끝난 뒤 이벤트 루프에서 만든다. 플러그인 setup은 플러그인 목록
@@ -942,10 +955,10 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         let h = handle.clone();
         if let Err(e) = handle.run_on_main_thread(move || {
             if let Err(e) = finish_setup(&h, initial, first_run, autostart, started) {
-                log::error!("screen-ink setup failed: {e}");
+                log::error!("shookshok setup failed: {e}");
             }
         }) {
-            log::error!("screen-ink setup could not be scheduled: {e}");
+            log::error!("shookshok setup could not be scheduled: {e}");
         }
     });
     Ok(())

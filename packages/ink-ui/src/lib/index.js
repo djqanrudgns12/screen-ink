@@ -21,6 +21,7 @@ export { default as SelectionFrame } from './components/SelectionFrame.svelte';
 export { default as Magnifier } from './components/Magnifier.svelte';
 export { default as MiniMap } from './components/MiniMap.svelte';
 export { default as PinFrame } from './components/PinFrame.svelte';
+export { default as MakerCredit } from './components/MakerCredit.svelte';
 
 // 화면
 export { default as TrayPopoverScreen } from './screens/TrayPopoverScreen.svelte';

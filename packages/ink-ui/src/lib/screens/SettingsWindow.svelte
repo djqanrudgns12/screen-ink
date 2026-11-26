@@ -5,6 +5,7 @@
   import SectionLabel from '../components/SectionLabel.svelte';
   import Group from '../components/Group.svelte';
   import Row from '../components/Row.svelte';
+  import MakerCredit from '../components/MakerCredit.svelte';
   import ShortcutsPage from './ShortcutsPage.svelte';
   import CapturePage from './CapturePage.svelte';
   import DrawZoomPage from './DrawZoomPage.svelte';
@@ -112,14 +113,14 @@
 
 <svelte:window onkeydown={handleWindowKeydown} />
 
-<div role="dialog" aria-label="screen-ink 설정" class="ink-settings-win {className}">
+<div role="dialog" aria-label="슉쇽 설정" class="ink-settings-win {className}">
   <nav aria-label="설정 묶음" class="ink-sidebar">
     <div class="ink-brand" data-tauri-drag-region>
       <span class="ink-brand-icon" data-tauri-drag-region>
         <AppIcon size={28} />
       </span>
       <div class="ink-brand-meta" data-tauri-drag-region>
-        <p class="ink-brand-name" data-tauri-drag-region>screen-ink</p>
+        <p class="ink-brand-name" data-tauri-drag-region>슉쇽</p>
         <p class="ink-brand-ver ink-mono" data-tauri-drag-region>{state?.version ?? '0.1.0'}</p>
       </div>
     </div>
@@ -205,6 +206,8 @@
             <SectionLabel title="앱" />
             <Group>
               <Row label="버전" sub={state?.version ?? '0.1.0'} subMono={true} />
+              <Row label="만든 이" sub="찰떡쌤" />
+              <Row label="라이선스" sub="MIT" />
               <Row label="오픈소스 고지" sub="IBM Plex · Svelte · bits-ui · Tauri" />
             </Group>
           </section>
@@ -214,6 +217,10 @@
               <Row label="통계·자동 업데이트" sub="1차 버전에서는 꺼져 있어요" />
             </Group>
           </section>
+          <footer class="ink-info-credit">
+            <p class="ink-info-credit-app">슉쇽 · v{state?.version ?? '0.1.0'}</p>
+            <MakerCredit />
+          </footer>
         </div>
       </div>
     {/if}
@@ -380,6 +387,22 @@
     font-size: 19px;
     font-weight: 600;
     color: var(--ink-text);
+    user-select: none;
+  }
+
+  .ink-info-credit {
+    margin-top: auto;
+    padding-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .ink-info-credit-app {
+    margin: 0;
+    font-size: 11px;
+    line-height: 16px;
+    color: var(--ink-sub);
     user-select: none;
   }
 
