@@ -56,6 +56,7 @@
 | 매니페스트 | `…/releases/latest/download/latest.json`, `{version, pub_date, platforms{windows-x86_64(-nsis): {signature, url}}}` (`tauri.conf.json:44-46`, `scripts/lib/updaterRelease.mjs`) | 같음 |
 | 서명 | minisign 업데이터 키 — 공개 키는 `tauri.conf.json`, 개인 키는 저장소 밖 `~/.tauri/*.key` | 같음(키는 새로 만듦: `~/.tauri/screen-ink-updater.key`) |
 | 설치 | 사용자가 누를 때: 받기(취소 가능) → 창마다 저장 확인 응답(15초) → 사본 → 쓰기 잠금 → `install()` passive (`app_update.rs:381-434`) | 같음 + **녹화 중이면 설치 단추 비활성("녹화를 마치면 설치할 수 있어요")**, "끌 때 설치" 선택지 추가 |
+| 알림 방식 | 배너로 살며시 | **바뀜(2026-11-26 사용자 결정)**: 배너는 사용자가 잘 못 알아챘다 → 새 버전이 준비되면 **업데이트 팝업**을 바로 띄우고 클릭 한 번에 몇 초 안 설치·자동 재시작. 모드·전체 화면 발표 중에는 미룸([11 §7.2](11-distribution.md)) |
 | 실패 | 확인 20초·연결 20초·조각 30초 제한, 코드별 한국어 안내, 안 되면 브라우저로 직접 받기 | 같음 |
 | 나중에·건너뛰기 | 24시간 미루기 · 그 버전 건너뛰기 (`updateChecker.js:186-198`) | 같음 |
 | 릴리스 | `npm run release`(버전 동기화 · latest.json 생성 · 서명 검증) | Tidy `scripts/lib/updaterRelease.mjs`·`minisign.mjs`를 옮겨 씀 |

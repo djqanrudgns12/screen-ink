@@ -15,7 +15,7 @@
 3. **스토어를 더 늘린다면:** winget은 스토어에 올리면 따라온다. 국내 교사 접근성 때문에 **네이버 소프트웨어**를 검토할 만하다(§4).
    - 맥은 Mac App Store와 Homebrew 공식 목록 둘 다 막혀 있다. 그래서 자체 서명 dmg 직접 배포(2026-11-26 결정)를 유지한다.
 4. **자동 업데이트는 Windows가 한다(§7).** 스토어판은 스토어가, 직접 배포판은 `.appinstaller` 파일로 Windows 앱 설치 관리자가 새 버전을 받는다. 앱 프로세스는 계속 네트워크 0이다.
-5. **학교 PC 주의:** 교육청이 관리하는 PC는 Microsoft Store가 막혀 있을 수 있다. 막혀 있으면 스토어 경로가 통째로 안 된다. **[확인 필요]** 학교 PC에서 확인한다(진척도 `D6`).
+5. **학교 PC:** 학교 PC에서 Microsoft Store가 **열린다**(사용자 확인 2026-11-26). 스토어 경로가 학교에서도 기본이다. 다른 학교·교육청 PC는 막혀 있을 수 있어 §1.1의 대체 경로를 남겨 둔다.
 
 ### 1.1 돈을 전혀 안 쓰는 조합 (2026-11-26, 사용자: "무료로")
 
@@ -132,12 +132,23 @@ Certum(€49/년)은 SignPath를 못 쓸 때만 고려한다(게시자 이름을
   - GitHub `releases/latest/download/…` 리디렉션 주소를 App Installer가 따라가는지
   - 학교 PC 정책
 
-### 7.2 (선택) 앱이 "새 버전 있어요"를 알려 주기
+### 7.2 앱의 업데이트 안내 — 팝업으로 바로 (2026-11-26 사용자 결정)
 
-- 상주 앱은 다시 시작할 일이 드물다. 그래서 백그라운드로 받아 둔 업데이트가 오래 미뤄질 수 있다.
-- 이때 앱이 Windows API(`Package.CheckUpdateAvailabilityAsync`)로 물어보고, 섬에 "다시 시작하면 새 버전이에요 [다시 시작]"을 띄울 수 있다.
-- 통신은 Windows가 하고 우리 실행 파일에는 HTTP가 들어가지 않는다. 다만 "앱이 업데이트를 확인한다"는 점에서 R-NET-1과 부딪힌다. 그래서 **사용자 결정** 항목으로 둔다(진척도 `D9` 메모).
-- 모드(캡처·판서·녹화) 중에는 묻지도, 띄우지도 않는다(06 §2.1과 같은 원칙).
+- **배너가 아니라 팝업이다.** Tidy Task는 배너로 살며시 띄웠는데, 사용자들이 잘 알아채지 못했다(사용자 경험).
+- 새 버전이 준비되면 커서가 있는 모니터 가운데에 **업데이트 창**(시트 모양, 디자인 시스템 `Sheet`)을 바로 띄운다.
+- 단추: **[지금 업데이트]**(기본, Enter) · [오늘은 그만]. 누르면 **몇 초 안에** 끝나고 앱이 스스로 다시 켜진다. 그동안 섬에 "업데이트 중 — 곧 다시 켜져요"를 보인다.
+- **빠르게:** 새 버전은 미리 받아 둔다. 누른 뒤에는 설치·재시작만 한다.
+  - 스토어판: `StoreContext.TrySilentDownloadStorePackageUpdatesAsync`로 미리 받고 → `TrySilentDownloadAndInstallStorePackageUpdatesAsync`로 설치
+  - 직접 배포판: `.appinstaller`의 백그라운드 확인이 받아 둔 것을 `PackageManager.AddPackageByAppInstallerFileAsync`(`ForceTargetAppShutdown`)로 적용
+  - 두 경로 모두 다시 켜기는 `RegisterApplicationRestart`로 한다
+  - 정확한 API 동작은 구현할 때 확인한다 **[확인 필요]**
+- **띄우지 않는 때:** 아래일 때는 미뤘다가 끝나자마자 띄운다. 수업 중 프로젝터 화면에 갑자기 뜨면 안 되기 때문이다.
+  - 모드(캡처·판서·확대·녹화) 중
+  - 전체 화면 앱(슬라이드 쇼·영상)이 앞에 있을 때
+  - 보안 데스크톱
+- **확인 시점:** 앱 시작 1분 뒤, 그 뒤 6시간마다, 트레이 팝오버를 열 때. "오늘은 그만"을 누르면 다음 날 처음 확인 때 다시 띄운다.
+- **통신:** 통신은 Windows(스토어·앱 설치 관리자)가 하고 우리 실행 파일에는 HTTP가 없다(R-NET-2의 import 검사는 그대로 통과). 다만 "앱이 업데이트를 확인한다"로 바뀌므로 **PRD R-NET-1 문장을 고쳐야 한다** → 원래 세션에서 처리(이 세션은 PRD를 고치지 않음).
+- 구현은 진척도 `D10`(코드 — 원래 세션).
 
 ## 8. Certum 오픈소스 인증서 — 비용·범위 (2026-11-26 조사)
 
@@ -151,7 +162,57 @@ Certum(€49/년)은 SignPath를 못 쓸 때만 고려한다(게시자 이름을
 | 스토어와의 관계 | 스토어판(MSIX)은 스토어가 서명하므로 이 인증서가 필요 없다. 이 인증서는 ② 직접 배포판에만 쓴다. 스토어에서 **유료로 팔면** 상업 배포가 되므로, 그 경우 직접 배포판 서명에 오픈소스 인증서를 쓰는 것이 약관에 걸릴 수 있다 **[확인 필요]** |
 | 저장소 공개와의 관계 | Certum은 공개 오픈소스가 조건이다 → 06 §2.2의 "코드 비공개 + 릴리스 전용 공개 저장소(B안)"와는 함께 쓸 수 없다. ②를 택하면 A안(공개)이 된다 |
 
-## 9. 출처
+## 10. 2026-11-26 결정과 다음 할 일
+
+| # | 결정 | 다음 할 일 | 진척도 |
+|---|---|---|---|
+| 1 | **저장소를 공개한다**(SignPath 무료 서명을 쓰기 위해) | 라이선스 정하기(제안 **MIT**: 짧고 흔하며, 나중에 Tidy 같은 비공개 앱에 붙여도 걸림이 없다) → `LICENSE`·`Cargo.toml`·`package.json` 라이선스 필드 → GitHub 공개 전환 | `D7` |
+| 2 | Microsoft Store 개발자 계정은 **등록 중**(사용자) | 승인되면 앱 이름 예약 | `D1` |
+| 3 | 학교 PC에서 스토어가 **열린다** | winget(msstore) 설치만 확인 | `D6` |
+| 4 | 개인정보 처리방침·지원 페이지·업데이트 주소는 **저장소의 GitHub Pages**에 두고, 주소는 **쌤유니버스.com의 하위 도메인**(예: `ink.쌤유니버스.com`)을 CNAME으로 붙인다 | §10.2 | `D12` |
+| 5 | 업데이트 안내는 **팝업**, 클릭 한 번에 몇 초 안 업데이트(§7.2) | 구현(코드) | `D10` |
+| 6 | 직접 배포판 서명은 **SignPath Foundation 신청** | §10.3 | `D11` |
+
+### 10.1 공개 전 점검 (2026-11-26, 읽기만 함)
+
+| 항목 | 결과 |
+|---|---|
+| 비밀값(토큰·키·`.env`·개인 키) — 전체 이력 | **없음**(`phc_`·`ghp_`·`github_pat_`·`sk-`·`AKIA`·PRIVATE KEY 등 패턴, 민감 파일 이름) |
+| 커밋 작성자 이메일 | 27개 커밋 모두 개인 Gmail 주소 → **공개되면 이력에 그대로 보인다**. 바꾸려면 이력을 다시 써야 하고 맥 사본도 다시 받아야 함 → 그대로 두는 것을 권장. 앞으로의 커밋은 GitHub noreply 주소로 바꿀 수 있다 |
+| 학교·학생·교직원 정보 | 없음(학교 이름·사람 이름 검색 0건). 측정 자료는 "학교 PC" 수치뿐 |
+| 다른 앱 분석 문서(`docs/benchmark/`) | 클린룸: 공개 정보·로그·PE import·화면 관찰만, 디컴파일 없음(문서에 명시) |
+| Tidy 내부 구조 언급 | PRD·03·06에 Tidy 파일 이름·줄 번호가 나온다(비밀값은 없음). 비공개 프로젝트의 설계가 조금 드러나는 정도 → 그대로 두어도 됨, 원하면 공개 전에 걷어 냄 |
+| 라이선스 | 지금 `UNLICENSED`(Cargo.toml) → 공개 전에 바꿔야 함. 의존성은 오픈소스(글꼴 IBM Plex = OFL) |
+
+### 10.2 배포 주소 — 도메인만 빌려 쓴다
+
+- **왜 GitHub Pages + 하위 도메인인가**
+  - 쌤유니버스.com 본 사이트(classlearning)는 건드리지 않는다. DNS에 **CNAME 한 줄**(예: `ink` → `djqanrudgns12.github.io`)만 더한다. 본 사이트 메뉴·링크와 연결되지 않으니 겉으로 티가 나지 않는다.
+  - 페이지는 이 저장소에 있으니 앱과 같이 버전 관리된다.
+  - `.appinstaller` 주소는 **한 번 정하면 바꿀 수 없다**(설치된 앱이 계속 그 주소를 본다). 내 도메인 아래에 두면 나중에 호스팅을 옮겨도 주소가 유지된다.
+- **순서**
+  1. 저장소 공개 뒤 GitHub Pages를 켠다. 처음에는 `djqanrudgns12.github.io/screen-ink/privacy`로 바로 쓸 수 있다. 스토어의 개인정보 처리방침 주소는 나중에 바꿀 수 있어서 이걸로 먼저 등록해도 된다.
+  2. 쌤유니버스.com DNS에 CNAME을 더하고 Pages에 사용자 도메인을 넣는다(HTTPS 자동). 한글 도메인은 퓨니코드(`xn--…`)로 들어간다. DNS 관리 화면 접근은 사용자 몫이다.
+  3. **첫 `.appinstaller` 릴리스는 반드시 2가 끝난 뒤에 낸다.**
+- **올릴 것:** `/privacy`(개인정보 처리방침), `/support`(문의 = GitHub Issues 링크, 이메일은 싣지 않음), `/screen-ink.appinstaller`. `.msix` 파일은 GitHub Releases에 두고 `.appinstaller`가 그 정확한 주소를 가리킨다.
+- **개인정보 처리방침 초안(요지):**
+  - screen-ink는 개인정보를 모으지 않고 어디로도 보내지 않는다.
+  - 화면 캡처는 사용자가 고른 곳(클립보드·사용자 폴더)에만 남는다.
+  - 설정과 범위 기록(사각형 좌표만)은 이 PC 안에만 저장된다.
+  - 앱에는 통신 기능이 없다. 업데이트 확인·내려받기는 Windows(Microsoft Store·앱 설치 관리자)가 한다.
+  - 문의는 GitHub Issues로 받는다.
+  - 한국어·영어 두 벌로 쓴다.
+
+### 10.3 SignPath Foundation 신청 준비물
+
+- 공개 저장소 + OSI 라이선스(§10 결정 1)
+- 홈페이지(README)에 **코드 서명 정책** 절과 정해진 문구 "Free code signing provided by SignPath.io, certificate by SignPath Foundation"
+- **GitHub Actions 릴리스 빌드**(GitHub 호스팅 러너에서 빌드 → 서명 요청). 지금은 로컬 빌드뿐이라 워크플로를 새로 만든다(코드·CI — 원래 세션)
+- 팀원 모두 2단계 인증(GitHub 계정)
+- 릴리스마다 SignPath에서 승인 한 번
+- 게시자 이름은 "SignPath Foundation"이다. 직접 배포판 MSIX의 매니페스트 `Publisher`가 그 인증서 주체와 같아야 한다
+
+## 11. 출처
 
 - 개인 개발자 무료 등록: [Windows Developer Blog 2025-09-10](https://blogs.windows.com/windowsdeveloper/2025/09/10/free-developer-registration-for-individual-developers-on-microsoft-store/), [storedeveloper.microsoft.com](https://storedeveloper.microsoft.com/)
 - MSIX는 스토어가 서명, EXE/MSI는 신뢰 루트 CA 서명 필요: [MSIX 패키지 요구사항](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements), [Code signing options](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options), [Win32 앱 스토어 배포](https://learn.microsoft.com/en-us/windows/apps/distribute-through-store/how-to-distribute-your-win32-app-through-microsoft-store)
