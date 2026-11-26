@@ -12,6 +12,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::{Arc, Mutex};
 
 pub mod replay;
+pub mod truth;
 
 #[derive(Debug, Default)]
 pub struct HotkeyBook {

@@ -748,6 +748,11 @@ impl InkService {
         self.island(capture_island(kind));
         self.emit_state();
         // 고르기 시작: 상태 기계 + 커서 아래 창 UIA 색인(미리 깨우기, D9) + V 전처리 — 모두 진입 뒤(진입 시간에 안 들어감)
+        self.cap.probe = crate::capture::EntryProbe {
+            pressed: Some(pressed),
+            window: self.snapshot.as_ref().and_then(|s| s.window_at(cursor, true)).map(|w| w.handle),
+            ..Default::default()
+        };
         self.start_selection(kept, cursor);
     }
 

@@ -19,6 +19,21 @@
    점 = 강조를 고른 커서 자리, 드래그면 가운데).
 4. JSON의 `note`에 무엇을 띄운 화면인지(예: `RB-04 Win32 시험 앱`) 적는다. 같은 화면의 점은 한 파일의 `points`로 합쳐도 된다.
 
+## 자동 정답 (RB-01·02·03·12·14·19 — 우리 시험 문서)
+
+시험 문서 `pages/*.html`은 배치(CSS px)를 `<script type="application/json" id="layout">`에 담고, 왼쪽 위에 2×2 색 표지(자홍·청록 / 노랑·검정)를 그린다.
+정지 이미지에서 표지를 찾으면 문서 원점과 배율(브라우저 틀·확대·Windows 배율 포함)을 알 수 있어서, 정답을 사람이 그리지 않아도 된다(`ink-platform-fake::truth`).
+
+1. **모든 모니터에 시험 문서 말고는 아무것도 없게 한다**(사례 PNG에 모든 모니터가 담긴다).
+2. 브라우저(RB-01 Chrome · 02 Edge · 03 WebView2 · 19 Firefox)로 `pages/rb01.html`을 열고 확대 100%, 창 최대화. 표지가 가려지지 않게 둔다.
+3. 사례 폴더를 주고 앱을 띄운 뒤 F1 → 아무 곳 Enter(확정 1번 = 사례 1개).
+4. 정답 채우기:
+   ```powershell
+   cargo run -p ink-platform-fake --bin recog-truth -- bench/recog/cases/<사례>.json bench/recog/pages/rb01.html "RB-01 Chrome 100%"
+   ```
+   → `모니터 N, 배율 1.000, 정답 점 32개`. 사례의 `points`가 문서의 모든 정답(그릇은 빈 자리 점)으로 바뀐다.
+5. RB-12(혼합 배율)는 배율이 다른 모니터에서 2~4를 한 번 더.
+
 ## 재생
 
 ```powershell

@@ -155,10 +155,12 @@ fn element_source<R: Runtime>(app: &AppHandle<R>) -> Box<dyn ink_app::ElementSou
     {
         let handle = app.clone();
         Box::new(ink_platform_windows::uia::UiaIndex::spawn(move |window, exe, took| {
+            // 끝난 순간(일꾼 스레드) — 메인 스레드로 넘어오는 지연과 나눠 잰다
+            let at = std::time::Instant::now();
             let h = handle.clone();
             let _ = handle.run_on_main_thread(move || {
                 if let Some(ink) = h.try_state::<Ink>() {
-                    ink.lock().on_elements_ready(window, &exe, took);
+                    ink.lock().on_elements_ready_at(window, &exe, took, at);
                 }
             });
         }))
@@ -174,10 +176,11 @@ fn element_source<R: Runtime>(app: &AppHandle<R>) -> Box<dyn ink_app::ElementSou
 fn vision_source<R: Runtime>(app: &AppHandle<R>) -> Box<dyn ink_app::VisionSource> {
     let handle = app.clone();
     Box::new(ink_app::VisionEngine::new(move || {
+        let at = std::time::Instant::now();
         let h = handle.clone();
         let _ = handle.run_on_main_thread(move || {
             if let Some(ink) = h.try_state::<Ink>() {
-                ink.lock().on_vision_ready();
+                ink.lock().on_vision_ready_at(at);
             }
         });
     }))

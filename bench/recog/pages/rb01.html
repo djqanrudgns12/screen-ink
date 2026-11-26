@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>RB-01 인식 시험 문서</title>
+<!--
+  RB-01 시험 문서(08 §5.1): 상자·표·버튼·그림·문단. 내용은 모두 지어낸 것(개인정보 없음).
+  배치는 아래 <script id="layout">(CSS px)가 유일한 원본이다 — 화면도 정답(recog-truth)도 이것에서 나온다.
+  왼쪽 위 표지(자홍·청록 / 노랑·검정 2×2)를 정지 이미지에서 찾아 문서 원점과 배율을 잰다.
+  쓰는 법: 브라우저 확대 100%, 창 최대화 → bench/recog/README.md "자동 정답".
+-->
+<style>
+  html, body { margin: 0; padding: 0; background: #ffffff; font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; }
+  #page { position: relative; width: 1280px; height: 800px; overflow: hidden; }
+  .el { position: absolute; box-sizing: border-box; }
+  .marker { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+  .marker > i { display: block; }
+  .bar { background: #1f2937; }
+  .side { background: #f3f4f6; }
+  .item { background: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 12px; font-size: 14px; color: #111827; }
+  .card { background: #ffffff; border: 1px solid #d1d5db; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+  .title { font-size: 20px; font-weight: 700; color: #111827; }
+  .btn { background: #d97706; color: #ffffff; border-radius: 8px; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+  .btn-line { background: #ffffff; color: #d97706; border: 2px solid #d97706; border-radius: 8px; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+  .head-btn { background: #374151; color: #f9fafb; border-radius: 6px; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  .cell { border: 1px solid #d1d5db; background: #ffffff; font-size: 13px; padding: 12px; color: #374151; }
+  .th { border: 1px solid #9ca3af; background: #e5e7eb; font-size: 13px; font-weight: 700; padding: 10px 12px; color: #111827; }
+  .pic { background: linear-gradient(135deg, #60a5fa 0%, #34d399 60%, #fbbf24 100%); border-radius: 4px; }
+  .para { font-size: 15px; line-height: 1.7; color: #1f2937; }
+  .input { border: 1px solid #9ca3af; border-radius: 6px; background: #ffffff; font-size: 14px; color: #9ca3af; padding: 10px 12px; }
+  .check { border: 2px solid #4b5563; border-radius: 4px; background: #ffffff; }
+  .foot { background: #e5e7eb; }
+</style>
+</head>
+<body>
+<div id="page"></div>
+<script type="application/json" id="layout">
+{
+  "page": "rb01",
+  "size": [1280, 800],
+  "marker": { "x": 8, "y": 8, "size": 16 },
+  "elements": [
+    { "label": "머리 막대", "class": "bar", "rect": [0, 40, 1280, 56], "at": [600, 68] },
+    { "label": "머리 단추 1", "class": "head-btn", "rect": [1056, 52, 96, 32], "text": "도움말" },
+    { "label": "머리 단추 2", "class": "head-btn", "rect": [1164, 52, 96, 32], "text": "설정" },
+    { "label": "옆 막대", "class": "side", "rect": [0, 96, 240, 648], "at": [120, 600] },
+    { "label": "목록 1", "class": "item", "rect": [16, 120, 208, 36], "text": "첫째 마당" },
+    { "label": "목록 2", "class": "item", "rect": [16, 164, 208, 36], "text": "둘째 마당" },
+    { "label": "목록 3", "class": "item", "rect": [16, 208, 208, 36], "text": "셋째 마당" },
+    { "label": "목록 4", "class": "item", "rect": [16, 252, 208, 36], "text": "넷째 마당" },
+    { "label": "카드", "class": "card", "rect": [272, 120, 480, 280], "at": [700, 230] },
+    { "label": "카드 제목", "class": "title", "rect": [296, 144, 300, 32], "text": "물의 순환 정리", "truth": false },
+    { "label": "카드 단추 1", "class": "btn", "rect": [296, 340, 120, 36], "text": "확인" },
+    { "label": "카드 단추 2", "class": "btn-line", "rect": [432, 340, 120, 36], "text": "다시 보기" },
+    { "label": "표 머리 1", "class": "th", "rect": [784, 120, 116, 40], "text": "모둠" },
+    { "label": "표 머리 2", "class": "th", "rect": [900, 120, 116, 40], "text": "관찰" },
+    { "label": "표 머리 3", "class": "th", "rect": [1016, 120, 116, 40], "text": "결과" },
+    { "label": "표 머리 4", "class": "th", "rect": [1132, 120, 116, 40], "text": "비고" },
+    { "label": "칸 1-1", "class": "cell", "rect": [784, 160, 116, 48], "text": "1모둠" },
+    { "label": "칸 1-2", "class": "cell", "rect": [900, 160, 116, 48], "text": "증발" },
+    { "label": "칸 1-3", "class": "cell", "rect": [1016, 160, 116, 48], "text": "구름" },
+    { "label": "칸 1-4", "class": "cell", "rect": [1132, 160, 116, 48], "text": "" },
+    { "label": "칸 2-1", "class": "cell", "rect": [784, 208, 116, 48], "text": "2모둠" },
+    { "label": "칸 2-2", "class": "cell", "rect": [900, 208, 116, 48], "text": "응결" },
+    { "label": "칸 2-3", "class": "cell", "rect": [1016, 208, 116, 48], "text": "비" },
+    { "label": "칸 2-4", "class": "cell", "rect": [1132, 208, 116, 48], "text": "" },
+    { "label": "칸 3-1", "class": "cell", "rect": [784, 256, 116, 48], "text": "3모둠" },
+    { "label": "칸 3-2", "class": "cell", "rect": [900, 256, 116, 48], "text": "강수" },
+    { "label": "칸 3-3", "class": "cell", "rect": [1016, 256, 116, 48], "text": "강" },
+    { "label": "칸 3-4", "class": "cell", "rect": [1132, 256, 116, 48], "text": "" },
+    { "label": "그림", "class": "pic", "rect": [272, 432, 320, 200] },
+    { "label": "문단", "class": "para", "rect": [624, 432, 624, 200], "text": "바다와 강의 물은 햇빛을 받아 수증기가 되어 하늘로 올라간다. 수증기는 높은 곳에서 식어 작은 물방울이 되고, 물방울이 모여 구름이 된다. 구름 속 물방울이 커지면 비나 눈이 되어 땅으로 내려오고, 다시 강과 바다로 흘러간다. 이 과정을 물의 순환이라고 한다." },
+    { "label": "입력 칸", "class": "input", "rect": [272, 664, 400, 40], "text": "이름을 적으세요(예시)" },
+    { "label": "확인란", "class": "check", "rect": [688, 672, 24, 24] },
+    { "label": "바닥 막대", "class": "foot", "rect": [0, 744, 1280, 56], "at": [640, 772] }
+  ]
+}
+</script>
+<script>
+  const L = JSON.parse(document.getElementById('layout').textContent);
+  const page = document.getElementById('page');
+  const m = L.marker, h = m.size / 2;
+  const mk = document.createElement('div');
+  mk.className = 'el marker';
+  Object.assign(mk.style, { left: m.x + 'px', top: m.y + 'px', width: m.size + 'px', height: m.size + 'px' });
+  for (const c of ['#ff00ff', '#00ffff', '#ffff00', '#000000']) {
+    const q = document.createElement('i');
+    q.style.background = c; q.style.width = h + 'px'; q.style.height = h + 'px';
+    mk.appendChild(q);
+  }
+  page.appendChild(mk);
+  for (const e of L.elements) {
+    const d = document.createElement('div');
+    d.className = 'el ' + e.class;
+    const [x, y, w, hh] = e.rect;
+    Object.assign(d.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: hh + 'px' });
+    if (e.text) d.textContent = e.text;
+    page.appendChild(d);
+  }
+</script>
+</body>
+</html>

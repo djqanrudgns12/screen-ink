@@ -19,6 +19,7 @@ use ink_domain::snapshot::{RawWindow, Snapshot};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Instant;
 
 /// 느린 앱 문턱(R-CAP-15): 색인이 이 시간을 2번 넘으면 그 앱은 창 단위로만.
 const SLOW_INDEX_MS: f64 = 150.0;
@@ -79,6 +80,41 @@ pub struct CaptureState {
     pub(crate) case_dir: Option<String>,
     /// 사례용 거르기 전 창 목록(우리 창 뺌) — 사례를 쓸 때만 채운다
     pub(crate) raw: Vec<RawWindow>,
+    /// 진입 계측(08 §4.7): 첫 근거 도착·커서 이동 질의 시간 — 모드가 끝날 때 한 줄
+    pub(crate) probe: EntryProbe,
+}
+
+/// 한 번의 고르기 동안 잰 것(08 §4.7 "첫 강조 ≤ 진입 + 30 ms", "커서 이동 질의 ≤ 5 ms").
+#[derive(Default)]
+pub(crate) struct EntryProbe {
+    /// 단축키를 받은 순간
+    pub(crate) pressed: Option<Instant>,
+    /// 진입 순간 커서 아래 창
+    pub(crate) window: Option<u64>,
+    /// 커서 자리 V 전처리가 처음 준비된 시각: (배경에서 끝난 때, 메인 스레드가 받은 때) 단축키부터 ms
+    pub(crate) v_ms: Option<(f64, f64)>,
+    /// 커서 아래 창 UIA 색인: (배경에서 끝난 때, 메인 스레드가 받은 때, 색인에 걸린 시간) ms
+    pub(crate) a_ms: Option<(f64, f64, f64)>,
+    /// 커서 이동 한 번의 질의(고르기 상태 기계 + 사슬 만들기) ms
+    pub(crate) moves: Vec<f64>,
+}
+
+const MAX_PROBE_MOVES: usize = 20_000;
+
+fn ms_since(t: Instant) -> f64 {
+    t.elapsed().as_secs_f64() * 1000.0
+}
+
+impl EntryProbe {
+    /// `selection probe` 한 줄(종류·시간만, 창 제목 없음).
+    pub(crate) fn line(&self) -> Option<String> {
+        self.pressed?;
+        let moves = ink_domain::timing::stats(&self.moves)
+            .map_or("moves 0".to_string(), |s| format!("moves {} p50 {:.2} p95 {:.2} max {:.2} ms", s.n, s.p50, s.p95, s.max));
+        let v = self.v_ms.map_or("-".to_string(), |(bg, main)| format!("{bg:.1} (main {main:.1})"));
+        let a = self.a_ms.map_or("-".to_string(), |(bg, main, took)| format!("{bg:.1} (main {main:.1}, index {took:.0})"));
+        Some(format!("selection probe: V first {v} ms, A first {a} ms, {moves}"))
+    }
 }
 
 impl CaptureState {
@@ -205,6 +241,10 @@ impl InkService {
 
     /// 모드 끝: 색인·전처리·이미지를 버린다.
     pub(crate) fn end_selection(&mut self) {
+        if let Some(line) = self.cap.probe.line() {
+            log::info!("{line}");
+        }
+        self.cap.probe = EntryProbe::default();
         self.cap.selector = None;
         self.cap.frames.clear();
         self.cap.children.clear();
@@ -230,10 +270,15 @@ impl InkService {
     /// 오버레이 입력 한 건.
     pub fn capture_input(&mut self, input: CaptureInput) {
         let (Some(_), Some(mut sel), Some(snap)) = (self.session(), self.cap.selector.take(), self.snapshot.take()) else { return };
+        let is_move = matches!(input, CaptureInput::Move { .. });
+        let t = Instant::now();
         let effect = {
             let mut ctx = ctx!(self, &snap);
             sel.handle(input.into(), &mut ctx)
         };
+        if is_move && self.cap.probe.moves.len() < MAX_PROBE_MOVES {
+            self.cap.probe.moves.push(ms_since(t));
+        }
         self.cap.selector = Some(sel);
         self.snapshot = Some(snap);
         self.apply(effect);
@@ -241,6 +286,17 @@ impl InkService {
 
     /// UIA 색인이 끝났다(어댑터 일꾼 → 메인 스레드). 느린 앱은 창 단위로 강등(R-CAP-15).
     pub fn on_elements_ready(&mut self, window: u64, exe: &str, took_ms: f64) {
+        self.on_elements_ready_at(window, exe, took_ms, Instant::now());
+    }
+
+    /// `at` = 일꾼 스레드에서 색인이 끝난 순간(메인 스레드로 넘어오는 지연과 나눠 잼).
+    pub fn on_elements_ready_at(&mut self, window: u64, exe: &str, took_ms: f64, at: Instant) {
+        if let (Some(p), None) = (self.cap.probe.pressed, self.cap.probe.a_ms) {
+            if self.cap.probe.window == Some(window) {
+                let bg = at.saturating_duration_since(p).as_secs_f64() * 1000.0;
+                self.cap.probe.a_ms = Some((bg, ms_since(p), took_ms));
+            }
+        }
         if took_ms > SLOW_INDEX_MS && !exe.is_empty() {
             let n = self.cap.slow.entry(exe.to_string()).or_default();
             *n += 1;
@@ -263,6 +319,18 @@ impl InkService {
 
     /// V 전처리가 끝났다 — 강조 사슬을 다시 만든다.
     pub fn on_vision_ready(&mut self) {
+        self.on_vision_ready_at(Instant::now());
+    }
+
+    /// `at` = 배경 스레드에서 전처리가 끝난 순간.
+    pub fn on_vision_ready_at(&mut self, at: Instant) {
+        if let (Some(p), None, Some(snap)) = (self.cap.probe.pressed, self.cap.probe.v_ms, self.snapshot.as_ref()) {
+            // 커서 자리가 준비됐을 때만(다른 모니터 전처리가 먼저 끝난 것은 세지 않음)
+            if self.ports.vision.support(PhysRect::new(snap.cursor.x, snap.cursor.y, 1, 1)).is_some() {
+                let bg = at.saturating_duration_since(p).as_secs_f64() * 1000.0;
+                self.cap.probe.v_ms = Some((bg, ms_since(p)));
+            }
+        }
         let (Some(_), Some(mut sel), Some(snap)) = (self.session(), self.cap.selector.take(), self.snapshot.take()) else { return };
         let effect = {
             let mut ctx = ctx!(self, &snap);
@@ -490,5 +558,22 @@ impl InkService {
             let _ = self.ports.store.save_section("history", &v);
         }
         n
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn 진입_계측은_진입했을_때만_한_줄() {
+        assert_eq!(EntryProbe::default().line(), None, "진입 안 했으면 없음");
+        let p = EntryProbe { pressed: Some(Instant::now()), window: Some(1), v_ms: Some((12.34, 40.0)), a_ms: Some((95.0, 120.0, 80.4)), moves: vec![0.5, 1.0, 2.0] };
+        let line = p.line().unwrap();
+        assert!(line.contains("V first 12.3 (main 40.0) ms"), "{line}");
+        assert!(line.contains("A first 95.0 (main 120.0, index 80) ms"), "{line}");
+        assert!(line.contains("moves 3 p50 1.00 p95 2.00 max 2.00 ms"), "{line}");
+        let none = EntryProbe { pressed: Some(Instant::now()), ..Default::default() }.line().unwrap();
+        assert!(none.contains("V first - ms, A first - ms, moves 0"), "{none}");
     }
 }
