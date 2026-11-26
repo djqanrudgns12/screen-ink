@@ -21,7 +21,6 @@ license = "MIT"
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-thiserror = "2"
 log = "0.4"
 ink-domain = { path = "crates/ink-domain" }
 ink-app = { path = "crates/ink-app" }

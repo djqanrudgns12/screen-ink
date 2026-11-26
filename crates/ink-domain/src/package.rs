@@ -3,6 +3,7 @@
 //! 운영체제 호출은 어댑터(`ink-platform-windows::package`)가 사실만 읽어 넘기고,
 //! 채널 분류·포터블 표시 파일 무시·자동 시작 안내·업데이트 연기 판정은 모두 여기서 한다.
 
+use crate::i18n::{tr, Lang};
 use serde::{Deserialize, Serialize};
 
 /// MSIX 매니페스트 `<desktop:StartupTask TaskId="...">` 식별자.
@@ -123,6 +124,17 @@ pub struct StoragePolicy {
     pub label_en: &'static str,
 }
 
+impl StoragePolicy {
+    pub fn label(&self, lang: Lang) -> String {
+        let key = match self.mode {
+            StorageMode::MsixPackaged => "store.storage.msix",
+            StorageMode::Portable => "store.storage.portable",
+            StorageMode::Installed => "store.storage.installed",
+        };
+        tr(lang, key)
+    }
+}
+
 /// 설정 저장 정책을 판정한다.
 pub fn resolve_storage_policy(channel: InstallChannel, has_portable_marker: bool) -> StoragePolicy {
     if channel.is_packaged() {
@@ -132,8 +144,8 @@ pub fn resolve_storage_policy(channel: InstallChannel, has_portable_marker: bool
             use_portable_dir: false,
             virtualized_by_package: true,
             removed_on_uninstall: true,
-            label_ko: "MSIX 패키지",
-            label_en: "MSIX package",
+            label_ko: "스토어 앱",
+            label_en: "Store app",
         }
     } else if has_portable_marker {
         StoragePolicy {
@@ -142,7 +154,7 @@ pub fn resolve_storage_policy(channel: InstallChannel, has_portable_marker: bool
             use_portable_dir: true,
             virtualized_by_package: false,
             removed_on_uninstall: false,
-            label_ko: "포터블",
+            label_ko: "무설치판",
             label_en: "Portable",
         }
     } else {
@@ -152,7 +164,7 @@ pub fn resolve_storage_policy(channel: InstallChannel, has_portable_marker: bool
             use_portable_dir: false,
             virtualized_by_package: false,
             removed_on_uninstall: false,
-            label_ko: "설치",
+            label_ko: "설치판",
             label_en: "Installed",
         }
     }
@@ -260,6 +272,21 @@ pub struct AutostartNotice {
     pub guidance_ko: Option<String>,
 }
 
+impl AutostartNotice {
+    pub fn guidance(&self, lang: Lang) -> Option<String> {
+        if !self.effective_enabled && self.blocked_by_user {
+            return Some(tr(lang, "error.package.autostartUserBlocked"));
+        }
+        if !self.effective_enabled && self.blocked_by_policy {
+            return Some(tr(lang, "error.package.autostartPolicyBlocked"));
+        }
+        if self.effective_enabled && self.blocked_by_policy {
+            return Some(tr(lang, "error.package.autostartPolicyLocked"));
+        }
+        self.guidance_ko.clone()
+    }
+}
+
 /// 사용자가 바라는 자동 시작 상태와 OS가 돌려준 `StartupTaskState`를 대조해 안내 문구를 만든다.
 pub fn evaluate_startup_task(desired_enabled: bool, state: StartupTaskState) -> AutostartNotice {
     match (desired_enabled, state) {
@@ -267,19 +294,19 @@ pub fn evaluate_startup_task(desired_enabled: bool, state: StartupTaskState) -> 
             effective_enabled: false,
             blocked_by_user: true,
             blocked_by_policy: false,
-            guidance_ko: Some("Windows 시작 앱 설정에서 켜 주세요".into()),
+            guidance_ko: Some(tr(Lang::Ko, "error.package.autostartUserBlocked")),
         },
         (true, StartupTaskState::DisabledByPolicy) => AutostartNotice {
             effective_enabled: false,
             blocked_by_user: false,
             blocked_by_policy: true,
-            guidance_ko: Some("학교·조직 정책으로 자동 실행이 막혀 있어요".into()),
+            guidance_ko: Some(tr(Lang::Ko, "error.package.autostartPolicyBlocked")),
         },
         (false, StartupTaskState::EnabledByPolicy) => AutostartNotice {
             effective_enabled: true,
             blocked_by_user: false,
             blocked_by_policy: true,
-            guidance_ko: Some("학교·조직 정책으로 자동 실행이 고정되어 있어요".into()),
+            guidance_ko: Some(tr(Lang::Ko, "error.package.autostartPolicyLocked")),
         },
         _ => AutostartNotice {
             effective_enabled: state.is_enabled(),
@@ -376,20 +403,24 @@ pub fn is_fullscreen_notification_state(quns: i32) -> bool {
 
 /// 3자리 SemVer(`0.1.0`) 또는 4자리 MSIX 버전(`0.1.0.0`)을 스토어 규칙에 맞는 4자리 MSIX 버전으로 정규화한다.
 /// 스토어 규칙: 4번째 자리는 반드시 `0`, 각 자리는 `0..=65535`.
-pub fn to_msix_version(version: &str) -> Result<String, &'static str> {
+pub fn to_msix_version_for(version: &str, lang: Lang) -> Result<String, String> {
     let trimmed = version.trim().strip_prefix('v').unwrap_or(version.trim());
     let parts: Vec<&str> = trimmed.split('.').collect();
     if parts.len() != 3 && parts.len() != 4 {
-        return Err("버전은 X.Y.Z 또는 X.Y.Z.0 형식이어야 해요");
+        return Err(tr(lang, "error.package.versionFormat"));
     }
     let mut nums = [0u16; 4];
     for (i, part) in parts.iter().enumerate() {
-        nums[i] = part.parse::<u16>().map_err(|_| "버전 각 자리는 0~65535 정수여야 해요")?;
+        nums[i] = part.parse::<u16>().map_err(|_| tr(lang, "error.package.versionRange"))?;
     }
     if nums[3] != 0 {
-        return Err("Microsoft Store MSIX 버전의 네 번째 자리는 0이어야 해요");
+        return Err(tr(lang, "error.package.storeRevisionZero"));
     }
     Ok(format!("{}.{}.{}.0", nums[0], nums[1], nums[2]))
+}
+
+pub fn to_msix_version(version: &str) -> Result<String, String> {
+    to_msix_version_for(version, Lang::Ko)
 }
 
 #[cfg(test)]
@@ -410,12 +441,13 @@ mod tests {
 
     #[test]
     fn 패키지모드_포터블무시_및_startup_task분기() {
-        // 비패키지 + 포터블 표시 파일 있음 → 포터블
+        // 비패키지 + 포터블 표시 파일 있음 → 무설치판
         let portable = resolve_storage_policy(InstallChannel::Unpackaged, true);
         assert_eq!(portable.mode, StorageMode::Portable);
         assert!(!portable.ignore_portable_marker);
         assert!(portable.use_portable_dir);
-        assert_eq!(portable.label_ko, "포터블");
+        assert_eq!(portable.label_ko, "무설치판");
+        assert_eq!(portable.label(Lang::En), "Portable");
         assert_eq!(autostart_backend(InstallChannel::Unpackaged), AutostartBackend::RegistryRun);
         assert_eq!(update_backend(InstallChannel::Unpackaged), UpdateBackend::None);
         assert_eq!(resolve_log_policy(InstallChannel::Unpackaged, true).location, LogLocation::PortableDataLogs);
@@ -424,7 +456,8 @@ mod tests {
         let installed = resolve_storage_policy(InstallChannel::Unpackaged, false);
         assert_eq!(installed.mode, StorageMode::Installed);
         assert!(!installed.use_portable_dir);
-        assert_eq!(installed.label_ko, "설치");
+        assert_eq!(installed.label_ko, "설치판");
+        assert_eq!(installed.label(Lang::En), "Installed");
         assert_eq!(resolve_log_policy(InstallChannel::Unpackaged, false).location, LogLocation::OsLogDir);
 
         // MSIX 스토어/직접 배포: 포터블 표시 파일이 있어도 무시하고 가상화 경로 + StartupTask 사용
@@ -435,7 +468,8 @@ mod tests {
             assert!(!p.use_portable_dir);
             assert!(p.virtualized_by_package);
             assert!(p.removed_on_uninstall);
-            assert_eq!(p.label_ko, "MSIX 패키지");
+            assert_eq!(p.label_ko, "스토어 앱");
+            assert_eq!(p.label(Lang::En), "Store app");
             assert_eq!(autostart_backend(ch), AutostartBackend::StartupTask);
 
             let log_p = resolve_log_policy(ch, true);
@@ -453,16 +487,19 @@ mod tests {
         assert!(!user_blocked.effective_enabled);
         assert!(user_blocked.blocked_by_user);
         assert_eq!(user_blocked.guidance_ko.as_deref(), Some("Windows 시작 앱 설정에서 켜 주세요"));
+        assert_eq!(user_blocked.guidance(Lang::En).as_deref(), Some("Turn on in Windows Startup Apps settings"));
 
         let policy_blocked = evaluate_startup_task(true, StartupTaskState::DisabledByPolicy);
         assert!(!policy_blocked.effective_enabled);
         assert!(policy_blocked.blocked_by_policy);
         assert!(policy_blocked.guidance_ko.is_some());
+        assert_eq!(policy_blocked.guidance(Lang::En).as_deref(), Some("Autostart is disabled by organization policy"));
 
         let policy_locked = evaluate_startup_task(false, StartupTaskState::EnabledByPolicy);
         assert!(policy_locked.effective_enabled);
         assert!(policy_locked.blocked_by_policy);
         assert!(policy_locked.guidance_ko.is_some());
+        assert_eq!(policy_locked.guidance(Lang::En).as_deref(), Some("Autostart is locked on by organization policy"));
 
         let ok = evaluate_startup_task(true, StartupTaskState::Enabled);
         assert!(ok.effective_enabled);
@@ -509,5 +546,8 @@ mod tests {
         assert!(to_msix_version("1.2.3.4").is_err());
         assert!(to_msix_version("1.2").is_err());
         assert!(to_msix_version("70000.0.0").is_err());
+        assert_eq!(to_msix_version_for("1.2.3.4", Lang::En), Err("Store version fourth number must be 0".into()));
+        assert_eq!(to_msix_version_for("1.2", Lang::En), Err("Use format X.Y.Z or X.Y.Z.0".into()));
+        assert_eq!(to_msix_version_for("70000.0.0", Lang::En), Err("Version numbers must be 0–65535".into()));
     }
 }

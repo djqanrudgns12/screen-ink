@@ -7,7 +7,7 @@ use crate::service::InkService;
 use crate::state::{IslandEvent, IslandHint, IslandKind};
 use ink_domain::geometry::{MonitorLayout, PhysRect};
 use ink_domain::settings::ExcludedApp;
-use ink_domain::shortcuts::to_accelerator;
+use ink_domain::shortcuts::{spoken_for, to_accelerator, Platform};
 use ink_domain::snapshot::{filter_windows, CaptureKind, Snapshot};
 
 /// 지연 캡처: 서비스 시계로 끝나는 때와 섬에 보인 남은 초.
@@ -43,7 +43,7 @@ impl InkService {
         }
         if !self.secure_notified {
             self.secure_notified = true;
-            self.island(IslandEvent::new(IslandKind::Off, "보안 화면에서는 쓸 수 없어요").variant("security"));
+            self.island(IslandEvent::new(IslandKind::Off, self.t("island.security")).variant("security"));
         }
         true
     }
@@ -56,7 +56,7 @@ impl InkService {
         self.end_capture();
         let layout = self.ports.monitors.layout();
         let Some(rect) = self.cap.ranges.for_layout(&layout.fingerprint()).first().copied() else {
-            self.island(IslandEvent::new(IslandKind::Info, "지난 범위가 없어요"));
+            self.island(IslandEvent::new(IslandKind::Info, self.t("island.capture.noRecent")));
             return;
         };
         self.capture_rect_now(rect, layout);
@@ -71,7 +71,7 @@ impl InkService {
         let layout = self.ports.monitors.layout();
         let cursor = self.ports.monitors.cursor();
         let Some(rect) = layout.monitor_at(cursor).or_else(|| layout.nearest(cursor)).map(|m| m.bounds) else {
-            self.island(IslandEvent::new(IslandKind::Problem, "화면을 가져오지 못했어요"));
+            self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.screenError")));
             return;
         };
         self.capture_rect_now(rect, layout);
@@ -88,7 +88,7 @@ impl InkService {
             }
             other => {
                 log::warn!("capture failed: {}", other.err().as_deref().unwrap_or("no frames"));
-                self.island(IslandEvent::new(IslandKind::Problem, "화면을 가져오지 못했어요"));
+                self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.screenError")));
                 return;
             }
         };
@@ -112,7 +112,7 @@ impl InkService {
         if self.rec.delay.take().is_some() {
             self.release_delay_esc();
             self.island(IslandEvent::new(IslandKind::End, ""));
-            self.island(IslandEvent::new(IslandKind::Info, "지연 캡처를 취소했어요"));
+            self.island(IslandEvent::new(IslandKind::Info, self.t("island.delay.cancelled")));
             return;
         }
         if self.secure_blocked() {
@@ -151,12 +151,13 @@ impl InkService {
     }
 
     fn delay_island(&self, left: u32) -> IslandEvent {
-        let mut ev = IslandEvent::new(IslandKind::Mode, "초 뒤 범위 캡처").variant("delay");
+        let mut ev = IslandEvent::new(IslandKind::Mode, self.t("island.delay.title")).variant("delay");
         ev.countdown = Some(left);
         ev.mode = Some("delay".into());
         let key = if self.rec.delay_esc.is_some() { self.settings.shortcut("c-cancel") } else { self.settings.shortcut("delay") };
         if !key.is_empty() {
-            ev.hints = vec![IslandHint { key: key.to_string(), label: "취소".into() }];
+            let key_disp = if self.platform == Platform::Mac { spoken_for(key, self.platform, self.lang()) } else { key.to_string() };
+            ev.hints = vec![IslandHint { key: key_disp, label: self.t("island.hint.cancel") }];
         }
         ev
     }

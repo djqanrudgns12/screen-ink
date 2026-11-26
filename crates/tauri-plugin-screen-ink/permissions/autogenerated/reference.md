@@ -12,6 +12,8 @@ screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있
 - `allow-undo`
 - `allow-set-hotkeys-enabled`
 - `allow-shortcut-capture`
+- `allow-save-pdf`
+- `allow-system-fonts`
 - `allow-run`
 - `allow-preview-import`
 - `allow-apply-import`
@@ -564,6 +566,32 @@ Denies the run command without any pre-configured scope.
 <tr>
 <td>
 
+`screen-ink:allow-save-pdf`
+
+</td>
+<td>
+
+Enables the save_pdf command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-save-pdf`
+
+</td>
+<td>
+
+Denies the save_pdf command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `screen-ink:allow-set-hotkeys-enabled`
 
 </td>
@@ -635,6 +663,32 @@ Enables the shortcut_capture command without any pre-configured scope.
 <td>
 
 Denies the shortcut_capture command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-system-fonts`
+
+</td>
+<td>
+
+Enables the system_fonts command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-system-fonts`
+
+</td>
+<td>
+
+Denies the system_fonts command without any pre-configured scope.
 
 </td>
 </tr>

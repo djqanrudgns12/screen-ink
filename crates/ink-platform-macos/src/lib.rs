@@ -16,6 +16,8 @@ pub mod display;
 #[cfg(target_os = "macos")]
 pub mod events;
 #[cfg(target_os = "macos")]
+pub mod fonts;
+#[cfg(target_os = "macos")]
 pub mod freeze;
 #[cfg(target_os = "macos")]
 pub mod magnifier;
@@ -27,6 +29,8 @@ mod pixels;
 pub mod recorder;
 #[cfg(target_os = "macos")]
 pub mod window;
+#[cfg(target_os = "macos")]
+pub mod updater;
 #[cfg(target_os = "macos")]
 pub mod wheel;
 #[cfg(target_os = "macos")]

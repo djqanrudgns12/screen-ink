@@ -12,10 +12,11 @@ use crate::ports::{Frame, SystemEvent, NO_SCREEN_PERMISSION};
 use crate::service::{HotkeyOutcome, InkService};
 use crate::state::{DrawSession, DrawViewTransform, IslandEvent, IslandKind, KeptCompat, OverlayMonitor};
 use ink_domain::geometry::MonitorLayout;
+use ink_domain::i18n::{tr, trf, Lang};
 use ink_domain::image;
 use ink_domain::mode::{self, DrawKind, Mode, ModeCommand};
 use ink_domain::settings::Settings;
-use ink_domain::shortcuts::{spoken, Platform};
+use ink_domain::shortcuts::{spoken_for, Platform};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
@@ -249,15 +250,16 @@ pub fn rgba_to_bgra(px: &mut [u8]) {
     }
 }
 
-fn tool_label(tool: &str) -> &'static str {
-    match tool {
-        "marker" => "형광펜",
-        "text" => "글자",
-        "select" => "고르기",
-        "eraser" => "지우개",
-        "pan" => "손",
-        _ => "펜",
-    }
+fn tool_label(tool: &str, lang: Lang) -> String {
+    let key = match tool {
+        "marker" => "island.draw.tool.marker",
+        "text" => "island.draw.tool.text",
+        "select" => "island.draw.tool.select",
+        "eraser" => "island.draw.tool.eraser",
+        "pan" => "island.draw.tool.pan",
+        _ => "island.draw.tool.pen",
+    };
+    tr(lang, key)
 }
 
 /// 확대 배율 글자: 1.25·1.75는 두 자리, 나머지는 한 자리(`×2.0`, 실시간 확대 섬과 같은 모양).
@@ -371,18 +373,28 @@ impl Look {
     }
 }
 
-/// 판서 모드 섬(04 S12·S14): 판서 = `[●] 판서 · 펜 4px ×1.75`, 칠판 = `칠판 · 흰색 1 / 1`.
-pub(crate) fn draw_island_event(board: bool, look: &Look, kept_hint: Option<&str>) -> IslandEvent {
+/// 판서 모드 섬(04 S12·S14): 판서 = `[●] 그리기 · 펜 4px ×1.75`, 칠판 = `칠판 · 흰색 1 / 1`.
+pub(crate) fn draw_island_event(board: bool, look: &Look, kept_hint: Option<&str>, lang: Lang) -> IslandEvent {
     let on_board = board || look.background != "frame";
     let mut ev = if on_board {
-        let bg = if look.background == "black" { "검은색" } else { "흰색" };
-        let mut ev = IslandEvent::new(IslandKind::Mode, format!("칠판 · {bg}")).variant("board").hints(&[("W·K", "바탕"), ("Esc", "보관"), ("?", "단축키")]);
+        let bg = tr(lang, if look.background == "black" { "island.draw.board.black" } else { "island.draw.board.white" });
+        let h_bg = tr(lang, "island.draw.hint.bg");
+        let h_keep = tr(lang, "island.draw.hint.keep");
+        let h_keys = tr(lang, "island.hint.shortcuts");
+        let mut ev = IslandEvent::new(IslandKind::Mode, trf(lang, "island.draw.boardTitle", &[("bg", &bg)]))
+            .variant("board")
+            .hints(&[("W·K", &h_bg), ("Esc", &h_keep), ("?", &h_keys)]);
         ev.value = Some(format!("{} / {}", look.page + 1, look.pages));
         // 칠판에서도 지금 펜 색 점(검은 칠판의 K는 화면이 흰색으로 바꿔 그림)
         ev.pen_color = Some(look.color.clone());
         ev
     } else {
-        let mut ev = IslandEvent::new(IslandKind::Mode, format!("판서 · {}", tool_label(&look.tool))).variant("draw").hints(&[("Esc", "보관"), ("?", "단축키")]);
+        let tool = tool_label(&look.tool, lang);
+        let h_keep = tr(lang, "island.draw.hint.keep");
+        let h_keys = tr(lang, "island.hint.shortcuts");
+        let mut ev = IslandEvent::new(IslandKind::Mode, trf(lang, "island.draw.title", &[("tool", &tool)]))
+            .variant("draw")
+            .hints(&[("Esc", &h_keep), ("?", &h_keys)]);
         ev.pen_color = Some(look.color.clone());
         ev.pen_width = Some(format!("{}px", look.width.round() as i64));
         if look.zoom > 1.0 + 1e-9 {
@@ -400,7 +412,7 @@ pub(crate) fn draw_island_event(board: bool, look: &Look, kept_hint: Option<&str
     if let Some(s) = &look.suggestion {
         ev.text = s.clone();
         ev.detail = None;
-        ev = ev.button("바꾸기", "draw.acceptSuggestion", None);
+        ev = ev.button(&tr(lang, "island.draw.acceptSuggestion"), "draw.acceptSuggestion", None);
     }
     ev
 }
@@ -485,14 +497,6 @@ impl InkService {
         }
     }
 
-    /// 결과 섬 안내의 붙여 넣기 키: Windows `Ctrl+V`, 맥 `⌘V`(맥에서도 "Ctrl+V"라고 하던 것, 2026-11-26 맥 M16).
-    pub(crate) fn paste_text(&self) -> String {
-        match self.platform {
-            Platform::Win => "Ctrl+V".into(),
-            Platform::Mac => spoken("Cmd+V", Platform::Mac),
-        }
-    }
-
     /// 섬에 쓸 키 글자: Windows = 표준 표기(`Alt+Shift+1`), 맥 = 기호. 비운 칸이면 None.
     pub(crate) fn key_text(&self, slot: &str) -> Option<String> {
         let combo = self.settings.shortcut(slot);
@@ -501,7 +505,7 @@ impl InkService {
         }
         Some(match self.platform {
             Platform::Win => combo.to_string(),
-            Platform::Mac => spoken(combo, Platform::Mac),
+            Platform::Mac => spoken_for(combo, Platform::Mac, self.lang()),
         })
     }
 
@@ -597,7 +601,7 @@ impl InkService {
     /// `pressed` = 단추를 받은 순간(진입 계측의 시작점이자 30초 판정의 지금 — 시험은 나중 시각을 준다).
     pub fn capture_to_draw_at(&mut self, pressed: Instant) {
         let Some(h) = self.cap.handoff.take() else {
-            self.island(IslandEvent::new(IslandKind::Info, "판서로 넘길 캡처가 없어요"));
+            self.island(IslandEvent::new(IslandKind::Info, self.t("island.draw.noCapture")));
             return;
         };
         let layout = self.ports.monitors.layout();
@@ -633,7 +637,7 @@ impl InkService {
         if self.ports.probe.secure_desktop() {
             if !self.secure_notified {
                 self.secure_notified = true;
-                self.island(IslandEvent::new(IslandKind::Off, "보안 화면에서는 쓸 수 없어요").variant("security"));
+                self.island(IslandEvent::new(IslandKind::Off, self.t("island.security")).variant("security"));
             }
             return;
         }
@@ -651,7 +655,7 @@ impl InkService {
         }
         let Some(mon) = wanted.or_else(|| layout.nearest(cursor).cloned()) else {
             log::warn!("draw: no monitor in layout");
-            self.island(IslandEvent::new(IslandKind::Problem, "화면을 가져오지 못했어요"));
+            self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.screenError")));
             return;
         };
         if !self.settings.bool("draw.keep") {
@@ -677,7 +681,7 @@ impl InkService {
                     Some(f) => Some(f),
                     None => {
                         log::warn!("draw capture: no frame for the cursor monitor");
-                        self.island(IslandEvent::new(IslandKind::Problem, "화면을 가져오지 못했어요"));
+                        self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.screenError")));
                         return;
                     }
                 },
@@ -688,7 +692,7 @@ impl InkService {
                 }
                 Err(e) => {
                     log::warn!("draw capture failed: {e}");
-                    self.island(IslandEvent::new(IslandKind::Problem, "화면을 가져오지 못했어요"));
+                    self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.screenError")));
                     return;
                 }
             }
@@ -719,7 +723,7 @@ impl InkService {
             Err(e) => {
                 log::warn!("draw overlay show failed: {e}");
                 self.ports.overlay.hide(session);
-                self.island(IslandEvent::new(IslandKind::Problem, "판서 화면을 띄우지 못했어요"));
+                self.island(IslandEvent::new(IslandKind::Problem, self.t("island.draw.openError")));
                 return;
             }
         }
@@ -779,7 +783,7 @@ impl InkService {
         let Some(ds) = self.close_draw() else { return };
         self.draw.ended = Some(Ended { session: ds, quiet: why != EndWhy::Hotkey });
         if why == EndWhy::Display {
-            self.island(IslandEvent::new(IslandKind::Info, "화면 구성이 바뀌어 판서를 닫았어요"));
+            self.island(IslandEvent::new(IslandKind::Info, self.t("island.draw.displayChanged")));
         }
     }
 
@@ -827,11 +831,11 @@ impl InkService {
     }
 
     fn kept_island(&self) -> IslandEvent {
-        let text = match self.key_text("restore") {
-            Some(k) => format!("판서를 보관했어요 · {k}"),
-            None => "판서를 보관했어요".to_string(),
-        };
-        IslandEvent::new(IslandKind::Result, text)
+        let mut ev = IslandEvent::new(IslandKind::Result, self.t("island.draw.kept"));
+        if let Some(k) = self.key_text("restore") {
+            ev = ev.detail(self.tf("island.draw.keptDetail", &[("key", &k)]));
+        }
+        ev
     }
 
     /// 전체 초기화(05 §7 D).
@@ -881,7 +885,7 @@ impl InkService {
         }
         // 불러옴·배율 맞춤·다른 모니터 문구는 엔진(restoreKept)이 drawIsland 안내로 낸다 — 겹치지 않게 Rust는 "없음"만
         if status == KeptCompat::None {
-            self.island(IslandEvent::new(IslandKind::Info, "불러올 판서가 없어요"));
+            self.island(IslandEvent::new(IslandKind::Info, self.t("island.draw.noKept")));
         }
         DrawRestoreResult { status, kept }
     }
@@ -913,7 +917,7 @@ impl InkService {
         match meta.action {
             ExportAction::Copy => match self.ports.clipboard.set_image(w, h, &px) {
                 Ok(()) => {
-                    let mut ev = IslandEvent::new(IslandKind::Result, "복사했어요").variant("result").detail(format!("한글·PPT에 {}", self.paste_text()));
+                    let mut ev = IslandEvent::new(IslandKind::Result, self.t("island.capture.copied")).variant("result").detail(self.t("island.capture.pasteHint"));
                     ev.value = Some(format!("{w}×{h}"));
                     ev.thumb_url = thumb;
                     self.island(ev);
@@ -921,7 +925,7 @@ impl InkService {
                 }
                 Err(e) => {
                     log::warn!("clipboard: {e}");
-                    self.island(IslandEvent::new(IslandKind::Problem, "클립보드를 쓸 수 없어요"));
+                    self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.copyError")));
                     DrawExported::fail("clipboard")
                 }
             },
@@ -946,13 +950,13 @@ impl InkService {
             return None;
         }
         let key = self.key_text("d-restore").or_else(|| self.key_text("restore"))?;
-        Some(format!("{key} 이전 판서"))
+        Some(self.tf("island.draw.restoreHint", &[("key", &key)]))
     }
 
-    fn emit_draw_island(&self) {
+    pub(crate) fn emit_draw_island(&self) {
         let Some(ds) = self.draw.session.as_ref() else { return };
         let hint = self.kept_hint();
-        self.island(draw_island_event(ds.board, &self.draw.look, hint.as_deref()));
+        self.island(draw_island_event(ds.board, &self.draw.look, hint.as_deref(), self.lang()));
     }
 
     /// 판서 섬 한 줄 갱신(색·도구·굵기·배율·쪽) + 안내 한 줄.
@@ -966,7 +970,7 @@ impl InkService {
         if let Some(n) = patch.notice.as_deref().map(str::trim).filter(|n| !n.is_empty()) {
             let mut ev = IslandEvent::new(IslandKind::Info, n.chars().take(NOTICE_MAX_CHARS).collect::<String>());
             if patch.notice_action.as_deref() == Some("undo") {
-                ev = ev.button("되돌리기", "draw.undo", None);
+                ev = ev.button(&self.t("island.action.undo"), "draw.undo", None);
             }
             self.island(ev);
         }
@@ -1080,28 +1084,32 @@ mod tests {
     #[test]
     fn 판서_섬은_색_도구_굵기_배율_칠판은_바탕과_쪽() {
         let mut look = Look::default();
-        let ev = draw_island_event(false, &look, Some("Ctrl+Shift+R 이전 판서"));
-        assert_eq!((ev.kind, ev.text.as_str(), ev.variant.as_deref(), ev.mode.as_deref()), (IslandKind::Mode, "판서 · 펜", Some("draw"), Some("draw")));
+        let ev = draw_island_event(false, &look, Some("Ctrl+Shift+R 방금 그리기"), Lang::Ko);
+        assert_eq!((ev.kind, ev.text.as_str(), ev.variant.as_deref(), ev.mode.as_deref()), (IslandKind::Mode, "그리기 · 펜", Some("draw"), Some("draw")));
         assert_eq!((ev.pen_color.as_deref(), ev.pen_width.as_deref(), ev.value.as_deref()), (Some("R"), Some("4px"), None));
-        assert_eq!(ev.detail.as_deref(), Some("Ctrl+Shift+R 이전 판서"));
+        assert_eq!(ev.detail.as_deref(), Some("Ctrl+Shift+R 방금 그리기"));
 
         look.merge(&DrawIslandPatch { color: Some("B".into()), tool: Some("marker".into()), width_px: Some(99.0), zoom: Some(1.75), ..Default::default() });
-        let ev = draw_island_event(false, &look, None);
-        assert_eq!((ev.text.as_str(), ev.pen_color.as_deref(), ev.pen_width.as_deref(), ev.value.as_deref()), ("판서 · 형광펜", Some("B"), Some("30px"), Some("×1.75")));
+        let ev = draw_island_event(false, &look, None, Lang::Ko);
+        assert_eq!((ev.text.as_str(), ev.pen_color.as_deref(), ev.pen_width.as_deref(), ev.value.as_deref()), ("그리기 · 형광펜", Some("B"), Some("30px"), Some("×1.75")));
+        let ev_en = draw_island_event(false, &look, None, Lang::En);
+        assert_eq!(ev_en.text.as_str(), "Draw · Highlighter");
         // 모르는 값은 버린다
         look.merge(&DrawIslandPatch { color: Some("pink".into()), tool: Some("laser".into()), zoom: Some(2.0), ..Default::default() });
-        let ev = draw_island_event(false, &look, None);
-        assert_eq!((ev.text.as_str(), ev.pen_color.as_deref(), ev.value.as_deref()), ("판서 · 형광펜", Some("B"), Some("×2.0")));
+        let ev = draw_island_event(false, &look, None, Lang::Ko);
+        assert_eq!((ev.text.as_str(), ev.pen_color.as_deref(), ev.value.as_deref()), ("그리기 · 형광펜", Some("B"), Some("×2.0")));
 
         let mut board = Look { background: "white".into(), ..Look::default() };
-        let ev = draw_island_event(true, &board, None);
+        let ev = draw_island_event(true, &board, None, Lang::Ko);
         assert_eq!((ev.text.as_str(), ev.variant.as_deref(), ev.value.as_deref(), ev.mode.as_deref()), ("칠판 · 흰색", Some("board"), Some("1 / 1"), Some("board")));
+        let ev_en = draw_island_event(true, &board, None, Lang::En);
+        assert_eq!(ev_en.text.as_str(), "Board · White");
         board.merge(&DrawIslandPatch { background: Some("black".into()), page_index: Some(5), page_count: Some(3), ..Default::default() });
-        let ev = draw_island_event(true, &board, None);
+        let ev = draw_island_event(true, &board, None, Lang::Ko);
         assert_eq!((ev.text.as_str(), ev.value.as_deref()), ("칠판 · 검은색", Some("3 / 3")));
         // 판서(Alt+1) 중 W = 흰 칠판 바탕 — 섬은 칠판 모양, 모드 이름은 그대로 draw
         let w = Look { background: "white".into(), ..Look::default() };
-        let ev = draw_island_event(false, &w, None);
+        let ev = draw_island_event(false, &w, None, Lang::Ko);
         assert_eq!((ev.text.as_str(), ev.mode.as_deref()), ("칠판 · 흰색", Some("draw")));
     }
 

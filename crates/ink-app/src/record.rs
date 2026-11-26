@@ -22,6 +22,28 @@ const FIRST_HINT_MS: u64 = 2000;
 /// 공간 부족·마이크 안내를 보이는 동안 녹화 섬으로 덮지 않는다.
 const NOTICE_MS: u64 = 3000;
 
+/// 자동 중지 이유.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum StopReason {
+    Lock,
+    Suspend,
+    DisplayChanged,
+    WindowClosed,
+    Stalled,
+}
+
+impl StopReason {
+    fn key(self) -> &'static str {
+        match self {
+            Self::Lock => "island.record.reason.lock",
+            Self::Suspend => "island.record.reason.suspend",
+            Self::DisplayChanged => "island.record.reason.display",
+            Self::WindowClosed => "island.record.reason.windowClosed",
+            Self::Stalled => "island.record.reason.stalled",
+        }
+    }
+}
+
 /// 녹화·바로 캡처·F2 고르기의 서비스 쪽 상태(단계 6). 녹화기는 어댑터가 `set_recorder`로 끼운다.
 pub struct RecordState {
     pub(crate) recorder: Box<dyn Recorder>,
@@ -190,7 +212,7 @@ impl InkService {
                 self.rec.app = app;
                 self.start_recording(t, &layout);
             }
-            None => self.island(IslandEvent::new(IslandKind::Problem, "녹화할 범위를 찾지 못했어요")),
+            None => self.island(IslandEvent::new(IslandKind::Problem, self.t("island.record.noTarget"))),
         }
     }
 
@@ -205,7 +227,7 @@ impl InkService {
         let folder = self.settings.str("output.folder").to_string();
         let warn = recording::space_warning(self.rec.recorder.free_bytes(&folder), w, h, fps);
         let Some(dir) = self.rec.recorder.temp_dir() else {
-            self.island(IslandEvent::new(IslandKind::Problem, "이 컴퓨터에서는 아직 녹화할 수 없어요"));
+            self.island(IslandEvent::new(IslandKind::Problem, self.t("island.record.unsupported")));
             return;
         };
         let id = self.ports.clock.unix() * 1000 + self.clock_ms() % 1000;
@@ -225,7 +247,7 @@ impl InkService {
             log::warn!("recording start failed: {e}");
             self.rec.phase = RecPhase::Idle;
             self.rec.app = None;
-            let text = if e.starts_with(REC_UNSUPPORTED) { "이 컴퓨터에서는 아직 녹화할 수 없어요" } else { "녹화를 시작할 수 없어요(코덱)" };
+            let text = if e.starts_with(REC_UNSUPPORTED) { self.t("island.record.unsupported") } else { self.t("island.record.startError") };
             self.island(IslandEvent::new(IslandKind::Problem, text));
             return;
         }
@@ -249,7 +271,7 @@ impl InkService {
 
         if !self.settings.bool("record.firstHintDone") {
             let mut ev = self.record_island(0);
-            ev.text = "판서는 영상에 함께 · 이 알약은 안 찍혀요".into();
+            ev.text = self.t("island.record.firstHint");
             self.island(ev);
             self.rec.quiet_until = now + FIRST_HINT_MS;
             if self.update_setting("record.firstHintDone", &serde_json::Value::Bool(true)).ok {
@@ -261,21 +283,23 @@ impl InkService {
         }
         if mic_wanted && !mic_on && !self.rec.mic_notice_done {
             self.rec.mic_notice_done = true;
-            self.island(IslandEvent::new(IslandKind::Info, "마이크 녹음은 아직 준비 중이에요").detail("영상만 녹화해요"));
+            self.island(IslandEvent::new(IslandKind::Info, self.t("island.record.micPending")).detail(self.t("island.record.videoOnly")));
             self.rec.quiet_until = self.rec.quiet_until.max(now + NOTICE_MS);
         }
         if let Some(m) = warn {
-            self.island(IslandEvent::new(IslandKind::Info, format!("남은 공간이 {m}분 정도예요")));
+            self.island(IslandEvent::new(IslandKind::Info, self.tp("island.record.lowDisk", m)));
             self.rec.quiet_until = self.rec.quiet_until.max(now + NOTICE_MS);
         }
     }
 
     /// 녹화 섬(04 S11): 빨간 점 · 경과 · 크기 · fps · 마이크 꺼짐 · [■ 중지 F3].
-    fn record_island(&self, elapsed_ms: u64) -> IslandEvent {
+    pub(crate) fn record_island(&self, elapsed_ms: u64) -> IslandEvent {
         let stats = self.rec.recorder.stats();
         let (w, h) = if stats.width > 0 { (stats.width, stats.height) } else { self.rec.size };
-        let key = self.settings.shortcut("record").to_string();
-        let mut ev = IslandEvent::new(IslandKind::Mode, "녹화 중").variant("record").button("중지", "record.stop", (!key.is_empty()).then_some(key.as_str()));
+        let key = self.key_text("record");
+        let mut ev = IslandEvent::new(IslandKind::Mode, self.t("island.record.recording"))
+            .variant("record")
+            .button(&self.t("island.record.stopBtn"), "record.stop", key.as_deref());
         ev.value = Some(format!("{} · {w}×{h} · {}fps", recording::clock_label(elapsed_ms), self.rec.fps));
         ev.mode = Some("record".into());
         ev.mic_off = !self.rec.mic_on;
@@ -319,8 +343,7 @@ impl InkService {
     }
 
     /// 마무리 → 이름 규칙으로 저장 폴더에 옮김 → "녹화를 저장했어요 · 길이 · 크기"(05 §8 U→C).
-    /// `why` = 자동 중지 이유(섬 앞머리, 예: "화면이 잠겨").
-    fn finish_recording(&mut self, why: Option<&str>) {
+    fn finish_recording(&mut self, why: Option<StopReason>) {
         if !self.recording_active() {
             return;
         }
@@ -328,14 +351,19 @@ impl InkService {
         let result = self.rec.recorder.stop();
         let temp = self.rec.temp.take();
         self.reset_recording();
-        let prefix = why.map(|w| format!("{w} ")).unwrap_or_default();
+        // 까닭 글은 미리 만들어 둔다(닫힘이 self를 빌린 채로 남지 않게)
+        let why_text = why.map(|r| self.t(r.key()));
+        let with_why = move |tail: String| match &why_text {
+            Some(w) => format!("{w} · {tail}"),
+            None => tail,
+        };
         let stats = match (result, temp) {
             (Ok(stats), Some(temp)) => (stats, temp),
             (r, _) => {
                 if let Err(e) = r {
                     log::warn!("recording finalize failed: {e}");
                 }
-                self.island(IslandEvent::new(IslandKind::Problem, format!("{prefix}녹화를 마무리하지 못했어요")).detail("다음에 켤 때 다시 저장해 볼게요"));
+                self.island(IslandEvent::new(IslandKind::Problem, self.t("island.record.finalizeError")).detail(with_why(self.t("island.record.retryNextLaunch"))));
                 return;
             }
         };
@@ -346,15 +374,15 @@ impl InkService {
         match self.rec.recorder.keep_file(&temp, &folder, &stem) {
             Ok(f) => {
                 log::info!("recording saved: {} ms, {} bytes, {} frames", stats.elapsed_ms, stats.bytes, stats.frames);
-                let place = if f.fell_back { "사진 폴더에 " } else { "" };
-                let mut ev = IslandEvent::new(IslandKind::Result, format!("{prefix}{place}녹화를 저장했어요")).variant("result").button("폴더 열기", "folder.open", None);
+                let title = self.t(if f.fell_back { "island.record.savedPictures" } else { "island.record.saved" });
+                let mut ev = IslandEvent::new(IslandKind::Result, title).variant("result").button(&self.t("island.action.openFolder"), "folder.open", None);
                 ev.value = Some(format!("{} · {}", recording::clock_label(stats.elapsed_ms), recording::size_label(stats.bytes)));
-                ev.detail = Some(f.name);
+                ev.detail = Some(with_why(f.name));
                 self.island(ev);
             }
             Err(e) => {
                 log::warn!("recording move failed: {e}");
-                self.island(IslandEvent::new(IslandKind::Problem, format!("{prefix}녹화를 옮기지 못했어요")).detail("다음에 켤 때 다시 저장해 볼게요"));
+                self.island(IslandEvent::new(IslandKind::Problem, self.t("island.record.moveError")).detail(with_why(self.t("island.record.retryNextLaunch"))));
             }
         }
     }
@@ -368,7 +396,7 @@ impl InkService {
         self.rec.temp = None;
         self.rec.app = None;
         self.reset_recording();
-        self.island(IslandEvent::new(IslandKind::Info, "녹화를 버렸어요"));
+        self.island(IslandEvent::new(IslandKind::Info, self.t("island.record.discarded")));
     }
 
     fn reset_recording(&mut self) {
@@ -402,13 +430,13 @@ impl InkService {
             return;
         }
         match ev {
-            SystemEvent::Lock => self.finish_recording(Some("화면이 잠겨")),
-            SystemEvent::Suspend => self.finish_recording(Some("절전에 들어가")),
+            SystemEvent::Lock => self.finish_recording(Some(StopReason::Lock)),
+            SystemEvent::Suspend => self.finish_recording(Some(StopReason::Suspend)),
             SystemEvent::DisplayChange => {
                 // WM_SETTINGCHANGE도 여기로 온다 — 그 모니터가 그대로면 계속 녹화
                 if let Some(b) = self.rec.monitor_bounds {
                     if !self.ports.monitors.layout().monitors.iter().any(|m| m.bounds == b) {
-                        self.finish_recording(Some("화면 구성이 바뀌어"));
+                        self.finish_recording(Some(StopReason::DisplayChanged));
                     }
                 }
             }
@@ -439,10 +467,10 @@ impl InkService {
                 self.rec.temp = None;
                 self.rec.app = None;
                 self.reset_recording();
-                self.island(IslandEvent::new(IslandKind::Problem, "녹화를 시작할 수 없어요(코덱)"));
+                self.island(IslandEvent::new(IslandKind::Problem, self.t("island.record.startError")));
                 return;
             }
-            let why = if f.starts_with(REC_WINDOW_CLOSED) { "창이 닫혀" } else { "녹화가 멈춰" };
+            let why = if f.starts_with(REC_WINDOW_CLOSED) { StopReason::WindowClosed } else { StopReason::Stalled };
             self.finish_recording(Some(why));
             return;
         }
@@ -455,17 +483,17 @@ impl InkService {
         }
     }
 
-    /// "끝나지 않은 녹화가 있어요 [저장 시도] [지우기]"(05 §8 R).
+    /// "저장 못 한 녹화가 있어요 [저장 시도] [지우기]"(05 §8 R).
     fn announce_leftovers(&mut self) {
         let n = self.rec.leftovers.len();
         if n == 0 {
             return;
         }
-        let text = if n == 1 { "끝나지 않은 녹화가 있어요".to_string() } else { format!("끝나지 않은 녹화가 {n}개 있어요") };
-        let mut ev = IslandEvent::new(IslandKind::Info, text).button("저장 시도", "record.recoverSave", None);
-        ev.chip = Some(IslandButton { label: "지우기".into(), action: "record.recoverDelete".into() });
+        let text = self.tp("island.record.unfinished", n as u64);
+        let mut ev = IslandEvent::new(IslandKind::Info, text).button(&self.t("island.record.recoverSaveBtn"), "record.recoverSave", None);
+        ev.chip = Some(IslandButton { label: self.t("island.record.recoverDeleteBtn"), action: "record.recoverDelete".into() });
         if self.rec.leftovers.iter().any(|l| !l.playable) {
-            ev.detail = Some("재생되지 않을 수도 있어요".into());
+            ev.detail = Some(self.t("island.record.maybeUnplayable"));
         }
         self.island(ev);
     }
@@ -496,16 +524,16 @@ impl InkService {
             }
         }
         let ev = match (keep, failed) {
-            (_, f) if f > 0 && done == 0 => IslandEvent::new(IslandKind::Problem, if keep { "녹화를 옮기지 못했어요" } else { "녹화를 지우지 못했어요" }),
+            (_, f) if f > 0 && done == 0 => IslandEvent::new(IslandKind::Problem, self.t(if keep { "island.record.moveError" } else { "island.record.deleteError" })),
             (true, f) => {
-                let text = if done == 1 { "녹화를 저장했어요".to_string() } else { format!("녹화 {done}개를 저장했어요") };
-                let mut ev = IslandEvent::new(IslandKind::Result, text).variant("result").button("폴더 열기", "folder.open", None);
+                let text = self.tp("island.record.recovered", done as u64);
+                let mut ev = IslandEvent::new(IslandKind::Result, text).variant("result").button(&self.t("island.action.openFolder"), "folder.open", None);
                 if f > 0 {
-                    ev.detail = Some(format!("{f}개는 옮기지 못했어요"));
+                    ev.detail = Some(self.tp("island.record.movePartialFailed", f as u64));
                 }
                 ev
             }
-            (false, _) => IslandEvent::new(IslandKind::Info, "끝나지 않은 녹화를 지웠어요"),
+            (false, _) => IslandEvent::new(IslandKind::Info, self.t("island.record.unfinishedDeleted")),
         };
         self.island(ev);
     }

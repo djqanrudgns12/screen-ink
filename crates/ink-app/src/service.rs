@@ -7,9 +7,10 @@
 use crate::ports::{HotkeyError, Ports, SystemEvent};
 use crate::state::*;
 use ink_domain::geometry::MonitorLayout;
+use ink_domain::i18n::{tr, trf, Lang};
 use ink_domain::mode::{self, Mode, ModeCommand};
 use ink_domain::settings::{self, ExcludedApp, LoadError, Settings};
-use ink_domain::shortcuts::{canonicalize, catalog, spoken, to_accelerator, Analysis, Environment, Level, Platform, SlotDef};
+use ink_domain::shortcuts::{canonicalize, catalog, spoken_for, to_accelerator, Analysis, Environment, Level, Platform, SlotDef};
 use ink_domain::snapshot::{filter_windows, CaptureKind, Snapshot};
 use ink_domain::timing::{self, EntryTiming, Stats};
 use serde_json::Value;
@@ -33,9 +34,57 @@ const KNOWN_APPS: [(&str, &str); 5] = [
 ];
 
 #[derive(Clone, Debug)]
+pub(crate) enum FailureKind {
+    Analysis,
+    Taken,
+    Unsupported,
+    Message(String),
+}
+
+#[derive(Clone, Debug)]
 pub(crate) struct Failure {
+    kind: FailureKind,
     reason: String,
     owner: Option<String>,
+}
+
+impl Failure {
+    fn reason_for(&self, lang: Lang, analysis: Option<&Analysis>) -> String {
+        match &self.kind {
+            FailureKind::Analysis => analysis.and_then(|a| a.reason_for(lang)).unwrap_or_else(|| self.reason.clone()),
+            FailureKind::Taken => self
+                .owner
+                .as_ref()
+                .map(|o| trf(lang, "shortcut.reason.owner", &[("owner", o)]))
+                .unwrap_or_else(|| tr(lang, "error.hotkey.taken")),
+            FailureKind::Unsupported => tr(lang, "error.hotkey.unsupported"),
+            FailureKind::Message(s) => s.clone(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) enum StartupNotice {
+    KeyOrText(String),
+    NewerSchema(u32),
+    LoadFailedReset(LoadError),
+    ReadOnlyDir,
+    Text(String),
+}
+
+impl StartupNotice {
+    fn render(&self, lang: Lang) -> String {
+        match self {
+            Self::KeyOrText(s) => tr(lang, s),
+            Self::NewerSchema(v) => LoadError::NewerSchema(*v).message(lang),
+            Self::LoadFailedReset(e) => {
+                let err = e.message(lang);
+                trf(lang, "error.settings.loadFailedReset", &[("err", &err)])
+            }
+            Self::ReadOnlyDir => tr(lang, "error.settings.readOnlyDir"),
+            Self::Text(s) => s.clone(),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -95,7 +144,7 @@ pub struct InkService {
     pub(crate) offered: BTreeMap<String, String>,
     pub(crate) history: Vec<Undo>,
     pub(crate) readonly: bool,
-    pub(crate) notices: Vec<String>,
+    pub(crate) notices: Vec<StartupNotice>,
     pub(crate) pinned_count: u32,
     // ── 모드·캡처(단계 2) ──
     pub(crate) epoch: Instant,
@@ -132,27 +181,67 @@ pub const ACTION_PERM_REFRESH: &str = "perm.refresh";
 /// 권한 안내 섬은 설정 앱을 다녀올 동안 남겨 둔다.
 pub const PERMISSION_ISLAND_MS: u32 = 15_000;
 
-/// 모드 섬 둘째 줄(처음 3번과 `?`일 때만 보임 — 섬 호스트가 정함).
-fn capture_island(kind: CaptureKind) -> IslandEvent {
-    let (text, variant, hints): (&str, &str, &[(&str, &str)]) = match kind {
-        CaptureKind::Region => ("범위 캡처", "region", &[("휠", "넓히기·좁히기"), ("Tab", "창"), ("Enter", "복사"), ("Esc", "취소")]),
-        CaptureKind::Window => ("창 캡처", "window", &[("클릭", "찍기"), ("F2", "활성 창"), ("Esc", "취소")]),
-        CaptureKind::Record => ("녹화 범위", "region", &[("드래그", "범위"), ("클릭", "모니터"), ("Esc", "취소")]),
-    };
-    let mut ev = IslandEvent::new(IslandKind::Mode, text).variant(variant).hints(hints);
-    ev.mode = Some(kind.slot().into());
-    ev
+fn peek_lang(file: &Value) -> Lang {
+    let s = file
+        .pointer("/sections/settings/data/values/general.lang")
+        .or_else(|| file.pointer("/sections/settings/data/general.lang"))
+        .or_else(|| file.pointer("/sections/settings/data/general/lang"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    Lang::from_setting(s)
 }
 
-fn failure_of(a: &Analysis) -> Failure {
+fn failure_of(a: &Analysis, lang: Lang) -> Failure {
     let top = a.hard_block().or_else(|| a.top());
     Failure {
-        reason: a.reason().or_else(|| top.map(|t| t.what.clone())).unwrap_or_else(|| "쓸 수 없는 키예요".into()),
+        kind: FailureKind::Analysis,
+        reason: a.reason_for(lang).or_else(|| top.map(|t| t.what.clone())).unwrap_or_else(|| tr(lang, "error.hotkey.unusable")),
         owner: top.and_then(|t| t.owner.clone()),
     }
 }
 
 impl InkService {
+    /// 모드 섬 둘째 줄(처음 3번과 `?`일 때만 보임 — 섬 호스트가 정함).
+    pub(crate) fn capture_island(&self, kind: CaptureKind) -> IslandEvent {
+        let (text, variant, hints): (String, &str, Vec<(String, String)>) = match kind {
+            CaptureKind::Region => (
+                self.t("island.capture.regionTitle"),
+                "region",
+                vec![
+                    (self.t("island.hint.key.wheel"), self.t("island.hint.resize")),
+                    ("Tab".into(), self.t("island.hint.window")),
+                    ("Enter".into(), self.t("island.hint.copy")),
+                    ("Esc".into(), self.t("island.hint.cancel")),
+                ],
+            ),
+            CaptureKind::Window => {
+                let win_key = self.key_text("window").unwrap_or_else(|| "F2".into());
+                (
+                    self.t("island.capture.windowTitle"),
+                    "window",
+                    vec![
+                        (self.t("island.hint.key.click"), self.t("island.hint.shoot")),
+                        (win_key, self.t("island.hint.currentWindow")),
+                        ("Esc".into(), self.t("island.hint.cancel")),
+                    ],
+                )
+            }
+            CaptureKind::Record => (
+                self.t("island.capture.recordTitle"),
+                "region",
+                vec![
+                    (self.t("island.hint.key.drag"), self.t("island.hint.area")),
+                    (self.t("island.hint.key.click"), self.t("island.hint.monitor")),
+                    ("Esc".into(), self.t("island.hint.cancel")),
+                ],
+            ),
+        };
+        let pairs: Vec<(&str, &str)> = hints.iter().map(|(k, l)| (k.as_str(), l.as_str())).collect();
+        let mut ev = IslandEvent::new(IslandKind::Mode, text).variant(variant).hints(&pairs);
+        ev.mode = Some(kind.slot().into());
+        ev
+    }
+
     pub fn new(mut ports: Ports, platform: Platform, version: impl Into<String>) -> Self {
         let loaded = ports.store.load();
         // 범위 기록(05 §4) — 설정과 같은 파일의 history 구역
@@ -162,7 +251,7 @@ impl InkService {
             .and_then(|f| f.pointer("/sections/history/data"))
             .and_then(|v| serde_json::from_value::<ink_domain::history::History>(v.clone()).ok())
             .unwrap_or_default();
-        let mut notices: Vec<String> = loaded.notice.into_iter().collect();
+        let mut notices: Vec<StartupNotice> = loaded.notice.into_iter().map(StartupNotice::KeyOrText).collect();
         let mut readonly = ports.store.location().read_only;
         let mut first_run = false;
         let settings = match loaded.file {
@@ -170,26 +259,29 @@ impl InkService {
                 first_run = true;
                 Settings::defaults(platform)
             }
-            Some(file) => match settings::migrate(&file) {
-                Ok(data) => {
-                    let (s, warnings) = Settings::from_data(&data, platform);
-                    notices.extend(warnings);
-                    s
+            Some(file) => {
+                let init_lang = peek_lang(&file);
+                match settings::migrate(&file) {
+                    Ok(data) => {
+                        let (s, warnings) = Settings::from_data_for(&data, platform, init_lang);
+                        notices.extend(warnings.into_iter().map(StartupNotice::Text));
+                        s
+                    }
+                    Err(LoadError::NewerSchema(v)) => {
+                        readonly = true;
+                        notices.push(StartupNotice::NewerSchema(v));
+                        let data = file.pointer("/sections/settings/data").cloned().unwrap_or(Value::Null);
+                        Settings::from_data_for(&data, platform, init_lang).0
+                    }
+                    Err(e) => {
+                        notices.push(StartupNotice::LoadFailedReset(e));
+                        Settings::defaults(platform)
+                    }
                 }
-                Err(e @ LoadError::NewerSchema(_)) => {
-                    readonly = true;
-                    notices.push(e.to_string());
-                    let data = file.pointer("/sections/settings/data").cloned().unwrap_or(Value::Null);
-                    Settings::from_data(&data, platform).0
-                }
-                Err(e) => {
-                    notices.push(format!("{e} — 처음 값으로 시작해요"));
-                    Settings::defaults(platform)
-                }
-            },
+            }
         };
         if readonly && ports.store.location().read_only {
-            notices.push("설정 폴더에 쓸 수 없어 이번에는 저장하지 않아요".into());
+            notices.push(StartupNotice::ReadOnlyDir);
         }
         let mut svc = InkService {
             ports,
@@ -274,8 +366,8 @@ impl InkService {
             readonly: self.readonly,
             location,
             channel,
-            autostart_notice: self.pkg.autostart_notice.as_ref().and_then(|n| n.guidance_ko.clone()),
-            notices: self.notices.clone(),
+            autostart_notice: self.pkg.autostart_notice.as_ref().and_then(|n| n.guidance(self.lang())),
+            notices: self.notices.iter().map(|n| n.render(self.lang())).collect(),
             mode: self.mode,
             permissions: self.permissions,
         }
@@ -290,7 +382,7 @@ impl InkService {
     }
 
     fn analyze(&self, slot: &SlotDef, combo: &str) -> Analysis {
-        catalog().analyze(slot, self.platform, combo, &self.assigned_except(&slot.id), &self.env)
+        catalog().analyze_for(slot, self.platform, combo, &self.assigned_except(&slot.id), &self.env, self.lang())
     }
 
     fn status_of(a: &Analysis) -> RowStatus {
@@ -305,6 +397,7 @@ impl InkService {
     }
 
     fn rows(&self) -> Vec<ShortcutRow> {
+        let lang = self.lang();
         catalog()
             .slots_for(self.platform)
             .map(|s| {
@@ -314,10 +407,10 @@ impl InkService {
                     a = a.confirmed_free();
                 }
                 let (status, reason, owner) = match self.failures.get(&s.id) {
-                    Some(f) => (RowStatus::Conflict, Some(f.reason.clone()), f.owner.clone()),
+                    Some(f) => (RowStatus::Conflict, Some(f.reason_for(lang, Some(&a))), f.owner.clone()),
                     None => {
                         let status = Self::status_of(&a);
-                        let reason = if a.empty { Some("트레이 메뉴로 시작할 수 있어요".into()) } else { a.reason() };
+                        let reason = if a.empty { Some(self.t("shortcut.emptyHint")) } else { a.reason_for(lang) };
                         (status, reason, a.top().and_then(|t| t.owner.clone()))
                     }
                 };
@@ -373,14 +466,20 @@ impl InkService {
     /// 시작할 때 한 번: 업데이트·재서명 뒤 화면 기록 권한이 풀렸으면 바로 알린다(M10).
     pub fn startup_permission_check(&mut self) {
         if self.refresh_permissions().is_some_and(|p| p.screen_revoked) {
-            let ev = IslandEvent::new(IslandKind::Problem, "업데이트 뒤 화면 기록 권한을 다시 켜야 해요").button("화면 기록 켜기", ACTION_PERM_SCREEN, None).duration_ms(PERMISSION_ISLAND_MS);
+            let ev = IslandEvent::new(IslandKind::Problem, self.t("island.perm.screenRevoked"))
+                .detail(self.t("island.perm.screenRevokedDetail"))
+                .button(&self.t("island.perm.openScreenBtn"), ACTION_PERM_SCREEN, None)
+                .duration_ms(PERMISSION_ISLAND_MS);
             self.island(ev);
         }
     }
 
     /// 화면 기록 권한 없음 섬(M10): 단추 하나로 요청 + 설정 칸 열기(맥만 생긴다 — Windows는 권한 개념 없음).
     pub(crate) fn no_screen_permission_island(&self) -> IslandEvent {
-        IslandEvent::new(IslandKind::Problem, "화면 기록 권한이 필요해요").detail("누르면 켜는 칸을 바로 열어 드려요").button("화면 기록 켜기", ACTION_PERM_SCREEN, None).duration_ms(PERMISSION_ISLAND_MS)
+        IslandEvent::new(IslandKind::Problem, self.t("island.perm.screenNeeded"))
+            .detail(self.t("island.perm.screenDetail"))
+            .button(&self.t("island.perm.openScreenBtn"), ACTION_PERM_SCREEN, None)
+            .duration_ms(PERMISSION_ISLAND_MS)
     }
 
     pub fn refresh_environment(&mut self) {
@@ -461,22 +560,28 @@ impl InkService {
 
     /// 판정 → 가속기 → 운영체제 등록. 성공하면 가속기.
     fn try_register(&mut self, slot: &SlotDef, combo: &str) -> Result<String, Failure> {
+        let lang = self.lang();
         let a = self.analyze(slot, combo);
         if a.hard_block().is_some() {
-            return Err(failure_of(&a));
+            return Err(failure_of(&a, lang));
         }
-        let accel = to_accelerator(combo, self.platform).ok_or(Failure { reason: "이 키는 등록할 수 없어요".into(), owner: None })?;
+        let accel = to_accelerator(combo, self.platform).ok_or_else(|| Failure {
+            kind: FailureKind::Unsupported,
+            reason: self.t("error.hotkey.unsupported"),
+            owner: None,
+        })?;
         match self.ports.hotkeys.register(&slot.id, &accel) {
             Ok(()) => Ok(accel),
             Err(HotkeyError::Taken) => {
                 // 카탈로그 추정이 있으면 그 앱 이름, 없으면 실행 중인 대체 앱 중 하나도 확신할 수 없으니 "다른 앱"
                 let owner = a.items.iter().find(|i| i.verifiable).and_then(|i| i.owner.clone());
-                Err(Failure {
-                    reason: owner.as_ref().map(|o| format!("{o}에서 먼저 쓰고 있어요")).unwrap_or_else(|| "다른 앱이 먼저 쓰고 있어요".into()),
-                    owner,
-                })
+                let reason = owner
+                    .as_ref()
+                    .map(|o| self.tf("shortcut.reason.owner", &[("owner", o)]))
+                    .unwrap_or_else(|| self.t("error.hotkey.taken"));
+                Err(Failure { kind: FailureKind::Taken, reason, owner })
             }
-            Err(e) => Err(Failure { reason: e.to_string(), owner: None }),
+            Err(e) => Err(Failure { kind: FailureKind::Message(e.message(lang)), reason: e.message(lang), owner: None }),
         }
     }
 
@@ -508,7 +613,7 @@ impl InkService {
     fn apply_shortcut(&mut self, slot: &SlotDef, combo: &str) -> Result<RowStatus, Failure> {
         let a = self.analyze(slot, combo);
         if a.hard_block().is_some() {
-            return Err(failure_of(&a));
+            return Err(failure_of(&a, self.lang()));
         }
         let live = slot.is_global() && (self.hotkeys_enabled || slot.id == PAUSE_SLOT);
         let mut status = Self::status_of(&a);
@@ -531,7 +636,10 @@ impl InkService {
         }
         self.failures.remove(&slot.id);
         self.offered.remove(&slot.id);
-        self.settings.set_shortcut(&slot.id, combo, self.platform).map_err(|e| Failure { reason: e.to_string(), owner: None })?;
+        let lang = self.lang();
+        self.settings
+            .set_shortcut(&slot.id, combo, self.platform)
+            .map_err(|e| Failure { kind: FailureKind::Message(e.message(lang)), reason: e.message(lang), owner: None })?;
         Ok(status)
     }
 
@@ -542,29 +650,35 @@ impl InkService {
 
     /// 키를 누르는 순간(S02). 빈 값 = 비우기.
     pub fn set_shortcut(&mut self, id: &str, combo: &str) -> SetShortcutResult {
+        let lang = self.lang();
         let Some(slot) = self.slot(id) else {
-            return self.fail_result(None, Failure { reason: "모르는 칸이에요".into(), owner: None });
+            return self.fail_result(None, Failure { kind: FailureKind::Message(self.t("error.hotkey.unknownSlot")), reason: self.t("error.hotkey.unknownSlot"), owner: None });
         };
         let Some(combo) = canonicalize(combo, self.platform) else {
-            return self.fail_result(Some(slot), Failure { reason: "이 키는 읽을 수 없어요".into(), owner: None });
+            return self.fail_result(Some(slot), Failure { kind: FailureKind::Message(self.t("error.hotkey.badCombo")), reason: self.t("error.hotkey.badCombo"), owner: None });
         };
         let prev = self.settings.shortcut(id).to_string();
         if combo == prev && !self.failures.contains_key(id) {
             let a = self.analyze(slot, &combo);
-            return SetShortcutResult { ok: true, status: Self::status_of(&a), reason: a.reason(), owner: None, suggestions: vec![] };
+            return SetShortcutResult { ok: true, status: Self::status_of(&a), reason: a.reason_for(lang), owner: None, suggestions: vec![] };
         }
         match self.apply_shortcut(slot, &combo) {
             Ok(status) => {
                 if let Err(f) = self.save() {
                     let _ = self.apply_shortcut(slot, &prev);
-                    self.island(IslandEvent::new(IslandKind::Problem, "저장하지 못했어요"));
+                    self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.saveError")));
                     return self.fail_result(None, f);
                 }
                 self.history.push(Undo::Shortcut { id: id.to_string(), prev });
-                let text = if combo.is_empty() { "비웠어요 · 트레이 메뉴로 시작할 수 있어요".to_string() } else { format!("{}로 바꿨어요", spoken(&combo, self.platform)) };
-                self.island(IslandEvent::new(IslandKind::Result, text).undo_button());
+                let ev = if combo.is_empty() {
+                    IslandEvent::new(IslandKind::Result, self.t("island.settings.shortcutCleared")).detail(self.t("shortcut.emptyHint")).undo_button_for(lang)
+                } else {
+                    let key_name = spoken_for(&combo, self.platform, lang);
+                    IslandEvent::new(IslandKind::Result, self.tf("island.settings.shortcutChanged", &[("combo", &key_name)])).undo_button_for(lang)
+                };
+                self.island(ev);
                 self.emit_state();
-                let reason = if status == RowStatus::Warn { self.analyze(slot, &combo).reason() } else { None };
+                let reason = if status == RowStatus::Warn { self.analyze(slot, &combo).reason_for(lang) } else { None };
                 SetShortcutResult { ok: true, status, reason, owner: None, suggestions: vec![] }
             }
             Err(f) => {
@@ -577,11 +691,12 @@ impl InkService {
 
     /// 누르기 전 미리 보기(입력 중 표시·실패 줄의 추천 다시 받기). 등록은 하지 않는다.
     pub fn preview_shortcut(&mut self, id: &str, combo: &str) -> PreviewResult {
+        let lang = self.lang();
         let Some(slot) = self.slot(id) else {
-            return PreviewResult { status: RowStatus::Conflict, reason: Some("모르는 칸이에요".into()), owner: None, suggestions: vec![] };
+            return PreviewResult { status: RowStatus::Conflict, reason: Some(self.t("error.hotkey.unknownSlot")), owner: None, suggestions: vec![] };
         };
         let Some(combo) = canonicalize(combo, self.platform) else {
-            return PreviewResult { status: RowStatus::Conflict, reason: Some("이 키는 읽을 수 없어요".into()), owner: None, suggestions: vec![] };
+            return PreviewResult { status: RowStatus::Conflict, reason: Some(self.t("error.hotkey.badCombo")), owner: None, suggestions: vec![] };
         };
         let a = self.analyze(slot, &combo);
         let status = Self::status_of(&a);
@@ -591,7 +706,7 @@ impl InkService {
         } else {
             vec![]
         };
-        PreviewResult { status, reason: a.reason(), owner: a.top().and_then(|t| t.owner.clone()), suggestions }
+        PreviewResult { status, reason: a.reason_for(lang), owner: a.top().and_then(|t| t.owner.clone()), suggestions }
     }
 
     /// 묶음 [기본값] — 그 묶음만 확정본 값으로. 등록 실패 줄은 이전 값 유지 + 이유(05 §2 U).
@@ -616,13 +731,17 @@ impl InkService {
         if !done.is_empty() {
             if self.save().is_err() {
                 self.revert(Undo::Batch(done));
-                self.island(IslandEvent::new(IslandKind::Problem, "저장하지 못했어요"));
+                self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.saveError")));
                 self.emit_state();
                 return self.state();
             }
             self.history.push(Undo::Batch(done));
-            let text = if failed == 0 { "기본값으로 되돌렸어요".to_string() } else { format!("기본값으로 되돌렸어요 · {failed}개는 겹쳐서 그대로예요") };
-            self.island(IslandEvent::new(IslandKind::Result, text).undo_button());
+            let text = if failed == 0 {
+                self.t("island.settings.shortcutsRestored")
+            } else {
+                self.tp("island.settings.shortcutsRestoredPartial", failed as u64)
+            };
+            self.island(IslandEvent::new(IslandKind::Result, text).undo_button_for(self.lang()));
         }
         self.emit_state();
         self.state()
@@ -644,6 +763,12 @@ impl InkService {
         ink_domain::i18n::trf_os(self.lang(), self.platform, key, args)
     }
 
+    /// 복수형 선택(`{base}.one` / `{base}.other`) + `{n}` 끼우기.
+    pub(crate) fn tp(&self, base: &str, n: u64) -> String {
+        let key = if n == 1 { format!("{base}.one") } else { format!("{base}.other") };
+        self.tf(&key, &[("n", &n)])
+    }
+
     /// 단축키 잠시 끄기(`` Alt+` ``만 남김) · 다시 켜기(실패 줄 보고).
     pub fn set_hotkeys_enabled(&mut self, enabled: bool) -> InkState {
         if enabled == self.hotkeys_enabled {
@@ -658,7 +783,11 @@ impl InkService {
         if enabled {
             self.start();
             let bad = self.failures.len();
-            let ev = if bad == 0 { IslandEvent::new(IslandKind::Info, self.t("island.hotkeys.on")) } else { IslandEvent::new(IslandKind::Problem, self.tf("island.hotkeys.onSome", &[("n", &bad)])) };
+            let ev = if bad == 0 {
+                IslandEvent::new(IslandKind::Info, self.t("island.hotkeys.on"))
+            } else {
+                IslandEvent::new(IslandKind::Problem, self.tp("island.hotkeys.onSomeCount", bad as u64))
+            };
             self.island(ev);
         } else {
             let ids: Vec<String> = self.registered.keys().filter(|k| k.as_str() != PAUSE_SLOT).cloned().collect();
@@ -671,7 +800,7 @@ impl InkService {
             let pause = self.settings.shortcut(PAUSE_SLOT);
             let mut ev = IslandEvent::new(IslandKind::Off, self.t("island.hotkeys.off"));
             if !pause.is_empty() {
-                ev = ev.detail(spoken(pause, self.platform));
+                ev = ev.detail(spoken_for(pause, self.platform, self.lang()));
             }
             self.island(ev);
         }
@@ -813,7 +942,7 @@ impl InkService {
         if self.ports.probe.secure_desktop() {
             if !self.secure_notified {
                 self.secure_notified = true;
-                self.island(IslandEvent::new(IslandKind::Off, "보안 화면에서는 쓸 수 없어요").variant("security"));
+                self.island(IslandEvent::new(IslandKind::Off, self.t("island.security")).variant("security"));
             }
             return;
         }
@@ -851,7 +980,7 @@ impl InkService {
             }
             other => {
                 log::warn!("capture failed: {}", other.err().as_deref().unwrap_or("no frames"));
-                self.island(IslandEvent::new(IslandKind::Problem, "화면을 가져오지 못했어요"));
+                self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.screenError")));
                 return;
             }
         };
@@ -893,7 +1022,7 @@ impl InkService {
                 log::warn!("overlay show failed: {e}");
                 self.ports.overlay.hide(session);
                 self.end_selection();
-                self.island(IslandEvent::new(IslandKind::Problem, "캡처 화면을 띄우지 못했어요"));
+                self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.openError")));
                 return;
             }
         };
@@ -912,11 +1041,11 @@ impl InkService {
         self.pending = Some((pressed, timing));
         self.snapshot = Some(snapshot);
         self.mode = Mode::Capture { session, kind, started_ms: self.now_ms() };
-        let mut ev = capture_island(kind);
+        let mut ev = self.capture_island(kind);
         // 맥: 손쉬운 사용이 없으면 요소(A)를 못 잡는다 — 이번 실행 첫 캡처의 모드 섬에 칩 하나(M10, 거절해도 W·V로 캡처)
         if self.permissions.is_some_and(|p| !p.accessibility) && !self.ax_chip_shown {
             self.ax_chip_shown = true;
-            ev.chip = Some(IslandButton { label: "요소까지 잡기 · 손쉬운 사용 켜기".into(), action: ACTION_PERM_AX.into() });
+            ev.chip = Some(IslandButton { label: self.t("island.perm.axChip"), action: ACTION_PERM_AX.into() });
         }
         self.island(ev);
         self.emit_state();
@@ -991,7 +1120,7 @@ impl InkService {
             SystemEvent::DisplayChange => {
                 if matches!(self.mode, Mode::Capture { .. }) {
                     self.end_capture();
-                    self.island(IslandEvent::new(IslandKind::Info, "화면 구성이 바뀌어 캡처를 닫았어요"));
+                    self.island(IslandEvent::new(IslandKind::Info, self.t("island.capture.displayChanged")));
                 }
                 self.prepare_overlays();
             }
@@ -1009,19 +1138,37 @@ impl InkService {
 
     /// 바꾸는 순간 바로 반영(R-SET-0). 검증 실패·저장 실패면 값은 그대로.
     pub fn update_setting(&mut self, path: &str, value: &Value) -> UpdateResult {
-        let prev = match self.settings.set(path, value) {
+        let lang = self.lang();
+        let prev = match self.settings.set_for(path, value, self.platform, lang) {
             Ok(prev) => prev,
-            Err(e) => return UpdateResult { ok: false, error: Some(e.to_string()), state: self.state() },
+            Err(e) => return UpdateResult { ok: false, error: Some(e.message(lang)), state: self.state() },
         };
         if prev == *self.settings.get(path).unwrap_or(&Value::Null) {
             return UpdateResult { ok: true, error: None, state: self.state() };
         }
         if let Err(f) = self.save() {
-            let _ = self.settings.set(path, &prev);
-            self.island(IslandEvent::new(IslandKind::Problem, "저장하지 못했어요"));
+            let _ = self.settings.set_for(path, &prev, self.platform, lang);
+            self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.saveError")));
             return UpdateResult { ok: false, error: Some(f.reason), state: self.state() };
         }
         self.history.push(Undo::Setting { path: path.to_string(), prev });
+        if path == "general.lang" {
+            self.emit_zoom();
+            match self.mode {
+                Mode::Capture { kind, .. } => self.island(self.capture_island(kind)),
+                Mode::Draw { .. } => self.emit_draw_island(),
+                Mode::LiveZoom { .. } => {
+                    if let Some(v) = self.zoom.view {
+                        self.island(self.zoom_island(v.target));
+                    }
+                }
+                Mode::Recording { .. } => {
+                    let elapsed = self.clock_ms().saturating_sub(self.rec.started_ms);
+                    self.island(self.record_island(elapsed));
+                }
+                Mode::Idle => {}
+            }
+        }
         self.emit_state();
         UpdateResult { ok: true, error: None, state: self.state() }
     }
@@ -1050,9 +1197,10 @@ impl InkService {
     }
 
     fn revert(&mut self, entry: Undo) {
+        let lang = self.lang();
         match entry {
             Undo::Setting { path, prev } => {
-                let _ = self.settings.set(&path, &prev);
+                let _ = self.settings.set_for(&path, &prev, self.platform, lang);
             }
             Undo::Shortcut { id, prev } => {
                 if let Some(slot) = self.slot(&id) {
@@ -1095,8 +1243,9 @@ impl InkService {
     }
 
     fn read_import(&self, file: &Value) -> Result<(Settings, Vec<String>), String> {
-        let data = settings::migrate(file).map_err(|e| e.to_string())?;
-        Ok(Settings::from_data(&data, self.platform))
+        let lang = self.lang();
+        let data = settings::migrate(file).map_err(|e| e.message(lang))?;
+        Ok(Settings::from_data_for(&data, self.platform, lang))
     }
 
     /// 무엇이 바뀌는지만 본다(취소하면 변경 0).
@@ -1116,14 +1265,18 @@ impl InkService {
         let prev = std::mem::replace(&mut self.settings, next);
         if let Err(f) = self.save() {
             self.settings = prev;
-            self.island(IslandEvent::new(IslandKind::Problem, "저장하지 못했어요"));
+            self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.saveError")));
             return UpdateResult { ok: false, error: Some(f.reason), state: self.state() };
         }
         self.history.push(Undo::Whole(Box::new(prev)));
         self.reregister_all();
         let bad = self.failures.len();
-        let text = if bad == 0 { "설정을 가져왔어요".to_string() } else { format!("설정을 가져왔어요 · 단축키 {bad}개는 겹쳐요") };
-        self.island(IslandEvent::new(IslandKind::Result, text).undo_button());
+        let text = if bad == 0 {
+            self.t("island.settings.imported")
+        } else {
+            self.tp("island.settings.importedWithConflicts", bad as u64)
+        };
+        self.island(IslandEvent::new(IslandKind::Result, text).undo_button_for(self.lang()));
         self.emit_state();
         UpdateResult { ok: true, error: None, state: self.state() }
     }
@@ -1137,13 +1290,13 @@ impl InkService {
         }
         if self.save().is_err() {
             self.settings = prev;
-            self.island(IslandEvent::new(IslandKind::Problem, "저장하지 못했어요"));
+            self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.saveError")));
             return self.state();
         }
         self.history.clear();
         self.clear_kept_ink();
         self.reregister_all();
-        self.island(IslandEvent::new(IslandKind::Result, "처음 상태로 되돌렸어요"));
+        self.island(IslandEvent::new(IslandKind::Result, self.t("island.settings.reset")));
         self.emit_state();
         self.state()
     }
@@ -1161,7 +1314,11 @@ impl InkService {
         if self.readonly {
             return Ok(());
         }
-        self.ports.store.save_section("settings", &self.settings.to_data()).map_err(|e| Failure { reason: e.to_string(), owner: None })
+        let lang = self.lang();
+        self.ports
+            .store
+            .save_section("settings", &self.settings.to_data())
+            .map_err(|e| Failure { kind: FailureKind::Message(e.message(lang)), reason: e.message(lang), owner: None })
     }
 
     pub(crate) fn emit_state(&self) {

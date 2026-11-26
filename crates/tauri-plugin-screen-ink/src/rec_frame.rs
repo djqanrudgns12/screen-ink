@@ -26,7 +26,7 @@ struct FramePlace {
 
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let w = WebviewWindowBuilder::new(app, REC_FRAME, WebviewUrl::App("index.html?view=recframe".into()))
-        .title("shookshok record frame")
+        .title("슉쇽 녹화 범위")
         .inner_size(320.0, 200.0)
         .resizable(false)
         .decorations(false)

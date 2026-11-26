@@ -1,6 +1,6 @@
 //! 유스케이스 흐름 시험(03 §7 ink-app 줄): 단축키 트랜잭션·롤백·추천·잠시 끄기, 설정 바로 반영·되돌리기.
 
-use ink_app::{HotkeyOutcome, InkService, IslandKind, RowStatus};
+use ink_app::{CaptureInput, HotkeyOutcome, InkService, IslandKind, RowStatus};
 use ink_domain::shortcuts::{LiveBinding, Platform};
 use ink_platform_fake::FakeWorld;
 use serde_json::json;
@@ -76,7 +76,7 @@ fn 바꾸기는_새_키_등록_후_옛_키_해제_그리고_되돌리기() {
     assert!(!w.is_registered("Shift+F2"));
     let island = w.last_island().unwrap();
     assert_eq!(island.kind, IslandKind::Result);
-    assert_eq!(island.text, "Ctrl Alt F2로 바꿨어요");
+    assert_eq!(island.text, "Ctrl Alt F2 키로 바꿨어요");
     assert_eq!(island.button.unwrap().action, "undo");
     assert_eq!(w.saved().unwrap()["sections"]["settings"]["data"]["shortcuts"]["active"], "Ctrl+Alt+F2");
 
@@ -131,7 +131,9 @@ fn 비우면_해제되고_트레이로_시작할_수_있다고_알린다() {
     assert!(s.set_shortcut("delay", "").ok);
     assert!(!w.is_registered("Alt+F1"));
     assert_eq!(row(&s.state(), "delay").status, RowStatus::Off);
-    assert!(w.last_island().unwrap().text.starts_with("비웠어요"));
+    let island = w.last_island().unwrap();
+    assert_eq!(island.text, "비웠어요");
+    assert_eq!(island.detail.as_deref(), Some("작업 표시줄에서 열 수 있어요"));
 }
 
 #[test]
@@ -331,4 +333,105 @@ fn 맥은_58칸이고_창_항상_위가_없다() {
     assert_eq!(st.shortcuts.len(), 56);
     assert!(st.shortcuts.iter().all(|r| r.id != "topmost"));
     assert_eq!(w.registered_count(), 15);
+}
+
+#[test]
+fn 영어_전환_뒤_섬과_오류가_영어로_나온다() {
+    let w = FakeWorld::new();
+    let mut s = service(&w);
+    assert!(s.update_setting("general.lang", &json!("en")).ok);
+
+    // 단축키 끄기·켜기 + 1개/복수 개 겹침 복수형
+    s.set_hotkeys_enabled(false);
+    assert_eq!(w.last_island().unwrap().text, "Shortcuts paused");
+    s.set_hotkeys_enabled(true);
+    assert_eq!(w.last_island().unwrap().text, "Shortcuts are back on");
+
+    s.set_hotkeys_enabled(false);
+    w.taken(&["F1"]);
+    s.set_hotkeys_enabled(true);
+    assert_eq!(w.last_island().unwrap().text, "Shortcuts on · 1 conflict");
+
+    s.set_hotkeys_enabled(false);
+    w.taken(&["F1", "F3"]);
+    s.set_hotkeys_enabled(true);
+    assert_eq!(w.last_island().unwrap().text, "Shortcuts on · 2 conflicts");
+
+    // 단축키 바꾸기·비우기
+    assert!(s.set_shortcut("active", "ctrl+alt+f2").ok);
+    assert_eq!(w.last_island().unwrap().text, "Changed to Ctrl Alt F2");
+    assert!(s.set_shortcut("delay", "").ok);
+    let cleared = w.last_island().unwrap();
+    assert_eq!(cleared.text, "Shortcut cleared");
+    assert_eq!(cleared.detail.as_deref(), Some("Open from taskbar"));
+
+    // 설정 범위 오류
+    let bad = s.update_setting("draw.width", &json!(99));
+    assert_eq!(bad.error.as_deref(), Some("Choose a value between 1 and 30"));
+
+    // 캡처 복사·저장 섬
+    w.taken(&[]);
+    s.set_hotkeys_enabled(false);
+    s.set_hotkeys_enabled(true);
+    s.on_hotkey("region");
+    s.capture_input(CaptureInput::Key { key: "Enter".into(), code: "Enter".into(), ctrl: false, shift: false, alt: false, meta: false });
+    let copied = w.last_island().unwrap();
+    assert_eq!(copied.text, "Copied");
+    assert_eq!(copied.detail.as_deref(), Some("Paste into documents · Ctrl+V"));
+    assert_eq!(copied.button.as_ref().map(|b| b.label.as_str()), Some("Save"));
+    assert_eq!(copied.secondary_button.as_ref().map(|b| b.label.as_str()), Some("Draw"));
+
+    s.save_last();
+    let saved = w.last_island().unwrap();
+    assert_eq!(saved.text, "Saved to Pictures");
+    assert_eq!(saved.button.as_ref().map(|b| b.label.as_str()), Some("Open in Explorer"));
+}
+
+#[test]
+fn 맥과_windows는_os_맞춤_글과_예외_앱_검증을_쓴다() {
+    let enter = CaptureInput::Key { key: "Enter".into(), code: "Enter".into(), ctrl: false, shift: false, alt: false, meta: false };
+
+    // macOS
+    let w_mac = FakeWorld::new();
+    let mut s_mac = InkService::new(w_mac.ports(), Platform::Mac, "0.1.0-test");
+    s_mac.start();
+    s_mac.on_hotkey("region");
+    s_mac.capture_input(enter.clone());
+    let detail_mac = w_mac.last_island().unwrap().detail.unwrap();
+    assert_eq!(detail_mac, "문서·발표 자료에 붙여 넣기 · ⌘V");
+    assert!(!detail_mac.contains("Ctrl"));
+    s_mac.save_last();
+    assert_eq!(w_mac.last_island().unwrap().button.unwrap().label, "Finder에서 보기");
+    assert!(s_mac.set_shortcut("delay", "").ok);
+    assert_eq!(w_mac.last_island().unwrap().detail.as_deref(), Some("메뉴 막대에서 열 수 있어요"));
+
+    assert!(s_mac.update_setting("general.lang", &json!("en")).ok);
+    s_mac.save_last();
+    assert_eq!(w_mac.last_island().unwrap().button.unwrap().label, "Show in Finder");
+    assert!(s_mac.set_shortcut("active", "").ok);
+    assert_eq!(w_mac.last_island().unwrap().detail.as_deref(), Some("Open from menu bar"));
+
+    // R2-FIX-5: 맥은 앱/번들 이름 허용, .exe 거부
+    assert!(s_mac.update_setting("capture.excluded", &json!([{ "exe": "Safari", "mode": "exclude" }])).ok);
+    let mac_err = s_mac.update_setting("capture.excluded", &json!([{ "exe": "hwp.exe", "mode": "exclude" }]));
+    assert!(!mac_err.ok);
+    assert!(mac_err.error.as_deref().is_some_and(|e| e.contains("Safari")), "{:?}", mac_err.error);
+
+    // Windows
+    let w_win = FakeWorld::new();
+    let mut s_win = service(&w_win);
+    s_win.on_hotkey("region");
+    s_win.capture_input(enter);
+    let detail_win = w_win.last_island().unwrap().detail.unwrap();
+    assert_eq!(detail_win, "문서·발표 자료에 붙여 넣기 · Ctrl+V");
+    assert!(!detail_win.contains('⌘'));
+    s_win.save_last();
+    assert_eq!(w_win.last_island().unwrap().button.unwrap().label, "탐색기에서 열기");
+    assert!(s_win.set_shortcut("delay", "").ok);
+    assert_eq!(w_win.last_island().unwrap().detail.as_deref(), Some("작업 표시줄에서 열 수 있어요"));
+
+    assert!(s_win.update_setting("capture.excluded", &json!([{ "exe": "hwp.exe", "mode": "exclude" }])).ok);
+    let win_err = s_win.update_setting("capture.excluded", &json!([{ "exe": "Safari", "mode": "exclude" }]));
+    assert!(!win_err.ok);
+    assert!(win_err.error.as_deref().is_some_and(|e| e.contains("hwp.exe")), "{:?}", win_err.error);
 }

@@ -38,7 +38,8 @@ fn 업데이트_뒤_화면_기록이_풀리면_시작할_때_단추로_알린다
     let p = s.state().permissions.unwrap();
     assert!(!p.screen && p.screen_revoked && !p.accessibility_revoked);
     let island = w.last_island().unwrap();
-    assert_eq!((island.kind, island.text.as_str()), (IslandKind::Problem, "업데이트 뒤 화면 기록 권한을 다시 켜야 해요"));
+    assert_eq!((island.kind, island.text.as_str()), (IslandKind::Problem, "화면 기록 권한을 다시 켜요"));
+    assert_eq!(island.detail.as_deref(), Some("업데이트 뒤 권한이 풀렸어요"));
     assert_eq!(island.button.as_ref().map(|b| b.action.as_str()), Some(ACTION_PERM_SCREEN));
 }
 

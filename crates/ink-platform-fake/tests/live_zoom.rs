@@ -48,7 +48,7 @@ fn 쉬다가_alt2는_커서_모니터에_돋보기와_확대_섬을_띄우고_es
 
     let island = w.last_island().unwrap();
     assert_eq!((island.kind, island.variant.as_deref(), island.mode.as_deref()), (IslandKind::Mode, Some("zoom"), Some("zoom")));
-    assert_eq!(island.text, "실시간 확대");
+    assert_eq!(island.text, "화면 확대");
     assert_eq!(island.detail.as_deref(), Some("움직이는 화면 그대로"));
     assert_eq!(island.value.as_deref(), Some("×2.0"));
     let keys: Vec<&str> = island.hints.iter().map(|h| h.key.as_str()).collect();
@@ -276,7 +276,7 @@ fn 잠금_절전_화면_구성_변경이면_확대를_끝낸다() {
     s.on_system_event(SystemEvent::DisplayChange);
     assert_eq!(s.mode(), Mode::Idle);
     let island = w.last_island().unwrap();
-    assert_eq!((island.kind, island.text.as_str()), (IslandKind::Info, "화면 구성이 바뀌어 확대를 끝냈어요"));
+    assert_eq!((island.kind, island.text.as_str()), (IslandKind::Info, "화면이 바뀌어 확대를 끝냈어요"));
     assert_eq!(w.magnifier.0.lock().unwrap().stops, 3);
 }
 
@@ -289,7 +289,7 @@ fn 돋보기를_못_띄우면_문제_섬이고_모드와_키는_그대로() {
     s.on_hotkey("zoom");
     assert_eq!(s.mode(), Mode::Idle);
     let island = w.last_island().unwrap();
-    assert_eq!((island.kind, island.text.as_str()), (IslandKind::Problem, "실시간 확대를 시작하지 못했어요"));
+    assert_eq!((island.kind, island.text.as_str()), (IslandKind::Problem, "확대를 시작하지 못했어요"));
     assert_eq!(w.registered_count(), globals);
 
     // 돋보기 어댑터가 없는 곳(맥 1차) = 기본 NoMagnifier
@@ -298,7 +298,7 @@ fn 돋보기를_못_띄우면_문제_섬이고_모드와_키는_그대로() {
     plain.start();
     plain.on_hotkey("zoom");
     assert_eq!(plain.mode(), Mode::Idle);
-    assert_eq!(w2.last_island().unwrap().text, "이 컴퓨터에서는 실시간 확대를 아직 쓸 수 없어요");
+    assert_eq!(w2.last_island().unwrap().text, "화면 확대를 지원하지 않아요");
 
     // 보안 화면
     let w3 = FakeWorld::new();
@@ -322,7 +322,7 @@ fn 돋보기가_스스로_멈추면_틱에서_확대를_끝낸다() {
     let islands = w.notifier.0.lock().unwrap().islands.clone();
     let tail: Vec<IslandKind> = islands.iter().rev().take(2).map(|i| i.kind).collect();
     assert_eq!(tail, [IslandKind::Problem, IslandKind::End]);
-    assert_eq!(islands.last().unwrap().text, "실시간 확대를 끝냈어요");
+    assert_eq!(islands.last().unwrap().text, "확대를 끝냈어요");
 }
 
 #[test]

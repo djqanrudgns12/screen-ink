@@ -1874,7 +1874,6 @@ dependencies = [
  "log",
  "serde",
  "serde_json",
- "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -1883,7 +1882,6 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
- "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -1916,6 +1914,8 @@ dependencies = [
  "objc2-foundation",
  "objc2-quartz-core",
  "objc2-screen-capture-kit",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

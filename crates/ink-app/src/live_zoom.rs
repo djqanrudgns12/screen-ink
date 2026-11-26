@@ -14,7 +14,7 @@ use crate::state::DrawViewTransform;
 use crate::state::{IslandEvent, IslandKind, LiveZoomState};
 use ink_domain::geometry::{PhysPoint, PhysRect};
 use ink_domain::mode::{DrawKind, Mode};
-use ink_domain::shortcuts::{spoken, to_accelerator};
+use ink_domain::shortcuts::{spoken_for, to_accelerator};
 use ink_domain::zoom::{self, FollowMode, LiveZoomView, ZoomCommand, LIVE_ZOOM_START, ZOOM_KEYS};
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -54,6 +54,7 @@ pub struct ZoomState {
     pub(crate) view: Option<LiveZoomView>,
     /// 그 모니터 배율(CSS px 환산)
     pub(crate) monitor_scale: f64,
+    pub(crate) monitor_index: usize,
     pub(crate) monitor_label: String,
     /// 마지막 틱의 커서(후광 자리)
     pub(crate) cursor: PhysPoint,
@@ -72,6 +73,7 @@ impl Default for ZoomState {
             magnifier: Box::new(NoMagnifier),
             view: None,
             monitor_scale: 1.0,
+            monitor_index: 0,
             monitor_label: String::new(),
             cursor: PhysPoint::default(),
             keys: BTreeMap::new(),
@@ -177,7 +179,7 @@ impl InkService {
         if self.ports.probe.secure_desktop() {
             if !self.secure_notified {
                 self.secure_notified = true;
-                self.island(IslandEvent::new(IslandKind::Off, "보안 화면에서는 쓸 수 없어요").variant("security"));
+                self.island(IslandEvent::new(IslandKind::Off, self.t("island.security")).variant("security"));
             }
             return;
         }
@@ -185,7 +187,7 @@ impl InkService {
         let layout = self.ports.monitors.layout();
         let cursor = self.ports.monitors.cursor();
         let Some(monitor) = layout.monitor_at(cursor).or_else(|| layout.nearest(cursor)).cloned() else {
-            self.island(IslandEvent::new(IslandKind::Problem, "화면을 찾지 못했어요"));
+            self.island(IslandEvent::new(IslandKind::Problem, self.t("island.zoom.noScreen")));
             return;
         };
         let index = layout.monitors.iter().position(|m| m.id == monitor.id).unwrap_or(0);
@@ -196,7 +198,7 @@ impl InkService {
         let t = Instant::now();
         if let Err(e) = self.zoom.magnifier.start(monitor.bounds, view.source, view.scale) {
             log::warn!("live zoom start failed: {e}");
-            let text = if e.starts_with(ZOOM_UNSUPPORTED) { "이 컴퓨터에서는 실시간 확대를 아직 쓸 수 없어요" } else { "실시간 확대를 시작하지 못했어요" };
+            let text = if e.starts_with(ZOOM_UNSUPPORTED) { self.t("island.zoom.unsupported") } else { self.t("island.zoom.startError") };
             self.island(IslandEvent::new(IslandKind::Problem, text));
             return;
         }
@@ -209,7 +211,8 @@ impl InkService {
         self.mode = Mode::LiveZoom { session, monitor_id: monitor.id, started_ms: self.epoch.elapsed().as_millis() as u64 };
         self.zoom.view = Some(view);
         self.zoom.monitor_scale = monitor.scale;
-        self.zoom.monitor_label = zoom::monitor_label(index);
+        self.zoom.monitor_index = index;
+        self.zoom.monitor_label = zoom::monitor_label_for(index, self.lang());
         self.zoom.cursor = cursor;
         self.zoom.last_tick = Some(Instant::now());
         self.zoom.last_sent = None;
@@ -306,7 +309,7 @@ impl InkService {
             SystemEvent::Lock | SystemEvent::Suspend => self.end_zoom(),
             SystemEvent::DisplayChange => {
                 self.end_zoom();
-                self.island(IslandEvent::new(IslandKind::Info, "화면 구성이 바뀌어 확대를 끝냈어요"));
+                self.island(IslandEvent::new(IslandKind::Info, self.t("island.zoom.displayChanged")));
             }
             SystemEvent::Unlock | SystemEvent::Resume | SystemEvent::ThemeChange => {}
         }
@@ -335,37 +338,40 @@ impl InkService {
             Err(e) => {
                 log::warn!("live zoom update failed: {e}");
                 self.end_zoom();
-                self.island(IslandEvent::new(IslandKind::Problem, "실시간 확대를 끝냈어요").detail("확대 화면이 멈췄어요"));
+                self.island(IslandEvent::new(IslandKind::Problem, self.t("island.zoom.stopped")).detail(self.t("island.zoom.stoppedDetail")));
                 false
             }
         }
     }
 
-    /// 확대 섬(04 S13): 확대 아이콘 · **실시간 확대** · 움직이는 화면 그대로 · `×2.0` / 휠 배율 · Alt 1 멈추고 쓰기 · Esc 끝.
-    fn zoom_island(&self, scale: f64) -> IslandEvent {
+    /// 확대 섬(04 S13): 확대 아이콘 · **화면 확대** · 움직이는 화면 그대로 · `×2.0` / 휠 확대·축소 · Alt 1 멈추고 그리기 · Esc 끝.
+    pub(crate) fn zoom_island(&self, scale: f64) -> IslandEvent {
+        let lang = self.lang();
         let draw = self.settings.shortcut("draw");
         let exit = self.settings.shortcut(zoom::ZOOM_EXIT_SLOT);
-        let mut hints: Vec<(String, &str)> = vec![("휠".into(), "배율")];
+        let mut hints: Vec<(String, String)> = vec![(self.t("island.hint.key.wheel"), self.t("island.zoom.hint.scale"))];
         if !draw.is_empty() {
-            hints.push((spoken(draw, self.platform), "멈추고 쓰기"));
+            hints.push((spoken_for(draw, self.platform, lang), self.t("island.zoom.hint.freezeDraw")));
         }
         if !exit.is_empty() {
-            hints.push((spoken(exit, self.platform), "끝"));
+            hints.push((spoken_for(exit, self.platform, lang), self.t("island.zoom.hint.exit")));
         }
-        let pairs: Vec<(&str, &str)> = hints.iter().map(|(k, l)| (k.as_str(), *l)).collect();
-        let mut ev = IslandEvent::new(IslandKind::Mode, "실시간 확대").variant("zoom").detail("움직이는 화면 그대로").hints(&pairs);
+        let pairs: Vec<(&str, &str)> = hints.iter().map(|(k, l)| (k.as_str(), l.as_str())).collect();
+        let mut ev = IslandEvent::new(IslandKind::Mode, self.t("island.zoom.title")).variant("zoom").detail(self.t("island.zoom.detail")).hints(&pairs);
         ev.mode = Some(zoom::ZOOM_SLOT.into());
         ev.value = Some(zoom::format_live_scale(scale));
         ev
     }
 
     /// HUD 상태(바뀐 때만 보낸다).
-    fn emit_zoom(&mut self) {
+    pub(crate) fn emit_zoom(&mut self) {
         let (Mode::LiveZoom { session, .. }, Some(view)) = (self.mode, self.zoom.view) else { return };
+        let label = zoom::monitor_label_for(self.zoom.monitor_index, self.lang());
+        self.zoom.monitor_label = label.clone();
         let state = LiveZoomState {
             session,
             monitor_id: view.monitor_id,
-            monitor_label: self.zoom.monitor_label.clone(),
+            monitor_label: label,
             scale: view.scale,
             scale_label: zoom::format_live_scale(view.scale),
             viewport: zoom::viewport(&view),

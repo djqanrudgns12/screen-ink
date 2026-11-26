@@ -7,6 +7,8 @@ const COMMANDS: &[&str] = &[
     "undo",
     "set_hotkeys_enabled",
     "shortcut_capture",
+    "save_pdf",
+    "system_fonts",
     "run",
     "preview_import",
     "apply_import",

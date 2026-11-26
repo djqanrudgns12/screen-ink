@@ -2,22 +2,37 @@
 
 use crate::state::{InkState, IslandEvent, OverlaySession};
 use ink_domain::geometry::{MonitorLayout, PhysPoint};
+use ink_domain::i18n::{tr, Lang};
 use ink_domain::shortcuts::LiveBinding;
 use ink_domain::snapshot::RawWindow;
 use serde::Serialize;
 use serde_json::Value;
-use thiserror::Error;
 
-#[derive(Clone, Debug, PartialEq, Eq, Error)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HotkeyError {
     /// 운영체제가 거절 — 다른 앱이 먼저 등록함
-    #[error("다른 앱이 먼저 쓰고 있어요")]
     Taken,
-    #[error("이 키는 등록할 수 없어요")]
     Unsupported,
-    #[error("{0}")]
     Other(String),
 }
+
+impl HotkeyError {
+    pub fn message(&self, lang: Lang) -> String {
+        match self {
+            Self::Taken => tr(lang, "error.hotkey.taken"),
+            Self::Unsupported => tr(lang, "error.hotkey.unsupported"),
+            Self::Other(s) => s.clone(),
+        }
+    }
+}
+
+impl std::fmt::Display for HotkeyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message(Lang::Ko))
+    }
+}
+
+impl std::error::Error for HotkeyError {}
 
 /// 전역 단축키(03 §3 `HotkeyRegistry`). 눌림은 어댑터가 `InkService::on_hotkey(slot)`로 넘긴다.
 pub trait HotkeyRegistry: Send {
@@ -226,11 +241,26 @@ pub trait OverlayHost: Send {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Error)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StoreError {
-    #[error("설정을 저장하지 못했어요")]
     Io(String),
 }
+
+impl StoreError {
+    pub fn message(&self, lang: Lang) -> String {
+        match self {
+            Self::Io(_) => tr(lang, "error.store.saveFailed"),
+        }
+    }
+}
+
+impl std::fmt::Display for StoreError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message(Lang::Ko))
+    }
+}
+
+impl std::error::Error for StoreError {}
 
 #[derive(Clone, Debug, Default)]
 pub struct Loaded {

@@ -6,6 +6,7 @@
 //! `화면 점 = monitor.xy + (원본 점 − source.xy) × scale`.
 
 use crate::geometry::{LogicalPoint, PhysPoint, PhysRect};
+use crate::i18n::{trf, Lang};
 use crate::mode::Mode;
 use serde::{Deserialize, Serialize};
 
@@ -355,9 +356,13 @@ pub fn format_scale(s: f64) -> String {
     }
 }
 
-/// 위치 지도 이름("모니터 1") — 배치 순서. 창 제목·장치 이름은 쓰지 않는다.
+/// 위치 지도 이름("모니터 1" / "Display 1") — 배치 순서. 창 제목·장치 이름은 쓰지 않는다.
+pub fn monitor_label_for(index: usize, lang: Lang) -> String {
+    trf(lang, "zoom.monitor", &[("n", &(index + 1))])
+}
+
 pub fn monitor_label(index: usize) -> String {
-    format!("모니터 {}", index + 1)
+    monitor_label_for(index, Lang::Ko)
 }
 
 /// 단축키 칸 + 지금 모드 → 확대가 맡을 일. `None` = 확대와 무관(원래 처리로).
@@ -697,6 +702,7 @@ mod tests {
         assert_eq!(format_scale(1.5), "×1.5");
         assert_eq!(format_scale(8.0), "×8.0");
         assert_eq!(monitor_label(0), "모니터 1");
+        assert_eq!(monitor_label_for(0, Lang::En), "Display 1");
     }
 
     #[test]

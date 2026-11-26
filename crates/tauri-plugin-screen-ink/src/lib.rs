@@ -14,6 +14,7 @@ mod pins;
 mod rec_frame;
 mod tray_art;
 mod zoom_hud;
+mod update;
 
 use ink_app::{
     HotkeyError, HotkeyOutcome, HotkeyRegistry, ImportPreview, InkService, InkState, IslandEvent, IslandKind, MonitorProbe, Notifier, Ports, PreviewResult, ScreenSource,
@@ -448,7 +449,7 @@ fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     });
 
     WebviewWindowBuilder::new(app, ISLAND, WebviewUrl::App("index.html?view=island".into()))
-        .title("ShookShok island")
+        .title(format!("{APP_NAME} 안내"))
         .inner_size(560.0, 88.0)
         .resizable(false)
         .decorations(false)
@@ -619,6 +620,19 @@ fn reveal_path(path: &std::path::Path) {
     let r = std::process::Command::new("xdg-open").arg(path.parent().unwrap_or(path)).spawn();
     if let Err(e) = r {
         log::warn!("reveal failed: {e}");
+    }
+}
+
+/// 파일을 그 OS의 기본 앱으로 연다.
+fn open_file(path: &std::path::Path) {
+    #[cfg(target_os = "macos")]
+    let r = std::process::Command::new("open").arg(path).spawn();
+    #[cfg(windows)]
+    let r = std::process::Command::new("explorer").arg(path).spawn();
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    let r = std::process::Command::new("xdg-open").arg(path).spawn();
+    if let Err(e) = r {
+        log::warn!("open file failed: {e}");
     }
 }
 
@@ -848,6 +862,118 @@ fn capture_commit_annotated(ink: State<'_, Ink>, request: tauri::ipc::Request<'_
 }
 
 /// 판서 배경을 그렸다 → 진입 계측(M4) `mode enter draw [N ms]` 한 줄.
+/// 이 컴퓨터 글꼴 집 이름(글자 도구 글꼴 고르기 R2-TXT-4) — 이름만, 화면에만(로그·파일에 쓰지 않는다).
+/// 맥 = `NSFontManager.availableFontFamilies`, Windows = 레지스트리 글꼴 목록에서 집 이름만. 숨은 글꼴(`.`으로 시작)은 뺀다.
+#[tauri::command]
+async fn system_fonts<R: Runtime>(app: AppHandle<R>) -> Vec<String> {
+    #[cfg(target_os = "macos")]
+    {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let _ = app.run_on_main_thread(move || {
+            let _ = tx.send(ink_platform_macos::fonts::families());
+        });
+        let mut v = rx.recv_timeout(Duration::from_secs(3)).unwrap_or_default();
+        tidy_font_names(&mut v);
+        v
+    }
+    #[cfg(windows)]
+    {
+        let _ = app;
+        let mut v = windows_font_families();
+        tidy_font_names(&mut v);
+        v
+    }
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    {
+        let _ = app;
+        Vec::new()
+    }
+}
+
+/// 정렬·중복 제거·숨은 글꼴 빼기.
+fn tidy_font_names(v: &mut Vec<String>) {
+    v.retain(|n| !n.is_empty() && !n.starts_with('.') && !n.starts_with('#'));
+    v.sort_by_key(|n| n.to_lowercase());
+    v.dedup();
+}
+
+/// `HKLM\…\Fonts` 값 이름("Malgun Gothic Bold (TrueType)", "Segoe UI & Segoe UI Semilight (TrueType)")에서 집 이름만.
+#[cfg(any(windows, test))]
+fn windows_family_names(reg_output: &str) -> Vec<String> {
+    const STYLES: [&str; 12] = [" Bold Italic", " Bold", " Italic", " Semibold", " SemiBold", " Semilight", " Light", " Black", " ExtraLight", " Regular", " Medium", " Oblique"];
+    let mut out = Vec::new();
+    for line in reg_output.lines() {
+        let line = line.trim();
+        let Some(i) = line.find("REG_SZ") else { continue };
+        let name = line[..i].trim();
+        let name = name.split(" (").next().unwrap_or(name);
+        for part in name.split(" & ") {
+            let mut fam = part.trim().to_string();
+            for st in STYLES {
+                if let Some(x) = fam.strip_suffix(st) {
+                    fam = x.to_string();
+                }
+            }
+            if !fam.is_empty() {
+                out.push(fam);
+            }
+        }
+    }
+    out
+}
+
+#[cfg(windows)]
+fn windows_font_families() -> Vec<String> {
+    let mut all = Vec::new();
+    for key in [r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts", r"HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"] {
+        if let Ok(out) = std::process::Command::new("reg").args(["query", key]).output() {
+            all.extend(windows_family_names(&String::from_utf8_lossy(&out.stdout)));
+        }
+    }
+    all
+}
+
+/// 마지막으로 저장한 PDF(저장 섬 [열기]가 연다).
+static LAST_PDF: std::sync::Mutex<Option<std::path::PathBuf>> = std::sync::Mutex::new(None);
+const ACTION_PDF_OPEN: &str = "pdf.open";
+
+/// 지금 언어·OS의 글(플러그인이 만드는 섬·대화상자 글 — R2-I18N).
+pub(crate) fn tr<R: Runtime>(app: &AppHandle<R>, key: &str) -> String {
+    let lang = app.state::<Ink>().lock().lang();
+    ink_domain::i18n::tr_os(lang, ink_domain::shortcuts::Platform::current(), key)
+}
+
+/// 화면이 만든 PDF(내 단축키 한 장, R2-PDF)를 저장 대화상자로 받아 쓴다. 이름은 화면이 정하고(경로 글자는 지움),
+/// 기본 위치는 저장 폴더. 저장하면 섬 + [열기]. 취소하면 아무 일도 없다.
+#[tauri::command]
+async fn save_pdf<R: Runtime>(app: AppHandle<R>, bytes: Vec<u8>, name: String) -> Result<bool, String> {
+    use tauri_plugin_dialog::DialogExt;
+    if !bytes.starts_with(b"%PDF-") {
+        return Err("not a pdf".into());
+    }
+    let safe: String = name.chars().filter(|c| !matches!(c, '/' | '\\' | ':' | '\0')).take(120).collect();
+    let safe = if safe.to_ascii_lowercase().ends_with(".pdf") { safe } else { format!("{safe}.pdf") };
+    let mut dialog = app.dialog().file().add_filter(tr(&app, "file.pdf.filter"), &["pdf"]).set_file_name(&safe);
+    if let Some(dir) = output_folder(&app) {
+        let _ = std::fs::create_dir_all(&dir);
+        dialog = dialog.set_directory(dir);
+    }
+    let Some(picked) = dialog.blocking_save_file() else { return Ok(false) };
+    let path = picked.into_path().map_err(|e| e.to_string())?;
+    let ok = std::fs::write(&path, &bytes).is_ok();
+    if ok {
+        *LAST_PDF.lock().unwrap_or_else(|e| e.into_inner()) = Some(path);
+    }
+    let (saved, failed, open) = (tr(&app, "file.pdf.saved"), tr(&app, "file.pdf.failed"), tr(&app, "file.open"));
+    let h = app.clone();
+    app.run_on_main_thread(move || {
+        let ev = if ok { IslandEvent::new(IslandKind::Result, saved).button(&open, ACTION_PDF_OPEN, None) } else { IslandEvent::new(IslandKind::Problem, failed) };
+        h.state::<Ink>().lock().island(ev);
+    })
+    .map_err(|e| e.to_string())?;
+    Ok(ok)
+}
+
 /// 화면(웹뷰)에서 난 오류를 앱 로그로(진단용 — 사용자 문제를 로그 하나로 볼 수 있게). 400자까지, 창 이름만 붙인다.
 #[tauri::command]
 fn ui_log<R: Runtime>(window: tauri::WebviewWindow<R>, level: String, message: String) {
@@ -984,7 +1110,7 @@ fn apply_import(ink: State<'_, Ink>, path: String) -> UpdateResult {
 }
 
 /// UTC 날짜(내보내기 파일 이름용) — 1970-01-01부터의 날 수 → 연·월·일(Hinnant).
-fn today() -> String {
+pub(crate) fn today() -> String {
     let days = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() / 86_400).unwrap_or(0) as i64;
     let z = days + 719_468;
     let era = z.div_euclid(146_097);
@@ -1059,6 +1185,24 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             hide(POPOVER);
             if let Some(p) = output_folder(&app) {
                 open_folder(&p);
+            }
+        }
+        // 자동 업데이트(R2-UPD): [지금 확인]은 뒤 스레드(통신은 잠금 밖), [지금 업데이트]·오늘은 그만은 메인 스레드
+        update::ACTION_CHECK => {
+            let h = app.clone();
+            std::thread::spawn(move || update::check(&h, true));
+        }
+        update::ACTION_INSTALL => {
+            let h = app.clone();
+            app.run_on_main_thread(move || update::install(&h)).map_err(|e| e.to_string())?;
+        }
+        update::ACTION_SNOOZE => {
+            let h = app.clone();
+            app.run_on_main_thread(move || update::snooze(&h)).map_err(|e| e.to_string())?;
+        }
+        ACTION_PDF_OPEN => {
+            if let Some(p) = LAST_PDF.lock().unwrap_or_else(|e| e.into_inner()).clone() {
+                open_file(&p);
             }
         }
         // 설정 › 일반 › 설정 위치 [열기](R2-FIX-1): 저장 폴더가 아니라 설정 파일이 있는 곳을 그 파일을 고른 채로
@@ -1378,6 +1522,8 @@ fn finish_setup<R: Runtime>(app: &AppHandle<R>, initial: InkState, first_run: bo
     if let Err(e) = zoom_hud::build(app) {
         log::error!("zoom hud window: {e}");
     }
+    // 자동 업데이트: 켠 뒤 10분부터 하루 한 번(설정에서 끄면 통신 0)
+    update::schedule(app);
     // 맥: 독 아이콘 없이 메뉴 막대에만(트레이 앱), 섬은 오버레이 위·모든 Space
     #[cfg(target_os = "macos")]
     {
@@ -1504,6 +1650,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             undo,
             set_hotkeys_enabled,
             shortcut_capture,
+            save_pdf,
+            system_fonts,
             run,
             preview_import,
             apply_import,
@@ -1539,6 +1687,14 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn windows_글꼴_목록에서_집_이름만() {
+        let out = "HKEY_LOCAL_MACHINE\\...\\Fonts\r\n    Malgun Gothic (TrueType)    REG_SZ    malgun.ttf\r\n    Malgun Gothic Bold (TrueType)    REG_SZ    malgunbd.ttf\r\n    Segoe UI & Segoe UI Semilight (TrueType)    REG_SZ    x.ttc\r\n";
+        let mut v = super::windows_family_names(out);
+        super::tidy_font_names(&mut v);
+        assert_eq!(v, ["Malgun Gothic", "Segoe UI"]);
+    }
+
     use super::*;
     use tauri::http::{HeaderMap, HeaderName, HeaderValue};
 

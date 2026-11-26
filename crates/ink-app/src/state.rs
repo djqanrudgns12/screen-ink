@@ -1,6 +1,7 @@
 //! UI로 나가는 모양 — `packages/ink-client/src/index.js`의 JSDoc 타입과 1:1(camelCase).
 
 use crate::ports::StoreLocation;
+use ink_domain::i18n::{tr, Lang};
 use ink_domain::shortcuts::Suggestion;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -285,8 +286,12 @@ impl IslandEvent {
         self
     }
 
-    pub fn undo_button(mut self) -> Self {
-        self.button = Some(IslandButton { label: "되돌리기".into(), action: "undo".into() });
+    pub fn undo_button(self) -> Self {
+        self.undo_button_for(Lang::Ko)
+    }
+
+    pub fn undo_button_for(mut self, lang: Lang) -> Self {
+        self.button = Some(IslandButton { label: tr(lang, "island.action.undo"), action: "undo".into() });
         self
     }
 }

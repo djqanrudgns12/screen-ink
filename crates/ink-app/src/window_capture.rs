@@ -63,14 +63,14 @@ impl InkService {
         self.ports.screen.prepare_window(handle);
         let rect = hit.map(|(_, r)| r);
         self.ports.overlay.highlight(session, rect);
-        let view = SelectionView { phase: Phase::Hover, rect, path: vec!["창".into()], level: 0, guides: Vec::new(), magnet: true, cursor_included: false, help: false, evidence: Vec::new() };
+        let view = SelectionView { phase: Phase::Hover, rect, path: vec![self.t("island.window.pathWindow")], level: 0, guides: Vec::new(), magnet: true, cursor_included: false, help: false, evidence: Vec::new() };
         self.ports.notifier.capture(&CaptureView { session, selection: view });
     }
 
     fn shoot_hovered(&mut self, save: bool) {
         let Some(snap) = self.snapshot.as_ref() else { return };
         let Some(w) = self.rec.hovered.and_then(|h| snap.windows.iter().find(|w| w.handle == h)).cloned() else {
-            self.island(IslandEvent::new(IslandKind::Info, "찍을 창이 없어요"));
+            self.island(IslandEvent::new(IslandKind::Info, self.t("island.window.none")));
             return;
         };
         self.shoot_window(w, save);
@@ -82,7 +82,7 @@ impl InkService {
             return;
         }
         let Some(handle) = self.ports.probe.foreground_window() else {
-            self.island(IslandEvent::new(IslandKind::Info, "활성 창이 없어요"));
+            self.island(IslandEvent::new(IslandKind::Info, self.t("island.window.noActive")));
             return;
         };
         let layout = self.ports.monitors.layout();
@@ -90,7 +90,7 @@ impl InkService {
         let excluded: Vec<ExcludedApp> = self.settings.get("capture.excluded").and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
         // 최소화·숨김·우리 창은 거른다(F2 목록과 같은 규칙)
         let Some(w) = filter_windows(&raw, &layout, std::process::id(), &excluded).into_iter().find(|w| w.handle == handle) else {
-            self.island(IslandEvent::new(IslandKind::Info, "활성 창이 없어요"));
+            self.island(IslandEvent::new(IslandKind::Info, self.t("island.window.noActive")));
             return;
         };
         self.shoot_window(w, false);
@@ -108,7 +108,7 @@ impl InkService {
             None => {
                 log::info!("window shot refused: protected or blank");
                 self.end_capture();
-                self.island(IslandEvent::new(IslandKind::Problem, "이 창은 가져올 수 없어요").detail("보호된 화면이라 복사하지 않았어요"));
+                self.island(IslandEvent::new(IslandKind::Problem, self.t("island.window.protected")).detail(self.t("island.window.protectedDetail")));
             }
         }
     }
@@ -175,7 +175,7 @@ impl InkService {
                 Ok(()) => copied = true,
                 Err(e) => {
                     log::warn!("clipboard: {e}");
-                    self.island(IslandEvent::new(IslandKind::Problem, "클립보드를 쓸 수 없어요"));
+                    self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.copyError")));
                     return;
                 }
             }
@@ -183,7 +183,7 @@ impl InkService {
         if do_save {
             if let Some(mut ev) = self.save_last_inner() {
                 if copied {
-                    ev.text = "복사하고 저장했어요".into();
+                    ev.text = self.t("island.capture.copiedAndSaved");
                 }
                 ev.thumb_url = thumb;
                 self.island(ev);
@@ -191,11 +191,12 @@ impl InkService {
             return;
         }
         let save_key = self.key_text("c-save");
-        let mut ev = IslandEvent::new(IslandKind::Result, "창을 복사했어요").variant("result").button("저장", "capture.saveLast", save_key.as_deref());
+        let mut ev = IslandEvent::new(IslandKind::Result, self.t("island.window.copied"))
+            .variant("result")
+            .button(&self.t("island.action.save"), "capture.saveLast", save_key.as_deref());
         ev.value = Some(format!("{cw}×{ch}"));
         // 스냅숏 자르기는 가린 창까지 함께 찍힌다 — 그때는 "가려진 부분까지"라고 하지 않는다
-        let paste = self.paste_text();
-        ev.detail = Some(if method == "snapshot" { format!("한글·PPT에 {paste}") } else { format!("가려진 부분까지 · {paste}") });
+        ev.detail = Some(if method == "snapshot" { self.t("island.capture.pasteHint") } else { self.t("island.window.occludedPasteHint") });
         ev.thumb_url = thumb;
         self.island(ev);
     }

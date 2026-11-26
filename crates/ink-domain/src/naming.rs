@@ -1,8 +1,8 @@
 //! 파일 이름 규칙(R-OUT-1) — `{yyyy}{MM}{dd}{HH}{mm}{ss}{앱}{n}` 토큰만, 금지 글자 경고,
 //! 같은 이름이면 ` (2)`, 경로가 260자를 넘으면 이름 앞부분을 줄인다(05 §11-5·6).
 
+use crate::i18n::{tr, trf, Lang};
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
 pub const TOKENS: [&str; 8] = ["yyyy", "MM", "dd", "HH", "mm", "ss", "앱", "n"];
 /// 템플릿 결과(확장자 빼고) 최대 글자 수(05 §1).
@@ -11,19 +11,34 @@ pub const MAX_STEM_CHARS: usize = 200;
 pub const MAX_PATH_CHARS: usize = 260;
 const FORBIDDEN: [char; 9] = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 
-#[derive(Clone, Debug, PartialEq, Eq, Error)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum NamingError {
-    #[error("이름 규칙이 비어 있어요")]
     Empty,
-    #[error("모르는 칸이에요: {{{0}}}")]
     UnknownToken(String),
-    #[error("‘{{’를 닫지 않았어요")]
     Unclosed,
-    #[error("파일 이름에 쓸 수 없는 글자예요: {0}")]
     ForbiddenChar(char),
-    #[error("이름이 너무 길어요(200자까지)")]
     TooLong,
 }
+
+impl NamingError {
+    pub fn message(&self, lang: Lang) -> String {
+        match self {
+            Self::Empty => tr(lang, "naming.error.empty"),
+            Self::UnknownToken(tok) => trf(lang, "naming.error.unknownToken", &[("token", tok)]),
+            Self::Unclosed => tr(lang, "naming.error.unclosed"),
+            Self::ForbiddenChar(ch) => trf(lang, "naming.error.forbiddenChar", &[("ch", ch)]),
+            Self::TooLong => tr(lang, "naming.error.tooLong"),
+        }
+    }
+}
+
+impl std::fmt::Display for NamingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message(Lang::Ko))
+    }
+}
+
+impl std::error::Error for NamingError {}
 
 /// 렌더에 쓰는 값. `app`은 실행 파일 이름 줄기(예: "chrome")만 — 창 제목은 쓰지 않는다.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -205,5 +220,16 @@ mod tests {
         let fitted = fit_path(&dir, &stem, "png");
         assert!(fitted.ends_with("_20260304_3"));
         assert!(dir.chars().count() + 1 + fitted.chars().count() + 5 + 4 <= MAX_PATH_CHARS);
+    }
+
+    #[test]
+    fn 다국어_오류_문구() {
+        assert_eq!(NamingError::Empty.message(Lang::Ko), "이름 규칙이 비어 있어요");
+        assert_eq!(NamingError::Empty.message(Lang::En), "File name pattern is empty");
+        assert_eq!(NamingError::UnknownToken("year".into()).message(Lang::Ko), "지원하지 않는 항목이에요: {year}");
+        assert_eq!(NamingError::UnknownToken("year".into()).message(Lang::En), "Unsupported token: {year}");
+        assert_eq!(NamingError::Unclosed.message(Lang::En), "Missing closing '}'");
+        assert_eq!(NamingError::ForbiddenChar('/').message(Lang::En), "Character not allowed in file name: /");
+        assert_eq!(NamingError::TooLong.message(Lang::En), "File name is too long (max 200 chars)");
     }
 }

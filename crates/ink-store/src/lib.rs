@@ -69,7 +69,7 @@ impl JsonFileStore {
                 let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes); // 메모장 BOM
                 let v: Value = serde_json::from_slice(bytes).map_err(|e| e.to_string())?;
                 if v.get("schemaVersion").is_none() {
-                    return Err("schemaVersion 없음".into());
+                    return Err("missing schemaVersion".into());
                 }
                 Ok(Some(v))
             }
@@ -137,11 +137,11 @@ impl SettingsStore for JsonFileStore {
                     Ok(Some(v)) => {
                         self.file = v.clone();
                         let _ = self.write_atomic(&v);
-                        Loaded { file: Some(v), notice: Some("설정 파일이 손상돼 백업으로 되살렸어요(원본은 보관했어요)".into()) }
+                        Loaded { file: Some(v), notice: Some("store.notice.recoveredBackup".into()) }
                     }
                     _ => Loaded {
                         file: None,
-                        notice: Some(if kept { "설정 파일이 손상돼 처음 값으로 시작했어요(원본은 보관했어요)".into() } else { "설정 파일이 손상돼 처음 값으로 시작했어요".into() }),
+                        notice: Some(if kept { "store.notice.resetKeptBroken" } else { "store.notice.reset" }.into()),
                     },
                 }
             }
@@ -207,7 +207,10 @@ mod tests {
         let mut s2 = JsonFileStore::new(&d, false);
         let loaded = s2.load();
         assert_eq!(loaded.file.unwrap()["sections"]["settings"]["data"]["values"]["a"], 1);
-        assert!(loaded.notice.unwrap().contains("백업"));
+        let notice = loaded.notice.unwrap();
+        assert_eq!(notice, "store.notice.recoveredBackup");
+        assert!(ink_domain::i18n::tr(ink_domain::i18n::Lang::Ko, &notice).contains("백업"));
+        assert!(ink_domain::i18n::tr(ink_domain::i18n::Lang::En, &notice).contains("backup"));
         assert!(fs::read_dir(&d).unwrap().any(|e| e.unwrap().file_name().to_string_lossy().starts_with("settings.json.broken-")));
         let _ = fs::remove_dir_all(&d);
     }
@@ -219,7 +222,10 @@ mod tests {
         let mut s = JsonFileStore::new(&d, false);
         let loaded = s.load();
         assert!(loaded.file.is_none());
-        assert!(loaded.notice.unwrap().contains("처음 값"));
+        let notice = loaded.notice.unwrap();
+        assert_eq!(notice, "store.notice.resetKeptBroken");
+        assert!(ink_domain::i18n::tr(ink_domain::i18n::Lang::Ko, &notice).contains("기본값"));
+        assert!(ink_domain::i18n::tr(ink_domain::i18n::Lang::En, &notice).contains("defaults"));
         let _ = fs::remove_dir_all(&d);
     }
 
@@ -248,7 +254,8 @@ mod tests {
         assert_eq!(resolve_dir(&d, &user, InstallChannel::MsixStore), (user.clone(), false));
         assert_eq!(resolve_dir(&d, &user, InstallChannel::MsixDirect), (user.clone(), false));
         let (_, policy) = resolve_dir_for(&d, &user, InstallChannel::MsixStore);
-        assert_eq!(policy.label_ko, "MSIX 패키지");
+        assert_eq!(policy.label_ko, "스토어 앱");
+        assert_eq!(policy.label(ink_domain::i18n::Lang::En), "Store app");
 
         // 옛 이름의 표시 파일도 비패키지에서는 포터블, 패키지에서는 무시
         fs::remove_file(d.join(PORTABLE_MARKER)).unwrap();

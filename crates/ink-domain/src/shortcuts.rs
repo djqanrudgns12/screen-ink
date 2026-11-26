@@ -4,7 +4,7 @@
 //! `docs/shortcuts/catalog-v1.json`에서 읽는다. 그래서 선택기에서 "막힘 0"이던 확정본은
 //! 앱에서도 막힘 0이어야 한다(아래 시험이 지킨다). 기본값은 `defaults-v1.json`.
 
-use crate::text::josa;
+use crate::i18n::{tr, tr_os, trf, Lang};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::OnceLock;
@@ -201,11 +201,16 @@ pub fn is_fkey(key: &str) -> bool {
     key.strip_prefix('F').is_some_and(|n| !n.is_empty() && n.len() <= 2 && n.chars().all(|c| c.is_ascii_digit()))
 }
 
-/// 섬 문구용 읽기 표기: Windows `Shift F2`, 맥 `⇧F2`.
-pub fn spoken(combo: &str, p: Platform) -> String {
+/// 섬 문구용 읽기 표기: Windows `Shift F2`, 맥 `⇧F2`. 영어에서는 `한/영`·`한자`를 `Hangul`·`Hanja`로.
+pub fn spoken_for(combo: &str, p: Platform, lang: Lang) -> String {
     let Parsed { mods, key } = parse(combo);
+    let disp_key = match (lang, key.as_str()) {
+        (Lang::En, "한/영") => "Hangul",
+        (Lang::En, "한자") => "Hanja",
+        _ => key.as_str(),
+    };
     match p {
-        Platform::Win => mods.iter().map(String::as_str).chain(std::iter::once(key.as_str())).filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" "),
+        Platform::Win => mods.iter().map(String::as_str).chain(std::iter::once(disp_key)).filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" "),
         Platform::Mac => {
             let sym = |m: &str| match m {
                 "Ctrl" => "⌃",
@@ -214,9 +219,13 @@ pub fn spoken(combo: &str, p: Platform) -> String {
                 "Cmd" => "⌘",
                 _ => "",
             };
-            format!("{}{}", mods.iter().map(|m| sym(m)).collect::<String>(), key)
+            format!("{}{}", mods.iter().map(|m| sym(m)).collect::<String>(), disp_key)
         }
     }
+}
+
+pub fn spoken(combo: &str, p: Platform) -> String {
+    spoken_for(combo, p, Lang::Ko)
 }
 
 /// `global-hotkey`(tauri-plugin-global-shortcut)가 받는 가속기 문자열. 등록할 수 없는 키(한/영 등)는 `None`.
@@ -474,9 +483,13 @@ impl Analysis {
 
     /// 줄 아래에 쓸 한 문장.
     pub fn reason(&self) -> Option<String> {
+        self.reason_for(Lang::Ko)
+    }
+
+    pub fn reason_for(&self, lang: Lang) -> Option<String> {
         let top = self.top()?;
         Some(match (&top.owner, top.level) {
-            (Some(owner), Level::Block) => format!("{owner}에서 먼저 쓰고 있어요"),
+            (Some(owner), Level::Block) => trf(lang, "shortcut.reason.owner", &[("owner", owner)]),
             _ => top.what.clone(),
         })
     }
@@ -488,14 +501,15 @@ pub struct Suggestion {
     pub level: Level,
 }
 
-fn scope_title(scope: &str) -> &'static str {
-    match scope {
-        "global" => "전역 단축키",
-        "capture" => "캡처 화면 안",
-        "draw" => "판서·칠판 화면 안",
-        "zoom" => "실시간 확대 화면 안",
-        _ => "다른 화면",
-    }
+pub fn scope_title(scope: &str, lang: Lang) -> String {
+    let key = match scope {
+        "global" => "shortcut.scope.global",
+        "capture" => "shortcut.scope.capture",
+        "draw" => "shortcut.scope.draw",
+        "zoom" => "shortcut.scope.zoom",
+        _ => "shortcut.scope.other",
+    };
+    tr(lang, key)
 }
 
 fn issue(level: Level, source: &str, what: impl Into<String>) -> Issue {
@@ -568,8 +582,15 @@ impl Catalog {
     /// 한 칸에 `combo`를 넣었을 때의 문제를 모두 모은다(선택기 `analyze`와 같은 규칙).
     /// `assigned`는 같은 플랫폼의 다른 칸 값(칸 ID → 조합).
     pub fn analyze(&self, slot: &SlotDef, p: Platform, combo: &str, assigned: &BTreeMap<String, String>, env: &Environment) -> Analysis {
+        self.analyze_for(slot, p, combo, assigned, env, Lang::Ko)
+    }
+
+    pub fn analyze_for(&self, slot: &SlotDef, p: Platform, combo: &str, assigned: &BTreeMap<String, String>, env: &Environment, lang: Lang) -> Analysis {
+        let src_required = tr(lang, "shortcut.source.required");
+        let src_rule = tr(lang, "shortcut.source.rule");
+        let src_table = tr(lang, "shortcut.source.table");
         if combo.trim().is_empty() {
-            let items = if slot.required { vec![issue(Level::Warn, "필수", "아직 정하지 않았어요")] } else { Vec::new() };
+            let items = if slot.required { vec![issue(Level::Warn, &src_required, tr(lang, "shortcut.rule.required"))] } else { Vec::new() };
             return Analysis { level: if slot.required { Level::Warn } else { Level::Ok }, items, empty: true };
         }
         let combo = normalize(combo, p);
@@ -578,16 +599,16 @@ impl Catalog {
         let mut items = Vec::new();
 
         if self.rules.ime_keys.contains(&key) {
-            items.push(issue(Level::Block, "규칙", "한/영 전환 키라 쓸 수 없어요"));
+            items.push(issue(Level::Block, &src_rule, tr(lang, "shortcut.rule.imeKey")));
         }
         if global {
             if mods.is_empty() && !is_fkey(&key) && !self.rules.special_alone.contains(&key) {
-                items.push(issue(Level::Block, "규칙", "수정 키(Ctrl·Alt 등) 없이 일반 키 하나는 전역으로 못 써요 — 타자를 막아요"));
+                items.push(issue(Level::Block, &src_rule, tr_os(lang, p, "shortcut.rule.plainKeyGlobal")));
             } else if mods.len() == 1 && mods[0] == "Shift" && !is_fkey(&key) {
-                items.push(issue(Level::Block, "규칙", "Shift + 글자는 대문자·기호 입력이라 전역으로 못 써요"));
+                items.push(issue(Level::Block, &src_rule, tr(lang, "shortcut.rule.shiftPlainGlobal")));
             }
             if p == Platform::Mac && is_fkey(&key) {
-                items.push(issue(Level::Warn, "규칙", "맥 키보드는 F키에 fn을 함께 눌러야 해요"));
+                items.push(issue(Level::Warn, &src_rule, tr(lang, "shortcut.rule.macFkey")));
             }
         }
 
@@ -620,7 +641,7 @@ impl Catalog {
             && key.chars().count() == 1
             && !items.iter().any(|i| i.source == mac_label)
         {
-            items.push(issue(Level::Warn, "규칙", "⌥ + 글자·기호는 특수 문자 입력이라, 가로채면 그 글자를 못 쳐요"));
+            items.push(issue(Level::Warn, &src_rule, tr(lang, "shortcut.rule.macOptionChar")));
         }
 
         for other in &self.slots {
@@ -631,13 +652,12 @@ impl Catalog {
             if v.is_empty() || normalize(v, p) != combo {
                 continue;
             }
-            let name = format!("‘{}’", other.label);
             if other.scope == slot.scope {
-                items.push(issue(Level::Block, "이 표", format!("{name}{} 같은 키예요", josa(&name, "과", "와"))));
+                items.push(issue(Level::Block, &src_table, trf(lang, "shortcut.rule.sameScope", &[("name", &other.label)])));
             } else if global {
-                items.push(issue(Level::Warn, "이 표", format!("{}의 {name} 키를 전역 키가 먼저 가져가요", scope_title(&other.scope))));
+                items.push(issue(Level::Warn, &src_table, trf(lang, "shortcut.rule.globalShadowsMode", &[("name", &other.label)])));
             } else if other.is_global() {
-                items.push(issue(Level::Block, "이 표", format!("전역 {name} 키라 이 화면에서도 전역이 먼저 받아요")));
+                items.push(issue(Level::Block, &src_table, trf(lang, "shortcut.rule.shadowedByGlobal", &[("name", &other.label)])));
             }
         }
 
@@ -790,7 +810,20 @@ mod tests {
         let s = c.slots().iter().find(|s| s.scope == "capture").unwrap();
         let a = c.analyze(s, Platform::Win, "Alt+1", &c.defaults(Platform::Win), &env_default());
         assert_eq!(a.level, Level::Block);
-        assert!(a.top().unwrap().what.starts_with("전역"));
+        assert!(a.top().unwrap().what.starts_with("어디서나"));
+    }
+
+    #[test]
+    fn 다국어와_os별_단축키_판정_문구() {
+        let c = catalog();
+        let s = c.slot("active").unwrap();
+        let win_plain = c.analyze_for(s, Platform::Win, "Q", &c.defaults(Platform::Win), &env_default(), Lang::En);
+        assert_eq!(win_plain.top().unwrap().what, "Combine with Ctrl or Alt");
+        let mac_plain = c.analyze_for(s, Platform::Mac, "Q", &c.defaults(Platform::Mac), &env_default(), Lang::En);
+        assert_eq!(mac_plain.top().unwrap().what, "Combine with ⌘ or ⌥");
+        assert_eq!(spoken_for("한/영", Platform::Win, Lang::En), "Hangul");
+        assert_eq!(spoken_for("한자", Platform::Mac, Lang::En), "Hanja");
+        assert_eq!(scope_title("draw", Lang::En), "While drawing");
     }
 
     #[test]

@@ -113,7 +113,7 @@ fn 클립보드가_잠기면_알린다() {
     let mut s = service(&w);
     s.on_hotkey("region");
     s.capture_input(key("Enter"));
-    assert_eq!(w.last_island().unwrap().text, "클립보드를 쓸 수 없어요");
+    assert_eq!(w.last_island().unwrap().text, "복사하지 못했어요");
 }
 
 #[test]

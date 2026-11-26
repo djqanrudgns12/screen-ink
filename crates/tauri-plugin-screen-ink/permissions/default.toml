@@ -11,6 +11,8 @@ permissions = [
   "allow-undo",
   "allow-set-hotkeys-enabled",
   "allow-shortcut-capture",
+  "allow-save-pdf",
+  "allow-system-fonts",
   "allow-run",
   "allow-preview-import",
   "allow-apply-import",

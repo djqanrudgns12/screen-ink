@@ -226,11 +226,11 @@ fn 결과_섬에_판서로_단추와_키캡() {
     let island = w.last_island().unwrap();
     assert_eq!((island.kind, island.text.as_str()), (IslandKind::Result, "복사했어요"));
     assert_eq!(island.button.as_ref().unwrap().action, "capture.saveLast", "주 단추는 그대로 [저장]");
-    let second = island.secondary_button.clone().expect("[판서로]");
-    assert_eq!((second.label.as_str(), second.action.as_str()), ("판서로", "capture.toDraw"));
+    let second = island.secondary_button.clone().expect("[그리기로]");
+    assert_eq!((second.label.as_str(), second.action.as_str()), ("그리기로", "capture.toDraw"));
     assert_eq!(island.secondary_button_key.as_deref(), Some("Alt+1"));
     let v = serde_json::to_value(&island).unwrap();
-    assert_eq!(v["secondaryButton"], json!({ "label": "판서로", "action": "capture.toDraw" }));
+    assert_eq!(v["secondaryButton"], json!({ "label": "그리기로", "action": "capture.toDraw" }));
     assert_eq!(v["secondaryButtonKey"], "Alt+1");
     assert!(s.capture_frame_held());
 
@@ -353,7 +353,7 @@ fn 다른_모드로_가거나_잠그면_판서로_프레임을_놓는다() {
         let n = w.overlay.0.lock().unwrap().draws.len();
         s.capture_to_draw();
         assert_eq!(w.overlay.0.lock().unwrap().draws.len(), n, "판서를 열지 않는다");
-        assert_eq!(w.last_island().unwrap().text, "판서로 넘길 캡처가 없어요");
+        assert_eq!(w.last_island().unwrap().text, "그리기로 넘길 캡처가 없어요");
     };
 
     // 확대가 결과 섬을 덮는다 — 그 뒤 [판서로]는 아무것도 열지 않고 확대도 그대로

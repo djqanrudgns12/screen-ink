@@ -462,14 +462,14 @@ impl Selector {
                     self.history_at = Some(0);
                     self.confirm(*r)
                 }
-                None => Effect::Notice("지난 범위가 없어요"),
+                None => Effect::Notice("island.capture.noRecent"),
             };
         }
         let (older, newer) = (on(&self.keys.prev), on(&self.keys.next));
         if older || newer {
             let list = ctx.history();
             if list.is_empty() {
-                return Effect::Notice("지난 범위가 없어요");
+                return Effect::Notice("island.capture.noRecent");
             }
             let i = match self.history_at {
                 None => 0,

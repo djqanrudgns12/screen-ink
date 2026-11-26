@@ -405,7 +405,7 @@ impl InkService {
         }
         list.push(ExcludedApp { exe: exe.to_string(), mode: "windowOnly".into(), auto: true });
         if self.update_setting("capture.excluded", &serde_json::to_value(list).unwrap_or_default()).ok {
-            self.island(IslandEvent::new(IslandKind::Info, format!("‘{exe}’는 창 단위로만 찾을게요")).undo_button());
+            self.island(IslandEvent::new(IslandKind::Info, self.tf("island.capture.excludedAuto", &[("app", &exe)])).undo_button_for(self.lang()));
         }
     }
 
@@ -417,7 +417,7 @@ impl InkService {
                 self.ports.monitors.set_cursor(p);
                 self.redraw();
             }
-            Effect::Notice(text) => self.island(IslandEvent::new(IslandKind::Info, text)),
+            Effect::Notice(key) => self.island(IslandEvent::new(IslandKind::Info, self.t(key))),
             Effect::Cancel => self.end_capture(),
             // 주석이 없으면 commit = 지금 경로 그대로(finish·pin_rect), 있으면 오버레이에 주석 층을 부탁
             Effect::Copy(rect) => self.commit(CommitAction::Copy, rect),
@@ -508,7 +508,8 @@ impl InkService {
         let to_draw = handoff.is_some();
         self.cap.handoff = handoff;
         let draw_key = self.settings.shortcut("draw").to_string();
-        let with_to_draw = |ev: IslandEvent| if to_draw && ev.kind == IslandKind::Result { ev.secondary("판서로", "capture.toDraw", Some(&draw_key)) } else { ev };
+        let to_draw_label = self.t("island.capture.toDraw");
+        let with_to_draw = |ev: IslandEvent| if to_draw && ev.kind == IslandKind::Result { ev.secondary(&to_draw_label, "capture.toDraw", Some(&draw_key)) } else { ev };
 
         let result = self.settings.str("capture.result").to_string();
         let do_copy = !save && result != "save";
@@ -521,7 +522,7 @@ impl InkService {
                 Ok(()) => copied = true,
                 Err(e) => {
                     log::warn!("clipboard: {e}");
-                    self.island(IslandEvent::new(IslandKind::Problem, "클립보드를 쓸 수 없어요"));
+                    self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.copyError")));
                     return;
                 }
             }
@@ -529,7 +530,7 @@ impl InkService {
         if do_save {
             if let Some(mut ev) = self.save_last_inner() {
                 if copied {
-                    ev.text = "복사하고 저장했어요".into();
+                    ev.text = self.t("island.capture.copiedAndSaved");
                 }
                 ev.thumb_url = thumb;
                 self.island(with_to_draw(ev));
@@ -537,12 +538,14 @@ impl InkService {
             return;
         }
         let save_key = self.key_text("c-save");
-        let mut ev = IslandEvent::new(IslandKind::Result, "복사했어요").variant("result").button("저장", "capture.saveLast", save_key.as_deref());
+        let mut ev = IslandEvent::new(IslandKind::Result, self.t("island.capture.copied"))
+            .variant("result")
+            .button(&self.t("island.action.save"), "capture.saveLast", save_key.as_deref());
         ev.value = Some(size);
-        ev.detail = Some(format!("한글·PPT에 {}", self.paste_text()));
+        ev.detail = Some(self.t("island.capture.pasteHint"));
         ev.thumb_url = thumb;
         if let Some(h) = hex {
-            ev.chip = Some(IslandButton { label: format!("{h} 복사"), action: "capture.copyHex".into() });
+            ev.chip = Some(IslandButton { label: self.tf("island.capture.copyHexChip", &[("hex", &h)]), action: "capture.copyHex".into() });
         }
         self.island(with_to_draw(ev));
     }
@@ -633,7 +636,7 @@ impl InkService {
             }
             Err(e) => {
                 log::warn!("pin open failed: {e}");
-                self.island(IslandEvent::new(IslandKind::Problem, "화면에 고정하지 못했어요"));
+                self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.pinError")));
             }
         }
     }
@@ -664,13 +667,13 @@ impl InkService {
         let Some(p) = self.cap.pins.get(&id).cloned() else { return };
         match self.ports.clipboard.set_image(p.w, p.h, &p.bgra) {
             Ok(()) => {
-                let mut ev = IslandEvent::new(IslandKind::Result, "복사했어요").variant("result");
+                let mut ev = IslandEvent::new(IslandKind::Result, self.t("island.capture.copied")).variant("result");
                 ev.value = Some(format!("{}×{}", p.w, p.h));
                 self.island(ev);
             }
             Err(e) => {
                 log::warn!("clipboard: {e}");
-                self.island(IslandEvent::new(IslandKind::Problem, "클립보드를 쓸 수 없어요"));
+                self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.copyError")));
             }
         }
     }
@@ -691,7 +694,7 @@ impl InkService {
         if let Some(ev) = self.save_last_inner() {
             self.island(ev);
         } else if self.cap.last.is_none() {
-            self.island(IslandEvent::new(IslandKind::Info, "저장할 캡처가 없어요"));
+            self.island(IslandEvent::new(IslandKind::Info, self.t("island.capture.nothingToSave")));
         }
     }
 
@@ -716,15 +719,14 @@ impl InkService {
         let folder = self.settings.str("output.folder").to_string();
         match self.ports.files.save_png(&folder, &stem, last.w, last.h, &last.bgra) {
             Ok(f) => {
-                let mut ev = IslandEvent::new(IslandKind::Result, if f.fell_back { "사진 폴더에 저장했어요" } else { "저장했어요" })
-                    .variant("result")
-                    .button("폴더 열기", "folder.open", None);
+                let title = self.t(if f.fell_back { "island.capture.savedPictures" } else { "island.capture.saved" });
+                let mut ev = IslandEvent::new(IslandKind::Result, title).variant("result").button(&self.t("island.action.openFolder"), "folder.open", None);
                 ev.detail = Some(f.name);
                 ev
             }
             Err(e) => {
                 log::warn!("save failed: {e}");
-                IslandEvent::new(IslandKind::Problem, "저장하지 못했어요")
+                IslandEvent::new(IslandKind::Problem, self.t("island.capture.saveError"))
             }
         }
     }
@@ -733,8 +735,8 @@ impl InkService {
     pub fn copy_last_hex(&mut self) {
         let Some(hex) = self.cap.last.as_ref().and_then(|l| l.hex.clone()) else { return };
         match self.ports.clipboard.set_text(&hex) {
-            Ok(()) => self.island(IslandEvent::new(IslandKind::Result, format!("{hex} 복사했어요")).variant("result")),
-            Err(_) => self.island(IslandEvent::new(IslandKind::Problem, "클립보드를 쓸 수 없어요")),
+            Ok(()) => self.island(IslandEvent::new(IslandKind::Result, self.tf("island.capture.copiedHex", &[("hex", &hex)])).variant("result")),
+            Err(_) => self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.copyError"))),
         }
     }
 

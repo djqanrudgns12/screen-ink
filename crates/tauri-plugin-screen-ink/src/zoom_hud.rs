@@ -24,7 +24,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     #[cfg(windows)]
     {
         let w = tauri::WebviewWindowBuilder::new(app, LABEL, tauri::WebviewUrl::App("index.html?view=zoom-hud".into()))
-            .title("screen-ink zoom")
+            .title("슉쇽 확대")
             .decorations(false)
             .transparent(true)
             .shadow(false)
@@ -50,7 +50,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     #[cfg(target_os = "macos")]
     {
         let w = tauri::WebviewWindowBuilder::new(app, LABEL, tauri::WebviewUrl::App("index.html?view=zoom-hud".into()))
-            .title("screen-ink zoom")
+            .title("슉쇽 확대")
             .decorations(false)
             .transparent(true)
             .shadow(false)

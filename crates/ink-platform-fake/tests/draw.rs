@@ -57,9 +57,9 @@ fn alt_1은_커서_모니터_한_장만_찍고_그_모니터_오버레이를_띄
     assert_eq!(s.draw_session().unwrap().monitor.frame_url, sent.monitor.frame_url);
     assert_eq!(s.mode(), Mode::Draw { session: ds.session, board: false, monitor_id: 0, started_ms: match s.mode() { Mode::Draw { started_ms, .. } => started_ms, _ => 0 } });
     assert!(matches!(s.state().mode, Mode::Draw { session, .. } if session == ds.session));
-    // 모드 섬: 판서 · 펜 4px(설정 색)
+    // 모드 섬: 그리기 · 펜 4px(설정 색)
     let island = w.last_island().unwrap();
-    assert_eq!((island.kind, island.variant.as_deref(), island.mode.as_deref(), island.text.as_str()), (IslandKind::Mode, Some("draw"), Some("draw"), "판서 · 펜"));
+    assert_eq!((island.kind, island.variant.as_deref(), island.mode.as_deref(), island.text.as_str()), (IslandKind::Mode, Some("draw"), Some("draw"), "그리기 · 펜"));
     assert_eq!((island.pen_color.as_deref(), island.pen_width.as_deref()), (Some("R"), Some("4px")));
     // 진입 계측은 지금 세션에 한 번만
     assert!(s.draw_ready(ds.session + 9, Some(3.0)).is_none());
@@ -106,14 +106,14 @@ fn esc로_끝내면_항목이_있을_때만_보관하고_섬으로_알린다() {
     assert_eq!(kept.layout_fingerprint, "0,0,1920,1080@100|1920,0,2880,1800@150");
     assert_eq!(kept.document, doc(2));
     let island = w.last_island().unwrap();
-    assert_eq!((island.kind, island.text.as_str()), (IslandKind::Result, "판서를 보관했어요 · Alt+Shift+1"));
+    assert_eq!((island.kind, island.text.as_str(), island.detail.as_deref()), (IslandKind::Result, "그리기를 보관했어요", Some("Alt+Shift+1로 다시 열기")));
 
-    // 다음 판서: 보관이 있고 같은 모니터 → 섬에 이전 판서 안내
+    // 다음 판서: 보관이 있고 같은 모니터 → 섬에 이전 그리기 안내
     s.on_hotkey("draw");
     let ds = s.draw_session().cloned().unwrap();
     assert!(ds.has_kept);
     assert_eq!(ds.kept_compatible, KeptCompat::Same);
-    assert_eq!(w.last_island().unwrap().detail.as_deref(), Some("Ctrl+Shift+R 이전 판서"));
+    assert_eq!(w.last_island().unwrap().detail.as_deref(), Some("Ctrl+Shift+R 방금 그리기"));
     // 빈 판서로 끝내면 덮지 않는다 — 모드 섬만 거둔다
     s.draw_finish(finish(ds.session, 0));
     assert_eq!(s.kept_ink().unwrap().document, doc(2));
@@ -140,7 +140,7 @@ fn draw_보관과_같은모니터_배율변경_다른모니터_복원() {
     s.on_hotkey("draw");
     let none = s.draw_restore(session_of(&s));
     assert_eq!((none.status, none.kept.is_none()), (KeptCompat::None, true));
-    assert_eq!(last_text(&w), "불러올 판서가 없어요", "엔진이 말하지 않는 '없음'만 Rust가 알린다");
+    assert_eq!(last_text(&w), "불러올 그리기가 없어요", "엔진이 말하지 않는 '없음'만 Rust가 알린다");
     s.draw_finish(finish(session_of(&s), 1));
 
     // 같은 모니터·같은 구성 = 그대로
@@ -238,11 +238,11 @@ fn 잠금_모니터변경시_판서_안전종료_및_보관() {
     w.screen.0.lock().unwrap().layout.monitors.pop();
     s.on_system_event(SystemEvent::DisplayChange);
     assert_eq!(s.mode(), Mode::Idle);
-    assert_eq!(last_text(&w), "화면 구성이 바뀌어 판서를 닫았어요");
+    assert_eq!(last_text(&w), "화면이 바뀌어 그리기를 껐어요");
     s.draw_finish(finish(changed, 4));
     let kept = s.kept_ink().unwrap();
     assert_eq!((kept.document.clone(), kept.layout_fingerprint.as_str()), (doc(4), "0,0,1920,1080@100|1920,0,2880,1800@150"));
-    assert_eq!(last_text(&w), "화면 구성이 바뀌어 판서를 닫았어요");
+    assert_eq!(last_text(&w), "화면이 바뀌어 그리기를 껐어요");
 
     // 절전도 같은 규칙
     s.on_hotkey("draw");
@@ -297,7 +297,7 @@ fn 내보내기_복사와_저장은_원본_바이트를_포트로() {
     w.desk.0.lock().unwrap().clipboard_locked = true;
     let r = s.draw_export(export(ExportAction::Copy, 4, 2, None), px(4, 2));
     assert!(!r.ok);
-    assert_eq!((w.last_island().unwrap().kind, last_text(&w)), (IslandKind::Problem, "클립보드를 쓸 수 없어요".to_string()));
+    assert_eq!((w.last_island().unwrap().kind, last_text(&w)), (IslandKind::Problem, "복사하지 못했어요".to_string()));
 }
 
 #[test]
@@ -312,7 +312,8 @@ fn 이중_진입_막기() {
     assert_eq!(w.overlay.0.lock().unwrap().draws.len(), 1);
     // 사용자가 끝냈으니 늦은 끝으로 보관되면 섬으로 알린다
     s.draw_finish(finish(first, 1));
-    assert_eq!(last_text(&w), "판서를 보관했어요 · Alt+Shift+1");
+    assert_eq!(last_text(&w), "그리기를 보관했어요");
+    assert_eq!(w.last_island().unwrap().detail.as_deref(), Some("Alt+Shift+1로 다시 열기"));
 
     // 트레이에서 두 번: 앞 세션을 끝내고 하나만 보인다
     s.start_draw(DrawKind::Draw);
@@ -386,7 +387,7 @@ fn 보안_화면_캡처_실패_창_실패는_판서를_열지_않는다() {
     w.overlay.0.lock().unwrap().fail_show = true;
     s.on_hotkey("draw");
     assert_eq!(s.mode(), Mode::Idle);
-    assert_eq!(last_text(&w), "판서 화면을 띄우지 못했어요");
+    assert_eq!(last_text(&w), "그리기 화면을 열지 못했어요");
     assert!(w.overlay.0.lock().unwrap().draws.is_empty());
 }
 
@@ -409,7 +410,7 @@ fn 판서_섬_갱신과_펜_지연_계측() {
     // 조각은 보낸 것만 바꾼다(색은 그대로)
     s.draw_island(DrawIslandPatch { tool: Some("eraser".into()), ..Default::default() });
     let ev = w.last_island().unwrap();
-    assert_eq!((ev.text.as_str(), ev.pen_color.as_deref()), ("판서 · 지우개", Some("G")));
+    assert_eq!((ev.text.as_str(), ev.pen_color.as_deref()), ("그리기 · 지우개", Some("G")));
     // 지난 세션 조각은 무시
     let n = w.notifier.0.lock().unwrap().islands.len();
     s.draw_island(DrawIslandPatch { session: Some(session + 1), tool: Some("pen".into()), ..Default::default() });
@@ -426,7 +427,7 @@ fn 판서_섬_갱신과_펜_지연_계측() {
     assert!(s.draw_command("acceptSuggestion"));
     // 제안 없이 오면 걷힌다
     s.draw_island(DrawIslandPatch::default());
-    assert_eq!((w.last_island().unwrap().text.as_str(), w.last_island().unwrap().button.is_none()), ("판서 · 지우개", true));
+    assert_eq!((w.last_island().unwrap().text.as_str(), w.last_island().unwrap().button.is_none()), ("그리기 · 지우개", true));
     // 모두 지우기 안내에는 [되돌리기] — 설정 되돌리기(undo)와 다른 동작 이름
     s.draw_island(DrawIslandPatch { notice: Some("판서를 모두 지웠어요".into()), notice_action: Some("undo".into()), ..Default::default() });
     assert_eq!(w.last_island().unwrap().button.map(|b| b.action), Some("draw.undo".to_string()));

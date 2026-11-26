@@ -3,13 +3,13 @@
 //! 설정 창은 한 칸씩 바로 반영하므로(`updateSetting(path, value)`) 값은 점 경로 → JSON 값의 평평한 표로 둔다.
 //! 저장 파일 구역 `settings`의 `data` = `{ "values": {...}, "shortcuts": {...} }`.
 
+use crate::i18n::{tr, trf, trf_os, Lang};
 use crate::naming;
 use crate::shortcuts::{canonicalize, catalog, Platform};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
-use thiserror::Error;
 
 pub const SCHEMA_VERSION: u32 = 3;
 pub const MAX_EXCLUDED_APPS: usize = 64;
@@ -80,6 +80,9 @@ fn fields() -> &'static [Field] {
             f("general.theme", Choice(&["system", "light", "dark"]), json!("system")),
             f("general.lang", Choice(&["ko", "en"]), json!("ko")),
             f("general.autostart", Bool, json!(true)),
+            // 자동 업데이트(R2-UPD): 하루 한 번 + 켠 뒤 10분에 확인(끄면 통신 0), "오늘은 그만"을 누른 날(YYYY-MM-DD, 숨은 값)
+            f("update.auto", Bool, json!(true)),
+            f("update.snooze", Text(10), json!("")),
             f("topmost.border", IntSet(&[0, 2, 4, 6]), json!(4)),
             f("topmost.sound", Bool, json!(false)),
             f("onboarding.done", Bool, json!(false)),
@@ -107,25 +110,55 @@ const OLD_DEFAULTS: [(&str, &str); 2] = [
     ("zoom.follow", "smooth"),
 ];
 
-#[derive(Clone, Debug, PartialEq, Eq, Error)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SettingError {
-    #[error("모르는 설정이에요: {0}")]
     UnknownKey(String),
-    #[error("{reason}")]
     Invalid { path: String, reason: String },
-    #[error("모르는 단축키 칸이에요: {0}")]
     UnknownSlot(String),
-    #[error("이 키는 읽을 수 없어요: {0}")]
     BadCombo(String),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Error)]
+impl SettingError {
+    pub fn message(&self, lang: Lang) -> String {
+        match self {
+            Self::UnknownKey(path) => trf(lang, "error.settings.unknown", &[("path", path)]),
+            Self::Invalid { reason, .. } => reason.clone(),
+            Self::UnknownSlot(id) => trf(lang, "error.settings.unknownSlot", &[("id", id)]),
+            Self::BadCombo(combo) => trf(lang, "error.settings.badCombo", &[("combo", combo)]),
+        }
+    }
+}
+
+impl std::fmt::Display for SettingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message(Lang::Ko))
+    }
+}
+
+impl std::error::Error for SettingError {}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LoadError {
-    #[error("이 파일은 슉쇽 설정이 아니에요")]
     NotSettings,
-    #[error("더 새 버전(v{0})이 만든 설정이라 읽기만 해요")]
     NewerSchema(u32),
 }
+
+impl LoadError {
+    pub fn message(&self, lang: Lang) -> String {
+        match self {
+            Self::NotSettings => tr(lang, "error.settings.notSettings"),
+            Self::NewerSchema(v) => trf(lang, "error.settings.newerVersion", &[("version", v)]),
+        }
+    }
+}
+
+impl std::fmt::Display for LoadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message(Lang::Ko))
+    }
+}
+
+impl std::error::Error for LoadError {}
 
 fn invalid(path: &str, reason: impl Into<String>) -> SettingError {
     SettingError::Invalid { path: path.to_string(), reason: reason.into() }
@@ -133,38 +166,49 @@ fn invalid(path: &str, reason: impl Into<String>) -> SettingError {
 
 /// 한 칸 검증 — 통과하면 저장할 정규화 값.
 pub fn validate(path: &str, value: &Value) -> Result<Value, SettingError> {
+    validate_for(path, value, Platform::Win, Lang::Ko)
+}
+
+/// 플랫폼·언어별 한 칸 검증(예외 앱은 Windows `.exe` vs 맥 앱 이름, R2-FIX-5).
+pub fn validate_for(path: &str, value: &Value, p: Platform, lang: Lang) -> Result<Value, SettingError> {
     let f = field(path).ok_or_else(|| SettingError::UnknownKey(path.to_string()))?;
     match &f.rule {
-        Rule::Bool => value.as_bool().map(Value::Bool).ok_or_else(|| invalid(path, "켜기·끄기 값이어야 해요")),
+        Rule::Bool => value.as_bool().map(Value::Bool).ok_or_else(|| invalid(path, tr(lang, "error.settings.bool"))),
         Rule::Choice(list) => match value.as_str() {
             Some(s) if list.contains(&s) => Ok(json!(s)),
-            _ => Err(invalid(path, format!("{} 중 하나여야 해요", list.join("·")))),
+            _ => Err(invalid(path, trf(lang, "error.settings.choice", &[("options", &list.join("·"))]))),
         },
         Rule::IntRange(lo, hi) => match as_int(value) {
             Some(n) if (*lo..=*hi).contains(&n) => Ok(json!(n)),
-            _ => Err(invalid(path, format!("{lo}~{hi} 사이로 정해 주세요"))),
+            _ => Err(invalid(path, trf(lang, "error.settings.range", &[("lo", lo), ("hi", hi)]))),
         },
         Rule::IntSet(set) => match as_int(value) {
             Some(n) if set.contains(&n) => Ok(json!(n)),
-            _ => Err(invalid(path, format!("{} 중 하나여야 해요", set.iter().map(|n| n.to_string()).collect::<Vec<_>>().join("·")))),
+            _ => {
+                let options = set.iter().map(|n| n.to_string()).collect::<Vec<_>>().join("·");
+                Err(invalid(path, trf(lang, "error.settings.choice", &[("options", &options)])))
+            }
         },
         Rule::NumSet(set) => match value.as_f64() {
             Some(x) if set.iter().any(|s| (s - x).abs() < 1e-9) => Ok(json!(x)),
-            _ => Err(invalid(path, format!("{} 중 하나여야 해요", set.iter().map(|n| n.to_string()).collect::<Vec<_>>().join("·")))),
+            _ => {
+                let options = set.iter().map(|n| n.to_string()).collect::<Vec<_>>().join("·");
+                Err(invalid(path, trf(lang, "error.settings.choice", &[("options", &options)])))
+            }
         },
         Rule::Folder => match value.as_str() {
             Some(s) if s.chars().count() <= naming::MAX_PATH_CHARS && !s.chars().any(char::is_control) => Ok(json!(s.trim())),
-            _ => Err(invalid(path, "폴더 경로가 올바르지 않아요")),
+            _ => Err(invalid(path, tr(lang, "error.settings.folder"))),
         },
         Rule::Template => {
-            let s = value.as_str().ok_or_else(|| invalid(path, "글자여야 해요"))?;
-            naming::validate(s).map_err(|e| invalid(path, e.to_string()))?;
+            let s = value.as_str().ok_or_else(|| invalid(path, tr(lang, "error.settings.string")))?;
+            naming::validate(s).map_err(|e| invalid(path, e.message(lang)))?;
             Ok(json!(s.trim()))
         }
-        Rule::ExcludedApps => validate_excluded(path, value),
+        Rule::ExcludedApps => validate_excluded(path, value, p, lang),
         Rule::Text(max) => match value.as_str() {
             Some(s) if s.chars().count() <= *max && !s.chars().any(char::is_control) => Ok(json!(s)),
-            _ => Err(invalid(path, format!("{max}자 안의 글이어야 해요"))),
+            _ => Err(invalid(path, trf(lang, "error.settings.maxChars", &[("max", max)]))),
         },
     }
 }
@@ -189,24 +233,35 @@ pub struct ExcludedApp {
     pub auto: bool,
 }
 
-fn validate_excluded(path: &str, value: &Value) -> Result<Value, SettingError> {
-    let list: Vec<ExcludedApp> = serde_json::from_value(value.clone()).map_err(|_| invalid(path, "목록 형식이 올바르지 않아요"))?;
+fn valid_excluded_name(name: &str, p: Platform) -> bool {
+    let lower = name.to_ascii_lowercase();
+    if name.is_empty() || name.chars().any(char::is_control) || name.contains(['\\', '/', ':']) {
+        return false;
+    }
+    match p {
+        Platform::Win => lower.ends_with(".exe") && lower != ".exe",
+        Platform::Mac => name.chars().count() <= 128 && !lower.ends_with(".exe") && lower != ".app",
+    }
+}
+
+fn validate_excluded(path: &str, value: &Value, p: Platform, lang: Lang) -> Result<Value, SettingError> {
+    let list: Vec<ExcludedApp> = serde_json::from_value(value.clone()).map_err(|_| invalid(path, tr(lang, "error.settings.listFormat")))?;
     if list.len() > MAX_EXCLUDED_APPS {
-        return Err(invalid(path, format!("{MAX_EXCLUDED_APPS}개까지 넣을 수 있어요")));
+        return Err(invalid(path, trf(lang, "error.settings.maxItems", &[("max", &MAX_EXCLUDED_APPS)])));
     }
     let mut seen = std::collections::BTreeSet::new();
     let mut out = Vec::with_capacity(list.len());
     for mut app in list {
         app.exe = app.exe.trim().to_string();
-        let lower = app.exe.to_lowercase();
-        if app.exe.is_empty() || app.exe.contains(['\\', '/', ':']) || !lower.ends_with(".exe") {
-            return Err(invalid(path, format!("‘{}’는 실행 파일 이름이 아니에요(예: hwp.exe)", app.exe)));
+        if !valid_excluded_name(&app.exe, p) {
+            return Err(invalid(path, trf_os(lang, p, "error.settings.invalidApp", &[("name", &app.exe)])));
         }
         if !matches!(app.mode.as_str(), "exclude" | "windowOnly") {
-            return Err(invalid(path, "찾지 않음·창 단위 중 하나여야 해요"));
+            return Err(invalid(path, tr(lang, "error.settings.invalidExcludedMode")));
         }
+        let lower = app.exe.to_lowercase();
         if !seen.insert(lower) {
-            return Err(invalid(path, format!("‘{}’는 이미 있어요", app.exe)));
+            return Err(invalid(path, trf(lang, "error.settings.duplicateApp", &[("name", &app.exe)])));
         }
         out.push(app);
     }
@@ -257,7 +312,11 @@ impl Settings {
 
     /// 검증 뒤 바꾸고 이전 값을 돌려준다(되돌리기 기록용).
     pub fn set(&mut self, path: &str, value: &Value) -> Result<Value, SettingError> {
-        let v = validate(path, value)?;
+        self.set_for(path, value, Platform::Win, Lang::Ko)
+    }
+
+    pub fn set_for(&mut self, path: &str, value: &Value, p: Platform, lang: Lang) -> Result<Value, SettingError> {
+        let v = validate_for(path, value, p, lang)?;
         Ok(self.values.insert(path.to_string(), v).unwrap_or(Value::Null))
     }
 
@@ -281,10 +340,14 @@ impl Settings {
     /// 저장 구역 `data`(또는 가져온 파일)를 읽는다. 모르는 키는 버리고, 틀린 값은 기본값으로 두고 경고를 모은다.
     /// 평평한 `values` 표와 중첩된 객체(`{"draw": {"width": 4}}`) 둘 다 받는다.
     pub fn from_data(data: &Value, p: Platform) -> (Settings, Vec<String>) {
+        Self::from_data_for(data, p, Lang::Ko)
+    }
+
+    pub fn from_data_for(data: &Value, p: Platform, lang: Lang) -> (Settings, Vec<String>) {
         let mut s = Settings::defaults(p);
         let mut warnings = Vec::new();
         let Some(obj) = data.as_object() else {
-            warnings.push("설정 형식이 올바르지 않아 처음 값으로 시작해요".into());
+            warnings.push(tr(lang, "error.settings.invalidFormat"));
             return (s, warnings);
         };
         let mut flat = Map::new();
@@ -304,8 +367,9 @@ impl Settings {
             if path.starts_with("shortcuts.") || field(path).is_none() {
                 continue;
             }
-            if let Err(e) = s.set(path, v) {
-                warnings.push(format!("{path}: {e} — 처음 값으로 둘게요"));
+            if let Err(e) = s.set_for(path, v, p, lang) {
+                let err = e.message(lang);
+                warnings.push(trf(lang, "error.settings.fieldFallback", &[("path", path), ("err", &err)]));
             }
         }
         let shortcuts = obj.get("shortcuts").and_then(Value::as_object);
@@ -316,7 +380,7 @@ impl Settings {
                     continue;
                 }
                 if s.set_shortcut(id, c, p).is_err() {
-                    warnings.push(format!("단축키 {id}: ‘{c}’를 읽을 수 없어 기본 키로 둘게요"));
+                    warnings.push(trf(lang, "error.settings.shortcutFallback", &[("id", id)]));
                 }
             }
         }
@@ -487,5 +551,27 @@ mod tests {
         let d = a.diff(&b);
         assert_eq!(d.len(), 2);
         assert_eq!(d[1].path, "shortcuts.pin");
+    }
+
+    #[test]
+    fn 예외_앱_검증은_os별_규칙을_따르고_영어로도_말한다() {
+        // R2-FIX-5: 맥은 앱/번들 이름 허용(.exe 거부), Windows는 .exe 필수
+        let mac_ok = json!([{ "exe": " Safari ", "mode": "windowOnly" }, { "exe": "com.apple.Keynote", "mode": "exclude" }]);
+        assert_eq!(validate_for("capture.excluded", &mac_ok, Platform::Mac, Lang::Ko).unwrap()[0]["exe"], "Safari");
+        let mac_bad = validate_for("capture.excluded", &json!([{ "exe": "hwp.exe", "mode": "exclude" }]), Platform::Mac, Lang::Ko).unwrap_err();
+        assert!(mac_bad.message(Lang::Ko).contains("Safari"), "{mac_bad}");
+        let mac_bad_en = validate_for("capture.excluded", &json!([{ "exe": "hwp.exe", "mode": "exclude" }]), Platform::Mac, Lang::En).unwrap_err();
+        assert!(mac_bad_en.message(Lang::En).contains("e.g. Safari"), "{mac_bad_en}");
+
+        let win_bad = validate_for("capture.excluded", &json!([{ "exe": "Safari", "mode": "exclude" }]), Platform::Win, Lang::En).unwrap_err();
+        assert!(win_bad.message(Lang::En).contains("e.g. hwp.exe"), "{win_bad}");
+        assert!(validate_for("capture.excluded", &json!([{ "exe": ".exe", "mode": "exclude" }]), Platform::Win, Lang::Ko).is_err());
+
+        // 영어 오류·경고
+        assert_eq!(validate_for("draw.width", &json!(99), Platform::Win, Lang::En).unwrap_err().message(Lang::En), "Choose a value between 1 and 30");
+        let (_, w_en) = Settings::from_data_for(&json!("bad"), Platform::Win, Lang::En);
+        assert_eq!(w_en, vec!["Invalid settings · started with defaults"]);
+        assert_eq!(LoadError::NotSettings.message(Lang::En), "Not a ShookShok settings file");
+        assert_eq!(LoadError::NewerSchema(4).message(Lang::En), "Read-only: from newer v4");
     }
 }

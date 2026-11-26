@@ -71,7 +71,7 @@ fn f2_wgc가_안되면_스냅숏을_자르고_보호화면은_복사하지_않�
     s.on_hotkey("window");
     s.capture_input(CaptureInput::Key { key: "Enter".into(), code: "Enter".into(), ctrl: false, shift: false, alt: false, meta: false });
     assert_eq!(w.desk.0.lock().unwrap().images, vec![(1200, 800)]);
-    assert_eq!(w.last_island().unwrap().detail.as_deref(), Some("한글·PPT에 Ctrl+V"), "자른 그림은 가린 창도 찍혀서 '가려진 부분까지'라 하지 않음");
+    assert_eq!(w.last_island().unwrap().detail.as_deref(), Some("문서·발표 자료에 붙여 넣기 · Ctrl+V"), "자른 그림은 가린 창도 찍혀서 '가려진 부분까지'라 하지 않음");
 
     // 2) 표시 선호도가 걸린 창(어댑터가 WINDOW_PROTECTED) → 대체 없이 안내, 클립보드 그대로
     w.screen.0.lock().unwrap().window_shots.insert(1, Err(format!("{WINDOW_PROTECTED}: display affinity")));
@@ -119,7 +119,7 @@ fn f2_400ms_두번_활성창_및_바로캡처_4종() {
 
     // Shift+F1: 기록이 없으면 안내
     assert_eq!(s.on_hotkey("last"), HotkeyOutcome::Captured);
-    assert_eq!(w.last_island().unwrap().text, "지난 범위가 없어요");
+    assert_eq!(w.last_island().unwrap().text, "이전 범위가 없어요");
 
     // Ctrl+F1: 커서 모니터 전체
     s.on_hotkey("full");
@@ -131,9 +131,9 @@ fn f2_400ms_두번_활성창_및_바로캡처_4종() {
     s.on_hotkey("last");
     assert_eq!(w.desk.0.lock().unwrap().images.last(), Some(&(1920, 1080)));
 
-    // Shift+F2: 활성 창이 없으면 안내 → 있으면 그 창
+    // Shift+F2: 지금 창이 없으면 안내 → 있으면 그 창
     s.on_hotkey("active");
-    assert_eq!(w.last_island().unwrap().text, "활성 창이 없어요");
+    assert_eq!(w.last_island().unwrap().text, "지금 창이 없어요");
     w.probe.0.lock().unwrap().foreground = Some(1);
     s.on_hotkey("active");
     assert_eq!(w.desk.0.lock().unwrap().images.last(), Some(&(120, 80)));
@@ -256,7 +256,7 @@ fn 녹화_섬은_1초마다_경과를_보이고_중지하면_이름_규칙으로
     s.on_hotkey("record");
     click(&mut s, 400, 300);
     let first = w.last_island().unwrap();
-    assert_eq!((first.variant.as_deref(), first.text.as_str()), (Some("record"), "판서는 영상에 함께 · 이 알약은 안 찍혀요"));
+    assert_eq!((first.variant.as_deref(), first.text.as_str()), (Some("record"), "그리기도 녹화 · 안내는 제외"));
     assert_eq!(first.button.as_ref().map(|b| b.action.as_str()), Some("record.stop"));
     assert_eq!(first.button_key.as_deref(), Some("F3"));
     assert!(first.mic_off);
@@ -273,7 +273,8 @@ fn 녹화_섬은_1초마다_경과를_보이고_중지하면_이름_규칙으로
     s.stop_recording();
     let ev = w.last_island().unwrap();
     assert_eq!((ev.kind, ev.value.as_deref()), (IslandKind::Result, Some("00:42 · 18 MB")));
-    assert!(ev.text.ends_with("녹화를 저장했어요"));
+    // 저장 폴더를 비워 두면(기본) 사진 폴더 — 그 자리를 알린다
+    assert_eq!(ev.text, "사진 폴더에 저장했어요");
     assert_eq!(ev.button.as_ref().map(|b| b.action.as_str()), Some("folder.open"));
     let b = w.recorder.0.lock().unwrap();
     assert_eq!(b.kept.len(), 1);
@@ -283,7 +284,7 @@ fn 녹화_섬은_1초마다_경과를_보이고_중지하면_이름_규칙으로
 
 #[test]
 fn 녹화중_잠금_절전_모니터해제_자동중지_저장() {
-    for (ev, prefix) in [(SystemEvent::Lock, "화면이 잠겨"), (SystemEvent::Suspend, "절전에 들어가")] {
+    for (ev, reason) in [(SystemEvent::Lock, "화면 잠김"), (SystemEvent::Suspend, "절전 전환")] {
         let w = FakeWorld::new();
         let mut s = service(&w);
         s.on_hotkey("record");
@@ -293,7 +294,8 @@ fn 녹화중_잠금_절전_모니터해제_자동중지_저장() {
         assert_eq!(w.recorder.0.lock().unwrap().kept.len(), 1, "{ev:?}: 임시 파일을 저장 폴더로");
         let island = w.last_island().unwrap();
         assert_eq!(island.kind, IslandKind::Result);
-        assert!(island.text.starts_with(prefix), "{}", island.text);
+        assert_eq!(island.text, "사진 폴더에 저장했어요");
+        assert!(island.detail.as_deref().is_some_and(|d| d.starts_with(reason)), "{:?}", island.detail);
     }
 
     // 배치 변경: 녹화하던 모니터가 그대로면(설정 바뀜 알림 등) 계속, 사라지면 저장
@@ -308,7 +310,9 @@ fn 녹화중_잠금_절전_모니터해제_자동중지_저장() {
     w.screen.0.lock().unwrap().layout = MonitorLayout::new(vec![Monitor { id: 0, bounds: PhysRect::new(1920, 0, 2880, 1800), work: PhysRect::new(1920, 0, 2880, 1728), scale: 1.5, primary: true }]);
     s.on_system_event(SystemEvent::DisplayChange);
     assert!(!s.recording_active());
-    assert!(w.last_island().unwrap().text.starts_with("화면 구성이 바뀌어"));
+    let island = w.last_island().unwrap();
+    assert_eq!(island.text, "사진 폴더에 저장했어요");
+    assert!(island.detail.as_deref().is_some_and(|d| d.starts_with("화면이 바뀜")), "{:?}", island.detail);
 }
 
 #[test]
@@ -323,7 +327,7 @@ fn 녹화중_f1_캡처_겹침_허용_및_임시파일_복구제안() {
     // 첫 틱에 복구 제안(창이 다 만들어진 뒤)
     s.tick_at(s.clock_ms());
     let ev = w.last_island().unwrap();
-    assert_eq!(ev.text, "끝나지 않은 녹화가 2개 있어요");
+    assert_eq!(ev.text, "저장 못 한 녹화가 2개예요");
     assert_eq!(ev.button.as_ref().map(|b| b.action.as_str()), Some("record.recoverSave"));
     assert_eq!(ev.chip.as_ref().map(|b| b.action.as_str()), Some("record.recoverDelete"));
     assert_eq!(ev.detail.as_deref(), Some("재생되지 않을 수도 있어요"));
@@ -362,7 +366,7 @@ fn 시작_실패_스스로_멈춤_버리기_마이크_공간_안내() {
     let mut s = service(&w);
     s.on_hotkey("record");
     click(&mut s, 400, 300);
-    assert_eq!(w.last_island().unwrap().text, "녹화를 시작할 수 없어요(코덱)");
+    assert_eq!(w.last_island().unwrap().text, "녹화를 시작하지 못했어요");
     assert!(!s.state().recording.active);
     assert_eq!(s.mode(), Mode::Idle);
 
@@ -372,7 +376,9 @@ fn 시작_실패_스스로_멈춤_버리기_마이크_공간_안내() {
     w.recorder.0.lock().unwrap().failure = Some(REC_WINDOW_CLOSED.into());
     s.tick();
     assert!(!s.recording_active());
-    assert!(w.last_island().unwrap().text.starts_with("창이 닫혀"));
+    let island = w.last_island().unwrap();
+    assert_eq!(island.text, "사진 폴더에 저장했어요");
+    assert!(island.detail.as_deref().is_some_and(|d| d.starts_with("창 닫힘")), "{:?}", island.detail);
 
     // 버리기 → 임시 파일 지움
     s.on_hotkey("record");
@@ -395,7 +401,7 @@ fn 시작_실패_스스로_멈춤_버리기_마이크_공간_안내() {
     s.on_hotkey("record");
     click(&mut s, 400, 300);
     let texts: Vec<String> = w.islands().iter().rev().take(3).map(|e| e.text.clone()).collect();
-    assert!(texts.contains(&"마이크 녹음은 아직 준비 중이에요".to_string()), "{texts:?}");
+    assert!(texts.contains(&"마이크 녹음은 준비 중이에요".to_string()), "{texts:?}");
     assert!(texts.contains(&"남은 공간이 2분 정도예요".to_string()), "{texts:?}");
     assert!(s.recording_active());
     assert_eq!(w.recorder.0.lock().unwrap().started.last().unwrap().mic_device, None);
@@ -409,7 +415,7 @@ fn 녹화기가_없는_곳은_안내만() {
     s.start();
     s.on_hotkey("record");
     click(&mut s, 400, 300);
-    assert_eq!(w.last_island().unwrap().text, "이 컴퓨터에서는 아직 녹화할 수 없어요");
+    assert_eq!(w.last_island().unwrap().text, "화면 녹화를 지원하지 않아요");
     assert!(!s.recording_active());
 }
 
