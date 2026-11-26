@@ -1,0 +1,256 @@
+{
+  "id": "06-iconoir",
+  "title": "Iconoir (Regular)",
+  "shortTitle": "Iconoir",
+  "package": "iconoir",
+  "version": "7.12.2",
+  "license": "MIT",
+  "url": "https://iconoir.com",
+  "kind": "stroke",
+  "grid": "24×24",
+  "strokeDesc": "네이티브 1.5px · 둥근 끝·이음",
+  "stroke20": null,
+  "stroke16": null,
+  "directCount": 31,
+  "totalCount": 35,
+  "substitutes": [
+    {
+      "key": "marker",
+      "label": "형광펜",
+      "glyph": "magic-wand",
+      "note": "형광펜 없음 → magic-wand로 대체"
+    },
+    {
+      "key": "mosaic",
+      "label": "모자이크",
+      "glyph": "dots-grid-3x3",
+      "note": "전용 모자이크 없음 → dots-grid-3x3으로 대체"
+    },
+    {
+      "key": "record",
+      "label": "화면 녹화",
+      "glyph": "circle-spark",
+      "note": "녹화 전용 아이콘 부재 → circle-spark(원형 레코드 대용)로 대체"
+    },
+    {
+      "key": "settings",
+      "label": "설정",
+      "glyph": "control-slider",
+      "note": "가로 슬라이더 사용(control-slider)"
+    }
+  ],
+  "feel": "초기 설정부터 1.5px 둥근 선으로 부드럽고 세련되나, 지우개·마이크 꺼짐 등 일부 네이밍/구성이 독특함",
+  "bundleMethod": "필요한 35개 SVG만 인라인 번들 (`iconoir` 패키지에서 추출)",
+  "icons": {
+    "rect": {
+      "label": "사각형",
+      "glyph": "square",
+      "substitute": false,
+      "note": ""
+    },
+    "ellipse": {
+      "label": "타원",
+      "glyph": "circle",
+      "substitute": false,
+      "note": ""
+    },
+    "arrow": {
+      "label": "화살표",
+      "glyph": "arrow-up-right",
+      "substitute": false,
+      "note": ""
+    },
+    "pen": {
+      "label": "펜",
+      "glyph": "design-nib",
+      "substitute": false,
+      "note": ""
+    },
+    "marker": {
+      "label": "형광펜",
+      "glyph": "magic-wand",
+      "substitute": true,
+      "note": "형광펜 없음 → magic-wand로 대체"
+    },
+    "mosaic": {
+      "label": "모자이크",
+      "glyph": "dots-grid-3x3",
+      "substitute": true,
+      "note": "전용 모자이크 없음 → dots-grid-3x3으로 대체"
+    },
+    "text": {
+      "label": "글자",
+      "glyph": "type",
+      "substitute": false,
+      "note": ""
+    },
+    "eraser": {
+      "label": "지우개",
+      "glyph": "erase",
+      "substitute": false,
+      "note": ""
+    },
+    "undo": {
+      "label": "실행 취소",
+      "glyph": "undo",
+      "substitute": false,
+      "note": ""
+    },
+    "redo": {
+      "label": "다시 실행",
+      "glyph": "redo",
+      "substitute": false,
+      "note": ""
+    },
+    "close": {
+      "label": "취소·닫기",
+      "glyph": "xmark",
+      "substitute": false,
+      "note": ""
+    },
+    "pin": {
+      "label": "고정·항상 위",
+      "glyph": "pin",
+      "substitute": false,
+      "note": ""
+    },
+    "save": {
+      "label": "저장",
+      "glyph": "download",
+      "substitute": false,
+      "note": ""
+    },
+    "copy": {
+      "label": "복사",
+      "glyph": "copy",
+      "substitute": false,
+      "note": ""
+    },
+    "region": {
+      "label": "범위 캡처",
+      "glyph": "crop",
+      "substitute": false,
+      "note": ""
+    },
+    "window": {
+      "label": "창 캡처",
+      "glyph": "mac-os-window",
+      "substitute": false,
+      "note": ""
+    },
+    "record": {
+      "label": "화면 녹화",
+      "glyph": "circle-spark",
+      "substitute": true,
+      "note": "녹화 전용 아이콘 부재 → circle-spark(원형 레코드 대용)로 대체"
+    },
+    "draw": {
+      "label": "판서",
+      "glyph": "edit-pencil",
+      "substitute": false,
+      "note": ""
+    },
+    "zoom": {
+      "label": "실시간 확대",
+      "glyph": "zoom-in",
+      "substitute": false,
+      "note": ""
+    },
+    "board": {
+      "label": "칠판",
+      "glyph": "presentation",
+      "substitute": false,
+      "note": ""
+    },
+    "restore": {
+      "label": "직전 판서",
+      "glyph": "database-restore",
+      "substitute": false,
+      "note": ""
+    },
+    "folder": {
+      "label": "저장 폴더",
+      "glyph": "folder",
+      "substitute": false,
+      "note": ""
+    },
+    "shortcuts": {
+      "label": "단축키",
+      "glyph": "key-command",
+      "substitute": false,
+      "note": ""
+    },
+    "settings": {
+      "label": "설정",
+      "glyph": "control-slider",
+      "substitute": true,
+      "note": "가로 슬라이더 사용(control-slider)"
+    },
+    "info": {
+      "label": "정보",
+      "glyph": "info-circle",
+      "substitute": false,
+      "note": ""
+    },
+    "monitor": {
+      "label": "모니터",
+      "glyph": "hd-display",
+      "substitute": false,
+      "note": ""
+    },
+    "mic": {
+      "label": "마이크",
+      "glyph": "microphone",
+      "substitute": false,
+      "note": ""
+    },
+    "mic-off": {
+      "label": "마이크 꺼짐",
+      "glyph": "microphone-mute",
+      "substitute": false,
+      "note": ""
+    },
+    "magnet": {
+      "label": "모서리 자석",
+      "glyph": "magnet",
+      "substitute": false,
+      "note": ""
+    },
+    "dark": {
+      "label": "다크 모드",
+      "glyph": "half-moon",
+      "substitute": false,
+      "note": ""
+    },
+    "delay": {
+      "label": "지연 캡처",
+      "glyph": "timer",
+      "substitute": false,
+      "note": ""
+    },
+    "check": {
+      "label": "확인",
+      "glyph": "check",
+      "substitute": false,
+      "note": ""
+    },
+    "warning": {
+      "label": "주의",
+      "glyph": "warning-triangle",
+      "substitute": false,
+      "note": ""
+    },
+    "quit": {
+      "label": "끝내기",
+      "glyph": "system-shut",
+      "substitute": false,
+      "note": ""
+    },
+    "lock": {
+      "label": "보안 화면",
+      "glyph": "lock",
+      "substitute": false,
+      "note": ""
+    }
+  }
+}

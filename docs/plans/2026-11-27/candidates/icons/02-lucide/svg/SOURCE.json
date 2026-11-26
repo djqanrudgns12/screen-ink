@@ -1,0 +1,244 @@
+{
+  "id": "02-lucide",
+  "title": "Lucide Icons",
+  "shortTitle": "Lucide",
+  "package": "lucide-static",
+  "version": "1.81.0",
+  "license": "ISC",
+  "url": "https://lucide.dev",
+  "kind": "stroke",
+  "grid": "24×24",
+  "strokeDesc": "기본 2.0 (20px→1.65 / 16px→1.85 조정)",
+  "stroke20": "1.65",
+  "stroke16": "1.85",
+  "directCount": 33,
+  "totalCount": 35,
+  "substitutes": [
+    {
+      "key": "mosaic",
+      "label": "모자이크",
+      "glyph": "grid-2x2",
+      "note": "전용 모자이크 없음 → grid-2x2로 대체"
+    },
+    {
+      "key": "record",
+      "label": "화면 녹화",
+      "glyph": "disc-2",
+      "note": "녹화 전용 원형 없음 → disc-2(이중 원)로 대체"
+    }
+  ],
+  "feel": "깔끔한 기하학 비례, 웹·Tauri 앱 표준감 (획 1.65 조정 시 맥 감성 우수)",
+  "bundleMethod": "필요한 35개 SVG만 인라인 또는 `lucide-svelte` 트리 셰이킹",
+  "icons": {
+    "rect": {
+      "label": "사각형",
+      "glyph": "rectangle-horizontal",
+      "substitute": false,
+      "note": ""
+    },
+    "ellipse": {
+      "label": "타원",
+      "glyph": "circle",
+      "substitute": false,
+      "note": ""
+    },
+    "arrow": {
+      "label": "화살표",
+      "glyph": "arrow-up-right",
+      "substitute": false,
+      "note": ""
+    },
+    "pen": {
+      "label": "펜",
+      "glyph": "pen",
+      "substitute": false,
+      "note": ""
+    },
+    "marker": {
+      "label": "형광펜",
+      "glyph": "highlighter",
+      "substitute": false,
+      "note": ""
+    },
+    "mosaic": {
+      "label": "모자이크",
+      "glyph": "grid-2x2",
+      "substitute": true,
+      "note": "전용 모자이크 없음 → grid-2x2로 대체"
+    },
+    "text": {
+      "label": "글자",
+      "glyph": "type",
+      "substitute": false,
+      "note": ""
+    },
+    "eraser": {
+      "label": "지우개",
+      "glyph": "eraser",
+      "substitute": false,
+      "note": ""
+    },
+    "undo": {
+      "label": "실행 취소",
+      "glyph": "undo-2",
+      "substitute": false,
+      "note": ""
+    },
+    "redo": {
+      "label": "다시 실행",
+      "glyph": "redo-2",
+      "substitute": false,
+      "note": ""
+    },
+    "close": {
+      "label": "취소·닫기",
+      "glyph": "x",
+      "substitute": false,
+      "note": ""
+    },
+    "pin": {
+      "label": "고정·항상 위",
+      "glyph": "pin",
+      "substitute": false,
+      "note": ""
+    },
+    "save": {
+      "label": "저장",
+      "glyph": "download",
+      "substitute": false,
+      "note": ""
+    },
+    "copy": {
+      "label": "복사",
+      "glyph": "copy",
+      "substitute": false,
+      "note": ""
+    },
+    "region": {
+      "label": "범위 캡처",
+      "glyph": "scan",
+      "substitute": false,
+      "note": ""
+    },
+    "window": {
+      "label": "창 캡처",
+      "glyph": "app-window-mac",
+      "substitute": false,
+      "note": ""
+    },
+    "record": {
+      "label": "화면 녹화",
+      "glyph": "disc-2",
+      "substitute": true,
+      "note": "녹화 전용 원형 없음 → disc-2(이중 원)로 대체"
+    },
+    "draw": {
+      "label": "판서",
+      "glyph": "pencil",
+      "substitute": false,
+      "note": ""
+    },
+    "zoom": {
+      "label": "실시간 확대",
+      "glyph": "zoom-in",
+      "substitute": false,
+      "note": ""
+    },
+    "board": {
+      "label": "칠판",
+      "glyph": "presentation",
+      "substitute": false,
+      "note": ""
+    },
+    "restore": {
+      "label": "직전 판서",
+      "glyph": "history",
+      "substitute": false,
+      "note": ""
+    },
+    "folder": {
+      "label": "저장 폴더",
+      "glyph": "folder",
+      "substitute": false,
+      "note": ""
+    },
+    "shortcuts": {
+      "label": "단축키",
+      "glyph": "keyboard",
+      "substitute": false,
+      "note": ""
+    },
+    "settings": {
+      "label": "설정",
+      "glyph": "sliders-horizontal",
+      "substitute": false,
+      "note": ""
+    },
+    "info": {
+      "label": "정보",
+      "glyph": "info",
+      "substitute": false,
+      "note": ""
+    },
+    "monitor": {
+      "label": "모니터",
+      "glyph": "monitor",
+      "substitute": false,
+      "note": ""
+    },
+    "mic": {
+      "label": "마이크",
+      "glyph": "mic",
+      "substitute": false,
+      "note": ""
+    },
+    "mic-off": {
+      "label": "마이크 꺼짐",
+      "glyph": "mic-off",
+      "substitute": false,
+      "note": ""
+    },
+    "magnet": {
+      "label": "모서리 자석",
+      "glyph": "magnet",
+      "substitute": false,
+      "note": ""
+    },
+    "dark": {
+      "label": "다크 모드",
+      "glyph": "moon",
+      "substitute": false,
+      "note": ""
+    },
+    "delay": {
+      "label": "지연 캡처",
+      "glyph": "timer",
+      "substitute": false,
+      "note": ""
+    },
+    "check": {
+      "label": "확인",
+      "glyph": "check",
+      "substitute": false,
+      "note": ""
+    },
+    "warning": {
+      "label": "주의",
+      "glyph": "alert-triangle",
+      "substitute": false,
+      "note": ""
+    },
+    "quit": {
+      "label": "끝내기",
+      "glyph": "power",
+      "substitute": false,
+      "note": ""
+    },
+    "lock": {
+      "label": "보안 화면",
+      "glyph": "lock",
+      "substitute": false,
+      "note": ""
+    }
+  }
+}

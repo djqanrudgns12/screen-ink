@@ -1,0 +1,231 @@
+{
+  "id": "10-custom-shookshok",
+  "title": "슉쇽 맞춤 세트 (Custom 24px)",
+  "shortTitle": "슉쇽 맞춤 세트",
+  "package": "custom (screen-ink)",
+  "version": "1.0.0",
+  "license": "MIT",
+  "url": "packages/ink-ui/src/lib/icons/",
+  "kind": "stroke",
+  "grid": "24×24",
+  "strokeDesc": "20px→1.60 / 16px→1.75 (둥근 끝·이음)",
+  "stroke20": "1.6",
+  "stroke16": "1.75",
+  "directCount": 35,
+  "totalCount": 35,
+  "substitutes": [],
+  "feel": "모든 도메인 은유(모자이크·형광펜·칠판·자석·범위·창) 100% 전용 설계, 두 OS 동일",
+  "bundleMethod": "앱 내 `icons.js` 또는 35개 SVG 직접 인라인 (외부 의존성 0)",
+  "icons": {
+    "rect": {
+      "label": "사각형",
+      "glyph": "custom:rect",
+      "substitute": false,
+      "note": ""
+    },
+    "ellipse": {
+      "label": "타원",
+      "glyph": "custom:ellipse",
+      "substitute": false,
+      "note": ""
+    },
+    "arrow": {
+      "label": "화살표",
+      "glyph": "custom:arrow",
+      "substitute": false,
+      "note": ""
+    },
+    "pen": {
+      "label": "펜",
+      "glyph": "custom:pen",
+      "substitute": false,
+      "note": ""
+    },
+    "marker": {
+      "label": "형광펜",
+      "glyph": "custom:marker",
+      "substitute": false,
+      "note": ""
+    },
+    "mosaic": {
+      "label": "모자이크",
+      "glyph": "custom:mosaic",
+      "substitute": false,
+      "note": ""
+    },
+    "text": {
+      "label": "글자",
+      "glyph": "custom:text",
+      "substitute": false,
+      "note": ""
+    },
+    "eraser": {
+      "label": "지우개",
+      "glyph": "custom:eraser",
+      "substitute": false,
+      "note": ""
+    },
+    "undo": {
+      "label": "실행 취소",
+      "glyph": "custom:undo",
+      "substitute": false,
+      "note": ""
+    },
+    "redo": {
+      "label": "다시 실행",
+      "glyph": "custom:redo",
+      "substitute": false,
+      "note": ""
+    },
+    "close": {
+      "label": "취소·닫기",
+      "glyph": "custom:close",
+      "substitute": false,
+      "note": ""
+    },
+    "pin": {
+      "label": "고정·항상 위",
+      "glyph": "custom:pin",
+      "substitute": false,
+      "note": ""
+    },
+    "save": {
+      "label": "저장",
+      "glyph": "custom:save",
+      "substitute": false,
+      "note": ""
+    },
+    "copy": {
+      "label": "복사",
+      "glyph": "custom:copy",
+      "substitute": false,
+      "note": ""
+    },
+    "region": {
+      "label": "범위 캡처",
+      "glyph": "custom:region",
+      "substitute": false,
+      "note": ""
+    },
+    "window": {
+      "label": "창 캡처",
+      "glyph": "custom:window",
+      "substitute": false,
+      "note": ""
+    },
+    "record": {
+      "label": "화면 녹화",
+      "glyph": "custom:record",
+      "substitute": false,
+      "note": ""
+    },
+    "draw": {
+      "label": "판서",
+      "glyph": "custom:draw",
+      "substitute": false,
+      "note": ""
+    },
+    "zoom": {
+      "label": "실시간 확대",
+      "glyph": "custom:zoom",
+      "substitute": false,
+      "note": ""
+    },
+    "board": {
+      "label": "칠판",
+      "glyph": "custom:board",
+      "substitute": false,
+      "note": ""
+    },
+    "restore": {
+      "label": "직전 판서",
+      "glyph": "custom:restore",
+      "substitute": false,
+      "note": ""
+    },
+    "folder": {
+      "label": "저장 폴더",
+      "glyph": "custom:folder",
+      "substitute": false,
+      "note": ""
+    },
+    "shortcuts": {
+      "label": "단축키",
+      "glyph": "custom:shortcuts",
+      "substitute": false,
+      "note": ""
+    },
+    "settings": {
+      "label": "설정",
+      "glyph": "custom:settings",
+      "substitute": false,
+      "note": ""
+    },
+    "info": {
+      "label": "정보",
+      "glyph": "custom:info",
+      "substitute": false,
+      "note": ""
+    },
+    "monitor": {
+      "label": "모니터",
+      "glyph": "custom:monitor",
+      "substitute": false,
+      "note": ""
+    },
+    "mic": {
+      "label": "마이크",
+      "glyph": "custom:mic",
+      "substitute": false,
+      "note": ""
+    },
+    "mic-off": {
+      "label": "마이크 꺼짐",
+      "glyph": "custom:mic-off",
+      "substitute": false,
+      "note": ""
+    },
+    "magnet": {
+      "label": "모서리 자석",
+      "glyph": "custom:magnet",
+      "substitute": false,
+      "note": ""
+    },
+    "dark": {
+      "label": "다크 모드",
+      "glyph": "custom:dark",
+      "substitute": false,
+      "note": ""
+    },
+    "delay": {
+      "label": "지연 캡처",
+      "glyph": "custom:delay",
+      "substitute": false,
+      "note": ""
+    },
+    "check": {
+      "label": "확인",
+      "glyph": "custom:check",
+      "substitute": false,
+      "note": ""
+    },
+    "warning": {
+      "label": "주의",
+      "glyph": "custom:warning",
+      "substitute": false,
+      "note": ""
+    },
+    "quit": {
+      "label": "끝내기",
+      "glyph": "custom:quit",
+      "substitute": false,
+      "note": ""
+    },
+    "lock": {
+      "label": "보안 화면",
+      "glyph": "custom:lock",
+      "substitute": false,
+      "note": ""
+    }
+  }
+}

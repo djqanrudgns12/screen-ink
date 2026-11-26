@@ -1,0 +1,231 @@
+{
+  "id": "08-mingcute",
+  "title": "MingCute Icons (Line)",
+  "shortTitle": "MingCute Line",
+  "package": "@iconify-json/mingcute",
+  "version": "1.2.10",
+  "license": "Apache-2.0",
+  "url": "https://www.mingcute.com",
+  "kind": "fill",
+  "grid": "24×24",
+  "strokeDesc": "~1.65px 상당 둥근 끝",
+  "stroke20": null,
+  "stroke16": null,
+  "directCount": 35,
+  "totalCount": 35,
+  "substitutes": [],
+  "feel": "친근하고 둥근 동글동글한 인상, 모자이크·칠판·형광펜·자석까지 직접 커버리지 우수",
+  "bundleMethod": "Iconify JSON에서 35개만 정적 SVG 추출 후 인라인 번들",
+  "icons": {
+    "rect": {
+      "label": "사각형",
+      "glyph": "rectangle-line",
+      "substitute": false,
+      "note": ""
+    },
+    "ellipse": {
+      "label": "타원",
+      "glyph": "round-line",
+      "substitute": false,
+      "note": ""
+    },
+    "arrow": {
+      "label": "화살표",
+      "glyph": "arrow-right-up-line",
+      "substitute": false,
+      "note": ""
+    },
+    "pen": {
+      "label": "펜",
+      "glyph": "pen-line",
+      "substitute": false,
+      "note": ""
+    },
+    "marker": {
+      "label": "형광펜",
+      "glyph": "mark-pen-line",
+      "substitute": false,
+      "note": ""
+    },
+    "mosaic": {
+      "label": "모자이크",
+      "glyph": "mosaic-line",
+      "substitute": false,
+      "note": ""
+    },
+    "text": {
+      "label": "글자",
+      "glyph": "font-line",
+      "substitute": false,
+      "note": ""
+    },
+    "eraser": {
+      "label": "지우개",
+      "glyph": "eraser-line",
+      "substitute": false,
+      "note": ""
+    },
+    "undo": {
+      "label": "실행 취소",
+      "glyph": "back-2-line",
+      "substitute": false,
+      "note": ""
+    },
+    "redo": {
+      "label": "다시 실행",
+      "glyph": "forward-2-line",
+      "substitute": false,
+      "note": ""
+    },
+    "close": {
+      "label": "취소·닫기",
+      "glyph": "close-line",
+      "substitute": false,
+      "note": ""
+    },
+    "pin": {
+      "label": "고정·항상 위",
+      "glyph": "pin-line",
+      "substitute": false,
+      "note": ""
+    },
+    "save": {
+      "label": "저장",
+      "glyph": "download-2-line",
+      "substitute": false,
+      "note": ""
+    },
+    "copy": {
+      "label": "복사",
+      "glyph": "copy-2-line",
+      "substitute": false,
+      "note": ""
+    },
+    "region": {
+      "label": "범위 캡처",
+      "glyph": "screenshot-line",
+      "substitute": false,
+      "note": ""
+    },
+    "window": {
+      "label": "창 캡처",
+      "glyph": "app-window-line",
+      "substitute": false,
+      "note": ""
+    },
+    "record": {
+      "label": "화면 녹화",
+      "glyph": "record-mail-line",
+      "substitute": false,
+      "note": ""
+    },
+    "draw": {
+      "label": "판서",
+      "glyph": "pencil-line",
+      "substitute": false,
+      "note": ""
+    },
+    "zoom": {
+      "label": "실시간 확대",
+      "glyph": "zoom-in-line",
+      "substitute": false,
+      "note": ""
+    },
+    "board": {
+      "label": "칠판",
+      "glyph": "black-board-line",
+      "substitute": false,
+      "note": ""
+    },
+    "restore": {
+      "label": "직전 판서",
+      "glyph": "history-line",
+      "substitute": false,
+      "note": ""
+    },
+    "folder": {
+      "label": "저장 폴더",
+      "glyph": "folder-line",
+      "substitute": false,
+      "note": ""
+    },
+    "shortcuts": {
+      "label": "단축키",
+      "glyph": "keyboard-line",
+      "substitute": false,
+      "note": ""
+    },
+    "settings": {
+      "label": "설정",
+      "glyph": "settings-6-line",
+      "substitute": false,
+      "note": ""
+    },
+    "info": {
+      "label": "정보",
+      "glyph": "information-line",
+      "substitute": false,
+      "note": ""
+    },
+    "monitor": {
+      "label": "모니터",
+      "glyph": "monitor-line",
+      "substitute": false,
+      "note": ""
+    },
+    "mic": {
+      "label": "마이크",
+      "glyph": "mic-line",
+      "substitute": false,
+      "note": ""
+    },
+    "mic-off": {
+      "label": "마이크 꺼짐",
+      "glyph": "mic-off-line",
+      "substitute": false,
+      "note": ""
+    },
+    "magnet": {
+      "label": "모서리 자석",
+      "glyph": "magnet-line",
+      "substitute": false,
+      "note": ""
+    },
+    "dark": {
+      "label": "다크 모드",
+      "glyph": "moon-line",
+      "substitute": false,
+      "note": ""
+    },
+    "delay": {
+      "label": "지연 캡처",
+      "glyph": "stopwatch-line",
+      "substitute": false,
+      "note": ""
+    },
+    "check": {
+      "label": "확인",
+      "glyph": "check-line",
+      "substitute": false,
+      "note": ""
+    },
+    "warning": {
+      "label": "주의",
+      "glyph": "alert-line",
+      "substitute": false,
+      "note": ""
+    },
+    "quit": {
+      "label": "끝내기",
+      "glyph": "power-line",
+      "substitute": false,
+      "note": ""
+    },
+    "lock": {
+      "label": "보안 화면",
+      "glyph": "lock-line",
+      "substitute": false,
+      "note": ""
+    }
+  }
+}

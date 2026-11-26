@@ -1,0 +1,231 @@
+{
+  "id": "01-phosphor",
+  "title": "Phosphor Icons (Regular)",
+  "shortTitle": "Phosphor Regular",
+  "package": "@phosphor-icons/core",
+  "version": "2.1.1",
+  "license": "MIT",
+  "url": "https://phosphoricons.com",
+  "kind": "fill",
+  "grid": "256×256",
+  "strokeDesc": "약 1.5px 상당 (16px 둥근 끝·이음)",
+  "stroke20": null,
+  "stroke16": null,
+  "directCount": 35,
+  "totalCount": 35,
+  "substitutes": [],
+  "feel": "SF Symbols와 가장 닮은 둥근 모서리·균형감, 두 OS 모두 자연스러움",
+  "bundleMethod": "선택한 35개 SVG만 인라인/컴포넌트화 (`@phosphor-icons/core` 원본 추출)",
+  "icons": {
+    "rect": {
+      "label": "사각형",
+      "glyph": "rectangle",
+      "substitute": false,
+      "note": ""
+    },
+    "ellipse": {
+      "label": "타원",
+      "glyph": "circle",
+      "substitute": false,
+      "note": ""
+    },
+    "arrow": {
+      "label": "화살표",
+      "glyph": "arrow-up-right",
+      "substitute": false,
+      "note": ""
+    },
+    "pen": {
+      "label": "펜",
+      "glyph": "pen-nib",
+      "substitute": false,
+      "note": ""
+    },
+    "marker": {
+      "label": "형광펜",
+      "glyph": "highlighter",
+      "substitute": false,
+      "note": ""
+    },
+    "mosaic": {
+      "label": "모자이크",
+      "glyph": "checkerboard",
+      "substitute": false,
+      "note": ""
+    },
+    "text": {
+      "label": "글자",
+      "glyph": "text-t",
+      "substitute": false,
+      "note": ""
+    },
+    "eraser": {
+      "label": "지우개",
+      "glyph": "eraser",
+      "substitute": false,
+      "note": ""
+    },
+    "undo": {
+      "label": "실행 취소",
+      "glyph": "arrow-u-up-left",
+      "substitute": false,
+      "note": ""
+    },
+    "redo": {
+      "label": "다시 실행",
+      "glyph": "arrow-u-up-right",
+      "substitute": false,
+      "note": ""
+    },
+    "close": {
+      "label": "취소·닫기",
+      "glyph": "x",
+      "substitute": false,
+      "note": ""
+    },
+    "pin": {
+      "label": "고정·항상 위",
+      "glyph": "push-pin",
+      "substitute": false,
+      "note": ""
+    },
+    "save": {
+      "label": "저장",
+      "glyph": "download-simple",
+      "substitute": false,
+      "note": ""
+    },
+    "copy": {
+      "label": "복사",
+      "glyph": "copy",
+      "substitute": false,
+      "note": ""
+    },
+    "region": {
+      "label": "범위 캡처",
+      "glyph": "crop",
+      "substitute": false,
+      "note": ""
+    },
+    "window": {
+      "label": "창 캡처",
+      "glyph": "app-window",
+      "substitute": false,
+      "note": ""
+    },
+    "record": {
+      "label": "화면 녹화",
+      "glyph": "record",
+      "substitute": false,
+      "note": ""
+    },
+    "draw": {
+      "label": "판서",
+      "glyph": "pencil-simple",
+      "substitute": false,
+      "note": ""
+    },
+    "zoom": {
+      "label": "실시간 확대",
+      "glyph": "magnifying-glass-plus",
+      "substitute": false,
+      "note": ""
+    },
+    "board": {
+      "label": "칠판",
+      "glyph": "chalkboard",
+      "substitute": false,
+      "note": ""
+    },
+    "restore": {
+      "label": "직전 판서",
+      "glyph": "clock-counter-clockwise",
+      "substitute": false,
+      "note": ""
+    },
+    "folder": {
+      "label": "저장 폴더",
+      "glyph": "folder",
+      "substitute": false,
+      "note": ""
+    },
+    "shortcuts": {
+      "label": "단축키",
+      "glyph": "keyboard",
+      "substitute": false,
+      "note": ""
+    },
+    "settings": {
+      "label": "설정",
+      "glyph": "sliders-horizontal",
+      "substitute": false,
+      "note": ""
+    },
+    "info": {
+      "label": "정보",
+      "glyph": "info",
+      "substitute": false,
+      "note": ""
+    },
+    "monitor": {
+      "label": "모니터",
+      "glyph": "monitor",
+      "substitute": false,
+      "note": ""
+    },
+    "mic": {
+      "label": "마이크",
+      "glyph": "microphone",
+      "substitute": false,
+      "note": ""
+    },
+    "mic-off": {
+      "label": "마이크 꺼짐",
+      "glyph": "microphone-slash",
+      "substitute": false,
+      "note": ""
+    },
+    "magnet": {
+      "label": "모서리 자석",
+      "glyph": "magnet",
+      "substitute": false,
+      "note": ""
+    },
+    "dark": {
+      "label": "다크 모드",
+      "glyph": "moon",
+      "substitute": false,
+      "note": ""
+    },
+    "delay": {
+      "label": "지연 캡처",
+      "glyph": "timer",
+      "substitute": false,
+      "note": ""
+    },
+    "check": {
+      "label": "확인",
+      "glyph": "check",
+      "substitute": false,
+      "note": ""
+    },
+    "warning": {
+      "label": "주의",
+      "glyph": "warning",
+      "substitute": false,
+      "note": ""
+    },
+    "quit": {
+      "label": "끝내기",
+      "glyph": "power",
+      "substitute": false,
+      "note": ""
+    },
+    "lock": {
+      "label": "보안 화면",
+      "glyph": "lock-simple",
+      "substitute": false,
+      "note": ""
+    }
+  }
+}

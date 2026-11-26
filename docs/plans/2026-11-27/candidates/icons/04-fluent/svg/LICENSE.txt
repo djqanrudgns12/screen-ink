@@ -1,0 +1,5 @@
+Fluent UI System Icons (20 Regular) v1.2.62
+License: MIT
+MIT License (Microsoft Corporation — @iconify-json/fluent)
+Source: https://github.com/microsoft/fluentui-system-icons
+NPM: @iconify-json/fluent@1.2.62

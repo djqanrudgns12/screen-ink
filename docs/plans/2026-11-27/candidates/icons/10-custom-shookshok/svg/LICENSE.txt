@@ -1,0 +1,5 @@
+MIT License
+
+Copyright (c) 2026 screen-ink (슉쇽)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this custom SVG icon set to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies without restriction.

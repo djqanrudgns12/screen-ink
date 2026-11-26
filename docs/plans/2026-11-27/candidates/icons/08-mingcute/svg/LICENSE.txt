@@ -1,0 +1,5 @@
+MingCute Icons (Line) v1.2.10
+License: Apache-2.0
+Apache-2.0 License (MingCute Design — @iconify-json/mingcute)
+Source: https://www.mingcute.com
+NPM: @iconify-json/mingcute@1.2.10

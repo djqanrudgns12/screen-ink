@@ -1,0 +1,238 @@
+{
+  "id": "09-remix",
+  "title": "Remix Icon (Line)",
+  "shortTitle": "Remix Icon Line",
+  "package": "remixicon",
+  "version": "4.9.1",
+  "license": "Apache-2.0",
+  "url": "https://remixicon.com",
+  "kind": "fill",
+  "grid": "24×24",
+  "strokeDesc": "~1.6px 상당 기하학적 선(직각 끝 혼합)",
+  "stroke20": null,
+  "stroke16": null,
+  "directCount": 34,
+  "totalCount": 35,
+  "substitutes": [
+    {
+      "key": "magnet",
+      "label": "모서리 자석",
+      "glyph": "Design/focus-2-line",
+      "note": "자석 아이콘 미보유 → Design/focus-2-line(모서리 스냅 조준)로 대체"
+    }
+  ],
+  "feel": "정갈하고 선명하지만 직선 끝이 많아 맥 특유의 둥근 감성보다는 중립적·엔터프라이즈 느낌",
+  "bundleMethod": "필요한 35개 SVG만 인라인 번들 (`remixicon` 추출)",
+  "icons": {
+    "rect": {
+      "label": "사각형",
+      "glyph": "Design/rectangle-line",
+      "substitute": false,
+      "note": ""
+    },
+    "ellipse": {
+      "label": "타원",
+      "glyph": "Design/circle-line",
+      "substitute": false,
+      "note": ""
+    },
+    "arrow": {
+      "label": "화살표",
+      "glyph": "Arrows/arrow-right-up-line",
+      "substitute": false,
+      "note": ""
+    },
+    "pen": {
+      "label": "펜",
+      "glyph": "Design/ball-pen-line",
+      "substitute": false,
+      "note": ""
+    },
+    "marker": {
+      "label": "형광펜",
+      "glyph": "Design/mark-pen-line",
+      "substitute": false,
+      "note": ""
+    },
+    "mosaic": {
+      "label": "모자이크",
+      "glyph": "Design/mosaic-line",
+      "substitute": false,
+      "note": ""
+    },
+    "text": {
+      "label": "글자",
+      "glyph": "Editor/font-size",
+      "substitute": false,
+      "note": ""
+    },
+    "eraser": {
+      "label": "지우개",
+      "glyph": "Design/eraser-line",
+      "substitute": false,
+      "note": ""
+    },
+    "undo": {
+      "label": "실행 취소",
+      "glyph": "Arrows/arrow-go-back-line",
+      "substitute": false,
+      "note": ""
+    },
+    "redo": {
+      "label": "다시 실행",
+      "glyph": "Arrows/arrow-go-forward-line",
+      "substitute": false,
+      "note": ""
+    },
+    "close": {
+      "label": "취소·닫기",
+      "glyph": "System/close-line",
+      "substitute": false,
+      "note": ""
+    },
+    "pin": {
+      "label": "고정·항상 위",
+      "glyph": "Map/pushpin-line",
+      "substitute": false,
+      "note": ""
+    },
+    "save": {
+      "label": "저장",
+      "glyph": "System/download-2-line",
+      "substitute": false,
+      "note": ""
+    },
+    "copy": {
+      "label": "복사",
+      "glyph": "Document/file-copy-line",
+      "substitute": false,
+      "note": ""
+    },
+    "region": {
+      "label": "범위 캡처",
+      "glyph": "Design/screenshot-2-line",
+      "substitute": false,
+      "note": ""
+    },
+    "window": {
+      "label": "창 캡처",
+      "glyph": "Business/window-line",
+      "substitute": false,
+      "note": ""
+    },
+    "record": {
+      "label": "화면 녹화",
+      "glyph": "Media/record-circle-line",
+      "substitute": false,
+      "note": ""
+    },
+    "draw": {
+      "label": "판서",
+      "glyph": "Design/pencil-line",
+      "substitute": false,
+      "note": ""
+    },
+    "zoom": {
+      "label": "실시간 확대",
+      "glyph": "System/zoom-in-line",
+      "substitute": false,
+      "note": ""
+    },
+    "board": {
+      "label": "칠판",
+      "glyph": "Business/presentation-line",
+      "substitute": false,
+      "note": ""
+    },
+    "restore": {
+      "label": "직전 판서",
+      "glyph": "System/history-line",
+      "substitute": false,
+      "note": ""
+    },
+    "folder": {
+      "label": "저장 폴더",
+      "glyph": "Document/folder-line",
+      "substitute": false,
+      "note": ""
+    },
+    "shortcuts": {
+      "label": "단축키",
+      "glyph": "Device/keyboard-line",
+      "substitute": false,
+      "note": ""
+    },
+    "settings": {
+      "label": "설정",
+      "glyph": "Media/equalizer-line",
+      "substitute": false,
+      "note": ""
+    },
+    "info": {
+      "label": "정보",
+      "glyph": "System/information-line",
+      "substitute": false,
+      "note": ""
+    },
+    "monitor": {
+      "label": "모니터",
+      "glyph": "Device/computer-line",
+      "substitute": false,
+      "note": ""
+    },
+    "mic": {
+      "label": "마이크",
+      "glyph": "Media/mic-line",
+      "substitute": false,
+      "note": ""
+    },
+    "mic-off": {
+      "label": "마이크 꺼짐",
+      "glyph": "Media/mic-off-line",
+      "substitute": false,
+      "note": ""
+    },
+    "magnet": {
+      "label": "모서리 자석",
+      "glyph": "Design/focus-2-line",
+      "substitute": true,
+      "note": "자석 아이콘 미보유 → Design/focus-2-line(모서리 스냅 조준)로 대체"
+    },
+    "dark": {
+      "label": "다크 모드",
+      "glyph": "Weather/moon-line",
+      "substitute": false,
+      "note": ""
+    },
+    "delay": {
+      "label": "지연 캡처",
+      "glyph": "System/timer-line",
+      "substitute": false,
+      "note": ""
+    },
+    "check": {
+      "label": "확인",
+      "glyph": "System/check-line",
+      "substitute": false,
+      "note": ""
+    },
+    "warning": {
+      "label": "주의",
+      "glyph": "System/alert-line",
+      "substitute": false,
+      "note": ""
+    },
+    "quit": {
+      "label": "끝내기",
+      "glyph": "Device/shut-down-line",
+      "substitute": false,
+      "note": ""
+    },
+    "lock": {
+      "label": "보안 화면",
+      "glyph": "System/lock-line",
+      "substitute": false,
+      "note": ""
+    }
+  }
+}

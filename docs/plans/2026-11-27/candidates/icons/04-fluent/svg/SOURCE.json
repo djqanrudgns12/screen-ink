@@ -1,0 +1,244 @@
+{
+  "id": "04-fluent",
+  "title": "Fluent UI System Icons (20 Regular)",
+  "shortTitle": "Fluent 20 Regular",
+  "package": "@iconify-json/fluent",
+  "version": "1.2.62",
+  "license": "MIT",
+  "url": "https://github.com/microsoft/fluentui-system-icons",
+  "kind": "fill",
+  "grid": "20×20",
+  "strokeDesc": "네이티브 20px 격자 · ~1.5px 둥근 선",
+  "stroke20": null,
+  "stroke16": null,
+  "directCount": 33,
+  "totalCount": 35,
+  "substitutes": [
+    {
+      "key": "mosaic",
+      "label": "모자이크",
+      "glyph": "grid-20-regular",
+      "note": "전용 모자이크 없음 → grid-20-regular(격자)로 대체"
+    },
+    {
+      "key": "magnet",
+      "label": "모서리 자석",
+      "glyph": "align-straighten-20-regular",
+      "note": "자석 아이콘 미보유 → align-straighten-20-regular(정렬 스냅)로 대체"
+    }
+  ],
+  "feel": "20px 픽셀 정렬이 가장 날카롭고 Windows 11 네이티브와 100% 어울리며 맥에서도 세련됨",
+  "bundleMethod": "Iconify JSON에서 35개만 정적 SVG 추출 후 인라인 번들",
+  "icons": {
+    "rect": {
+      "label": "사각형",
+      "glyph": "rectangle-landscape-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "ellipse": {
+      "label": "타원",
+      "glyph": "circle-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "arrow": {
+      "label": "화살표",
+      "glyph": "arrow-up-right-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "pen": {
+      "label": "펜",
+      "glyph": "pen-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "marker": {
+      "label": "형광펜",
+      "glyph": "highlight-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "mosaic": {
+      "label": "모자이크",
+      "glyph": "grid-20-regular",
+      "substitute": true,
+      "note": "전용 모자이크 없음 → grid-20-regular(격자)로 대체"
+    },
+    "text": {
+      "label": "글자",
+      "glyph": "text-t-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "eraser": {
+      "label": "지우개",
+      "glyph": "eraser-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "undo": {
+      "label": "실행 취소",
+      "glyph": "arrow-undo-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "redo": {
+      "label": "다시 실행",
+      "glyph": "arrow-redo-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "close": {
+      "label": "취소·닫기",
+      "glyph": "dismiss-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "pin": {
+      "label": "고정·항상 위",
+      "glyph": "pin-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "save": {
+      "label": "저장",
+      "glyph": "arrow-download-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "copy": {
+      "label": "복사",
+      "glyph": "copy-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "region": {
+      "label": "범위 캡처",
+      "glyph": "screenshot-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "window": {
+      "label": "창 캡처",
+      "glyph": "window-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "record": {
+      "label": "화면 녹화",
+      "glyph": "record-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "draw": {
+      "label": "판서",
+      "glyph": "inking-tool-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "zoom": {
+      "label": "실시간 확대",
+      "glyph": "zoom-in-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "board": {
+      "label": "칠판",
+      "glyph": "whiteboard-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "restore": {
+      "label": "직전 판서",
+      "glyph": "history-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "folder": {
+      "label": "저장 폴더",
+      "glyph": "folder-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "shortcuts": {
+      "label": "단축키",
+      "glyph": "keyboard-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "settings": {
+      "label": "설정",
+      "glyph": "options-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "info": {
+      "label": "정보",
+      "glyph": "info-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "monitor": {
+      "label": "모니터",
+      "glyph": "desktop-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "mic": {
+      "label": "마이크",
+      "glyph": "mic-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "mic-off": {
+      "label": "마이크 꺼짐",
+      "glyph": "mic-off-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "magnet": {
+      "label": "모서리 자석",
+      "glyph": "align-straighten-20-regular",
+      "substitute": true,
+      "note": "자석 아이콘 미보유 → align-straighten-20-regular(정렬 스냅)로 대체"
+    },
+    "dark": {
+      "label": "다크 모드",
+      "glyph": "weather-moon-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "delay": {
+      "label": "지연 캡처",
+      "glyph": "timer-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "check": {
+      "label": "확인",
+      "glyph": "checkmark-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "warning": {
+      "label": "주의",
+      "glyph": "warning-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "quit": {
+      "label": "끝내기",
+      "glyph": "power-20-regular",
+      "substitute": false,
+      "note": ""
+    },
+    "lock": {
+      "label": "보안 화면",
+      "glyph": "lock-closed-20-regular",
+      "substitute": false,
+      "note": ""
+    }
+  }
+}

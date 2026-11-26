@@ -1,0 +1,298 @@
+{
+  "id": "07-heroicons",
+  "title": "Heroicons (24 Outline)",
+  "shortTitle": "Heroicons 24",
+  "package": "heroicons",
+  "version": "2.2.0",
+  "license": "MIT",
+  "url": "https://heroicons.com",
+  "kind": "stroke",
+  "grid": "24×24",
+  "strokeDesc": "네이티브 1.5px · 둥근 끝·이음",
+  "stroke20": null,
+  "stroke16": null,
+  "directCount": 24,
+  "totalCount": 35,
+  "substitutes": [
+    {
+      "key": "rect",
+      "label": "사각형",
+      "glyph": "stop",
+      "note": "정사각형/사각형 도형 없음 → stop(네모 외곽)으로 대체"
+    },
+    {
+      "key": "ellipse",
+      "label": "타원",
+      "glyph": "circle-stack",
+      "note": "단독 원형 없음 → viewfinder-circle 대신 circle-stack 대체"
+    },
+    {
+      "key": "marker",
+      "label": "형광펜",
+      "glyph": "paint-brush",
+      "note": "형광펜 없음 → paint-brush로 대체"
+    },
+    {
+      "key": "mosaic",
+      "label": "모자이크",
+      "glyph": "squares-2x2",
+      "note": "모자이크 없음 → squares-2x2(2×2 칸)로 대체"
+    },
+    {
+      "key": "text",
+      "label": "글자",
+      "glyph": "language",
+      "note": "텍스트 T 없음 → language로 대체"
+    },
+    {
+      "key": "record",
+      "label": "화면 녹화",
+      "glyph": "video-camera",
+      "note": "녹화 원형 없음 → video-camera로 대체"
+    },
+    {
+      "key": "restore",
+      "label": "직전 판서",
+      "glyph": "clock",
+      "note": "이력 아이콘 없음 → clock으로 대체"
+    },
+    {
+      "key": "shortcuts",
+      "label": "단축키",
+      "glyph": "command-line",
+      "note": "키보드 없음 → command-line으로 대체"
+    },
+    {
+      "key": "mic-off",
+      "label": "마이크 꺼짐",
+      "glyph": "no-symbol",
+      "note": "마이크 끔 없음 → no-symbol로 대체"
+    },
+    {
+      "key": "magnet",
+      "label": "모서리 자석",
+      "glyph": "sparkles",
+      "note": "자석 없음 → sparkles(스냅/자동)로 대체"
+    },
+    {
+      "key": "delay",
+      "label": "지연 캡처",
+      "glyph": "clock",
+      "note": "타이머 없음 → clock으로 대체"
+    }
+  ],
+  "feel": "1.5px 선 감성은 아주 깔끔하지만 총 324개 소형 세트라 주석·캡처 특화 아이콘 대체가 많음",
+  "bundleMethod": "35개 추출 후 빠진 도구는 커스텀 보완 필요",
+  "icons": {
+    "rect": {
+      "label": "사각형",
+      "glyph": "stop",
+      "substitute": true,
+      "note": "정사각형/사각형 도형 없음 → stop(네모 외곽)으로 대체"
+    },
+    "ellipse": {
+      "label": "타원",
+      "glyph": "circle-stack",
+      "substitute": true,
+      "note": "단독 원형 없음 → viewfinder-circle 대신 circle-stack 대체"
+    },
+    "arrow": {
+      "label": "화살표",
+      "glyph": "arrow-up-right",
+      "substitute": false,
+      "note": ""
+    },
+    "pen": {
+      "label": "펜",
+      "glyph": "pencil",
+      "substitute": false,
+      "note": ""
+    },
+    "marker": {
+      "label": "형광펜",
+      "glyph": "paint-brush",
+      "substitute": true,
+      "note": "형광펜 없음 → paint-brush로 대체"
+    },
+    "mosaic": {
+      "label": "모자이크",
+      "glyph": "squares-2x2",
+      "substitute": true,
+      "note": "모자이크 없음 → squares-2x2(2×2 칸)로 대체"
+    },
+    "text": {
+      "label": "글자",
+      "glyph": "language",
+      "substitute": true,
+      "note": "텍스트 T 없음 → language로 대체"
+    },
+    "eraser": {
+      "label": "지우개",
+      "glyph": "backspace",
+      "substitute": false,
+      "note": ""
+    },
+    "undo": {
+      "label": "실행 취소",
+      "glyph": "arrow-uturn-left",
+      "substitute": false,
+      "note": ""
+    },
+    "redo": {
+      "label": "다시 실행",
+      "glyph": "arrow-uturn-right",
+      "substitute": false,
+      "note": ""
+    },
+    "close": {
+      "label": "취소·닫기",
+      "glyph": "x-mark",
+      "substitute": false,
+      "note": ""
+    },
+    "pin": {
+      "label": "고정·항상 위",
+      "glyph": "map-pin",
+      "substitute": false,
+      "note": ""
+    },
+    "save": {
+      "label": "저장",
+      "glyph": "arrow-down-tray",
+      "substitute": false,
+      "note": ""
+    },
+    "copy": {
+      "label": "복사",
+      "glyph": "document-duplicate",
+      "substitute": false,
+      "note": ""
+    },
+    "region": {
+      "label": "범위 캡처",
+      "glyph": "viewfinder-circle",
+      "substitute": false,
+      "note": ""
+    },
+    "window": {
+      "label": "창 캡처",
+      "glyph": "window",
+      "substitute": false,
+      "note": ""
+    },
+    "record": {
+      "label": "화면 녹화",
+      "glyph": "video-camera",
+      "substitute": true,
+      "note": "녹화 원형 없음 → video-camera로 대체"
+    },
+    "draw": {
+      "label": "판서",
+      "glyph": "pencil-square",
+      "substitute": false,
+      "note": ""
+    },
+    "zoom": {
+      "label": "실시간 확대",
+      "glyph": "magnifying-glass-plus",
+      "substitute": false,
+      "note": ""
+    },
+    "board": {
+      "label": "칠판",
+      "glyph": "presentation-chart-bar",
+      "substitute": false,
+      "note": ""
+    },
+    "restore": {
+      "label": "직전 판서",
+      "glyph": "clock",
+      "substitute": true,
+      "note": "이력 아이콘 없음 → clock으로 대체"
+    },
+    "folder": {
+      "label": "저장 폴더",
+      "glyph": "folder",
+      "substitute": false,
+      "note": ""
+    },
+    "shortcuts": {
+      "label": "단축키",
+      "glyph": "command-line",
+      "substitute": true,
+      "note": "키보드 없음 → command-line으로 대체"
+    },
+    "settings": {
+      "label": "설정",
+      "glyph": "adjustments-horizontal",
+      "substitute": false,
+      "note": ""
+    },
+    "info": {
+      "label": "정보",
+      "glyph": "information-circle",
+      "substitute": false,
+      "note": ""
+    },
+    "monitor": {
+      "label": "모니터",
+      "glyph": "computer-desktop",
+      "substitute": false,
+      "note": ""
+    },
+    "mic": {
+      "label": "마이크",
+      "glyph": "microphone",
+      "substitute": false,
+      "note": ""
+    },
+    "mic-off": {
+      "label": "마이크 꺼짐",
+      "glyph": "no-symbol",
+      "substitute": true,
+      "note": "마이크 끔 없음 → no-symbol로 대체"
+    },
+    "magnet": {
+      "label": "모서리 자석",
+      "glyph": "sparkles",
+      "substitute": true,
+      "note": "자석 없음 → sparkles(스냅/자동)로 대체"
+    },
+    "dark": {
+      "label": "다크 모드",
+      "glyph": "moon",
+      "substitute": false,
+      "note": ""
+    },
+    "delay": {
+      "label": "지연 캡처",
+      "glyph": "clock",
+      "substitute": true,
+      "note": "타이머 없음 → clock으로 대체"
+    },
+    "check": {
+      "label": "확인",
+      "glyph": "check",
+      "substitute": false,
+      "note": ""
+    },
+    "warning": {
+      "label": "주의",
+      "glyph": "exclamation-triangle",
+      "substitute": false,
+      "note": ""
+    },
+    "quit": {
+      "label": "끝내기",
+      "glyph": "power",
+      "substitute": false,
+      "note": ""
+    },
+    "lock": {
+      "label": "보안 화면",
+      "glyph": "lock-closed",
+      "substitute": false,
+      "note": ""
+    }
+  }
+}

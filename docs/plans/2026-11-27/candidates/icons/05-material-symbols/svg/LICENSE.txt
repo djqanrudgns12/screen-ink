@@ -1,0 +1,5 @@
+Material Symbols Rounded (Light) v1.2.102
+License: Apache-2.0
+Apache-2.0 License (Google — @iconify-json/material-symbols-light)
+Source: https://fonts.google.com/icons
+NPM: @iconify-json/material-symbols-light@1.2.102
