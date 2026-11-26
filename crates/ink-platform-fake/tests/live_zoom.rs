@@ -152,12 +152,12 @@ fn 틱은_부드럽게_따라가고_죽은_영역에서는_멈추고_설정은_�
     assert!(s.tick_zoom_with(DT));
     assert_eq!(sent(), n, "바뀐 것이 없으면 HUD에 다시 보내지 않는다");
 
-    // 바깥 — 남은 거리의 0.35
+    // 바깥 — 죽은 영역을 넘은 만큼(440 − 48)의 0.35
     cursor(&w, 1400, 540);
     s.tick_zoom_with(DT);
     let v = s.zoom_view().unwrap();
-    assert!((v.center_x - (960.0 + 440.0 * 0.35)).abs() < 1e-9, "{}", v.center_x);
-    assert_eq!(running(&w).unwrap().1.x, 634);
+    assert!((v.center_x - (960.0 + 392.0 * 0.35)).abs() < 1e-9, "{}", v.center_x);
+    assert_eq!(running(&w).unwrap().1.x, 617);
 
     // 바로 따라가기로 바꾸면 다음 틱부터
     s.update_setting("zoom.follow", &json!("instant"));
