@@ -16,8 +16,8 @@ export const MOSAIC_BLOCK_MIN = 6;
 export const MOSAIC_BLOCK_MAX = 24;
 /** 이보다 작게 끈 모자이크·도형은 만들지 않는다(CSS px). */
 export const MIN_DRAG_PX = 2;
-/** 휠 한 단계로 볼 누적 deltaY(px) — 엔진 WHEEL_STEP_DELTA와 같게. */
-export const ANNOT_WHEEL_STEP = 50;
+/** 휠 한 단계로 볼 누적 deltaY(px) — 엔진 WHEEL_STEP_DELTA와 같게(맥 휠 한 칸 = 40 px). */
+export const ANNOT_WHEEL_STEP = 40;
 
 /**
  * @typedef {{ x: number, y: number, w: number, h: number }} PhysRect

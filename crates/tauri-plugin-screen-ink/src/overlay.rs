@@ -453,8 +453,13 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
         self.bump_afterimage_gen();
         #[cfg(windows)]
         self.freeze.hide_all();
+        // 맥: 창을 숨기기 전에 커서를 화살표로(판서 `cursor: none`·캡처 십자가 숨긴 뒤에도 남지 않게).
+        // on_main은 아래 Tauri hide()보다 먼저 메인 대기열에 들어간다.
         #[cfg(target_os = "macos")]
-        on_main(&self.app, ink_platform_macos::freeze::hide_all);
+        on_main(&self.app, || {
+            ink_platform_macos::window::reset_cursor();
+            ink_platform_macos::freeze::hide_all();
+        });
         for (l, w) in self.app.webview_windows() {
             if l.starts_with(PREFIX) {
                 let _ = show_raw(&w, false);

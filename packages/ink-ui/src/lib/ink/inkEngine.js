@@ -196,8 +196,11 @@ export const ERASER_WIDTH_MUL = 1.5;
 /** 고르기 판정 여유·핸들 반경(CSS px). */
 export const SELECT_TOLERANCE_PX = 6;
 export const HANDLE_RADIUS_PX = 8;
-/** 휠 한 단계로 볼 누적 deltaY(px). */
-export const WHEEL_STEP_DELTA = 50;
+/**
+ * 휠 한 단계로 볼 누적 deltaY(px). 맥 WebKit은 마우스 휠 한 칸을 40 px로 준다(Windows WebView2는 100 px) —
+ * 50이면 맥에서 두 칸째에야 확대됐다(2026-11-26 맥 실측). 사건 하나는 한 단계만 넘기므로 Windows 한 칸도 한 단계.
+ */
+export const WHEEL_STEP_DELTA = 40;
 /** 화살표 머리 길이 = 굵기 × 3.5(최소 6). */
 export const ARROW_HEAD_MUL = 3.5;
 /** 멈춤 도형 제안이 저절로 사라지는 시간(ms). */

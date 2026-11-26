@@ -110,7 +110,8 @@ test('모자이크 항목·칸 크기(6~24)·물리 px 바꾸기', () => {
   assert.deepEqual(exportTransform(anchor, { x: 2250, y: 330, w: 1, h: 1 }, 1.5), [1.5, 0, 0, 1.5, -30, -30]);
 });
 
-test('휠 누적: 50 px마다 한 단계, 방향이 바뀌면 처음부터', () => {
+test('휠 누적: 40 px마다 한 단계(맥 휠 한 칸), 방향이 바뀌면 처음부터', () => {
+  assert.equal(wheelStep(0, -40).dir, 1, '맥 휠 한 칸 = 한 단계');
   let r = wheelStep(0, -30);
   assert.equal(r.dir, 0);
   r = wheelStep(r.acc, -30);

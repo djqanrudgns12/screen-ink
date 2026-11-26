@@ -48,7 +48,7 @@
    - 메서드: `drawReady`·`drawFinish`·`drawRestore`·`drawExport`·`drawIsland`·`drawPenMetrics`, `zoomInput`, `captureAnnotations`·`captureCommitAnnotated`
    - 이벤트: `screen-ink://draw`·`draw-command`·`zoom`·`afterimage`·`capture-commit`
    - 동작(`run`): `capture.toDraw`·`capture.copyHex`·`capture.saveLast`·`draw.acceptSuggestion`·`draw.undo`·`record.*`·`pins.closeAll`
-5. **원본 바이트 IPC**: `draw_export`·`capture_commit_annotated`는 Tauri 2 `tauri::ipc::Request` 원본 본문으로 RGBA를 받는다(base64 없음). 주석은 본문 앞 `[머리 길이 u32 LE][머리 JSON][RGBA]`. **WKWebView(맥)에서 원본 본문으로 오는지 확인 필요** — postMessage 대체 경로로 오면 명령이 거부된다(§2.1).
+5. **원본 바이트 IPC**: `draw_export`·`capture_commit_annotated`는 Tauri 2 `tauri::ipc::Request` 원본 본문으로 RGBA를 받는다(base64 없음). 주석은 본문 앞 `[머리 길이 u32 LE][머리 JSON][RGBA]`. **WKWebView(맥)에서도 원본 본문으로 온다 — 확인됨 2026-11-26**(`draw_export` Cmd+C → 클립보드 PNG 3840×2160, §2.1 결과). `capture_commit_annotated`는 M16에서.
 6. **설정·단축키 변경**: `draw.shapeApply`(suggest 기본 | auto), `record.cursor`·`record.firstHintDone`·`capture.delay`·`capture.evidence`(숨김). 확대 키 `z-in`·`z-out` 칸 삭제 — 화면 안 키 43 → **41칸**(PRD v3.0.6, R-KEY-6).
 7. **병렬 작업 규칙(다음에 또 나눌 때)**: 흐름 하나 = 워크트리 하나 = 브랜치 `stream/<이름>` = **전용 `CARGO_TARGET_DIR`**. 빌드 폴더를 워크트리끼리 같이 쓰면 같은 이름 산출물을 덮어써 틀린 결과가 난다(오늘 실제로 겪음). 메인 검사는 깨끗한 검사 전용 워크트리에서.
 8. 공통 검사는 그대로(이전 문서 §1-4) + `npm run progress -- --check`. CI가 푸시마다 4작업을 돌린다.
@@ -68,6 +68,20 @@
 - **원본 바이트 IPC**: Cmd+C 결과가 클립보드에 오는지 = `draw_export`가 WKWebView에서 원본 본문으로 오는지. 안 되면 [확인 필요]로 적고 대체 경로(설계: 03 §4) 결정.
 - **캡처 주석·핀·칩·잔상(M16)**: F1 → 범위 확정 → 툴바 주석 도구 8종 → 복사·저장·[고정]에 주석이 들어가는지, 모자이크, 단색 범위의 HEX 칩, 확정 직후 0.4초 주황 잔상, 결과 섬 [판서로].
 - 결과·수치(`mode enter draw [N ms]`)는 이 문서 §2.1 아래에 적는다.
+
+**M12 결과(2026-11-26 저녁, 맥미니 4K@2 + FHD@1, 개발 빌드, 자동 입력 `bench/mac/input.swift`)**
+- 진입 `mode enter draw`: 4K 9회 125~219 ms(p50 184 — capture 46~101 · show 5~16 · ui paint 46~111), FHD 125 ms, 칠판 64 ms. **목표 150 ms(G5)를 넘는다.** 큰 몫은 SCK 한 장(40~100 ms)과 웹뷰가 4K BMP를 읽어 첫 그림을 그리는 시간(46~111 ms). [할 일] 줄일 후보: 캡처처럼 네이티브 정지 창(`freeze`)을 먼저 띄우고 웹뷰 배경이 그려지면 걷기 · 미리 띄워 둔 SCK 흐름의 마지막 그림 쓰기.
+- 펜 지연(소프트웨어 `pen latency`): p50 7~10 · p95 14~19 ms(목표 p95 ≤ 25 통과).
+- 획 → Esc(보관) → Option+Shift+1: 세 획이 Retina 4K 제자리로 돌아옴(새 정지 화면 위). 끝난 뒤 섬 창은 몇 초 뒤 내려감(보관 안내).
+- Cmd+C: 클립보드 PNG 3840×2160(FHD 모니터는 1920×1080), 획이 물리 px 제자리. Cmd+S: `~/Pictures/Shookshok/`에 같은 크기 PNG.
+- 칠판 Option+3: 흰 바탕 · K = 검정 · W = 흰색. 도형 제안: 원을 그리고 0.9초 멈춤 → 점선 원 미리보기 → Enter = 반듯한 원. 1×에서 우클릭 = 끝.
+- FHD 모니터에서 Option+1: 오버레이 1920,0 1920×1080 pt, 섬 가운데(x 2600 pt).
+- 고친 것
+  1. **판서를 끝낸 뒤 커서가 사라짐**(사용자 발견, Esc로 꺼도): 맥 WebKit은 `cursor: none`을 투명 커서로 바꾸는 것이라 창을 숨겨도 남는다 → 오버레이를 숨기기 전에 화살표 커서로(`ink_platform_macos::window::reset_cursor`, 플러그인 `hide`). 고친 뒤 Esc → 마우스를 움직이면 바로 화살표가 보임.
+  2. **저장 파일 이름이 `screen-ink_…`**: 설정 파일이 값을 모두 적어 두어 이름을 바꾸기 전 기본 틀을 그대로 읽었다 → 읽을 때 옛 기본값은 새 기본값으로(`ink_domain::settings` `OLD_DEFAULTS`, 시험 1). 고친 뒤 `Shookshok_20261126_….png`. 학교 PC 설정 파일도 같았을 것.
+  3. **휠 한 칸으로 확대가 안 됨**: 맥 WebKit 마우스 휠 한 칸 = 40 px < 문턱 50 → 두 칸째에 확대. 문턱 40으로(`inkEngine` `WHEEL_STEP_DELTA`·`captureAnnotate` `ANNOT_WHEEL_STEP`, 시험 2). 고친 뒤 한 칸 = 1.75×. Windows 한 칸(100 px)은 사건 하나에 한 단계라 그대로.
+- 처음 두 번은 앞 획이 사라졌는데, 같은 순서·간격으로 다시 하면 재현되지 않았다. 그때 사용자가 컴퓨터를 쓰던 중이라 키 입력이 판서 창(키 창)으로 들어간 것으로 본다. **[확인 필요]** 손으로 쓰다가 또 보이면 기록.
+- **[확인 필요 — 사용자 눈]** 섬·안내 문구는 캡처 제외 창이라 스크린숏에 안 찍힘(창 목록으로 떠 있는 것만 확인) · 글자 T 한글 IME(입력 소스를 바꿔야 함) · 진입 순간 배경 번쩍임 · 확대 중 가장자리 밀기.
 
 ### 2.2 맥 트랙 원래 순서 — M9·M10·M17·M-sign
 - **M9 AX 요소 색인**(P0, 1.5일): 시안 [I-mac.md](../plans/2026-11-26/I-mac.md) §2.1. Windows UIA 일꾼(`ink-platform-windows/src/uia.rs`)과 MSAA 대체(`msaa.rs`)의 구조·시간 예산을 본보기로.
@@ -96,7 +110,7 @@ Windows 구현을 본보기로 같은 포트에 맥 구현을 꽂는다. 공통 
 
 ### 3.1 화면 확인 묶음 — 사용자에게 미리 묻고 한 번에(합계 약 3시간)
 1. **인식**(1.7~2시간): `bench/recog/RUNBOOK-windows.md` 순서대로 — RB-15·16 실제 창(`cargo test -p ink-platform-windows --test rb15_16 real:: -- --ignored --test-threads=1`), DPI·MSAA 실측(125%/150% PC 필요 — 배율 변경은 사용자 승인), RB-20 멈춘 앱, 사례 17종(RB-01~14·17·18·19로 해석)·기준선, G3, Snipaste 대조, 붙여 넣기.
-2. **판서 G5**: 펜 지연 로그 `pen latency n=.. p50=.. p95=..`(소프트웨어 p95 ≤ 25 ms), 240 fps 촬영 p95 ≤ 50 ms, 진입 `mode enter draw` p95 ≤ 150 ms.
+2. **판서 G5**: 펜 지연 로그 `pen latency n=.. p50=.. p95=..`(소프트웨어 p95 ≤ 25 ms), 240 fps 촬영 p95 ≤ 50 ms, 진입 `mode enter draw` p95 ≤ 150 ms. 휠 문턱을 50 → 40 px로 낮췄다(맥 M12) — Windows 마우스 휠 한 칸 = 한 단계 그대로인지, 터치패드가 너무 민감하지 않은지. 저장 파일 이름이 `Shookshok_…`로 나오는지(옛 설정 파일의 `screen-ink_…` 틀을 읽을 때 바꿈).
 3. **실시간 확대 M6**: `bench/m6-zoom.md`(1080p ≥ 30 fps, 4K는 4K 모니터·DSR에서). 시스템 커서가 하나만 보이는지(`magnifier.rs` `HIDE_SYSTEM_CURSOR`), Shift+휠 통과, 끝낸 뒤 방향키·Esc 정상.
 4. **F2·F3·바로 캡처**: 가려진 창 F2(노란 테두리 없는지 육안), 둥근 창 귀 투명, 보호 화면 안내, 바로 캡처 4종(Shift+F1·Ctrl+F1·Shift+F2·Alt+F1 지연 — 카운트다운 중 Esc 취소), F3 1080p30 10분·0.3초 즉시 중지 재생, 영상에 섬·꺾쇠 0 px, Win+L·모니터 분리·강제 종료 뒤 복구 섬, `recorder warmed in`·`encoder ready in`.
 5. **주석·잔상·이어받기**: 툴바 14단추 넘침, 도구별 결과 위치·색(150%), 글자 도구 한글, 첫 Esc = 도구 해제, 잔상 중 클릭 통과, Alt+2 → Alt+1(배경에 돋보기 안 찍힘, ≤150 ms), [판서로](`frame reused`, ≤150 ms).

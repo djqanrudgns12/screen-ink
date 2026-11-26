@@ -211,6 +211,22 @@ pub fn make_key(ns_window: *mut c_void) {
     }
 }
 
+/// 화살표 커서로 되돌린다. 웹뷰의 `cursor: none`은 맥 WebKit에서 "투명 커서로 바꾸기"라, 창을 숨겨도
+/// 다른 앱이 커서를 다시 정할 때까지 커서가 안 보인다(판서 뒤 커서 사라짐, 2026-11-26 사용자 발견).
+/// 우리 창이 아직 커서 아래에 있을 때(숨기기 전) 부른다 — 커서는 그 아래 창의 앱이 정한다.
+pub fn reset_cursor() {
+    if MainThreadMarker::new().is_none() {
+        return;
+    }
+    // SAFETY: NSCursor 공개 클래스 메서드·인스턴스 메서드, 메인 스레드.
+    unsafe {
+        let c: *mut AnyObject = msg_send![objc2::class!(NSCursor), arrowCursor];
+        if !c.is_null() {
+            let _: () = msg_send![c, set];
+        }
+    }
+}
+
 /// 모드가 끝나면 포커스를 원래 앱(전체 화면 앱 등)으로 돌려준다.
 pub fn deactivate() {
     let Some(app) = app() else { return };

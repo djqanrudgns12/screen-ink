@@ -90,6 +90,10 @@ fn field(path: &str) -> Option<&'static Field> {
 /// 옛 이름 → 지금 이름(초안 v1·v2, 사람이 쓴 파일).
 const RENAMED: [(&str, &str); 3] = [("detection.excluded", "capture.excluded"), ("output.name", "output.template"), ("general.startup", "general.autostart")];
 
+/// 옛 기본값 → 지금 기본값(앱 이름을 슉쇽으로 바꾸기 전 파일). 설정 파일은 값을 모두 적어 두어서,
+/// 이름을 바꾸기 전에 쓴 PC는 옛 기본 파일 이름 틀(`screen-ink_…`)을 그대로 읽었다(2026-11-26 맥에서 발견).
+const OLD_DEFAULTS: [(&str, &str); 1] = [("output.template", "screen-ink_{yyyy}{MM}{dd}_{HH}{mm}{ss}")];
+
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum SettingError {
     #[error("모르는 설정이에요: {0}")]
@@ -278,6 +282,11 @@ impl Settings {
                 flat.entry(new.to_string()).or_insert(v);
             }
         }
+        for (path, old) in OLD_DEFAULTS {
+            if flat.get(path).and_then(Value::as_str) == Some(old) {
+                flat.remove(path);
+            }
+        }
         for (path, v) in &flat {
             if path.starts_with("shortcuts.") || field(path).is_none() {
                 continue;
@@ -420,6 +429,16 @@ mod tests {
         assert!(w.is_empty(), "{w:?}");
         assert_eq!(s.get("draw.width"), Some(&json!(6)));
         assert_eq!(s.get("capture.excluded").unwrap()[0]["exe"], "hwp.exe");
+    }
+
+    #[test]
+    fn 옛_기본_파일_이름_틀은_새_기본값으로() {
+        let (s, w) = Settings::from_data(&json!({ "values": { "output.template": "screen-ink_{yyyy}{MM}{dd}_{HH}{mm}{ss}" } }), Platform::Mac);
+        assert!(w.is_empty(), "{w:?}");
+        assert_eq!(s.str("output.template"), "Shookshok_{yyyy}{MM}{dd}_{HH}{mm}{ss}");
+        // 사용자가 고친 틀은 그대로
+        let (s, _) = Settings::from_data(&json!({ "values": { "output.template": "screen-ink_{HH}{mm}" } }), Platform::Mac);
+        assert_eq!(s.str("output.template"), "screen-ink_{HH}{mm}");
     }
 
     #[test]

@@ -519,8 +519,11 @@ test('휠_첫휠_시작배율_Ctrl휠_굵기_Space_1배_방향키', () => {
   const e = engine({ settings: { 'draw.startZoom': 1.75 } });
   e.wheel({ x: 960, y: 540, deltaY: -100 });
   assert.equal(e.view.s, 1.75);
-  for (let i = 0; i < 5; i++) e.wheel({ x: 960, y: 540, deltaY: -10 }); // 작은 터치패드 휠 50 누적 = 한 단계
+  for (let i = 0; i < 5; i++) e.wheel({ x: 960, y: 540, deltaY: -10 }); // 작은 터치패드 휠 40 누적 = 한 단계
   assert.equal(e.view.s, 2);
+  const mac = engine({ settings: { 'draw.startZoom': 1.75 } });
+  mac.wheel({ x: 960, y: 540, deltaY: -40 }); // 맥 WebKit 마우스 휠 한 칸
+  assert.equal(mac.view.s, 1.75, '맥 휠 한 칸 = 첫 휠');
   e.wheel({ x: 960, y: 540, deltaY: 100 });
   assert.equal(e.view.s, 1.75);
   e.wheel({ x: 10, y: 10, deltaY: -100, ctrlKey: true });
