@@ -5,6 +5,13 @@
 - 오늘 Windows에서는 메인 세션이 일을 흐름 11개로 쪼개 Claude 일꾼·제미나이(antigravity) 네온에게 동시에 맡기고 병합했다. 운영 기록 = [docs/plans/work-streams.md](../plans/work-streams.md), 설계 시안 = [docs/plans/2026-11-26/](../plans/2026-11-26/index.md), 실측 = [spikes-windows.md](../plans/2026-11-26/spikes-windows.md).
 - 표기: **[완료]** 코드·자동 시험 끝 · **[확인 남음]** 실제 화면 확인만 남음 · **[할 일]** · **[확인 필요]** 아직 사실 확인 안 한 가정
 
+> **2026-11-26 밤 맥 세션 결과(요약 — 자세한 것은 §2.1 각 결과)**
+> - 실기 확인: M12 판서·칠판 · M16 캡처 주석·핀·칩·잔상 · 원본 바이트 IPC(WKWebView 확인됨). 셸 실측: M9 AX 색인 48개 42 ms · M14 F2 창 48~161 ms · M15 녹화 4K 2초 47프레임 moov.
+> - 새로 만든 것: M9 `ax.rs` · M10 권한 스마트 흐름 · M14 `window_shot.rs` · M15 `recorder.rs` · M17 F키 한 줄 · M-sign 스크립트·안내.
+> - 고친 버그: 판서 뒤 커서 사라짐 · 옛 파일 이름 틀 · 맥 휠 한 칸 · 결과 섬 0.2초 사라짐 · 핀 혼합 배율 · 맥 "Ctrl+V" 표기 · 트레이 확대가 판서를 안 끝냄 · 결과 섬 중 Alt+1 = [판서로].
+> - 남은 맥 일(순서): ① 캡처 중 글 상자 한글 조합 버그(§2.1 M16) ② M13 실시간 확대(§2.1 설계 메모) ③ 서명한 `.app`에서 M9·M10·M14·M15 실기(인증서는 사람이 만듦, `mac-self-sign.md`) ④ 귀 투명 확인(M14) ⑤ §2.4 판서 엔진 확장·여러 모니터 주석 동기화.
+> - 개발 실행(`npm run app:dev`)은 권한이 터미널 앱 몫이다 — 손쉬운 사용이 없으면 A 근거·휠 가로채기가 안 된다.
+
 ---
 
 ## 0. 한눈에 — 오늘 들어온 것
@@ -123,6 +130,11 @@
 - 우리 섬·빨간 꺾쇠·정지 패널은 창 공유 끔이라 영상에 안 찍히고, 판서·확대 오버레이는 찍힌다. 빨간 꺾쇠 창도 맥에서는 포인트로 그 모니터를 덮게 고침(혼합 배율 어긋남 방지).
 - 실측(이 셸, `cargo test -p ink-platform-macos recorder::tests -- --include-ignored --nocapture`): 4K 주 모니터 2초 = 3840×2160 **프레임 47개 · 361 KB · 상자 ftyp/mdat/moov**(재생 가능). 영상은 바로 지웠다.
 - **[확인 남음]** 실제 앱 F3(범위·모니터·창 추적), 10분 녹화, 0.3초 즉시 중지 재생, 영상에 섬·꺾쇠 0 px, 녹화 중 판서가 영상에 남는지, 잠금·모니터 분리 자동 중지와 복구 섬.
+
+**M13 설계 메모(2026-11-26 밤, 코드 아직 없음 — 다음 세션이 이대로 짠다)**
+- 실측: 뒤에 있는(활성 아닌) 프로세스의 `CGDisplayHideCursor`는 **커서를 숨기지 못한다**(반환 0인데 스크린숏에 커서가 그대로). 우리 앱은 Space 넘어감을 막으려고 활성화하지 않으므로, Windows처럼 "시스템 커서 숨기고 확대된 커서만"을 하려면 비공개 연결 속성 `CGSSetConnectionProperty(_CGSDefaultConnection(), …, "SetsCursorInBackground", kCFBooleanTrue)` 뒤에 `CGDisplayHideCursor`가 필요하다(여러 맥 도구가 쓰는 방법 — 안 되면 두 커서가 보이는 것으로 물러난다). 따라가기(죽은 영역·0.35 추적) 때문에 확대 그림 속 커서와 진짜 커서 자리는 같지 않다 → 진짜 커서를 숨겨야 한다.
+- 구조(Windows `zoom_hud.rs` `HudMagnifier`와 같은 겉): ① 돋보기 창 = 테두리 없는 NSPanel(클릭 통과 `ignoresMouseEvents`, 창 공유 끔, 모든 Space, HUD·섬 아래 층) + CALayer — `SCStream`(그 디스플레이, **우리 앱 창 모두 제외** `excludingApplications:[me]` = R-ZOOM-4, `showsCursor = true`, 원래 해상도, 60 fps, BGRA) 프레임의 IOSurface를 `layer.contents`로, `update(source, scale)`는 `contentsRect` = (원본 − 모니터)/모니터 크기(정규화, CATransaction 애니메이션 끔) — Metal 없이 GPU 확대. ② HUD 웹뷰 창(`ink-zoom-hud`)은 맥에서도 만들고 `window::place`로 모니터를 덮는다. ③ 휠 = `CGEventTap`(scrollWheel, 손쉬운 사용 필요): Shift 없으면 삼키고 `zoom_input(Wheel{dy})`, Shift면 통과(R-ZOOM-2). 권한이 없으면 휠은 아래 앱으로 가고 배율은 시작 배율 그대로. ④ 틱 스레드는 Windows 것을 그대로(메인 스레드로 `tick_zoom`). ⑤ `start`는 첫 프레임까지(≤ 500 ms) 기다리고, `wait_hidden`은 창을 내린 뒤 CATransaction flush + 한 화면 갱신(약 17 ms).
+- 확인 거리: 4K 60 fps CPU·발열(M6과 같은 기준 1080p ≥ 30 fps), 커서 숨김이 끝난 뒤 꼭 돌아오는지(앱이 죽어도 — 커서 복구를 `Drop`·시스템 사건·종료 처리에), 확대 중 Option+1 이어받기(돋보기 숨김 → 캡처)에 확대 화면이 찍히지 않는지.
 
 ### 2.2 맥 트랙 원래 순서 — M9·M10·M17·M-sign
 - **M9 AX 요소 색인**(P0, 1.5일): 시안 [I-mac.md](../plans/2026-11-26/I-mac.md) §2.1. Windows UIA 일꾼(`ink-platform-windows/src/uia.rs`)과 MSAA 대체(`msaa.rs`)의 구조·시간 예산을 본보기로.

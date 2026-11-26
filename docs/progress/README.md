@@ -270,7 +270,7 @@
 | `M11` | 시스템 사건·지역 시각 | 맥 | 0.5 | 🟡 확인 남음 |  |
 | `M-drag` | 듀얼 모니터 넘어 끌기·섬 위치 | 맥 | 0.5 | ✅ 완료 |  |
 | `M12` | 맥 판서·칠판 확인(Alt+1·Alt+3, 웹뷰 판서·보관·복사) | 맥 | 0.5 | 🟡 확인 남음 | 2026-11-26 맥 실기(자동 입력): 판서·칠판·보관·복원·Cmd+C(원본 바이트 IPC)·Cmd+S·도형 제안·FHD 모니터 확인, 커서 사라짐·파일 이름 틀·휠 문턱 고침. 진입 p50 184 ms(목표 150 넘음), 사용자 눈 확인 남음(섬 문구·한글 IME·번쩍임) |
-| `M13` | 맥 실시간 확대(Magnifier 포트: SCStream → Metal) | 맥 | 1.5 | ⬜ 안 함 | R-ZOOM-1 맥 = SCStream → Metal. 지금 맥은 NoMagnifier(지원 안 함) |
+| `M13` | 맥 실시간 확대(Magnifier 포트: SCStream → Metal) | 맥 | 1.5 | ⬜ 안 함 | 설계 메모(인수인계 §2.1 M13): SCStream→CALayer contentsRect·CGEventTap 휠·비공개 커서 숨김(뒤 앱 CGDisplayHideCursor 안 됨 실측). 지금 맥은 NoMagnifier |
 | `M14` | 맥 F2 창 캡처(ScreenCaptureKit 창 한 장·보호 화면 판정) | 맥 | 0.5 | 🟡 확인 남음 | window_shot.rs SCK 창 하나 필터·미리 준비·대체 사슬, 실측 FHD 48 ms·4K 114~161 ms(셸). 귀 투명·앱 안 F2 흐름 확인 남음 |
 | `M15` | 맥 F3 녹화(Recorder 포트: SCStream + AVAssetWriter H.264) | 맥 | 1.5 | 🟡 확인 남음 | recorder.rs SCStream→AVAssetWriter H.264·모니터·범위·창 추적·마무리·복구 파일, 실측 4K 2초 47프레임 moov(셸). 앱 안 F3·10분·자동 중지 확인 남음, 마이크 없음 |
 | `M16` | 맥 캡처 주석·핀·결과 섬 칩·잔상 확인 | 맥 | 0.25 | 🟡 확인 남음 | 2026-11-26 맥 실기: 주석 3종·원본 바이트 합성·잔상·HEX 칩·[판서로] 71 ms·핀 확인, 결과 섬 0.2초 사라짐·핀 혼합 배율·⌘V 표기 고침. 남음: 캡처 중 한글 조합 안 됨(버그, 인수인계 §2.1) |
@@ -388,7 +388,7 @@
 - [~] `M10` 권한 스마트 흐름(화면 기록·손쉬운 사용) — 확인 남음 (단추 요청+설정 칸 열기·다시 시작·손쉬운 사용 1초 확인·풀림 감지·첫 실행 시트, 가짜 세계 시험 5. 서명한 .app 실기 남음)
 - [~] `M11` 시스템 사건·지역 시각 — 확인 남음
 - [~] `M12` 맥 판서·칠판 확인(Alt+1·Alt+3, 웹뷰 판서·보관·복사) — 확인 남음 (2026-11-26 맥 실기(자동 입력): 판서·칠판·보관·복원·Cmd+C(원본 바이트 IPC)·Cmd+S·도형 제안·FHD 모니터 확인, 커서 사라짐·파일 이름 틀·휠 문턱 고침. 진입 p50 184 ms(목표 150 넘음), 사용자 눈 확인 남음(섬 문구·한글 IME·번쩍임))
-- [ ] `M13` 맥 실시간 확대(Magnifier 포트: SCStream → Metal) — 안 함 (R-ZOOM-1 맥 = SCStream → Metal. 지금 맥은 NoMagnifier(지원 안 함))
+- [ ] `M13` 맥 실시간 확대(Magnifier 포트: SCStream → Metal) — 안 함 (설계 메모(인수인계 §2.1 M13): SCStream→CALayer contentsRect·CGEventTap 휠·비공개 커서 숨김(뒤 앱 CGDisplayHideCursor 안 됨 실측). 지금 맥은 NoMagnifier)
 - [~] `M14` 맥 F2 창 캡처(ScreenCaptureKit 창 한 장·보호 화면 판정) — 확인 남음 (window_shot.rs SCK 창 하나 필터·미리 준비·대체 사슬, 실측 FHD 48 ms·4K 114~161 ms(셸). 귀 투명·앱 안 F2 흐름 확인 남음)
 - [~] `M15` 맥 F3 녹화(Recorder 포트: SCStream + AVAssetWriter H.264) — 확인 남음 (recorder.rs SCStream→AVAssetWriter H.264·모니터·범위·창 추적·마무리·복구 파일, 실측 4K 2초 47프레임 moov(셸). 앱 안 F3·10분·자동 중지 확인 남음, 마이크 없음)
 - [~] `M16` 맥 캡처 주석·핀·결과 섬 칩·잔상 확인 — 확인 남음 (2026-11-26 맥 실기: 주석 3종·원본 바이트 합성·잔상·HEX 칩·[판서로] 71 ms·핀 확인, 결과 섬 0.2초 사라짐·핀 혼합 배율·⌘V 표기 고침. 남음: 캡처 중 한글 조합 안 됨(버그, 인수인계 §2.1))
