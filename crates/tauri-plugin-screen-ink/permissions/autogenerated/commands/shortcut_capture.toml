@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-shortcut-capture"
+description = "Enables the shortcut_capture command without any pre-configured scope."
+commands.allow = ["shortcut_capture"]
+
+[[permission]]
+identifier = "deny-shortcut-capture"
+description = "Denies the shortcut_capture command without any pre-configured scope."
+commands.deny = ["shortcut_capture"]
