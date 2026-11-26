@@ -1,0 +1,342 @@
+파일:줄,제안 키,지금 원문,바꿀 ko,바꿀 en,까닭,확인 필요 여부
+packages/ink-ui/src/lib/components/AnnotateLayer.svelte:394,capture.annotate.aria,캡처 주석,캡처 표시,Capture markup,어려운 말(주석→표시),아니오
+packages/ink-ui/src/lib/components/AnnotateLayer.svelte:415,capture.annotate.textAria,주석 글자,캡처 글자,Capture text,어려운 말(주석→캡처),아니오
+packages/ink-ui/src/lib/components/AnnotateOptions.svelte:99,capture.annotate.widthTitle,{label} {px}px · Ctrl+휠,{label} {px}px · {modCtrl}+휠,{label} {px}px · {modCtrl}+scroll,OS 혼용(Ctrl 고정 → 맥 ⌘ / Windows Ctrl 분기),아니오
+packages/ink-ui/src/lib/components/AnnotateOptions.svelte:117,capture.annotate.mosaicTitle,{label} {px}px · Ctrl+휠,{label} {px}px · {modCtrl}+휠,{label} {px}px · {modCtrl}+scroll,OS 혼용(Ctrl 고정 → 맥 ⌘ / Windows Ctrl 분기),아니오
+packages/ink-ui/src/lib/components/DrawCanvas.svelte:513,draw.canvas.aria,판서 화면,그리기 화면,Drawing screen,비범용어(판서→그리기) · 확인: 교사 친숙어 유지 여부,확인 필요
+packages/ink-ui/src/lib/components/DrawCanvas.svelte:531,draw.text.aria,판서 글자,그리기 글자,Drawing text,비범용어(판서→그리기) · 확인: 교사 친숙어 유지 여부,확인 필요
+packages/ink-ui/src/lib/components/Magnifier.svelte:69,capture.magnifier.aria,확대경,색 돋보기,Color loupe,어려운 말(확대경→색 돋보기),아니오
+packages/ink-ui/src/lib/components/Magnifier.svelte:94,capture.magnifier.copyHex,C 복사,C 색 복사,C copy color,모호한 말(무엇을 복사하는지 명시 · 6자 안쪽),아니오
+packages/ink-ui/src/lib/components/MakerCredit.svelte:28,app.credit.madeBy,Made by. 찰떡쌤,만든 이: 찰떡쌤,Made by ChaltteokSsaem,영어 섞임 + 문법 오류(by. 마침표) · 확인: 제작자 영문 표기,확인 필요
+packages/ink-ui/src/lib/components/MakerCredit.svelte:30,app.credit.copyright,© 2026 찰떡쌤. MIT License.,© 2026 찰떡쌤 · MIT 라이선스,© 2026 ChaltteokSsaem. MIT License.,영어 섞임 정제 · 확인: 제작자 영문 표기,확인 필요
+packages/ink-ui/src/lib/components/Row.svelte:71,common.later,후속,준비 중,Soon,내부 개발 용어(후속→준비 중),아니오
+packages/ink-ui/src/lib/components/Row.svelte:93,common.later,후속,준비 중,Soon,내부 개발 용어(후속→준비 중),아니오
+packages/ink-ui/src/lib/icons/icons.js:66,icon.draw,판서,화면 그리기,Draw on screen,비범용어(판서→화면 그리기) · 확인: 교사 친숙어 유지 여부,확인 필요
+packages/ink-ui/src/lib/icons/icons.js:102,icon.restore,직전 판서,이전 그리기,Last drawing,한자어·동의어 통일(직전→이전) + 비범용어(판서→그리기),확인 필요
+packages/ink-ui/src/lib/icons/icons.js:169,icon.magnet,모서리 자석,경계 자동 맞춤,Snap to edges,비유적 표현(모서리 자석→경계 자동 맞춤) · 확인: 감성 표현 유지 여부,확인 필요
+packages/ink-ui/src/lib/icons/icons.js:176,icon.moon,다크 모드,어두운 테마,Dark theme,영어 음차·모드 제거(다크 모드→어두운 테마),아니오
+packages/ink-ui/src/lib/icons/icons.js:226,icon.lock,보안 화면,보호 화면,Protected screen,용어 통일(보안 화면→보호 화면) · 확인: OS 보안 데스크톱/DRM 구분,확인 필요
+packages/ink-ui/src/lib/ink/inkEngine.js:229,draw.notice.cleared,판서를 모두 지웠어요,그린 내용을 모두 지웠어요,Cleared all drawings,비범용어(판서→그린 내용) · 섬 제목 13자,확인 필요
+packages/ink-ui/src/lib/ink/inkEngine.js:230,draw.notice.restored,이전 판서를 불러왔어요,이전 그리기를 불러왔어요,Restored last drawing,비범용어(판서→그리기) · 섬 제목 13자,확인 필요
+packages/ink-ui/src/lib/ink/inkEngine.js:231,draw.notice.rescaled,배율이 바뀌어 크기를 맞췄어요,화면 비율이 바뀌어 맞췄어요,Adjusted to display scaling,모호한 말(DPI 배율→화면 비율 · 줌 배율과 구분) · 섬 제목 15자,확인 필요
+packages/ink-ui/src/lib/ink/inkEngine.js:232,draw.notice.differentMonitor,다른 모니터라 불러올 수 없어요,다른 모니터라 못 불러와요,Saved on another monitor,길이 초과(섬 제목 17자→14자),아니오
+packages/ink-ui/src/lib/ink/inkEngine.js:866,draw.notice.withUndo,{notice} · {undo}로 원래 획,{notice} · {undo}로 원래 선,{notice} · {undo} to undo,어려운 말(획→선) + 길이(제목·보조 분리 권장: 보조 13자 안쪽),아니오
+packages/ink-ui/src/lib/ink/inkEngine.js:1579,draw.notice.withUndo,{notice} · {undo}로 원래 획,{notice} · {undo}로 원래 선,{notice} · {undo} to undo,어려운 말(획→선) + 길이(제목·보조 분리 권장: 보조 13자 안쪽),아니오
+packages/ink-ui/src/lib/ink/inkEngine.js:1582,draw.shape.suggestPrompt,{shapeTo} 바꿀까요? · Enter,{shapeTo} 바꿀까요?,Convert to {shape}?,길이 초과(섬 제목 20자→11자 · Enter는 버튼 키캡으로 분리),아니오
+packages/ink-ui/src/lib/models/captureToolbar.js:140,common.undo,실행 취소,되돌리기,Undo,동의어 통일(실행 취소→되돌리기 · 버튼 4자),아니오
+packages/ink-ui/src/lib/models/captureToolbar.js:141,common.redo,다시 실행,다시 하기,Redo,동의어 통일(다시 실행→다시 하기 · 버튼 5자),아니오
+packages/ink-ui/src/lib/models/cheatSheet.js:8,shortcut.slot.draw,판서,화면 그리기,Draw on screen,비범용어(판서→화면 그리기 · 메뉴 6자) · 확인: 교사 친숙어 유지 여부,확인 필요
+packages/ink-ui/src/lib/models/cheatSheet.js:13,shortcut.slot.restore,직전 판서 열기,이전 그리기 열기,Open last drawing,동의어 통일(직전→이전) + 비범용어(판서→그리기 · 메뉴 9자),확인 필요
+packages/ink-ui/src/lib/models/cheatSheet.js:84,cheatSheet.section.drawNow,판서 화면 — 지금,그리기 화면 — 지금,Drawing — now,비범용어(판서→그리기),확인 필요
+packages/ink-ui/src/lib/models/cheatSheet.js:92,cheatSheet.row.captureDetect,창 ↔ 요소 전환,창 ↔ 세부 영역,Window ↔ element,모호한 말(요소→세부 영역 · 메뉴 8자),아니오
+packages/ink-ui/src/lib/models/cheatSheet.js:102,cheatSheet.row.lastArea,직전 범위,방금 범위,Last area,한자어·동의어 통일(직전→방금),아니오
+packages/ink-ui/src/lib/models/cheatSheet.js:110,cheatSheet.row.recentArea,지난 범위,이전 범위,Previous area,동의어 통일(지난/최근→이전),아니오
+packages/ink-ui/src/lib/models/cheatSheet.js:130,cheatSheet.row.magnetPause,자석 잠시 끄기,맞춤 잠시 끄기,Pause edge snap,용어 통일(자석→맞춤) · 확인: 자석 비유 유지 여부,확인 필요
+packages/ink-ui/src/lib/models/cheatSheet.js:138,cheatSheet.row.zoomScale,배율 조절,확대·축소,Zoom in/out,한자어(배율 조절→확대·축소) · 확인: 배율 표현 유지 여부,확인 필요
+packages/ink-ui/src/lib/models/cheatSheet.js:139,cheatSheet.row.freezeAndDraw,멈추고 판서,멈추고 그리기,Freeze and draw,비범용어(판서→그리기),확인 필요
+packages/ink-ui/src/lib/models/cheatSheet.js:151,cheatSheet.section.drawNow,판서 화면 — 지금,그리기 화면 — 지금,Drawing — now,비범용어(판서→그리기),확인 필요
+packages/ink-ui/src/lib/models/cheatSheet.js:196,cheatSheet.row.redoShort,다시,다시 하기,Redo,동의어 통일(다시→다시 하기 · 모호함 해소),아니오
+packages/ink-ui/src/lib/models/islandQueue.js:283,island.tag.magnetOff,자석 끔,맞춤 끔,Snap off,용어 통일(자석→맞춤) · 확인: 자석 비유 유지 여부,확인 필요
+packages/ink-ui/src/lib/models/settingsMeta.js:10,settings.capture.element,UI 요소까지 찾기,세부 영역까지 찾기,Detect inner elements,개발자 영어·추상어(UI 요소→세부 영역),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:11,settings.capture.magnet,모서리 자석,경계 자동 맞춤,Snap to edges,비유적 표현(모서리 자석→경계 자동 맞춤) · 확인: 감성 표현 유지 여부,확인 필요
+packages/ink-ui/src/lib/models/settingsMeta.js:25,settings.draw.startZoom,첫 휠 배율,처음 확대 크기,Initial zoom,한자어·모호함(첫 휠 배율→처음 확대 크기) · 확인: 배율 유지 여부,확인 필요
+packages/ink-ui/src/lib/models/settingsMeta.js:42,settings.draw.shapeApply.suggest,물어보고 바꾸기,묻고 바꾸기,Ask first,길이 초과(세그먼트 버튼 8자→6자),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:43,settings.draw.esc.step,한 단계씩,하나씩 닫기,Step back,모호한 말(한 단계씩→하나씩 닫기 · 버튼 6자),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:44,settings.zoom.follow.pointer,마우스 위치대로,마우스 따라,Follow cursor,길이 초과(세그먼트 버튼 8자→6자),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:44,settings.zoom.follow.smoothFull,가운데로 부드럽게,가운데로,Smooth center,길이 초과(9자→4자 · DrawZoomPage와 통일),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:44,settings.zoom.follow.instantFull,가운데로 바로,바로 이동,Instant,길이 초과(7자→5자 · 모호함 해소),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:45,settings.general.theme.system,시스템 따라,기기 설정,System,쉬운 말·간결화(시스템 따라→기기 설정 · 버튼 5자),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:45,settings.general.theme.light,라이트,밝게,Light,영어 음차(라이트→밝게 · 버튼 2자),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:45,settings.general.theme.dark,다크,어둡게,Dark,영어 음차(다크→어둡게 · 버튼 3자),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:106,settings.draw.shapeOnHold.subAuto,0.5초 · Ctrl+Z = 원래 획,0.5초 · {undo}로 원래 선,0.5s · {undo} to revert,OS 혼용(Ctrl+Z 고정 → 맥 ⌘Z) + 어려운 말(획→선),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:121,notice.storage.msix,MSIX 패키지,스토어 앱,Store app,개발자 약어(MSIX 패키지→스토어 앱),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:121,notice.storage.portable,포터블,무설치판,Portable,영어 외래어(포터블→무설치판),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:121,notice.storage.installed,설치,설치판,Installed,용어 대칭 통일(설치→설치판 · 무설치판과 짝),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:138,firstRun.conflict.powertoysAot,{app}에서 '항상 위'를 끄면 Alt+Shift+D를 써요,{app} ‘항상 위’를 끄면 Alt+Shift+D 사용 가능,Turn off Always on Top in {app} to use Alt+Shift+D,장문 축소(34자→29자 · 배너 한 줄 넘침 방지),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:149,firstRun.conflict.appMulti,{keys} 키 {n}개는 {app}{이/가} 쓰고 있어요,{app}에서 {keys} 등 {n}개를 쓰고 있어요,{app} is using {keys} ({n} keys),문장 통일(shortcuts.rs ‘{owner}에서’ 일치 · 조사 분기 제거 + 축약),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:149,firstRun.conflict.appSingle,{key} 키는 {app}{이/가} 쓰고 있어요,{app}에서 {key} 키를 쓰고 있어요,{app} is using {key},문장 통일(shortcuts.rs ‘{owner}에서’ 일치 · 조사 분기 제거),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:154,firstRun.conflict.appOverflow,{keys} 외 {extra}개는 {app}{이/가} 쓰고 있어요,{app}에서 {keys} 외 {extra}개를 쓰고 있어요,{app} is using {keys} and {extra} more,문장 통일(조사 분기 제거 + 배너 한 줄 정제),아니오
+packages/ink-ui/src/lib/models/settingsMeta.js:156,firstRun.conflict.appCountOnly,키 {n}개는 {app}{이/가} 쓰고 있어요,{app}에서 키 {n}개를 쓰고 있어요,{app} is using {n} keys,문장 통일(조사 분기 제거),아니오
+packages/ink-ui/src/lib/models/shortcutDisplay.js:65,settings.shortcuts.conflict.appMulti,{app}{이/가} {keys} 키 {n}개를 먼저 쓰고 있어요,{app}에서 {keys} 등 {n}개를 쓰고 있어요,{app} is already using {keys} ({n} keys),문장 통일(조사 분기 제거 + 장문 축소 35자→25자),아니오
+packages/ink-ui/src/lib/models/shortcutDisplay.js:68,settings.shortcuts.conflict.appSingle,{app}{이/가} {key} 키를 먼저 쓰고 있어요,{app}에서 {key} 키를 쓰고 있어요,{app} is already using {key},문장 통일(조사 분기 제거 + 축약),아니오
+packages/ink-ui/src/lib/models/shortcutDisplay.js:79,settings.shortcuts.conflict.appOverflow,{app}{이/가} {keys} 외 {extra}개를 먼저 쓰고 있어요,{app}에서 {keys} 외 {extra}개를 쓰고 있어요,{app} is already using {keys} and {extra} more,문장 통일(조사 분기 제거 + 장문 축소 39자→27자),아니오
+packages/ink-ui/src/lib/models/shortcutDisplay.js:88,settings.shortcuts.conflict.appCountOnly,{app}{이/가} 키 {n}개를 먼저 쓰고 있어요,{app}에서 키 {n}개를 쓰고 있어요,{app} is already using {n} keys,문장 통일(조사 분기 제거 + 축약),아니오
+packages/ink-ui/src/lib/models/shortcutDisplay.js:111,settings.shortcuts.recordingHint,키를 누르세요 · Esc 취소,새 키를 눌러요 · Esc 취소,Press new keys · Esc to cancel,말투 통일(누르세요→눌러요 · PRD R2-KEY-REC-5 일치),아니오
+packages/ink-ui/src/lib/models/template.js:11,settings.output.template.errEmpty,파일 이름을 입력하세요,파일 이름을 써 주세요,Enter a file name,말투 통일(입력하세요→써 주세요),아니오
+packages/ink-ui/src/lib/screens/CapturePage.svelte:203,settings.capture.section.smart,스마트 인식,자동 영역 인식,Auto detection,모호한 외래어(스마트→자동 영역),아니오
+packages/ink-ui/src/lib/screens/CapturePage.svelte:205,settings.capture.element,UI 요소까지 찾기,세부 영역까지 찾기,Detect inner elements,개발자 영어·추상어(UI 요소→세부 영역),아니오
+packages/ink-ui/src/lib/screens/CapturePage.svelte:205,settings.capture.element.sub,끄면 창 단위만,끄면 창 전체만 찾아요,Windows only when off,개발자 말(창 단위→창 전체) + 해요 말투,아니오
+packages/ink-ui/src/lib/screens/CapturePage.svelte:208,settings.capture.element,UI 요소까지 찾기,세부 영역까지 찾기,Detect inner elements,개발자 영어·추상어(UI 요소→세부 영역),아니오
+packages/ink-ui/src/lib/screens/CapturePage.svelte:212,settings.capture.magnet,모서리 자석,경계 자동 맞춤,Snap to edges,비유적 표현(모서리 자석→경계 자동 맞춤) · 확인: 감성 표현 유지 여부,확인 필요
+packages/ink-ui/src/lib/screens/CapturePage.svelte:212,settings.capture.magnet.sub,Alt를 누르는 동안 끔,{modAlt} 누르는 동안 끔,Hold {modAlt} to pause,OS 혼용(Alt 고정 → 맥 ⌥ / Windows Alt 분기),아니오
+packages/ink-ui/src/lib/screens/CapturePage.svelte:215,settings.capture.magnet,모서리 자석,경계 자동 맞춤,Snap to edges,비유적 표현(모서리 자석→경계 자동 맞춤) · 확인: 감성 표현 유지 여부,확인 필요
+packages/ink-ui/src/lib/screens/CapturePage.svelte:231,settings.capture.excluded.autoChip,느림 · 창 단위 자동,느림 · 창만 찾기,Slow · windows only,개발자 말(창 단위 자동→창만 찾기) + 축약,아니오
+packages/ink-ui/src/lib/screens/CapturePage.svelte:235,settings.capture.excluded.inputAria,제외할 실행 파일 이름,제외할 앱 이름,App name to exclude,개발자 말(실행 파일→앱 이름) + OS 호환,아니오
+packages/ink-ui/src/lib/screens/CapturePage.svelte:236,settings.capture.excluded.placeholder,app.exe,Win: app.exe / 맥: 앱 이름,Win: app.exe / Mac: App name,OS 혼용(.exe 고정 · macOS에 .exe 없음) · 확인: 코드 검증 연동,확인 필요
+packages/ink-ui/src/lib/screens/CapturePage.svelte:263,settings.record.fps.aria,녹화 초당 프레임,녹화 부드러움(초당 프레임),Recording frame rate,기술어 보조(초당 프레임 → 부드러움 병기),아니오
+packages/ink-ui/src/lib/screens/CapturePage.svelte:306,settings.record.micSheet.desc,녹화에 함께 담을 마이크 장치를 고르세요.,녹화에 넣을 마이크를 골라요,Choose a microphone to record,"말투 통일(고르세요.→골라요, 마침표 제거) + 군더더기 축소",아니오
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:59,settings.tab.draw,판서·확대,그리기·확대,Draw & zoom,비범용어(판서→그리기 · 탭 6자) · 확인: 교사 친숙어 유지 여부,확인 필요
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:85,settings.draw.width.sub,Ctrl+휠,{modCtrl}+휠,{modCtrl}+scroll,OS 혼용(Ctrl 고정 → 맥 ⌘ / Windows Ctrl 분기),아니오
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:143,settings.draw.shapeApply.suggest,물어보고 바꾸기,묻고 바꾸기,Ask first,길이 초과(세그먼트 버튼 8자→6자),아니오
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:153,settings.draw.section.draw,판서,화면 그리기,Drawing,비범용어(판서→화면 그리기) · 확인: 교사 친숙어 유지 여부,확인 필요
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:155,settings.draw.startZoom,첫 휠 배율,처음 확대 크기,Initial zoom,한자어·모호함(첫 휠 배율→처음 확대 크기) · 확인: 배율 유지 여부,확인 필요
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:157,settings.draw.startZoom,첫 휠 배율,처음 확대 크기,Initial zoom,한자어·모호함(첫 휠 배율→처음 확대 크기) · 확인: 배율 유지 여부,확인 필요
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:170,settings.draw.keep.sub,Alt+Shift+1로 다시 열기,{restoreKey}로 다시 열기,Reopen with {restoreKey},OS 혼용(Alt+Shift+1 고정 → 맥 ⌥⇧1 및 사용자 키 반영),아니오
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:182,settings.draw.esc.step,한 단계씩,하나씩 닫기,Step back,모호한 말(한 단계씩→하나씩 닫기 · 버튼 6자),아니오
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:188,settings.draw.rightClickPan.sub,손 모드 · 아니면 끝내기,화면 옮기기 · 확대 전엔 끝내기,Drag to move · else exit,어려운 말(손 모드→화면 옮기기) + 조건 명확화,아니오
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:232,settings.zoom.follow.pointer,마우스 위치대로,마우스 따라,Follow cursor,길이 초과(세그먼트 버튼 8자→6자),아니오
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:234,settings.zoom.follow.instant,바로,바로 이동,Instant,모호한 말(바로→바로 이동 · 버튼 5자),아니오
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:60,shortcut.slot.draw,판서,화면 그리기,Draw on screen,비범용어(판서→화면 그리기 · 메뉴 6자) · 확인: 교사 친숙어 유지 여부,확인 필요
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:60,firstRun.card.drawHint,멈추고 쓰기,화면 위에 써요,Draw on screen,어미 통일(알아서 찾아요와 ~해요 짝맞춤) + 의미 명확화,아니오
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:61,firstRun.card.zoomHint,움직이는 그대로,움직이며 키워요,Zoom live screen,어미 통일(알아서 찾아요와 ~해요 짝맞춤),아니오
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:100,firstRun.subtitle,트레이에 있다가 단축키를 누르면 나타나요,맥: 메뉴 막대에 있다가 단축키로 켜져요 / Win: 작업 표시줄에 있다가 단축키로 켜져요,Lives in menu bar / taskbar until you press a shortcut,OS 혼용·개발자 말(트레이 → 메뉴 막대 / 작업 표시줄),아니오
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:136,firstRun.perm.screenRevoked,업데이트 뒤 화면 기록 권한을 다시 켜야 해요,화면 기록 권한을 다시 켜요,Re-enable Screen Recording,길이 초과(섬 제목 25자→15자 · 업데이트 사유는 보조로),아니오
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:139,firstRun.perm.relaunch,켰으면 다시 시작,다시 시작,Restart,길이 초과(버튼 9자→5자),아니오
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:139,firstRun.perm.openScreen,화면 기록 켜기,권한 켜기,Open settings,길이 초과(버튼 8자→5자),아니오
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:168,firstRun.fkey.conflictHint,F1·F2·F3을 쓰는 동안 다른 앱의 도움말·이름 바꾸기·찾기가 막혀요,F1~F3 사용 중엔 다른 앱의 F1~F3이 안 먹혀요,Other apps’ F1–F3 shortcuts pause while active,장문 축소(40자→26자 · 배너 nowrap 잘림 방지),아니오
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:175,firstRun.fkey.macFnHint,F 키는 fn과 함께 눌러요 · fn 없이 쓰려면 키보드 설정에서 ‘표준 기능 키’를 켜요,맥 F키는 fn과 함께 · 시스템 설정 › 키보드에서 변경,Press fn with F keys · change in System Settings › Keyboard,장문 축소(50자→29자) + macOS 공식 명칭(시스템 설정 › 키보드),아니오
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:181,firstRun.cheatHint,모드 안에서 언제든 단축키 한 장,사용 중 언제든 단축키 보기,View shortcuts anytime,기술어 제거(모드 안에서→사용 중),아니오
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:189,firstRun.btn.changeShortcuts,단축키 바꾸기,키 바꾸기,Edit keys,길이 초과(버튼 7자→5자 · ShortcutsPage와 통일),아니오
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:96,settings.general.theme.system,시스템 따라,기기 설정,System,쉬운 말·간결화(시스템 따라→기기 설정 · 버튼 5자),아니오
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:97,settings.general.theme.light,라이트,밝게,Light,영어 음차(라이트→밝게 · 버튼 2자),아니오
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:98,settings.general.theme.dark,다크,어둡게,Dark,영어 음차(다크→어둡게 · 버튼 3자),아니오
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:120,settings.general.autostart.sub,트레이에만 조용히,맥: 메뉴 막대에만 조용히 / Win: 작업 표시줄에만 조용히,Quietly in menu bar / taskbar,OS 혼용·개발자 말(트레이 → 맥 메뉴 막대 / Windows 작업 표시줄),아니오
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:208,settings.general.data.log,로그,진단 기록,Diagnostic logs,개발자 말(로그→진단 기록),아니오
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:233,settings.general.importSheet.descChanges,지금 설정과 다른 항목만 아래에 모았어요.,지금 설정과 다른 항목만 모았어요,Only changed settings are shown below,말투·문장부호 통일(마침표 제거 + 축약),아니오
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:233,settings.general.importSheet.descEmpty,지금 설정과 내용이 같아요.,지금 설정과 같아요,Matches your current settings,말투·문장부호 통일(마침표 제거 + 축약),아니오
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:280,settings.general.resetSheet.desc,바꾼 단축키와 설정이 모두 기본값으로 돌아가요.,단축키와 설정이 모두 기본값으로 돌아가요,All shortcuts and settings reset to defaults,말투·문장부호 통일(마침표 제거 + 축약),아니오
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:41,settings.tab.draw,판서·확대,그리기·확대,Draw & zoom,비범용어(판서→그리기 · 탭 6자) · 확인: 교사 친숙어 유지 여부,확인 필요
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:194,settings.banner.readonly,다른 버전이 만든 설정이라 바꿔도 저장하지 않아요,새 버전 설정이라 읽기 전용이에요,Read-only: created by a newer version,장문 축소(27자→18자),아니오
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:228,settings.info.oss,오픈소스 고지,오픈소스 안내,Open-source notices,행정·법률어(고지→안내),아니오
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:232,settings.info.section.network,연결,업데이트,Updates,모호한 내부 용어(연결→업데이트),아니오
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:232,settings.info.tag.v2,2차,준비 중,Soon,내부 개발 로드맵 노출(2차→준비 중),아니오
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:234,settings.info.telemetry,통계·자동 업데이트,자동 업데이트·통계,Updates & usage stats,사용자 관심 순서 재배치(업데이트 우선),아니오
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:234,settings.info.telemetry.sub,1차 버전에서는 꺼져 있어요,지금 버전에서는 꺼져 있어요,Off in this version,내부 개발 로드맵 노출(1차 버전→지금 버전),아니오
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:120,shortcut.slot.draw,판서,화면 그리기,Draw on screen,비범용어(판서→화면 그리기 · 메뉴 6자) · 확인: 교사 친숙어 유지 여부,확인 필요
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:184,shortcut.slot.restore,직전 판서 열기,이전 그리기 열기,Open last drawing,동의어 통일(직전→이전) + 비범용어(판서→그리기 · 메뉴 9자),확인 필요
+packages/ink-client/src/index.js:334,shortcut.group.drawMode,판서 화면 안,그리기 화면 안,While drawing,비범용어(판서→그리기),확인 필요
+packages/ink-client/src/fake.js:23,island.hint.activeWindow,활성 창,현재 창,Current window,전문 번역투(활성 창→현재 창),아니오
+packages/ink-client/src/fake.js:29,draw.notice.restored,이전 판서를 불러왔어요,이전 그리기를 불러왔어요,Restored last drawing,비범용어(판서→그리기) · 섬 제목 13자,확인 필요
+packages/ink-client/src/fake.js:29,draw.notice.rescaled,배율이 바뀌어 크기를 맞췄어요,화면 비율이 바뀌어 맞췄어요,Adjusted to display scaling,모호한 말(DPI 배율→화면 비율 · 줌 배율과 구분) · 섬 제목 15자,확인 필요
+packages/ink-client/src/fake.js:29,draw.notice.differentMonitor,다른 모니터라 불러올 수 없어요,다른 모니터라 못 불러와요,Saved on another monitor,길이 초과(섬 제목 17자→14자),아니오
+packages/ink-client/src/fake.js:29,island.draw.noKept,불러올 판서가 없어요,불러올 그리기가 없어요,No saved drawing,비범용어(판서→그리기),확인 필요
+packages/ink-client/src/fake.js:98,shortcut.rule.plainKeyGlobal,글자 하나는 전역 키로 쓸 수 없어요,글자 하나는 어디서나 키로 못 써요,Single keys can’t be used anywhere,개발자 말(전역→어디서나),아니오
+packages/ink-client/src/fake.js:147,island.draw.restoreHint,{key} 이전 판서,{key} 이전 그리기,{key} last drawing,비범용어(판서→그리기),확인 필요
+packages/ink-client/src/fake.js:149,island.draw.title,판서 · {tool},그리기 · {tool},Draw · {tool},비범용어(판서→그리기),확인 필요
+packages/ink-client/src/fake.js:155,island.draw.keptWithKey,판서를 보관했어요 · {key},그리기를 보관했어요,Drawing saved,비범용어(판서→그리기) + 길이 초과(23자→10자 · {key}는 키캡 분리),확인 필요
+packages/ink-client/src/fake.js:155,island.draw.kept,판서를 보관했어요,그리기를 보관했어요,Drawing saved,비범용어(판서→그리기),확인 필요
+packages/ink-client/src/fake.js:183,island.hint.zoomScale,배율,확대·축소,Zoom,한자어(배율→확대·축소) · 확인: 배율 표현 유지 여부,확인 필요
+packages/ink-client/src/fake.js:226,island.capture.toDraw,판서로,그리기로,Draw,비범용어(판서로→그리기로 · 버튼 4자),확인 필요
+packages/ink-client/src/fake.js:231,error.settings.unknown,모르는 설정: {path},없는 설정이에요: {path},Unknown setting: {path},말투 통일(반말→해요) + settings.rs와 통일,아니오
+packages/ink-client/src/fake.js:249,island.settings.shortcutCleared,비웠어요 · 트레이 메뉴로 시작할 수 있어요,비웠어요 · 앱 메뉴에서 실행,Cleared · open from app menu,OS 혼용·개발자 말(트레이) + 길이 초과(섬 제목 24자→15자 · 보조로 OS 메뉴 안내),아니오
+packages/ink-client/src/fake.js:284,island.settings.reset,처음 상태로 되돌렸어요,기본값으로 되돌렸어요,Reset to defaults,용어 통일(처음 상태→기본값 · 섬 제목 12자),아니오
+packages/ink-client/src/fake.js:366,island.capture.pasteHint,한글·PPT에 Ctrl+V,문서·발표에 {paste},Paste with {paste},OS 혼용(Ctrl+V 고정 → 맥 ⌘V) + 문화권·앱 범용화 · 확인: 한글·PPT 유지 여부,확인 필요
+packages/ink-client/src/fake.js:472,island.capture.pasteHint,한글·PPT에 Ctrl+V,문서·발표에 {paste},Paste with {paste},OS 혼용(Ctrl+V 고정 → 맥 ⌘V) + 문화권·앱 범용화 · 확인: 한글·PPT 유지 여부,확인 필요
+packages/ink-client/src/fake.js:510,island.draw.noCapture,판서로 넘길 캡처가 없어요,그리기로 넘길 캡처가 없어요,No capture to draw on,비범용어(판서→그리기),확인 필요
+crates/ink-app/src/capture.rs:405,island.capture.excludedAuto,‘{exe}’는 창 단위로만 찾을게요,{exe}는 창만 찾아요,Windows only for {exe},개발자 말(창 단위) + 길이 초과(섬 제목 20자+→14자 안쪽),아니오
+crates/ink-app/src/capture.rs:508,island.capture.toDraw,판서로,그리기로,Draw,비범용어(판서로→그리기로 · 버튼 4자),확인 필요
+crates/ink-app/src/capture.rs:521,island.capture.clipboardError,클립보드를 쓸 수 없어요,복사하지 못했어요,Couldn't copy,개발자 말(클립보드→복사) · 확인: 기술 원인 구분 필요 여부,확인 필요
+crates/ink-app/src/capture.rs:539,island.capture.pasteHint,한글·PPT에 {paste},문서·발표에 {paste},Paste with {paste},비범용 문화권 표현(한글·PPT→문서·발표) · 확인: 한국어 교사 맞춤 유지 여부,확인 필요
+crates/ink-app/src/capture.rs:670,island.capture.clipboardError,클립보드를 쓸 수 없어요,복사하지 못했어요,Couldn't copy,개발자 말(클립보드→복사) · 확인: 기술 원인 구분 필요 여부,확인 필요
+crates/ink-app/src/capture.rs:734,island.capture.clipboardError,클립보드를 쓸 수 없어요,복사하지 못했어요,Couldn't copy,개발자 말(클립보드→복사) · 확인: 기술 원인 구분 필요 여부,확인 필요
+crates/ink-app/src/draw.rs:385,island.draw.title,판서 · {tool},그리기 · {tool},Draw · {tool},비범용어(판서→그리기),확인 필요
+crates/ink-app/src/draw.rs:600,island.draw.noCapture,판서로 넘길 캡처가 없어요,그리기로 넘길 캡처가 없어요,No capture to draw on,비범용어(판서→그리기),확인 필요
+crates/ink-app/src/draw.rs:636,island.security,보안 화면에서는 쓸 수 없어요,보호된 화면에선 못 써요,Unavailable on protected screens,용어 통일(보안→보호된 화면) + 섬 제목 축약(16자→13자) · 확인: UAC/DRM 구분,확인 필요
+crates/ink-app/src/draw.rs:722,island.draw.openError,판서 화면을 띄우지 못했어요,그리기 화면을 열지 못했어요,Couldn't open drawing screen,비범용어(판서→그리기) + 쉬운 동사(띄우다→열다),확인 필요
+crates/ink-app/src/draw.rs:782,island.draw.displayChanged,화면 구성이 바뀌어 판서를 닫았어요,화면이 바뀌어 그리기를 껐어요,Drawing closed: display changed,개발자 말(화면 구성) + 비범용어(판서) + 길이 초과(19자→16자),확인 필요
+crates/ink-app/src/draw.rs:831,island.draw.keptWithKey,판서를 보관했어요 · {key},그리기를 보관했어요,Drawing saved,비범용어(판서→그리기) + 길이 초과(23자→10자 · {key}는 키캡 분리),확인 필요
+crates/ink-app/src/draw.rs:832,island.draw.kept,판서를 보관했어요,그리기를 보관했어요,Drawing saved,비범용어(판서→그리기),확인 필요
+crates/ink-app/src/draw.rs:884,island.draw.noKept,불러올 판서가 없어요,불러올 그리기가 없어요,No saved drawing,비범용어(판서→그리기),확인 필요
+crates/ink-app/src/draw.rs:916,island.capture.pasteHint,한글·PPT에 {paste},문서·발표에 {paste},Paste with {paste},비범용 문화권 표현(한글·PPT→문서·발표) · 확인: 한국어 교사 맞춤 유지 여부,확인 필요
+crates/ink-app/src/draw.rs:924,island.capture.clipboardError,클립보드를 쓸 수 없어요,복사하지 못했어요,Couldn't copy,개발자 말(클립보드→복사) · 확인: 기술 원인 구분 필요 여부,확인 필요
+crates/ink-app/src/draw.rs:949,island.draw.restoreHint,{key} 이전 판서,{key} 이전 그리기,{key} last drawing,비범용어(판서→그리기),확인 필요
+crates/ink-app/src/live_zoom.rs:180,island.security,보안 화면에서는 쓸 수 없어요,보호된 화면에선 못 써요,Unavailable on protected screens,용어 통일(보안→보호된 화면) + 섬 제목 축약(16자→13자) · 확인: UAC/DRM 구분,확인 필요
+crates/ink-app/src/live_zoom.rs:199,island.zoom.unsupported,이 컴퓨터에서는 실시간 확대를 아직 쓸 수 없어요,실시간 확대를 지원하지 않아요,Live zoom isn’t supported here,길이 초과(섬 제목 27자→16자),아니오
+crates/ink-app/src/live_zoom.rs:199,island.zoom.startError,실시간 확대를 시작하지 못했어요,확대를 시작하지 못했어요,Couldn't start live zoom,길이 초과(섬 제목 17자→13자),아니오
+crates/ink-app/src/live_zoom.rs:309,island.zoom.displayChanged,화면 구성이 바뀌어 확대를 끝냈어요,화면이 바뀌어 확대를 끝냈어요,Zoom ended: display changed,개발자 말(화면 구성→화면) + 길이 초과(섬 제목 19자→16자),아니오
+crates/ink-app/src/live_zoom.rs:348,island.hint.zoomScale,배율,확대·축소,Zoom,한자어(배율→확대·축소) · 확인: 배율 표현 유지 여부,확인 필요
+crates/ink-app/src/quick.rs:41,island.security,보안 화면에서는 쓸 수 없어요,보호된 화면에선 못 써요,Unavailable on protected screens,용어 통일(보안→보호된 화면) + 섬 제목 축약(16자→13자) · 확인: UAC/DRM 구분,확인 필요
+crates/ink-app/src/quick.rs:54,island.capture.noRecent,지난 범위가 없어요,이전 범위가 없어요,No previous area,동의어 통일(지난→이전),아니오
+crates/ink-app/src/record.rs:208,island.record.unsupported,이 컴퓨터에서는 아직 녹화할 수 없어요,화면 녹화를 지원하지 않아요,Recording isn’t supported here,길이 초과(섬 제목 21자→15자),아니오
+crates/ink-app/src/record.rs:228,island.record.unsupported,이 컴퓨터에서는 아직 녹화할 수 없어요,화면 녹화를 지원하지 않아요,Recording isn’t supported here,길이 초과(섬 제목 21자→15자),아니오
+crates/ink-app/src/record.rs:228,island.record.codecError,녹화를 시작할 수 없어요(코덱),녹화를 시작하지 못했어요,Couldn't start recording,개발자 말(코덱 제거) + 길이 초과(섬 제목 17자→13자) · 확인: 원인 표기 여부,확인 필요
+crates/ink-app/src/record.rs:252,island.record.firstHint,판서는 영상에 함께 · 이 알약은 안 찍혀요,그리기도 녹화 · 안내는 제외,Drawings recorded · bar hidden,비범용어(판서) + 내부 은어(알약) + 길이 초과(섬 제목 24자→15자),확인 필요
+crates/ink-app/src/record.rs:264,island.record.micPending,마이크 녹음은 아직 준비 중이에요,마이크 녹음은 준비 중이에요,Mic recording coming soon,길이 초과(섬 제목 18자→15자),아니오
+crates/ink-app/src/record.rs:338,island.record.finalizeError,{prefix}녹화를 마무리하지 못했어요,녹화를 마무리하지 못했어요,Couldn't finish recording,길이 초과(접두 결합 시 24자+ → 제목 14자 고정 · 사유는 보조로 분리),아니오
+crates/ink-app/src/record.rs:349,island.record.savedPictures,사진 폴더에 ,사진 폴더에 저장했어요,Saved to Pictures,어순 조각 제거(접두 결합→완전 문장 · 섬 제목 12자),아니오
+crates/ink-app/src/record.rs:350,island.record.saved,{prefix}{place}녹화를 저장했어요,녹화를 저장했어요,Recording saved,길이 초과(접두+장소 결합 시 28자+ → 제목 9자 고정 · 사유/폴더는 보조로 분리),아니오
+crates/ink-app/src/record.rs:357,island.record.moveError,{prefix}녹화를 옮기지 못했어요,녹화를 옮기지 못했어요,Couldn't move recording,길이 초과(접두 결합 시 22자+ → 제목 12자 고정 · 사유는 보조로 분리),아니오
+crates/ink-app/src/record.rs:405,island.record.reason.lock,화면이 잠겨,화면 잠김,Screen locked,보조 사유 명사형 간결화(제목 접두 결합 해제),아니오
+crates/ink-app/src/record.rs:406,island.record.reason.suspend,절전에 들어가,절전 전환,System sleep,보조 사유 명사형 간결화(제목 접두 결합 해제),아니오
+crates/ink-app/src/record.rs:411,island.record.reason.display,화면 구성이 바뀌어,화면이 바뀜,Display changed,개발자 말(화면 구성→화면) + 보조 사유 명사형 간결화,아니오
+crates/ink-app/src/record.rs:442,island.record.codecError,녹화를 시작할 수 없어요(코덱),녹화를 시작하지 못했어요,Couldn't start recording,개발자 말(코덱 제거) + 길이 초과(섬 제목 17자→13자) · 확인: 원인 표기 여부,확인 필요
+crates/ink-app/src/record.rs:445,island.record.reason.windowClosed,창이 닫혀,창 닫힘,Window closed,보조 사유 명사형 간결화(제목 접두 결합 해제),아니오
+crates/ink-app/src/record.rs:445,island.record.reason.stalled,녹화가 멈춰,녹화 중단,Recording stalled,보조 사유 명사형 간결화(제목 접두 결합 해제),아니오
+crates/ink-app/src/record.rs:464,island.record.unfinished.one,끝나지 않은 녹화가 있어요,저장 못 한 녹화가 있어요,1 unsaved recording found,모호한 말(끝나지 않은→저장 못 한 · 섬 제목 13자),아니오
+crates/ink-app/src/record.rs:464,island.record.unfinished.other,끝나지 않은 녹화가 {n}개 있어요,저장 못 한 녹화가 {n}개예요,{n} unsaved recordings found,모호한 말(끝나지 않은→저장 못 한) + 길이 초과(섬 제목 19자→15자),아니오
+crates/ink-app/src/record.rs:508,island.record.unfinishedDeleted,끝나지 않은 녹화를 지웠어요,저장 못 한 녹화를 지웠어요,Deleted unsaved recordings,모호한 말(끝나지 않은→저장 못 한 · 섬 제목 14자),아니오
+crates/ink-app/src/service.rs:139,island.hint.activeWindow,활성 창,현재 창,Current window,전문 번역투(활성 창→현재 창),아니오
+crates/ink-app/src/service.rs:376,firstRun.perm.screenRevoked,업데이트 뒤 화면 기록 권한을 다시 켜야 해요,화면 기록 권한을 다시 켜요,Re-enable Screen Recording,길이 초과(섬 제목 25자→15자 · 업데이트 사유는 보조로),아니오
+crates/ink-app/src/service.rs:376,firstRun.perm.openScreen,화면 기록 켜기,권한 켜기,Open settings,길이 초과(버튼 8자→5자),아니오
+crates/ink-app/src/service.rs:383,island.perm.screenDetail,누르면 켜는 칸을 바로 열어 드려요,누르면 설정 화면을 바로 열어요,Opens the permission setting,모호한 말(켜는 칸→설정 화면) + 말투 통일(열어 드려요→열어요),아니오
+crates/ink-app/src/service.rs:564,island.settings.shortcutCleared,비웠어요 · 트레이 메뉴로 시작할 수 있어요,비웠어요 · 앱 메뉴에서 실행,Cleared · open from app menu,OS 혼용·개발자 말(트레이) + 길이 초과(섬 제목 24자→15자 · 보조로 OS 메뉴 안내),아니오
+crates/ink-app/src/service.rs:624,island.settings.shortcutsRestoredPartial,기본값으로 되돌렸어요 · {n}개는 겹쳐서 그대로예요,기본값 복원 · {n}개는 겹침,Defaults restored · {n} conflicted,길이 초과(섬 제목 29자→15자 · 상세는 보조로 분리 권장),아니오
+crates/ink-app/src/service.rs:660,island.hotkeys.onSome,단축키를 켰어요 · {n}개는 다른 앱이 쓰고 있어요,단축키 켜짐 · {n}개 겹침,Shortcuts on · {n} in use,길이 초과(섬 제목 29자→13자 · 선반영 ko.json/en.json 축약 권장),아니오
+crates/ink-app/src/service.rs:815,island.security,보안 화면에서는 쓸 수 없어요,보호된 화면에선 못 써요,Unavailable on protected screens,용어 통일(보안→보호된 화면) + 섬 제목 축약(16자→13자) · 확인: UAC/DRM 구분,확인 필요
+crates/ink-app/src/service.rs:895,island.capture.openError,캡처 화면을 띄우지 못했어요,캡처 화면을 열지 못했어요,Couldn't open capture screen,쉬운 동사(띄우다→열다),아니오
+crates/ink-app/src/service.rs:918,island.perm.axChip,요소까지 잡기 · 손쉬운 사용 켜기,세부 인식 켜기,Enable element detect,길이 초과(칩 버튼 19자→8자 · 공백 제외 6자) + 모호한 말(요소→세부 인식) · 확인: 6자 칩 축약 시 맥락 유지,확인 필요
+crates/ink-app/src/service.rs:993,island.capture.displayChanged,화면 구성이 바뀌어 캡처를 닫았어요,화면이 바뀌어 캡처를 닫았어요,Capture closed: display changed,개발자 말(화면 구성→화면) + 길이 초과(섬 제목 19자→16자),아니오
+crates/ink-app/src/service.rs:1124,island.settings.importedWithConflicts,설정을 가져왔어요 · 단축키 {n}개는 겹쳐요,설정 가져옴 · 키 {n}개 겹침,Settings imported · {n} conflicts,길이 초과(섬 제목 25자→15자),아니오
+crates/ink-app/src/service.rs:1145,island.settings.reset,처음 상태로 되돌렸어요,기본값으로 되돌렸어요,Reset to defaults,용어 통일(처음 상태→기본값 · 섬 제목 12자),아니오
+crates/ink-app/src/window_capture.rs:85,island.window.noActive,활성 창이 없어요,현재 창이 없어요,No active window,전문 번역투(활성 창→현재 창),아니오
+crates/ink-app/src/window_capture.rs:93,island.window.noActive,활성 창이 없어요,현재 창이 없어요,No active window,전문 번역투(활성 창→현재 창),아니오
+crates/ink-app/src/window_capture.rs:178,island.capture.clipboardError,클립보드를 쓸 수 없어요,복사하지 못했어요,Couldn't copy,개발자 말(클립보드→복사) · 확인: 기술 원인 구분 필요 여부,확인 필요
+crates/ink-app/src/window_capture.rs:198,island.capture.pasteHint,한글·PPT에 {paste},문서·발표에 {paste},Paste with {paste},비범용 문화권 표현(한글·PPT→문서·발표) · 확인: 한국어 교사 맞춤 유지 여부,확인 필요
+crates/ink-domain/src/recog.rs:103,recog.control.button,단추,버튼,Button,범용어 통일(단추→버튼),아니오
+crates/ink-domain/src/recog.rs:111,recog.control.header,머리,머리글,Header,모호한 말(머리→머리글),아니오
+crates/ink-domain/src/recog.rs:119,recog.control.checkBox,확인란,체크 칸,Checkbox,행정·번역투(확인란→체크 칸),아니오
+crates/ink-domain/src/recog.rs:120,recog.control.comboBox,고르기 칸,선택 칸,Dropdown,어색한 표현(고르기 칸→선택 칸),아니오
+crates/ink-domain/src/recog.rs:121,recog.control.tree,트리,계층 목록,Tree list,개발자 말(트리→계층 목록),아니오
+crates/ink-domain/src/recog.rs:122,recog.control.treeItem,트리 항목,목록 항목,Tree item,개발자 말(트리 항목→목록 항목),아니오
+crates/ink-domain/src/recog.rs:126,recog.control.other,요소,조각,Item,추상어(요소→조각 · 경로 표시용) · 확인: 영역/항목과 구분,확인 필요
+crates/ink-domain/src/selection.rs:465,island.capture.noRecent,지난 범위가 없어요,이전 범위가 없어요,No previous area,동의어 통일(지난→이전),아니오
+crates/ink-domain/src/selection.rs:472,island.capture.noRecent,지난 범위가 없어요,이전 범위가 없어요,No previous area,동의어 통일(지난→이전),아니오
+crates/tauri-plugin-screen-ink/src/lib.rs:1149,island.perm.screenGuide,화면 기록에서 {app}을 켜 주세요,화면 기록에서 {app} 켜기,Enable {app} in Screen Recording,길이 초과(섬 제목 17자→13자) + 조사 제거({app} 영문 호환),아니오
+crates/tauri-plugin-screen-ink/src/lib.rs:1167,island.perm.axGuide,손쉬운 사용에서 {app}을 켜 주세요,손쉬운 사용에서 {app} 켜기,Enable {app} in Accessibility,길이 초과(섬 제목 18자→14자) + 조사 제거({app} 영문 호환),아니오
+crates/tauri-plugin-screen-ink/src/lib.rs:1185,island.perm.axGranted,손쉬운 사용을 켰어요 · 이제 요소까지 잡아요,이제 세부 영역까지 잡아요,Element detection is now on,모호한 말(요소→세부 영역) + 길이 초과(섬 제목 25자→14자),아니오
+crates/ink-domain/src/naming.rs:18,error.naming.unknownToken,모르는 칸이에요: {{{token}}},지원하지 않는 항목이에요: {{{token}}},Unsupported token: {{{token}}},모호한 말(칸→항목),아니오
+crates/ink-domain/src/package.rs:135,notice.storage.msix,MSIX 패키지,스토어 앱,Store app,개발자 약어(MSIX 패키지→스토어 앱),아니오
+crates/ink-domain/src/package.rs:145,notice.storage.portable,포터블,무설치판,Portable,영어 외래어(포터블→무설치판),아니오
+crates/ink-domain/src/package.rs:155,notice.storage.installed,설치,설치판,Installed,용어 대칭 통일(설치→설치판 · 무설치판과 짝),아니오
+crates/ink-domain/src/package.rs:383,error.package.versionFormat,버전은 X.Y.Z 또는 X.Y.Z.0 형식이어야 해요,버전 형식이 맞지 않아요(예: 1.0.0),Use format X.Y.Z or X.Y.Z.0,개발자 표현 평이화 · 확인: 내부 패키징 CLI 전용 여부,확인 필요
+crates/ink-domain/src/package.rs:387,error.package.versionRange,버전 각 자리는 0~65535 정수여야 해요,버전 숫자는 0~65535 사이여야 해요,Version numbers must be 0–65535,수학/개발자 말(정수→숫자) · 확인: 내부 패키징 CLI 전용 여부,확인 필요
+crates/ink-domain/src/package.rs:390,error.package.storeRevisionZero,Microsoft Store MSIX 버전의 네 번째 자리는 0이어야 해요,스토어 버전의 마지막 자리는 0이어야 해요,Store version fourth number must be 0,개발자 약어(MSIX) 제거 + 축약 · 확인: 내부 패키징 CLI 전용 여부,확인 필요
+crates/ink-domain/src/settings.rs:108,error.settings.unknown,모르는 설정이에요: {path},없는 설정이에요: {path},Unknown setting: {path},표현 통일(모르는→없는),아니오
+crates/ink-domain/src/settings.rs:112,error.settings.unknownSlot,모르는 단축키 칸이에요: {id},없는 단축키 항목이에요: {id},Unknown shortcut: {id},모호한 말(칸→항목),아니오
+crates/ink-domain/src/settings.rs:122,error.settings.newerVersion,더 새 버전(v{version})이 만든 설정이라 읽기만 해요,새 버전(v{version}) 설정이라 읽기만 해요,Read-only: from newer v{version},장문 축소(34자→25자),아니오
+crates/ink-domain/src/settings.rs:199,error.settings.invalidExe,‘{exe}’는 실행 파일 이름이 아니에요(예: hwp.exe),‘{exe}’는 올바른 앱 이름이 아니에요(예: hwp.exe),'{exe}' isn’t a valid app name (e.g. hwp.exe),개발자 말(실행 파일→앱 이름) + OS 분기 필요(macOS .exe 없음) · 확인: 검증 코드 연동,확인 필요
+crates/ink-domain/src/settings.rs:202,error.settings.invalidExcludedMode,찾지 않음·창 단위 중 하나여야 해요,제외 또는 창만 찾기 중 골라 주세요,Choose exclude or window-only,개발자 말(창 단위→창만 찾기),아니오
+crates/ink-domain/src/settings.rs:283,notice.settings.invalidFormat,설정 형식이 올바르지 않아 처음 값으로 시작해요,설정이 잘못돼 기본값으로 시작해요,Invalid settings · started with defaults,용어 통일(처음 값→기본값) + 축약(26자→19자),아니오
+crates/ink-domain/src/settings.rs:304,notice.settings.fieldFallback,{path}: {err} — 처음 값으로 둘게요,{path}: {err} · 기본값 사용,{path}: {err} · using default,용어 통일(처음 값→기본값) + 축약,아니오
+crates/ink-domain/src/settings.rs:315,notice.settings.shortcutFallback,단축키 {id}: ‘{combo}’를 읽을 수 없어 기본 키로 둘게요,단축키 {id} 오류 · 기본 키로 둘게요,Couldn't read {id} · using default,장문 축소(38자→21자) + 조사 제거,아니오
+crates/ink-domain/src/shortcuts.rs:493,shortcut.scope.global,전역 단축키,어디서나 단축키,Anywhere shortcuts,개발자 말(전역→어디서나 · 탭 이름과 통일),아니오
+crates/ink-domain/src/shortcuts.rs:495,shortcut.scope.draw,판서·칠판 화면 안,그리기·칠판 화면 안,While drawing or on board,비범용어(판서→그리기),확인 필요
+crates/ink-domain/src/shortcuts.rs:585,shortcut.rule.plainKeyGlobal,수정 키(Ctrl·Alt 등) 없이 일반 키 하나는 전역으로 못 써요 — 타자를 막아요,Win: Ctrl·Alt 같은 키와 함께 눌러야 해요 / 맥: ⌘·⌥ 같은 키와 함께 눌러야 해요,Win: Combine with Ctrl or Alt / Mac: Combine with ⌘ or ⌥,개발자 말(수정 키·전역) + OS 혼용(Ctrl·Alt 고정) + 장문 축소(48자→21자),아니오
+crates/ink-domain/src/shortcuts.rs:587,shortcut.rule.shiftPlainGlobal,Shift + 글자는 대문자·기호 입력이라 전역으로 못 써요,Shift + 글자는 입력에 쓰여 못 써요,Shift + letter is reserved for typing,개발자 말(전역) + 장문 축소(33자→21자),아니오
+crates/ink-domain/src/shortcuts.rs:623,shortcut.rule.macOptionChar,"⌥ + 글자·기호는 특수 문자 입력이라, 가로채면 그 글자를 못 쳐요",⌥ + 글자는 특수 문자 입력 키라 못 써요,⌥ + character is used for symbols,개발자 말(가로채면) + 장문 축소(38자→23자),아니오
+crates/ink-domain/src/shortcuts.rs:638,shortcut.rule.globalShadowsMode,{scope}의 {name} 키를 전역 키가 먼저 가져가요,어디서나 키가 먼저 동작해요({name}),Anywhere shortcut overrides {name},개발자 말(전역) + 장문 축소(32자→21자),아니오
+crates/ink-domain/src/shortcuts.rs:640,shortcut.rule.shadowedByGlobal,전역 {name} 키라 이 화면에서도 전역이 먼저 받아요,어디서나 {name} 키가 먼저 동작해요,Anywhere {name} key takes priority,개발자 말(전역) + 장문 축소(31자→20자),아니오
+crates/ink-app/src/service.rs:186,notice.settings.loadFailedReset,{err} — 처음 값으로 시작해요,{err} · 기본값으로 시작해요,{err} · started with defaults,용어 통일(처음 값→기본값),아니오
+crates/ink-app/src/service.rs:192,notice.settings.readOnlyDir,설정 폴더에 쓸 수 없어 이번에는 저장하지 않아요,설정 폴더 권한이 없어 저장하지 않아요,Can't write to settings folder,장문 축소 + 원인 명확화(쓸 수 없어→권한이 없어),아니오
+crates/ink-app/src/service.rs:320,shortcut.emptyHint,트레이 메뉴로 시작할 수 있어요,맥: 메뉴 막대에서 열 수 있어요 / Win: 작업 표시줄에서 열 수 있어요,Open from menu bar / taskbar,OS 혼용·개발자 말(트레이 → 메뉴 막대 / 작업 표시줄),아니오
+crates/ink-app/src/service.rs:546,error.hotkey.unknownSlot,모르는 칸이에요,없는 단축키 항목이에요,Unknown shortcut,모호한 말(칸→단축키 항목),아니오
+crates/ink-app/src/service.rs:581,error.hotkey.unknownSlot,모르는 칸이에요,없는 단축키 항목이에요,Unknown shortcut,모호한 말(칸→단축키 항목),아니오
+crates/ink-store/src/lib.rs:140,notice.store.recoveredBackup,설정 파일이 손상돼 백업으로 되살렸어요(원본은 보관했어요),설정이 깨져 백업으로 복구했어요(원본 보관),Settings corrupted · restored backup,장문 축소(32자→24자) + 쉬운 말(손상돼→깨져),아니오
+crates/ink-store/src/lib.rs:144,notice.store.resetKeptBroken,설정 파일이 손상돼 처음 값으로 시작했어요(원본은 보관했어요),설정이 깨져 기본값으로 시작했어요(원본 보관),Settings corrupted · reset to defaults,용어 통일(처음 값→기본값) + 장문 축소(34자→25자),아니오
+crates/ink-store/src/lib.rs:144,notice.store.reset,설정 파일이 손상돼 처음 값으로 시작했어요,설정이 깨져 기본값으로 시작했어요,Settings corrupted · reset to defaults,용어 통일(처음 값→기본값) + 쉬운 말(손상돼→깨져),아니오
+crates/ink-platform-windows/src/powertoys.rs:15,powertoys.module.textExtractor,텍스트 추출,글자 추출,Text Extractor,외래어(텍스트→글자) · 확인: PowerToys 공식 한국어명 유지 여부,확인 필요
+apps/screen-ink/src-tauri/tauri.conf.json:3,os.bundle.productName,Shookshok,ShookShok,ShookShok,브랜드 대소문자 불일치(Shookshok→ShookShok),아니오
+crates/tauri-plugin-screen-ink/src/lib.rs:450,os.window.island,ShookShok island,슉쇽 안내,ShookShok notice,내부 개발 영어(island) 창 제목 노출,아니오
+crates/tauri-plugin-screen-ink/src/overlay.rs:192,os.window.overlay,ShookShok overlay,슉쇽 화면,ShookShok screen,개발자 영어(overlay) 창 제목 노출,아니오
+crates/tauri-plugin-screen-ink/src/pins.rs:99,os.window.pin,ShookShok pin,슉쇽 고정 캡처,ShookShok pinned capture,영어·용어 통일(pin→고정 캡처),아니오
+crates/tauri-plugin-screen-ink/src/rec_frame.rs:29,os.window.recFrame,shookshok record frame,슉쇽 녹화 범위,ShookShok recording area,브랜드 소문자·영어 창 제목 노출,아니오
+crates/tauri-plugin-screen-ink/src/zoom_hud.rs:27,os.window.zoomHud,screen-ink zoom,슉쇽 확대,ShookShok zoom,옛 프로젝트명(screen-ink) 잔재 노출,아니오
+crates/tauri-plugin-screen-ink/src/zoom_hud.rs:53,os.window.zoomHud,screen-ink zoom,슉쇽 확대,ShookShok zoom,옛 프로젝트명(screen-ink) 잔재 노출,아니오
+docs/shortcuts/catalog-v1.json:76,shortcut.slot.draw,판서,화면 그리기,Draw on screen,비범용어(판서→화면 그리기 · 메뉴 6자) · 확인: 교사 친숙어 유지 여부,확인 필요
+docs/shortcuts/catalog-v1.json:103,shortcut.slot.last,직전 범위 바로 캡처,방금 범위 바로 캡처,Recapture last area,한자어·동의어 통일(직전→방금),아니오
+docs/shortcuts/catalog-v1.json:112,shortcut.slot.full,모니터 전체 바로 캡처,전체 화면 바로 캡처,Capture full screen,쉬운 말·축약(모니터 전체→전체 화면 · 11자),아니오
+docs/shortcuts/catalog-v1.json:121,shortcut.slot.active,활성 창 바로 캡처,현재 창 바로 캡처,Capture current window,전문 번역투(활성 창→현재 창),아니오
+docs/shortcuts/catalog-v1.json:139,shortcut.slot.restore,직전 판서 열기,이전 그리기 열기,Open last drawing,동의어 통일(직전→이전) + 비범용어(판서→그리기 · 메뉴 9자),확인 필요
+docs/shortcuts/catalog-v1.json:166,shortcut.slot.pin,화면에 붙이기,화면에 고정,Pin to screen,동의어 통일(화면에 붙이기→화면에 고정 · CaptureToolbar와 일치),아니오
+docs/shortcuts/catalog-v1.json:175,shortcut.slot.pinToggle,핀 숨기기·보이기,고정 캡처 숨김·표시,Show or hide pins,외래어·동의어 통일(핀→고정 캡처 · 메뉴 11자),아니오
+docs/shortcuts/catalog-v1.json:193,shortcut.slot.c-detect,창 ↔ UI 요소 찾기 전환,창 ↔ 세부 영역 전환,Toggle window or element,개발자 영어(UI 요소→세부 영역) + 길이 초과(메뉴 15자→10자),아니오
+docs/shortcuts/catalog-v1.json:220,shortcut.slot.c-quick,빠른 저장(묻지 않고 저장 폴더로),바로 저장(폴더로),Quick save to folder,길이 초과(메뉴 19자→9자),아니오
+docs/shortcuts/catalog-v1.json:238,shortcut.slot.c-last,직전 범위로,방금 범위로,Use last area,한자어·동의어 통일(직전→방금),아니오
+docs/shortcuts/catalog-v1.json:247,shortcut.slot.c-prev,지난 범위(앞),이전 범위(앞),Previous area,동의어 통일(지난→이전),아니오
+docs/shortcuts/catalog-v1.json:256,shortcut.slot.c-next,지난 범위(뒤),이전 범위(뒤),Next area,동의어 통일(지난→이전),아니오
+docs/shortcuts/catalog-v1.json:283,shortcut.slot.c-color,확대경 색 복사,돋보기 색 복사,Copy color under loupe,어려운 말(확대경→돋보기),아니오
+docs/shortcuts/catalog-v1.json:328,shortcut.slot.d-eraser,지우개(획 단위),지우개(선 단위),Eraser (by stroke),어려운 말(획→선),아니오
+docs/shortcuts/catalog-v1.json:436,shortcut.slot.d-copy,판서한 화면 복사,그린 화면 복사,Copy drawn screen,비범용어(판서→그린 화면),확인 필요
+docs/shortcuts/catalog-v1.json:445,shortcut.slot.d-save,판서한 화면 저장,그린 화면 저장,Save drawn screen,비범용어(판서→그린 화면),확인 필요
+docs/shortcuts/catalog-v1.json:454,shortcut.slot.d-restore,직전 판서 불러오기,이전 그리기 열기,Open last drawing,동의어 통일(직전→이전) + 비범용어(판서→그리기),확인 필요
+docs/shortcuts/catalog-v1.json:517,shortcut.slot.d-exit,판서 끝내기,그리기 끝내기,Exit drawing,비범용어(판서→그리기),확인 필요
+docs/shortcuts/catalog-v1.json:526,shortcut.slot.d-spot,화면 강조(스포트라이트),화면 집중 강조,Spotlight focus,길이 초과(메뉴 13자→7자) + 외래어 제거 · 확인: 스포트라이트 병기 여부,확인 필요
+docs/shortcuts/catalog-v1.json:544,shortcut.slot.d-number,"번호 도장(1, 2, 3…)",번호 도장(1·2·3),"Number stamp (1, 2, 3)",길이 초과(메뉴 15자→10자),아니오
+docs/shortcuts/catalog-v1.json:633,shortcut.ref.win.win.prtscn,캡처 도구 열기(Windows 11 기본 · 설정 > 접근성 > 키보드에서 끌 수 있음),캡처 도구 열기(Windows 설정에서 끄기),Snipping Tool (turn off in Settings),장문 축소(49자→22자),아니오
+docs/shortcuts/catalog-v1.json:647,shortcut.ref.win.win.alt_prtscn,활성 창을 클립보드로,현재 창 바로 복사,Copy current window,전문 번역투·개발자 말(활성 창·클립보드),아니오
+docs/shortcuts/catalog-v1.json:654,shortcut.ref.win.win.win_shift_r,캡처 도구 화면 녹화(최신 Windows 11),Windows 캡처 도구 녹화,Snipping Tool recording,장문 축소(26자→14자),아니오
+docs/shortcuts/catalog-v1.json:710,shortcut.ref.win.win.ctrl_alt_m,돋보기 보기 바꾸기(돋보기가 켜져 있을 때),돋보기 보기 전환(켜짐 시),Switch Magnifier view,장문 축소(24자→14자),아니오
+docs/shortcuts/catalog-v1.json:717,shortcut.ref.win.win.ctrl_alt_f,돋보기 전체 화면 보기(켜져 있을 때),돋보기 전체 화면(켜짐 시),Magnifier full-screen view,장문 축소(21자→14자),아니오
+docs/shortcuts/catalog-v1.json:738,shortcut.ref.win.win.ctrl_win_enter,내레이터,화면 읽어 주기(내레이터),Narrator screen reader,어려운 공식명 보조(내레이터→화면 읽어 주기 병기) · 확인: 공식명 단독 유지 여부,확인 필요
+docs/shortcuts/catalog-v1.json:745,shortcut.ref.win.win.win_v,클립보드 기록,복사 기록(클립보드),Clipboard history,개발자 말 보조(클립보드→복사 기록 병기) · 확인: OS 공식명 단독 유지 여부,확인 필요
+docs/shortcuts/catalog-v1.json:773,shortcut.ref.win.win.ctrl_alt_delete,보안 화면,보안 옵션 화면,Security options screen,모호함 해소(DRM 보호 화면과 구분) · 확인: Windows 공식명,확인 필요
+docs/shortcuts/catalog-v1.json:815,shortcut.ref.win.win.alt_space,창 메뉴(이 PC에서는 PowerToys Run이 씀),창 메뉴(PowerToys 검색과 겹칠 수 있음),Window menu (may conflict with PowerToys Run),개발자 개인 PC 메모 노출(“이 PC에서는…” 제거),아니오
+docs/shortcuts/catalog-v1.json:969,shortcut.ref.win.win.win_z,스냅 레이아웃,창 배치 메뉴(스냅),Snap layouts,영어 외래어 보조(스냅 레이아웃→창 배치 메뉴 병기) · 확인: OS 공식명,확인 필요
+docs/shortcuts/catalog-v1.json:976,shortcut.ref.win.win.win_p,디스플레이 모드(복제·확장) — 교실 TV 연결 때 자주 씀,화면 연결 방식(복제·확장),Display projection (duplicate/extend),기술어(디스플레이 모드→화면 연결 방식) + 장문 축소(33자→15자),아니오
+docs/shortcuts/catalog-v1.json:1018,shortcut.ref.win.win.ctrl_shift_win_b,그래픽 드라이버 다시 시작,화면 그래픽 다시 시작,Restart graphics driver,기술어 평이화(그래픽 드라이버→화면 그래픽),아니오
+docs/shortcuts/catalog-v1.json:1032,shortcut.ref.win.win.ctrl_alt_up,화면 회전(일부 Intel 그래픽 드라이버),화면 회전(일부 그래픽 설정),Rotate screen (some graphics drivers),기술어·장문 축소(24자→16자),아니오
+docs/shortcuts/catalog-v1.json:1039,shortcut.ref.win.win.ctrl_alt_down,화면 회전(일부 Intel 그래픽 드라이버),화면 회전(일부 그래픽 설정),Rotate screen (some graphics drivers),기술어·장문 축소(24자→16자),아니오
+docs/shortcuts/catalog-v1.json:1046,shortcut.ref.win.win.ctrl_alt_left,화면 회전(일부 Intel 그래픽 드라이버),화면 회전(일부 그래픽 설정),Rotate screen (some graphics drivers),기술어·장문 축소(24자→16자),아니오
+docs/shortcuts/catalog-v1.json:1053,shortcut.ref.win.win.ctrl_alt_right,화면 회전(일부 Intel 그래픽 드라이버),화면 회전(일부 그래픽 설정),Rotate screen (some graphics drivers),기술어·장문 축소(24자→16자),아니오
+docs/shortcuts/catalog-v1.json:1130,shortcut.ref.winapp.win.f7,맞춤법(Office) · 캐럿 탐색(브라우저),맞춤법(Office) · 키보드 커서(브라우저),Spell check (Office) · caret browsing,개발자 말(캐럿 탐색→키보드 커서),아니오
+docs/shortcuts/catalog-v1.json:1186,shortcut.ref.winapp.win.ctrl_shift_1_8,탐색기 보기 바꾸기 · 엑셀 표시 형식(숫자·시간·날짜·통화·%),탐색기 보기 · 엑셀 숫자 형식,Explorer view · Excel number format,장문 축소(36자→17자),아니오
+docs/shortcuts/catalog-v1.json:1193,shortcut.ref.winapp.win.alt_1_9,Office(워드·엑셀·PowerPoint) 빠른 실행 도구 모음 단추,Office 빠른 실행 버튼,Office quick access toolbar,범용어(단추→버튼) + 장문 축소(39자→13자),아니오
+docs/shortcuts/catalog-v1.json:1214,shortcut.ref.winapp.win.ctrl_shift_n,시크릿 창 · 탐색기 새 폴더,비공개 창 · 탐색기 새 폴더,Private window · new folder,외래어(시크릿 창→비공개 창),아니오
+docs/shortcuts/catalog-v1.json:1389,shortcut.ref.winapp.win.ctrl_shift_p,브라우저 InPrivate·시크릿 창,브라우저 비공개 창,Private browser window,영어·외래어 제거(InPrivate·시크릿→비공개 창),아니오
+docs/shortcuts/catalog-v1.json:1396,shortcut.ref.winapp.win.ctrl_f1,Office 리본 접기·펴기,Office 위쪽 메뉴 접기·펴기,Toggle Office ribbon,전문어(리본→위쪽 메뉴),아니오
+docs/shortcuts/catalog-v1.json:1445,shortcut.ref.winapp.win.ctrl_f5,브라우저 강력 새로 고침,브라우저 완전히 새로 고침,Hard reload in browser,어색한 표현(강력 새로 고침→완전히 새로 고침),아니오
+docs/shortcuts/catalog-v1.json:1452,shortcut.ref.winapp.win.alt_f8,Office 매크로,Office 자동 작업(매크로),Office macros,전문어 보조(매크로→자동 작업 병기),아니오
+docs/shortcuts/catalog-v1.json:1459,shortcut.ref.winapp.win.alt_f11,Office VBA 편집기,Office 코드 편집기(VBA),Office VBA editor,개발자 약어 보조(VBA→코드 편집기 병기),아니오
+docs/shortcuts/catalog-v1.json:1662,shortcut.ref.ptaot.win.alt_shift_d,창 항상 위에 두기(이 PC에서 바꾼 값 · 기본은 Win+Ctrl+T),창 항상 위(사용자 설정 키),Always on Top (custom key),개발자 개인 PC 메모 노출(“이 PC에서 바꾼 값” 제거) + 장문 축소(40자→15자),아니오
+docs/shortcuts/catalog-v1.json:1690,shortcut.ref.pt.win.ctrl_shift_win_r,Crop And Lock 창 잘라 붙이기,창 잘라 붙이기(PowerToys),Crop And Lock reparent,영어 제거·정제,아니오
+docs/shortcuts/catalog-v1.json:1697,shortcut.ref.pt.win.ctrl_shift_win_t,Crop And Lock 썸네일,창 축소판 고정(PowerToys),Crop And Lock thumbnail,영어 제거·정제,아니오
+docs/shortcuts/catalog-v1.json:1704,shortcut.ref.pt.win.shift_win,FancyZones 편집기,창 구역 편집기(FancyZones),FancyZones editor,영어 모듈명 한글 보조,아니오
+docs/shortcuts/catalog-v1.json:1711,shortcut.ref.pt.win.win_pgdn,FancyZones 다음 창,다음 구역 창(FancyZones),FancyZones next window,영어 모듈명 한글 보조,아니오
+docs/shortcuts/catalog-v1.json:1718,shortcut.ref.pt.win.win_pgup,FancyZones 이전 창,이전 구역 창(FancyZones),FancyZones previous window,영어 모듈명 한글 보조,아니오
+docs/shortcuts/catalog-v1.json:1746,shortcut.ref.pt.win.ctrl_space,Peek 미리 보기,빠른 미리 보기(Peek),Peek preview,영어 모듈명 한글 보조,아니오
+docs/shortcuts/catalog-v1.json:1753,shortcut.ref.pt.win.alt_space,PowerToys Run,빠른 검색(PowerToys Run),PowerToys Run,영어 모듈명 한글 보조,아니오
+docs/shortcuts/catalog-v1.json:1767,shortcut.ref.pt.win.ctrl_win,Workspaces,작업 공간(Workspaces),Workspaces,영어 단독 노출 → 한글 보조(powertoys.rs와 통일),아니오
+docs/shortcuts/catalog-v1.json:1774,shortcut.ref.pt.win.alt_win_space,Command Palette(기본값 · 설정 파일에서 확인 못 함),명령 팔레트(PowerToys),Command Palette,개발자 내부 메모(“설정 파일에서 확인 못 함”) + 영어 제거,아니오
+docs/shortcuts/catalog-v1.json:1802,shortcut.ref.snip.win.f3,붙이기(핀),화면에 고정,Pin to screen,외래어·동의어 통일(붙이기(핀)→화면에 고정),아니오
+docs/shortcuts/catalog-v1.json:1830,shortcut.ref.icz.win.ctrl_2,판서하기,화면 그리기,Draw on screen,비범용어(판서하기→화면 그리기) · 확인: 타사 앱 공식명 유지 여부,확인 필요
+docs/shortcuts/catalog-v1.json:1879,shortcut.ref.zi.win.ctrl_4,LiveZoom,실시간 확대(LiveZoom),LiveZoom,영어 단독 노출 → 한글 보조,아니오
+docs/shortcuts/catalog-v1.json:1886,shortcut.ref.zi.win.ctrl_shift_4,LiveDraw,실시간 그리기(LiveDraw),LiveDraw,영어 단독 노출 → 한글 보조,아니오
+docs/shortcuts/catalog-v1.json:1900,shortcut.ref.zi.win.ctrl_6,스닙(영역 복사),영역 복사,Snip area to copy,영어 음차 제거(스닙→영역 복사),아니오
+docs/shortcuts/catalog-v1.json:1907,shortcut.ref.zi.win.ctrl_shift_6,스닙 저장,영역 저장,Save snip,영어 음차 제거(스닙→영역),아니오
+docs/shortcuts/catalog-v1.json:1914,shortcut.ref.zi.win.ctrl_alt_6,글자 인식 스닙,글자 인식 복사,Text capture snip,영어 음차 제거(스닙→복사),아니오
+docs/shortcuts/catalog-v1.json:1921,shortcut.ref.zi.win.ctrl_7,DemoType,자동 입력(DemoType),DemoType,영어 단독 노출 → 한글 보조,아니오
+docs/shortcuts/catalog-v1.json:1928,shortcut.ref.zi.win.ctrl_shift_7,DemoType 처음으로,자동 입력 처음으로(DemoType),Reset DemoType,영어 단독 노출 → 한글 보조,아니오
+docs/shortcuts/catalog-v1.json:1935,shortcut.ref.zi.win.ctrl_8,파노라마,긴 화면 캡처(파노라마),Panorama capture,모호한 외래어 보조 · 확인: ZoomIt 공식명 단독 유지 여부,확인 필요
+docs/shortcuts/catalog-v1.json:1942,shortcut.ref.zi.win.ctrl_shift_8,파노라마 저장,긴 화면 저장(파노라마),Save panorama,모호한 외래어 보조 · 확인: ZoomIt 공식명 단독 유지 여부,확인 필요
+docs/shortcuts/catalog-v1.json:1949,shortcut.ref.zi.win.ctrl_9,미러,화면 복제(미러),Mirror screen,모호한 외래어 보조 · 확인: ZoomIt 공식명 단독 유지 여부,확인 필요
+docs/shortcuts/catalog-v1.json:1984,shortcut.ref.mac.mac.ctrl_shift_cmd_3,전체 화면을 클립보드로,전체 화면 바로 복사,Copy full screen,개발자 말(클립보드→바로 복사),아니오
+docs/shortcuts/catalog-v1.json:1991,shortcut.ref.mac.mac.ctrl_shift_cmd_4,영역을 클립보드로,고른 영역 바로 복사,Copy selected area,개발자 말(클립보드→바로 복사),아니오
+docs/shortcuts/catalog-v1.json:1998,shortcut.ref.mac.mac.cmd_space,Spotlight,빠른 검색(Spotlight),Spotlight search,영어 단독 노출 → 한글 보조,아니오
+docs/shortcuts/catalog-v1.json:2012,shortcut.ref.mac.mac.ctrl_space,입력 소스 바꾸기(한/영),입력 언어 바꾸기(한/영),Switch input language,어려운 OS 용어(입력 소스→입력 언어) · 확인: macOS 공식명 유지 여부,확인 필요
+docs/shortcuts/catalog-v1.json:2019,shortcut.ref.mac.mac.ctrl_option_space,다음 입력 소스,다음 입력 언어,Next input language,어려운 OS 용어(입력 소스→입력 언어) · 확인: macOS 공식명 유지 여부,확인 필요
+docs/shortcuts/catalog-v1.json:2103,shortcut.ref.mac.mac.ctrl_up,Mission Control,열린 창 한눈에(Mission Control),Mission Control,영어 단독 노출 → 한글 보조,아니오
+docs/shortcuts/catalog-v1.json:2110,shortcut.ref.mac.mac.ctrl_down,앱 윈도우,현재 앱 창 모아 보기,App Exposé,모호한 번역(앱 윈도우→현재 앱 창 모아 보기),아니오
+docs/shortcuts/catalog-v1.json:2166,shortcut.ref.mac.mac.cmd_f5,VoiceOver,화면 읽어 주기(VoiceOver),VoiceOver,영어 단독 노출 → 한글 보조,아니오
+docs/shortcuts/catalog-v1.json:2180,shortcut.ref.mac.mac.option_1_9,특수 문자 입력(¡ ™ £ ¢ ∞ § ¶ • ª) — 가로채면 이 글자를 못 침,특수 문자 입력(겹치면 입력 불가),Special characters (blocked if overridden),개발자 말(가로채면) + 장문 축소(44자→19자),아니오
+docs/shortcuts/catalog-v1.json:2194,shortcut.ref.mac.mac.f1_12,기본은 밝기·음량 등 — F키로 쓰려면 fn을 함께,밝기·음량 키(F키는 fn과 함께),Media keys (hold fn for F keys),장문 축소(28자→19자),아니오
+docs/shortcuts/catalog-v1.json:2201,shortcut.ref.mac.mac.cmd_f1,디스플레이 미러링 켜기·끄기,화면 복제 켜기·끄기,Toggle display mirroring,외래어·전문어(디스플레이 미러링→화면 복제),아니오
+docs/shortcuts/catalog-v1.json:2369,shortcut.ref.macapp.mac.ctrl_a,글 칸에서 줄 처음으로,입력 칸 줄 처음으로,Move to start of line,어색한 조어 통일(글 칸→입력 칸 · recog.rs와 일치),아니오
+docs/shortcuts/catalog-v1.json:2376,shortcut.ref.macapp.mac.ctrl_e,글 칸에서 줄 끝으로,입력 칸 줄 끝으로,Move to end of line,어색한 조어 통일(글 칸→입력 칸),아니오
+docs/shortcuts/catalog-v1.json:2383,shortcut.ref.macapp.mac.ctrl_k,글 칸에서 줄 끝까지 지우기,입력 칸 줄 끝까지 지우기,Delete to end of line,어색한 조어 통일(글 칸→입력 칸),아니오
+docs/shortcuts/catalog-v1.json:2390,shortcut.ref.macapp.mac.ctrl_d,글 칸에서 앞 글자 지우기,입력 칸 앞 글자 지우기,Delete next character,어색한 조어 통일(글 칸→입력 칸),아니오
+docs/shortcuts/catalog-v1.json:2397,shortcut.ref.macapp.mac.ctrl_h,글 칸에서 뒤 글자 지우기,입력 칸 뒤 글자 지우기,Delete previous character,어색한 조어 통일(글 칸→입력 칸),아니오
+apps/screen-ink/src-tauri/packaging/msix/msix.config.json:4,store.msix.description,발표자를 위한 화면 캡처·판서·확대 도구,발표자를 위한 화면 캡처·그리기·확대 도구,"Screen capture, drawing and zoom for presenters",비범용어(판서→그리기) · 확인: 교사 친숙어 유지 여부,확인 필요
+docs/store/microsoft-store-listing.md:30,store.listing.copyright,© 2026 찰떡쌤. MIT License.,© 2026 찰떡쌤 · MIT 라이선스,© 2026 ChaltteokSsaem. MIT License.,영어 섞임 정제(app.credit.copyright와 통일) · 확인: 제작자 영문 표기,확인 필요
+docs/store/microsoft-store-listing.md:42,store.listing.shortDescFull,"단축키 한 번으로 화면을 캡처하고, 확대하고, 그 위에 바로 판서하는 수업용 도구입니다. 인터넷 연결 없이 동작하고, 어떤 정보도 모으지 않습니다.",단축키 한 번으로 화면을 캡처하고 확대해 바로 그리는 발표·수업 도구예요. 인터넷 없이 동작하고 어떤 정보도 모으지 않아요,"Capture, zoom and draw on your screen with one shortcut. Works offline and collects no data.",비범용어(판서→그리기) + 발표자 범용화 + 말투 · 확인: 스토어 격식체(~습니다) 유지 여부,확인 필요
+docs/store/microsoft-store-listing.md:46,store.listing.shortDescFirst,"F1 한 번이면 커서 아래 표·그림·단추를 알아서 잡아 주는 화면 캡처 도구입니다. 한글·PPT에 바로 붙여 넣고, 인터넷 연결 없이 동작하며 어떤 정보도 모으지 않습니다.",F1 한 번으로 커서 아래 표·그림·버튼을 알아서 잡는 화면 캡처 도구예요. 문서·슬라이드에 바로 붙여 넣고 인터넷 없이 안전하게 써요,"Press F1 to capture the table, image or button under your cursor. Paste straight into documents and slides, completely offline.","범용어(단추→버튼, 한글·PPT→문서·슬라이드) + 말투 · 확인: 스토어 격식체 및 한글·PPT 표기 유지 여부",확인 필요
+docs/store/microsoft-store-listing.md:51,store.listing.description,슉쇽은 교실에서 화면을 보여 주며 수업하는 선생님을 위해 만든 도구입니다. … (스토어 상세 설명 5문단),슉쇽은 발표와 수업을 위해 만든 화면 캡처·그리기·확대 도구예요. … (본문 내 판서·클립보드·단추·배율 일괄 정제),"ShookShok is a screen capture, drawing and zoom tool built for teaching and presenting.",본문 용어 정제(판서·클립보드·단추·배율) + 말투 · 확인: 스토어 격식체 유지 여부,확인 필요
+docs/store/microsoft-store-listing.md:82,store.listing.feature.01,F1 한 번으로 커서 아래 표·그림·단추·문단을 알아서 강조,F1 한 번으로 커서 아래 표·그림·버튼·문단 자동 선택,"Press F1 to auto-select the table, image or button under your cursor",범용어(단추→버튼),아니오
+docs/store/microsoft-store-listing.md:84,store.listing.feature.03,드래그할 때 창·칸 경계에 붙는 자석과 1px 방향키 조정,드래그할 때 창·칸 경계 자동 맞춤과 1px 방향키 조정,Auto-snap to window and cell edges plus 1px arrow-key nudging,용어 통일(자석→경계 자동 맞춤) · 확인: 자석 비유 유지 여부,확인 필요
+docs/store/microsoft-store-listing.md:85,store.listing.feature.04,결과를 클립보드에 바로 — 한글·PowerPoint에 Ctrl+V,찍자마자 바로 복사 — 문서·PowerPoint에 Ctrl+V,Copied right away — paste straight into documents and slides,개발자 말(클립보드→바로 복사) + 문화권 범용화 · 확인: 한글 표기 유지 여부,확인 필요
+docs/store/microsoft-store-listing.md:87,store.listing.feature.06,"F1 안에서 R로 방금 잡은 범위, 쉼표·마침표로 최근 범위 넘기기","F1 안에서 R로 방금 범위, 쉼표·마침표로 이전 범위 넘기기","Press R for the last area, or comma and period for previous areas",동의어 통일(최근→이전),아니오
+docs/store/microsoft-store-listing.md:89,store.listing.feature.08,배율이 서로 다른 모니터에서도 정확한 범위,화면 비율이 다른 모니터에서도 정확한 범위,Accurate across monitors with different display scaling,한자어(배율→화면 비율) · 확인: 배율 표현 유지 여부,확인 필요
+docs/store/microsoft-store-listing.md:90,store.listing.feature.09,단색 범위는 색 코드(HEX) 바로 복사,단색 영역은 색상 코드(#) 바로 복사,One-click HEX color copy for solid-color areas,영어 약어(HEX→색상 코드(#)) · 확인: HEX 병기 여부,확인 필요
+docs/store/microsoft-store-listing.md:91,store.listing.feature.10,"Shift+F1 직전 범위 바로 캡처, Ctrl+F1 모니터 바로 캡처","Shift+F1 방금 범위 바로 캡처, Ctrl+F1 전체 화면 바로 캡처","Shift+F1 to recapture last area, Ctrl+F1 for full screen","동의어 통일(직전→방금, 모니터→전체 화면)",아니오
+docs/store/microsoft-store-listing.md:95,store.listing.feature.14,Alt+1 화면 위 판서 — 휠로 확대하며 쓰기,Alt+1 화면 그리기 — 휠로 확대하며 쓰기,Alt+1 to draw on screen with wheel zoom,비범용어(판서→화면 그리기),확인 필요
+docs/store/microsoft-store-listing.md:103,store.listing.whatsNew,"첫 버전입니다. F1 스마트 캡처, 휠로 범위 고르기, 클립보드 복사·저장, 최근 범위 다시 고르기(R)를 담았습니다.","첫 버전이에요. F1 자동 영역 캡처, 휠로 범위 고르기, 바로 복사·저장, 방금 범위 다시 고르기(R)를 담았어요","First release: F1 auto-detect capture, scroll to resize, instant copy and save, and reuse last area (R).",개발자·외래어 정제(스마트·클립보드·최근→자동 영역·바로 복사·방금) + 말투 · 확인: 스토어 격식체 유지 여부,확인 필요
+docs/store/microsoft-store-listing.md:107,store.listing.searchTerms,화면 캡처 · 스크린샷 · 캡처 프로그램 · 판서 · 화면 확대 · 수업 도구 · 전자칠판,화면 캡처 · 스크린샷 · 캡처 프로그램 · 화면 그리기 · 판서 · 화면 확대 · 수업 도구,"screen capture, screenshot, draw on screen, zoom, teacher, presenter, whiteboard",검색어에 ‘화면 그리기’ 추가(교사 검색용 ‘판서’ 병기) · 확인: 스토어 검색어 7개 한도,확인 필요
