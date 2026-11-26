@@ -3,7 +3,7 @@
   import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
   import { listen } from '@tauri-apps/api/event';
   import { CaptureOverlay, DrawOverlay, IslandHost, PinView, RecordFrame, SettingsWindow, TrayPopoverScreen, applyTheme, watchSystemTheme } from '@screen-ink/ui';
-  import { ZoomHud, syncLang } from '@screen-ink/ui';
+  import { ZoomHud, locale, syncLang, t } from '@screen-ink/ui';
 
   /** @type {{ client: import('@screen-ink/client').InkClient, view: 'popover'|'settings'|'island'|'overlay'|'pin'|'zoom-hud'|'recframe', firstRun?: boolean, monitorId?: number, pinId?: number }} */
   let { client, view, firstRun = false, monitorId = 0, pinId = 0 } = $props();
@@ -51,6 +51,13 @@
 
   $effect(() => {
     applyTheme(document.documentElement, pref, systemDark);
+  });
+
+  $effect(() => {
+    void locale.lang;
+    if (typeof document !== 'undefined') {
+      document.title = view === 'settings' ? t('settings.title') : t('common.appTitle');
+    }
   });
 
   onMount(() => {

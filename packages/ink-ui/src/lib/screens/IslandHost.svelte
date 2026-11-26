@@ -1,6 +1,7 @@
 <script>
   import { Spring } from 'svelte/motion';
   import Island from '../components/Island.svelte';
+  import { locale, syncLang } from '../i18n/index.svelte.js';
   import {
     DRAW_IDLE_DIM_MS,
     DRAW_PALETTE_EXPAND_MS,
@@ -104,11 +105,13 @@
     let alive = true;
     client.getState().then((s) => {
       if (!alive || !s) return;
+      syncLang(s);
       if (s.platform) platform = s.platform;
       if (s.settings?.['draw.color']) defaultPenColor = s.settings['draw.color'];
     });
     const off = client.subscribe((e) => {
       if (e.type === 'state') {
+        syncLang(e.state);
         if (e.state?.platform) platform = e.state.platform;
         if (e.state?.settings?.['draw.color']) defaultPenColor = e.state.settings['draw.color'];
         if (e.state?.mode?.mode !== 'capture') captureSession = null;
@@ -144,7 +147,7 @@
             : pushIsland(queue, e.island, { now: Date.now(), reducedMotion });
       } else if (e.type === 'capture') {
         captureSession = e.view?.session ?? null;
-        queue = applyCaptureView(queue, e.view);
+        queue = applyCaptureView(queue, e.view, locale.lang);
       }
     });
     return () => {

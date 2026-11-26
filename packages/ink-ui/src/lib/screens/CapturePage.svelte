@@ -5,6 +5,8 @@
   import Switch from '../components/Switch.svelte';
   import Segmented from '../components/Segmented.svelte';
   import Sheet from '../components/Sheet.svelte';
+  import { locale, syncLang, t } from '../i18n/index.svelte.js';
+  import { formatComboReadable } from '../models/shortcutDisplay.js';
   import {
     renderFilenamePreview,
     shortenPath,
@@ -12,16 +14,10 @@
   } from '../models/template.js';
 
   /**
-   * S03 설정 · 캡처·녹화 화면(F05).
+   * S03 설정 · 캡처·녹화 화면(F05 · R2-FIX-5·9·13).
    * @type {{ client: import('@screen-ink/client').InkClient }}
    */
   let { client } = $props();
-
-  const MIC_DEVICES = [
-    { id: '', label: '기본 장치' },
-    { id: 'built-in', label: '내장 마이크(Realtek)' },
-    { id: 'usb', label: 'USB 마이크' },
-  ];
 
   let state = $state(null);
   let draftTemplate = $state('');
@@ -36,6 +32,7 @@
     client.getState().then((s) => {
       if (!alive) return;
       state = s;
+      syncLang(s);
       if (!templateSynced) {
         draftTemplate = s.settings['output.template'] ?? '';
         templateSynced = true;
@@ -44,8 +41,9 @@
     const off = client.subscribe((e) => {
       if (e.type === 'state') {
         state = e.state;
+        syncLang(e.state);
         const remote = e.state.settings['output.template'] ?? '';
-        if (validateFilenameTemplate(draftTemplate) === null && draftTemplate !== remote) {
+        if (validateFilenameTemplate(draftTemplate, locale.lang) === null && draftTemplate !== remote) {
           draftTemplate = remote;
         }
       }
@@ -57,13 +55,21 @@
   });
 
   let settings = $derived(state?.settings ?? {});
-  let templateError = $derived(validateFilenameTemplate(draftTemplate));
+  let platform = $derived(state?.platform ?? 'windows');
+  let micDevices = $derived([
+    { id: '', label: t('page.capture.micDefault') },
+    { id: 'built-in', label: t('page.capture.micBuiltIn') },
+    { id: 'usb', label: t('page.capture.micUsb') },
+  ]);
+  let cursorCombo = $derived(state?.shortcuts?.find((s) => s.id === 'c-cursor')?.combo ?? '');
+  let cursorKeyLabel = $derived(formatComboReadable(cursorCombo, platform) || '`');
+  let templateError = $derived(validateFilenameTemplate(draftTemplate, locale.lang));
   let templatePreview = $derived(renderFilenamePreview(draftTemplate));
   let excluded = $derived(Array.isArray(settings['capture.excluded']) ? settings['capture.excluded'] : []);
   let historyMax = $derived(Number(settings['capture.historyMax'] ?? 20));
   let micDeviceId = $derived(String(settings['record.micDevice'] ?? ''));
   let micDeviceLabel = $derived(
-    MIC_DEVICES.find((d) => d.id === micDeviceId)?.label ?? (micDeviceId || '기본 장치'),
+    micDevices.find((d) => d.id === micDeviceId)?.label ?? (micDeviceId || t('page.capture.micDefault')),
   );
 
   function setSetting(path, value) {
@@ -73,7 +79,7 @@
   function handleTemplateInput(e) {
     const val = e.currentTarget.value;
     draftTemplate = val;
-    if (validateFilenameTemplate(val) === null) {
+    if (validateFilenameTemplate(val, locale.lang) === null) {
       setSetting('output.template', val);
     }
   }
@@ -91,7 +97,12 @@
       addingExe = false;
       return;
     }
-    const exe = trimmed.endsWith('.exe') ? trimmed : `${trimmed}.exe`;
+    const exe =
+      platform === 'macos'
+        ? trimmed
+        : trimmed.toLowerCase().endsWith('.exe')
+          ? trimmed
+          : `${trimmed}.exe`;
     if (!excluded.some((item) => item.exe.toLowerCase() === exe.toLowerCase())) {
       setSetting('capture.excluded', [...excluded, { exe, mode: 'exclude', auto: false }]);
     }
@@ -108,6 +119,11 @@
     }
   }
 
+  function openMicPicker() {
+    selectedMic = micDeviceId;
+    micSheetOpen = true;
+  }
+
   async function confirmMic() {
     await client.updateSetting('record.micDevice', selectedMic);
     await client.updateSetting('record.mic', true);
@@ -120,36 +136,36 @@
 
 <div class="ink-page">
   <header class="ink-page-head" data-tauri-drag-region>
-    <h1 class="ink-page-title" data-tauri-drag-region>캡처·녹화</h1>
+    <h1 class="ink-page-title" data-tauri-drag-region>{t('page.capture.title')}</h1>
   </header>
 
   <div class="ink-page-body ink-scroll">
   <section class="ink-section">
-    <SectionLabel title="결과" />
+    <SectionLabel title={t('page.capture.section.result')} />
     <Group>
-      <Row label="Enter · 더블클릭 하면">
+      <Row label={t('page.capture.result')}>
         <Segmented
-          label="Enter · 더블클릭 결과"
+          label={t('page.capture.resultAria')}
           value={settings['capture.result'] ?? 'copy'}
           options={[
-            { value: 'copy', label: '복사' },
-            { value: 'save', label: '저장' },
-            { value: 'both', label: '둘 다' },
+            { value: 'copy', label: t('page.capture.result.copy') },
+            { value: 'save', label: t('page.capture.result.save') },
+            { value: 'both', label: t('page.capture.result.both') },
           ]}
           onChange={(v) => setSetting('capture.result', v)}
         />
       </Row>
-      <Row label="마우스 커서도 찍기" sub="캡처 중 ` 키">
+      <Row label={t('page.capture.cursor')} sub={t('page.capture.cursorSub', { key: cursorKeyLabel })}>
         <Switch
           checked={Boolean(settings['capture.cursor'])}
-          label="마우스 커서도 찍기"
+          label={t('page.capture.cursor')}
           onCheckedChange={(v) => setSetting('capture.cursor', v)}
         />
       </Row>
-      <Row label="찰칵 소리">
+      <Row label={t('page.capture.sound')}>
         <Switch
           checked={Boolean(settings['capture.sound'])}
-          label="찰칵 소리"
+          label={t('page.capture.sound')}
           onCheckedChange={(v) => setSetting('capture.sound', v)}
         />
       </Row>
@@ -157,10 +173,10 @@
   </section>
 
   <section class="ink-section">
-    <SectionLabel title="저장" />
+    <SectionLabel title={t('page.capture.section.save')} />
     <Group>
       <Row
-        label="저장 폴더"
+        label={t('page.capture.folder')}
         sub={shortenPath(settings['output.folder'] ?? '')}
         subMono={true}
       >
@@ -168,24 +184,29 @@
           <button
             type="button"
             class="ink-sec-btn ink-focus"
+            aria-label={t('page.capture.folderOpenAria')}
             onclick={() => client.run('folder.open')}
           >
-            열기
+            {t('common.open')}
           </button>
           <button
             type="button"
             class="ink-sec-btn ink-focus"
             onclick={() => client.run('folder.pick')}
           >
-            바꾸기
+            {t('common.change')}
           </button>
         </div>
       </Row>
-      <Row label="파일 이름" error={templateError || ''}>
+      <Row
+        label={t('page.capture.template')}
+        sub={t('page.capture.templateTokensHint', { tokens: '{yyyy} {MM} {dd} {HH} {mm} {ss} {n}' })}
+        error={templateError || ''}
+      >
         <div class="ink-template-box">
           <input
             type="text"
-            aria-label="파일 이름 규칙"
+            aria-label={t('page.capture.templateAria')}
             value={draftTemplate}
             oninput={handleTemplateInput}
             data-invalid={templateError ? 'true' : undefined}
@@ -200,40 +221,40 @@
   </section>
 
   <section class="ink-section">
-    <SectionLabel title="스마트 인식" />
+    <SectionLabel title={t('page.capture.section.smart')} />
     <Group>
-      <Row label="UI 요소까지 찾기" sub="끄면 창 단위만">
+      <Row label={t('page.capture.element')} sub={t('page.capture.elementSub')}>
         <Switch
           checked={Boolean(settings['capture.element'])}
-          label="UI 요소까지 찾기"
+          label={t('page.capture.element')}
           onCheckedChange={(v) => setSetting('capture.element', v)}
         />
       </Row>
-      <Row label="모서리 자석" sub="Alt를 누르는 동안 끔">
+      <Row label={t('page.capture.magnet')} sub={t('page.capture.magnetSub')}>
         <Switch
           checked={Boolean(settings['capture.magnet'])}
-          label="모서리 자석"
+          label={t('page.capture.magnet')}
           onCheckedChange={(v) => setSetting('capture.magnet', v)}
         />
       </Row>
-      <Row label="찾지 않을 앱">
+      <Row label={t('page.capture.excluded')} sub={t('page.capture.excludedAutoNote')}>
         <div class="ink-chips">
           {#each excluded as item (item.exe)}
             <button
               type="button"
               class="ink-chip ink-mono ink-focus"
               onclick={() => removeExcluded(item.exe)}
-              aria-label={`${item.exe} 빼기`}
+              aria-label={t('page.capture.excludedRemoveAria', { app: item.exe })}
             >
-              {item.exe} ×
+              <span>{item.exe}</span>
+              <span class="ink-chip-x" aria-hidden="true">×</span>
             </button>
           {/each}
-          <span class="ink-chip ink-chip-auto">느림 · 창 단위 자동</span>
           {#if addingExe}
             <input
               type="text"
-              aria-label="제외할 실행 파일 이름"
-              placeholder="app.exe"
+              aria-label={t('page.capture.excludedInputAria')}
+              placeholder={t('page.capture.excludedPlaceholder')}
               bind:value={exeInput}
               onkeydown={(e) => {
                 if (e.key === 'Enter') addExcluded();
@@ -247,7 +268,7 @@
             />
           {:else}
             <button type="button" class="ink-sec-btn ink-focus" onclick={() => (addingExe = true)}>
-              추가
+              {t('common.add')}
             </button>
           {/if}
         </div>
@@ -256,11 +277,11 @@
   </section>
 
   <section class="ink-section">
-    <SectionLabel title="녹화" />
+    <SectionLabel title={t('page.capture.section.record')} />
     <Group>
-      <Row label="부드러움">
+      <Row label={t('page.capture.fps')}>
         <Segmented
-          label="녹화 초당 프레임"
+          label={t('page.capture.fpsAria')}
           value={Number(settings['record.fps'] ?? 30)}
           options={[
             { value: 30, label: '30 fps' },
@@ -270,29 +291,36 @@
         />
       </Row>
       <Row
-        label="마이크 소리"
-        sub={settings['record.mic'] ? micDeviceLabel : '처음 켤 때 장치 고르기'}
+        label={t('page.capture.mic')}
+        sub={settings['record.mic'] ? micDeviceLabel : t('page.capture.micPickOnFirst')}
       >
-        <Switch
-          checked={Boolean(settings['record.mic'])}
-          label="마이크 소리"
-          onCheckedChange={handleMicToggle}
-        />
+        <div class="ink-inline-actions">
+          {#if settings['record.mic']}
+            <button type="button" class="ink-sec-btn ink-focus" onclick={openMicPicker}>
+              {t('common.change')}
+            </button>
+          {/if}
+          <Switch
+            checked={Boolean(settings['record.mic'])}
+            label={t('page.capture.mic')}
+            onCheckedChange={handleMicToggle}
+          />
+        </div>
       </Row>
     </Group>
   </section>
 
   <section class="ink-section">
-    <SectionLabel title="기록" />
+    <SectionLabel title={t('page.capture.section.history')} />
     <Group>
-      <Row label="캡처 기록" sub={`${historyMax}개 보관`} subMono={true}>
+      <Row label={t('page.capture.history')} sub={t('page.capture.historySub', { n: historyMax })} subMono={true}>
         <button
           type="button"
           class="ink-sec-btn ink-focus"
           disabled={historyMax === 0}
           onclick={clearHistory}
         >
-          기록 지우기
+          {t('page.capture.historyClear')}
         </button>
       </Row>
     </Group>
@@ -302,14 +330,14 @@
 
 <Sheet
   bind:open={micSheetOpen}
-  title="마이크 고르기"
-  description="녹화에 함께 담을 마이크 장치를 고르세요."
-  confirmLabel="켜기"
-  cancelLabel="취소"
+  title={t('page.capture.micSheetTitle')}
+  description={t('page.capture.micSheetDesc')}
+  confirmLabel={t('page.capture.micSheetConfirm')}
+  cancelLabel={t('common.cancel')}
   onConfirm={confirmMic}
 >
   <div class="ink-mic-list">
-    {#each MIC_DEVICES as dev (dev.id)}
+    {#each micDevices as dev (dev.id)}
       <button
         type="button"
         class="ink-mic-item ink-focus"
@@ -433,23 +461,31 @@
     flex-wrap: nowrap;
   }
 
+  /* R2-FIX-9: 지울 수 있는 칩만 테두리 + × 로 표시 */
   .ink-chip {
     display: inline-flex;
     align-items: center;
+    gap: 4px;
     height: 22px;
-    padding: 0 9px;
-    border: 0;
+    padding: 0 8px;
+    border: 1px solid var(--ink-line-strong);
     border-radius: 11px;
-    background: var(--ink-chip-bg);
+    background: var(--ink-surface);
     color: var(--ink-text-2);
     font-size: 11px;
     white-space: nowrap;
     cursor: pointer;
   }
 
-  .ink-chip-auto {
-    cursor: default;
-    font-size: 11.5px;
+  .ink-chip:hover {
+    border-color: var(--ink-danger);
+    color: var(--ink-danger-text);
+  }
+
+  .ink-chip-x {
+    font-size: 12px;
+    line-height: 1;
+    opacity: 0.75;
   }
 
   .ink-chip-input {

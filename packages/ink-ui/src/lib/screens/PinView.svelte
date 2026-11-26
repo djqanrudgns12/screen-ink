@@ -1,9 +1,10 @@
 <script>
+  import { syncLang, t } from '../i18n/index.svelte.js';
   import { DRAG_START_PX, anchorOf, nextOpacity } from '../models/pin.js';
 
   /**
-   * 캡처 핀 창(R-CAP-29, 04 S08): 창 = 그림. 끌기 = 옮기기 · 휠 = 확대·축소(커서 기준) · Ctrl+휠 = 투명도 ·
-   * 두 번 클릭·Esc = 닫기 · Ctrl+C 복사 · Ctrl+S 저장 · 오른쪽 클릭 = 메뉴(앱이 띄움).
+   * 캡처 화면 고정 창(R-CAP-29, 04 S08): 창 = 그림. 끌기 = 옮기기 · 휠 = 확대·축소(커서 기준) ·
+   * Ctrl/⌘+휠 = 투명도 · 두 번 클릭·Esc = 닫기 · Ctrl/⌘+C 복사 · Ctrl/⌘+S 저장 · 오른쪽 클릭 = 메뉴.
    * 끌기는 누른 채 3px 넘게 움직일 때만 OS에 넘긴다 — 누르자마자 넘기면 두 번째 클릭을 OS가 삼킨다(실측 2026-11-26).
    * @type {{ client: import('@screen-ink/client').InkClient, pinId: number }}
    */
@@ -22,11 +23,18 @@
 
   $effect(() => {
     let alive = true;
+    client.getState?.().then((s) => {
+      if (alive && s) syncLang(s);
+    });
+    const off = client.subscribe?.((e) => {
+      if (e.type === 'state') syncLang(e.state);
+    });
     Promise.resolve(client.pinInfo(pinId)).then((i) => {
       if (alive) info = i;
     });
     return () => {
       alive = false;
+      off?.();
       if (badgeTimer) clearTimeout(badgeTimer);
     };
   });
@@ -43,9 +51,9 @@
     e.preventDefault();
     const dy = Math.sign(e.deltaY);
     if (!dy) return;
-    if (e.ctrlKey) {
+    if (e.ctrlKey || e.metaKey) {
       opacity = nextOpacity(opacity, dy);
-      showBadge(`투명도 ${opacity}%`);
+      showBadge(t('pin.view.opacity', { pct: opacity }));
       return;
     }
     const { fx, fy } = anchorOf(e.clientX, e.clientY, window.innerWidth, window.innerHeight);
@@ -101,7 +109,7 @@
   class="ink-pin"
   class:hover
   role="img"
-  aria-label="화면에 고정한 캡처"
+  aria-label={t('pin.view.aria')}
   data-pin={pinId}
   style:opacity={opacity / 100}
   onpointerenter={() => (hover = true)}
@@ -117,6 +125,23 @@
 >
   {#if info}
     <img src={info.url} alt="" draggable="false" />
+  {/if}
+  {#if hover}
+    <button
+      type="button"
+      class="ink-pin-close ink-focus"
+      aria-label={t('pin.view.closeAria')}
+      onpointerdown={(e) => e.stopPropagation()}
+      onclick={(e) => {
+        e.stopPropagation();
+        client.pinAction(pinId, 'close');
+      }}
+    >
+      ×
+    </button>
+    {#if !badge}
+      <span class="ink-pin-hint">{t('pin.view.hint')}</span>
+    {/if}
   {/if}
   {#if badge}
     <span class="ink-pin-badge ink-mono">{badge}</span>
@@ -150,6 +175,47 @@
     width: 100vw;
     height: 100vh;
     object-fit: fill;
+    pointer-events: none;
+  }
+
+  .ink-pin-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--ink-island);
+    color: var(--ink-island-text);
+    font-size: 14px;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    opacity: 0.9;
+  }
+
+  .ink-pin-close:hover {
+    opacity: 1;
+    background: var(--ink-danger);
+  }
+
+  .ink-pin-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    transform: translateX(-50%);
+    max-width: calc(100% - 16px);
+    padding: 3px 9px;
+    border-radius: var(--ink-r-island);
+    background: var(--ink-island);
+    color: var(--ink-island-text-2);
+    font-size: 10.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     pointer-events: none;
   }
 

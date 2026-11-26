@@ -5,22 +5,24 @@
   import Row from '../components/Row.svelte';
   import Switch from '../components/Switch.svelte';
   import Segmented from '../components/Segmented.svelte';
+  import { locale, syncLang, t } from '../i18n/index.svelte.js';
+  import { formatComboReadable } from '../models/shortcutDisplay.js';
   import { formatShapeOnHoldSub } from '../models/settingsMeta.js';
   import { buildBoardPreviewSamples } from '../models/drawUi.js';
 
   /**
-   * S04 설정 · 판서·확대 화면(F06).
+   * S04 설정 · 그리기·확대 화면(F06 · R2-FIX-12).
    * @type {{ client: import('@screen-ink/client').InkClient }}
    */
   let { client } = $props();
 
-  const PEN_COLORS = [
-    { key: 'R', label: '빨강', lightFg: false },
-    { key: 'Y', label: '노랑', lightFg: false },
-    { key: 'G', label: '초록', lightFg: false },
-    { key: 'O', label: '주황', lightFg: false },
-    { key: 'B', label: '파랑', lightFg: true },
-    { key: 'L', label: '연두', lightFg: false },
+  const PEN_COLOR_META = [
+    { key: 'R', lightFg: false },
+    { key: 'Y', lightFg: false },
+    { key: 'G', lightFg: false },
+    { key: 'O', lightFg: false },
+    { key: 'B', lightFg: true },
+    { key: 'L', lightFg: false },
   ];
 
   let state = $state(null);
@@ -28,10 +30,15 @@
   $effect(() => {
     let alive = true;
     client.getState().then((s) => {
-      if (alive) state = s;
+      if (!alive) return;
+      state = s;
+      syncLang(s);
     });
     const off = client.subscribe((e) => {
-      if (e.type === 'state') state = e.state;
+      if (e.type === 'state') {
+        state = e.state;
+        syncLang(e.state);
+      }
     });
     return () => {
       alive = false;
@@ -40,14 +47,29 @@
   });
 
   let settings = $derived(state?.settings ?? {});
+  let platform = $derived(state?.platform ?? 'windows');
   let penColor = $derived(settings['draw.color'] ?? 'R');
   let penWidth = $derived(Number(settings['draw.width'] ?? 4));
   let shapeApply = $derived(settings['draw.shapeApply'] ?? 'suggest');
-  let shapeOnHoldSub = $derived(formatShapeOnHoldSub(shapeApply));
-  // "멈추면 도형으로"가 꺼져 있으면 도형 보정 방식은 쓸 일이 없다 — 흐리게
+  let dUndoCombo = $derived(state?.shortcuts?.find((s) => s.id === 'd-undo')?.combo ?? '');
+  let restoreCombo = $derived(
+    state?.shortcuts?.find((s) => s.id === 'restore')?.combo ??
+      (platform === 'macos' ? 'Option+Shift+1' : 'Alt+Shift+1'),
+  );
+  let restoreKeyLabel = $derived(
+    formatComboReadable(restoreCombo, platform) || (platform === 'macos' ? '⌥⇧1' : 'Alt Shift 1'),
+  );
+  let boardCombo = $derived(
+    state?.shortcuts?.find((s) => s.id === 'board')?.combo ??
+      (platform === 'macos' ? 'Option+3' : 'Alt+3'),
+  );
+  let boardShortcut = $derived(
+    formatComboReadable(boardCombo, platform) || (platform === 'macos' ? '⌥3' : 'Alt+3'),
+  );
+  let shapeOnHoldSub = $derived(formatShapeOnHoldSub(shapeApply, platform, locale.lang, dUndoCombo));
+  // "멈추면 도형으로"가 꺼져 있으면 도형 바꾸는 방식은 쓸 일이 없다 — 들여쓰기+흐리게
   let shapeOff = $derived(!settings['draw.shapeOnHold']);
-  let boardShortcut = $derived(state?.platform === 'macos' ? '⌥3' : 'Alt+3');
-  let boardPreviews = $derived(buildBoardPreviewSamples({ penColor, penWidth }));
+  let boardPreviews = $derived(buildBoardPreviewSamples({ penColor, penWidth, lang: locale.lang }));
 
   function setSetting(path, value) {
     client.updateSetting(path, value);
@@ -56,21 +78,22 @@
 
 <div class="ink-page">
   <header class="ink-page-head" data-tauri-drag-region>
-    <h1 class="ink-page-title" data-tauri-drag-region>판서·확대</h1>
+    <h1 class="ink-page-title" data-tauri-drag-region>{t('page.draw.title')}</h1>
   </header>
 
   <div class="ink-page-body ink-scroll">
   <section class="ink-section">
-    <SectionLabel title="펜" />
+    <SectionLabel title={t('page.draw.section.pen')} />
     <Group>
-      <Row label="처음 색">
-        <div role="radiogroup" aria-label="처음 펜 색" class="ink-pen-colors">
-          {#each PEN_COLORS as c (c.key)}
+      <Row label={t('page.draw.color')}>
+        <div role="radiogroup" aria-label={t('page.draw.colorAria')} class="ink-pen-colors">
+          {#each PEN_COLOR_META as c (c.key)}
+            {@const colorName = t(`capture.color.${c.key}`)}
             <button
               type="button"
               role="radio"
               aria-checked={penColor === c.key}
-              aria-label={`펜 색 ${c.label} (${c.key})`}
+              aria-label={t('page.draw.colorItemAria', { color: colorName, key: c.key })}
               class="ink-pen-swatch ink-mono ink-focus"
               data-selected={penColor === c.key ? 'true' : undefined}
               style:background={`var(--ink-pen-${c.key})`}
@@ -82,7 +105,7 @@
           {/each}
         </div>
       </Row>
-      <Row label="굵기" sub="Ctrl+휠">
+      <Row label={t('page.draw.width')} sub={t('page.draw.widthSub')}>
         <div class="ink-slider-wrap">
           <Slider.Root
             type="single"
@@ -91,7 +114,7 @@
             step={1}
             value={penWidth}
             onValueChange={(v) => setSetting('draw.width', v)}
-            aria-label="펜 굵기"
+            aria-label={t('page.draw.widthAria')}
             class="ink-slider"
           >
             <span class="ink-slider-track">
@@ -106,42 +129,45 @@
   </section>
 
   <section class="ink-section">
-    <SectionLabel title="보정" />
+    <SectionLabel title={t('page.draw.section.assist')} />
     <Group>
-      <Row label="떨림 보정">
+      <Row label={t('page.draw.smoothing')}>
         <Segmented
-          label="떨림 보정"
+          label={t('page.draw.smoothing')}
           value={settings['draw.smoothing'] ?? 'light'}
           options={[
-            { value: 'off', label: '끔' },
-            { value: 'light', label: '약' },
-            { value: 'strong', label: '강' },
+            { value: 'off', label: t('page.draw.smoothing.off') },
+            { value: 'light', label: t('page.draw.smoothing.light') },
+            { value: 'strong', label: t('page.draw.smoothing.strong') },
           ]}
           onChange={(v) => setSetting('draw.smoothing', v)}
         />
       </Row>
-      <Row label="거의 곧은 선은 곧게" sub="±4°" subMono={true}>
+      <Row label={t('page.draw.straighten')} sub="±4°" subMono={true}>
         <Switch
           checked={Boolean(settings['draw.straighten'])}
-          label="거의 곧은 선은 곧게"
+          label={t('page.draw.straighten')}
           onCheckedChange={(v) => setSetting('draw.straighten', v)}
         />
       </Row>
-      <Row label="멈추면 도형으로" sub={shapeOnHoldSub}>
+      <Row label={t('page.draw.shapeOnHold')} sub={shapeOnHoldSub}>
         <Switch
           checked={Boolean(settings['draw.shapeOnHold'])}
-          label="멈추면 도형으로"
+          label={t('page.draw.shapeOnHold')}
           onCheckedChange={(v) => setSetting('draw.shapeOnHold', v)}
         />
       </Row>
-      <Row label="도형 보정" class={shapeOff ? 'ink-row-off' : ''}>
+      <Row
+        label={t('page.draw.shapeApply')}
+        class={shapeOff ? 'ink-row-sub-item ink-row-off' : 'ink-row-sub-item'}
+      >
         <Segmented
-          label="도형 보정"
+          label={t('page.draw.shapeApply')}
           value={settings['draw.shapeApply'] ?? 'suggest'}
           disabled={shapeOff}
           options={[
-            { value: 'suggest', label: '물어보고 바꾸기' },
-            { value: 'auto', label: '바로 바꾸기' },
+            { value: 'suggest', label: t('page.draw.shapeApply.suggest') },
+            { value: 'auto', label: t('page.draw.shapeApply.auto') },
           ]}
           onChange={(v) => setSetting('draw.shapeApply', v)}
         />
@@ -150,11 +176,11 @@
   </section>
 
   <section class="ink-section">
-    <SectionLabel title="판서" />
+    <SectionLabel title={t('page.draw.section.draw')} />
     <Group>
-      <Row label="첫 휠 배율">
+      <Row label={t('page.draw.startZoom')}>
         <Segmented
-          label="첫 휠 배율"
+          label={t('page.draw.startZoom')}
           mono={true}
           value={Number(settings['draw.startZoom'] ?? 1.75)}
           options={[
@@ -167,39 +193,42 @@
           onChange={(v) => setSetting('draw.startZoom', Number(v))}
         />
       </Row>
-      <Row label="나갈 때 보관" sub="Alt+Shift+1로 다시 열기">
+      <Row label={t('page.draw.keep')} sub={t('page.draw.keepSub', { key: restoreKeyLabel })}>
         <Switch
           checked={Boolean(settings['draw.keep'])}
-          label="나갈 때 보관"
+          label={t('page.draw.keep')}
           onCheckedChange={(v) => setSetting('draw.keep', v)}
         />
       </Row>
-      <Row label="Esc 키">
+      <Row label={t('page.draw.esc')}>
         <Segmented
-          label="Esc 키 동작"
+          label={t('page.draw.escAria')}
           value={settings['draw.esc'] ?? 'step'}
           options={[
-            { value: 'step', label: '한 단계씩' },
-            { value: 'exit', label: '바로 나가기' },
+            { value: 'step', label: t('page.draw.esc.step') },
+            { value: 'exit', label: t('page.draw.esc.exit') },
           ]}
           onChange={(v) => setSetting('draw.esc', v)}
         />
       </Row>
-      <Row label="확대 중 오른쪽 클릭" sub="손 모드 · 아니면 끝내기">
+      <Row label={t('page.draw.rightClickPan')} sub={t('page.draw.rightClickPanSub')}>
         <Switch
           checked={Boolean(settings['draw.rightClickPan'])}
-          label="확대 중 오른쪽 클릭"
+          label={t('page.draw.rightClickPan')}
           onCheckedChange={(v) => setSetting('draw.rightClickPan', v)}
         />
       </Row>
-      <Row label="칠판 미리 보기" sub={`${boardShortcut} · W 흰색 · K 검은색`}>
-        <div class="ink-board-previews" role="group" aria-label="흰 칠판과 검은 칠판 미리 보기">
+      <Row
+        label={t('page.draw.boardPreview')}
+        sub={t('page.draw.boardPreviewSub', { shortcut: boardShortcut })}
+      >
+        <div class="ink-board-previews" role="img" aria-label={t('page.draw.boardPreviewAria')}>
           {#each boardPreviews as board (board.id)}
             <div
               class="ink-board-mini"
               data-board={board.id}
               style:background={board.bg}
-              title={board.substituted ? `${board.label} (검정 펜은 흰색으로)` : board.label}
+              title={board.substituted ? t('page.draw.boardPreviewSubstituted', { label: board.label }) : board.label}
             >
               <svg viewBox="0 0 84 40" class="ink-board-mini-svg" aria-hidden="true">
                 <path
@@ -212,7 +241,7 @@
               </svg>
               <span class="ink-board-mini-tag">
                 <kbd class="ink-mono">{board.key}</kbd>
-                <span>{board.id === 'white' ? '흰색' : '검은색'}</span>
+                <span>{board.id === 'white' ? t('page.draw.boardBgWhite') : t('page.draw.boardBgBlack')}</span>
               </span>
             </div>
           {/each}
@@ -222,24 +251,24 @@
   </section>
 
   <section class="ink-section">
-    <SectionLabel title="실시간 확대" />
+    <SectionLabel title={t('page.draw.section.zoom')} />
     <Group>
-      <Row label="커서 따라가기">
+      <Row label={t('page.draw.zoomFollow')}>
         <Segmented
-          label="커서 따라가기"
+          label={t('page.draw.zoomFollow')}
           value={settings['zoom.follow'] ?? 'pointer'}
           options={[
-            { value: 'pointer', label: '마우스 위치대로' },
-            { value: 'smooth', label: '가운데로' },
-            { value: 'instant', label: '바로' },
+            { value: 'pointer', label: t('page.draw.zoomFollow.pointer') },
+            { value: 'smooth', label: t('page.draw.zoomFollow.smooth') },
+            { value: 'instant', label: t('page.draw.zoomFollow.instant') },
           ]}
           onChange={(v) => setSetting('zoom.follow', v)}
         />
       </Row>
-      <Row label="위치 지도 보이기" sub="모서리에 작게">
+      <Row label={t('page.draw.zoomMinimap')} sub={t('page.draw.zoomMinimapSub')}>
         <Switch
           checked={Boolean(settings['zoom.minimap'])}
-          label="위치 지도 보이기"
+          label={t('page.draw.zoomMinimap')}
           onCheckedChange={(v) => setSetting('zoom.minimap', v)}
         />
       </Row>
@@ -249,8 +278,27 @@
 </div>
 
 <style>
+  /* R2-FIX-12: "도형 바꾸는 방식"을 "멈추면 도형으로" 하위 행으로 들여쓰기·연결 표시 */
+  :global(.ink-row-wrap.ink-row-sub-item .ink-row) {
+    padding-left: 28px;
+    position: relative;
+  }
+
+  :global(.ink-row-wrap.ink-row-sub-item .ink-row::before) {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 8px;
+    bottom: 14px;
+    width: 7px;
+    border-left: 1.5px solid var(--ink-line-strong);
+    border-bottom: 1.5px solid var(--ink-line-strong);
+    border-bottom-left-radius: 3px;
+  }
+
   :global(.ink-row-wrap.ink-row-off) {
     opacity: 0.45;
+    pointer-events: none;
   }
 
   .ink-page {
@@ -365,24 +413,32 @@
     color: var(--ink-text);
   }
 
+  /* R2-FIX-12: 단추가 아닌 비대화형 미리보기 프레임으로 구분 */
   .ink-board-previews {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px dashed var(--ink-line);
+    background: var(--ink-raised);
+    cursor: default;
+    user-select: none;
+    pointer-events: none;
   }
 
   .ink-board-mini {
     position: relative;
-    width: 92px;
-    height: 44px;
-    border-radius: var(--ink-r-row);
+    width: 90px;
+    height: 42px;
+    border-radius: calc(var(--ink-r-row) - 1px);
     box-sizing: border-box;
     overflow: hidden;
     flex: none;
   }
 
   .ink-board-mini[data-board='white'] {
-    box-shadow: inset 0 0 0 1px var(--ink-line-strong);
+    box-shadow: inset 0 0 0 1px var(--ink-line);
     color: #5e5e5b;
   }
 

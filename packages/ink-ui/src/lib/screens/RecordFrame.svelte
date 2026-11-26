@@ -6,12 +6,13 @@
    * @type {{ x: number, y: number, width: number, height: number }}
    */
   import SelectionFrame from '../components/SelectionFrame.svelte';
+  import { t } from '../i18n/index.svelte.js';
 
   let { x, y, width, height } = $props();
 </script>
 
 <div class="ink-rec-frame">
-  <SelectionFrame {x} {y} {width} {height} state="recording" scrim={true} instant={true} label="녹화 범위" />
+  <SelectionFrame {x} {y} {width} {height} state="recording" scrim={true} instant={true} label={t('recordUi.frame.aria')} />
 </div>
 
 <style>
