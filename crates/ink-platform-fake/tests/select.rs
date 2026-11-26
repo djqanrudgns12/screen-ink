@@ -142,11 +142,23 @@ fn 색인이_늦게_오면_강조를_다시_만든다() {
 fn 색인이_두_번_느린_앱은_창_단위로_강등() {
     let w = world();
     let mut s = service(&w);
-    s.on_elements_ready(1, "hwp.exe", 220.0);
-    s.on_elements_ready(1, "hwp.exe", 260.0);
+    s.on_elements_ready(1, "hwp.exe", 620.0);
+    s.on_elements_ready(1, "hwp.exe", 710.0);
     let list = s.settings().get("capture.excluded").cloned().unwrap();
     assert_eq!(list[0]["exe"], "hwp.exe");
     assert_eq!(list[0]["mode"], "windowOnly");
     assert_eq!(list[0]["auto"], true);
     assert!(w.last_island().unwrap().text.contains("hwp.exe"));
+}
+
+#[test]
+fn 보통_속도_색인은_강등하지_않는다() {
+    // 학교 PC 실측 Chrome·Claude 80~210 ms — 몇 번이어도 창 단위로 떨어지지 않는다
+    let w = world();
+    let mut s = service(&w);
+    for took in [210.0, 190.0, 160.0] {
+        s.on_elements_ready(1, "chrome.exe", took);
+    }
+    let list = s.settings().get("capture.excluded").cloned().unwrap_or_default();
+    assert!(list.as_array().cloned().unwrap_or_default().is_empty(), "{list}");
 }

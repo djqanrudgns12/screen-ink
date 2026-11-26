@@ -21,8 +21,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
-/// 느린 앱 문턱(R-CAP-15): 색인이 이 시간을 2번 넘으면 그 앱은 창 단위로만.
-const SLOW_INDEX_MS: f64 = 150.0;
+/// 느린 앱 문턱(R-CAP-15): 하위 트리 색인이 이 시간을 2번 넘으면 그 앱은 창 단위로만.
+/// 색인은 일꾼 스레드라 화면은 기다리지 않는다 — 문턱은 "강조가 늦게 바뀌어 튀어 보이는" 앱을 거른다.
+/// 학교 PC 릴리스 실측(2026-11-26): Chrome·Claude 80~210 ms → 2.4배 여유.
+const SLOW_INDEX_MS: f64 = 500.0;
 
 /// 오버레이가 넘기는 입력(packages/ink-client CaptureInput).
 #[derive(Clone, Debug, Deserialize)]
