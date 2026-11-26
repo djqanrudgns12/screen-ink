@@ -70,6 +70,34 @@ impl Control {
         }
     }
 
+    /// macOS 접근성 역할(`AXRole`, 탭 단추는 `AXSubrole` `AXTabButton`을 넘긴다) → 종류(M9, I-mac §2.1).
+    pub fn from_ax(role: &str) -> Control {
+        match role {
+            "AXButton" | "AXPopUpButton" | "AXMenuButton" | "AXDisclosureTriangle" | "AXIncrementor" | "AXColorWell" => Control::Button,
+            "AXTextField" | "AXTextArea" | "AXSearchField" | "AXSecureTextField" => Control::Edit,
+            "AXStaticText" | "AXHeading" => Control::Text,
+            "AXImage" => Control::Image,
+            "AXList" | "AXCollection" => Control::List,
+            "AXTable" | "AXGrid" => Control::Table,
+            "AXOutline" | "AXBrowser" => Control::Tree,
+            "AXRow" => Control::DataItem,
+            "AXCell" => Control::ListItem,
+            "AXTabGroup" => Control::Tab,
+            "AXTabButton" => Control::TabItem,
+            "AXRadioButton" => Control::Button,
+            "AXMenu" | "AXMenuBar" => Control::Menu,
+            "AXMenuItem" | "AXMenuBarItem" => Control::MenuItem,
+            "AXToolbar" => Control::ToolBar,
+            "AXWebArea" | "AXDocument" => Control::Document,
+            "AXLink" => Control::Hyperlink,
+            "AXCheckBox" | "AXSwitch" => Control::CheckBox,
+            "AXComboBox" => Control::ComboBox,
+            "AXGroup" | "AXScrollArea" | "AXRadioGroup" | "AXSegmentedControl" => Control::Group,
+            "AXSplitGroup" | "AXSheet" | "AXLayoutArea" | "AXDrawer" => Control::Pane,
+            _ => Control::Other,
+        }
+    }
+
     pub fn label(self) -> &'static str {
         match self {
             Control::Button => "단추",
@@ -521,5 +549,36 @@ mod tests {
         assert_eq!(Control::from_uia(50000), Control::Button);
         assert_eq!(Control::from_uia(50029), Control::DataItem);
         assert_eq!(Control::from_uia(99999), Control::Other);
+    }
+
+    #[test]
+    fn ax_역할문자열_종류_매핑() {
+        for (role, want) in [
+            ("AXButton", Control::Button),
+            ("AXPopUpButton", Control::Button),
+            ("AXTextField", Control::Edit),
+            ("AXSearchField", Control::Edit),
+            ("AXStaticText", Control::Text),
+            ("AXImage", Control::Image),
+            ("AXList", Control::List),
+            ("AXTable", Control::Table),
+            ("AXOutline", Control::Tree),
+            ("AXRow", Control::DataItem),
+            ("AXCell", Control::ListItem),
+            ("AXTabGroup", Control::Tab),
+            ("AXTabButton", Control::TabItem),
+            ("AXMenuItem", Control::MenuItem),
+            ("AXToolbar", Control::ToolBar),
+            ("AXWebArea", Control::Document),
+            ("AXLink", Control::Hyperlink),
+            ("AXCheckBox", Control::CheckBox),
+            ("AXComboBox", Control::ComboBox),
+            ("AXGroup", Control::Group),
+            ("AXSplitGroup", Control::Pane),
+            ("AXSlider", Control::Other),
+            ("", Control::Other),
+        ] {
+            assert_eq!(Control::from_ax(role), want, "{role}");
+        }
     }
 }

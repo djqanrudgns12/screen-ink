@@ -4,6 +4,8 @@
 pub mod coords;
 
 #[cfg(target_os = "macos")]
+pub mod ax;
+#[cfg(target_os = "macos")]
 pub mod capture;
 #[cfg(target_os = "macos")]
 pub mod clipboard;

@@ -95,6 +95,11 @@
   3. **맥 결과 섬 안내가 "Ctrl+V"**: 범위·창 캡처·판서 복사 안내 → 맥 `⌘V`(`paste_text`), [저장] 키는 설정 `c-save` 값(`key_text`).
 - **[할 일 — 버그] 캡처 중 글 상자에서 한글 조합이 안 됨**(맥): 캡처 주석 글자 도구, 그리고 캡처 뒤 [판서로]로 연 판서의 글자 도구에서 2벌식 `a b c ␣`가 하나도 안 들어간다. 숫자 `123`은 들어간다. Option+1로 바로 연 판서에서는 된다. 배제한 것: 화면 초점(AX 초점 = 그 글 상자), 섬이 키 창을 가져감(섬은 `focusable(false)`, 치는 동안 섬 사건 0), 보안 입력(`kCGSSessionSecureInputPID` 없음), CSS(`user-select`는 판서와 같음). 이상한 점: 캡처 때만 우리 앱 AX 창 목록에 이름 없는 280×168 창이 생김(입력기 떠 있는 창으로 추정). 다음 가설: 캡처 모드에서 WKWebView `inputContext`가 nil(편집 상태 `isContentEditable`가 갱신되지 않음 — 정지 패널·두 오버레이 동시 표시 중 무엇이 영향?). 확인 방법: 캡처 진입 단계(정지 패널 `freeze::show` · 두 번째 모니터 오버레이 표시)를 하나씩 빼 보며 같은 시험(`bench/mac/input.swift` + AX 값 읽기).
 
+**M9 결과(2026-11-26 밤)** — `crates/ink-platform-macos/src/ax.rs`(`AxIndex`, Windows `uia.rs`와 같은 구조), `Control::from_ax`(+ 시험), 플러그인 `element_source` 맥 분기.
+- 요소마다 역할·부역할·자리·크기·자식을 `AXUIElementCopyMultipleAttributeValues` 한 번으로, 요청 제한 400 ms, 창 하나 예산 300 ms, 방문 4000·저장 1500·깊이 12. 창은 CG 경계와 AX 창 자리·크기(±2 pt, 없으면 겹침 최대)로 찾는다. 사각형은 `Space::rect_to_phys` 하나로 바꾸고 창 안으로 자른다. 글자 값·제목은 읽지 않는다.
+- 실측(이 셸 = 손쉬운 사용 있음, `cargo test -p ink-platform-macos ax::tests::실제_맨앞_창_색인 -- --ignored --nocapture`): 맨 앞 앱 창 요소 48개 42 ms(Group 30·Button 14·Tab·ToolBar·Text).
+- 개발 앱(`npm run app:dev`)은 손쉬운 사용 권한이 **터미널 앱** 몫이라 지금은 `ax index skipped: accessibility not granted` → A 근거 없이 W·V로 캡처(정상 대체). **[확인 남음]** 권한을 준 실행(서명한 `.app` 또는 터미널에 손쉬운 사용)에서 `capture.evidence: true`로 초록 `A` 마디, `ax index N elements in M ms`, 느린 앱 강등(500 ms×2).
+
 ### 2.2 맥 트랙 원래 순서 — M9·M10·M17·M-sign
 - **M9 AX 요소 색인**(P0, 1.5일): 시안 [I-mac.md](../plans/2026-11-26/I-mac.md) §2.1. Windows UIA 일꾼(`ink-platform-windows/src/uia.rs`)과 MSAA 대체(`msaa.rs`)의 구조·시간 예산을 본보기로.
 - **M10 권한 스마트 흐름**(1일): I-mac.md §2.2. 권한 허용은 사용자에게 부탁(직접 바꾸지 않음).

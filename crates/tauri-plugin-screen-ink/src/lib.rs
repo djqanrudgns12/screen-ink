@@ -178,7 +178,7 @@ impl<R: Runtime> Notifier for TauriNotifier<R> {
     }
 }
 
-/// A 근거 어댑터: Windows = UIA 색인 일꾼(끝나면 메인 스레드에서 서비스에 알림), 그 밖 = 없음.
+/// A 근거 어댑터: Windows = UIA 색인 일꾼, 맥 = AX 색인 일꾼(끝나면 메인 스레드에서 서비스에 알림), 그 밖 = 없음.
 fn element_source<R: Runtime>(app: &AppHandle<R>) -> Box<dyn ink_app::ElementSource> {
     #[cfg(windows)]
     {
@@ -194,7 +194,21 @@ fn element_source<R: Runtime>(app: &AppHandle<R>) -> Box<dyn ink_app::ElementSou
             });
         }))
     }
-    #[cfg(not(windows))]
+    // 맥: AX 색인 일꾼(M9) — 끝나면 같은 길로 서비스에 알린다
+    #[cfg(target_os = "macos")]
+    {
+        let handle = app.clone();
+        Box::new(ink_platform_macos::ax::AxIndex::spawn(move |window, exe, took| {
+            let at = std::time::Instant::now();
+            let h = handle.clone();
+            let _ = handle.run_on_main_thread(move || {
+                if let Some(ink) = h.try_state::<Ink>() {
+                    ink.lock().on_elements_ready_at(window, &exe, took, at);
+                }
+            });
+        }))
+    }
+    #[cfg(all(not(windows), not(target_os = "macos")))]
     {
         let _ = app;
         Box::new(NoElements)
@@ -215,10 +229,10 @@ fn vision_source<R: Runtime>(app: &AppHandle<R>) -> Box<dyn ink_app::VisionSourc
     }))
 }
 
-#[cfg(not(windows))]
+#[cfg(all(not(windows), not(target_os = "macos")))]
 struct NoElements;
 
-#[cfg(not(windows))]
+#[cfg(all(not(windows), not(target_os = "macos")))]
 impl ink_app::ElementSource for NoElements {
     fn request(&self, _window: u64, _exe: &str) {}
     fn elements_at(&self, _window: u64, _p: ink_domain::geometry::PhysPoint) -> Vec<ink_domain::recog::ElementCand> {

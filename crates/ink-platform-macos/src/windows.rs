@@ -54,6 +54,15 @@ fn app_of(pid: i32, owner: &str) -> App {
     App { exe, bundle }
 }
 
+/// 창 하나(CGWindowID)의 소유 pid와 경계(CG 전역 포인트) — AX 색인이 그 앱의 AX 창을 찾을 때(M9).
+pub(crate) fn owner_and_bounds(window: u32) -> Option<(i32, RectF)> {
+    let list = CGWindowListCopyWindowInfo(CGWindowListOption::OptionIncludingWindow, window)?;
+    // SAFETY: 위 `top_windows`와 같은 무료 다리.
+    let list: &NSArray<NSDictionary<NSString, AnyObject>> = unsafe { &*(&*list as *const CFArray as *const NSArray<NSDictionary<NSString, AnyObject>>) };
+    let d = list.iter().next()?;
+    Some((num(&d, "kCGWindowOwnerPID")?.intValue(), bounds(&d)?))
+}
+
 /// Z 순서(앞 → 뒤) 화면에 보이는 창 전부. 거르기는 도메인(`snapshot::filter_windows`)이 한다.
 pub fn top_windows(space: &Space) -> Vec<RawWindow> {
     let opts = CGWindowListOption::OptionOnScreenOnly | CGWindowListOption::ExcludeDesktopElements;
