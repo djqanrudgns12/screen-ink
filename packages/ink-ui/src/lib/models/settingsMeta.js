@@ -99,12 +99,17 @@ export function describeSettingChange(change, shortcuts = []) {
 
 /**
  * 설정 위치(`state.location`) 표시 문자열을 만든다.
- * @param {{ path: string, portable: boolean, readOnly?: boolean } | null | undefined} location
+ * @param {{ path: string, portable: boolean, readOnly?: boolean, packaged?: boolean } | null | undefined} location
  * @param {number} [maxPathLen=32]
+ * @param {'unpackaged' | 'msix-store' | 'msix-direct' | string} [channel]
  */
-export function formatLocationSub(location, maxPathLen = 32) {
+export function formatLocationSub(location, maxPathLen = 32, channel = undefined) {
   if (!location) return '';
-  const kind = location.portable ? '포터블' : '설치';
+  const isMsix =
+    Boolean(location.packaged) ||
+    channel === 'msix-store' ||
+    channel === 'msix-direct';
+  const kind = isMsix ? 'MSIX 패키지' : location.portable ? '포터블' : '설치';
   const short = shortenPath(location.path ?? '', maxPathLen);
   return short ? `${kind} · ${short}` : kind;
 }

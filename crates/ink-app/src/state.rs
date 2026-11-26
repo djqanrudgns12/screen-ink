@@ -67,6 +67,11 @@ pub struct InkState {
     /// 더 새 스키마·쓸 수 없는 폴더 — 바꿔도 저장하지 않음
     pub readonly: bool,
     pub location: StoreLocation,
+    /// 설치 채널(`unpackaged` | `msix-store` | `msix-direct`) — 설정 위치 표기(`MSIX 패키지`/`설치`/`포터블`)와 자동 실행 분기
+    pub channel: ink_domain::package::InstallChannel,
+    /// 로그인 자동 실행 안내(MSIX `StartupTask`가 `DisabledByUser`·정책 차단일 때 설정 화면 한 줄)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub autostart_notice: Option<String>,
     /// 시작할 때 한 번 알려 줄 문구(손상 복구·읽을 수 없던 값)
     pub notices: Vec<String>,
     /// 지금 모드(`{mode:'idle'}` · `{mode:'capture', session, kind, startedMs}`)

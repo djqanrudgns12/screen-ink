@@ -618,16 +618,30 @@ fn export_meta(headers: &tauri::http::HeaderMap) -> Result<ink_app::DrawExportMe
 
 #[cfg(not(debug_assertions))]
 fn sync_autostart<R: Runtime>(app: &AppHandle<R>, on: bool) {
-    use tauri_plugin_autostart::ManagerExt;
-    let m = app.autolaunch();
-    let now = m.is_enabled().unwrap_or(false);
-    let r = match (on, now) {
-        (true, false) => m.enable(),
-        (false, true) => m.disable(),
-        _ => Ok(()),
-    };
-    if let Err(e) = r {
-        log::warn!("autostart sync failed: {e}");
+    let channel = app.state::<Ink>().lock().install_channel();
+    match ink_domain::package::autostart_backend(channel) {
+        ink_domain::package::AutostartBackend::StartupTask => match app.state::<Ink>().lock().sync_autostart_via_port(on) {
+            Ok(notice) => {
+                if let Some(msg) = &notice.guidance_ko {
+                    log::info!("startup task notice: {msg}");
+                }
+            }
+            Err(e) => log::warn!("startup task sync failed: {e}"),
+        },
+        ink_domain::package::AutostartBackend::RegistryRun => {
+            app.state::<Ink>().lock().set_autostart_notice(None);
+            use tauri_plugin_autostart::ManagerExt;
+            let m = app.autolaunch();
+            let now = m.is_enabled().unwrap_or(false);
+            let r = match (on, now) {
+                (true, false) => m.enable(),
+                (false, true) => m.disable(),
+                _ => Ok(()),
+            };
+            if let Err(e) = r {
+                log::warn!("autostart sync failed: {e}");
+            }
+        }
     }
 }
 
@@ -646,9 +660,10 @@ fn get_state(ink: State<'_, Ink>) -> InkState {
 
 #[tauri::command]
 fn update_setting<R: Runtime>(app: AppHandle<R>, ink: State<'_, Ink>, path: String, value: Value) -> UpdateResult {
-    let r = ink.lock().update_setting(&path, &value);
+    let mut r = ink.lock().update_setting(&path, &value);
     if r.ok && path == "general.autostart" {
         sync_autostart(&app, value.as_bool().unwrap_or(false));
+        r.state = ink.lock().state();
     }
     r
 }
@@ -1006,6 +1021,17 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
 
 // ───────────────────────── 조립 ─────────────────────────
 
+fn package_runtime() -> Box<dyn ink_app::PackageRuntime> {
+    #[cfg(windows)]
+    {
+        Box::new(ink_platform_windows::package::WindowsPackageRuntime)
+    }
+    #[cfg(not(windows))]
+    {
+        Box::new(ink_app::UnpackagedRuntime)
+    }
+}
+
 fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error>> {
     let started = Instant::now();
     app.manage(PopoverClock::default());
@@ -1042,7 +1068,9 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         // 이름 바꾸기 전에 쓰던 설정을 그대로 가져간다. 실패하면 새 폴더에서 처음부터.
         let _ = std::fs::rename(&legacy, &user_dir);
     }
-    let (dir, portable) = ink_store::resolve_dir(&exe_dir, &user_dir);
+    let pkg_runtime = package_runtime();
+    let channel = pkg_runtime.channel();
+    let (dir, portable) = ink_store::resolve_dir(&exe_dir, &user_dir, channel);
     let (screen, windows, monitors) = screen_ports();
     let ports = Ports {
         hotkeys: Box::new(TauriHotkeys { app: app.clone() }),
@@ -1061,6 +1089,11 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         pins: Box::new(pins::TauriPinHost::new(app.clone(), pin_store)),
     };
     let mut service = InkService::new(ports, Platform::current(), app.package_info().version.to_string());
+    service.set_package_runtime(pkg_runtime);
+    #[cfg(windows)]
+    if channel.is_packaged() {
+        service.set_autostart(Box::new(ink_platform_windows::package::WindowsStartupTaskAutostart::default()));
+    }
     // 실시간 확대(Alt+2): Windows = Magnification API + HUD, 그 밖 = 없음
     service.set_magnifier(zoom_hud::magnifier(app));
     // 개발용 사람 정답 도구: 확정할 때마다 인식 시험 사례를 쓴다(시험 문서 화면에서만, 08 §5.2)

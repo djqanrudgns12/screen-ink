@@ -12,6 +12,8 @@ pub mod uia;
 #[cfg(windows)]
 pub mod freeze;
 #[cfg(windows)]
+pub mod package;
+#[cfg(windows)]
 pub mod screen;
 #[cfg(windows)]
 pub mod magnifier;

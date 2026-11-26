@@ -112,6 +112,8 @@ pub struct InkService {
     pub(crate) draw: crate::draw::DrawState,
     // ── 실시간 확대(단계 5) ──
     pub(crate) zoom: crate::live_zoom::ZoomState,
+    // ── 패키지 모드·자동 실행·업데이터(D3) ──
+    pub(crate) pkg: crate::package::PackageState,
 }
 
 /// 모드 섬 둘째 줄(처음 3번과 `?`일 때만 보임 — 섬 호스트가 정함).
@@ -198,6 +200,7 @@ impl InkService {
             cap: crate::capture::CaptureState::with_ranges(ranges),
             draw: Default::default(),
             zoom: Default::default(),
+            pkg: Default::default(),
         };
         svc.refresh_environment();
         svc.prepare_overlays();
@@ -231,6 +234,9 @@ impl InkService {
             [Some(o)] => Some((*o).clone()),
             _ => None,
         };
+        let channel = self.pkg.runtime.channel();
+        let mut location = self.ports.store.location();
+        location.portable = ink_domain::package::resolve_storage_policy(channel, location.portable).use_portable_dir;
         InkState {
             platform: match self.platform {
                 Platform::Win => "windows",
@@ -246,7 +252,9 @@ impl InkService {
             shortcuts,
             version: self.version.clone(),
             readonly: self.readonly,
-            location: self.ports.store.location(),
+            location,
+            channel,
+            autostart_notice: self.pkg.autostart_notice.as_ref().and_then(|n| n.guidance_ko.clone()),
             notices: self.notices.clone(),
             mode: self.mode,
         }

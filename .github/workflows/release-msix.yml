@@ -1,0 +1,147 @@
+# Windows MSIX 릴리스 포장 · SignPath 서명(자리표시) 파이프라인 (D2 · D8 · D9 · D11).
+# 기존 ci.yml과 분리된 릴리스 전용 워크플로다.
+#
+# SignPath Foundation 활성화 전 준비:
+#   - Repository Variables:
+#       SIGNPATH_ENABLED              ("true"로 켜기 전에는 서명 단계를 건너뜀)
+#       SIGNPATH_ORGANIZATION_ID      (SignPath 조직 ID)
+#       SIGNPATH_PROJECT_SLUG         (예: screen-ink)
+#       SIGNPATH_SIGNING_POLICY_SLUG  (예: release-signing)
+#       SIGNPATH_PUBLISHER            (SignPath 인증서 Subject, 글자 그대로 일치)
+#       STORE_PACKAGE_NAME            (Partner Center 예약 Identity Name, 비우면 msix.config.json 기본값)
+#       STORE_PUBLISHER               (Partner Center 발급 CN=...)
+#   - Repository Secrets:
+#       SIGNPATH_API_TOKEN            (SignPath CI submit 토큰)
+name: release-msix
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: '포장할 채널 (store | direct | both)'
+        required: false
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - store
+          - direct
+      release_tag:
+        description: '직접 배포 .appinstaller용 릴리스 태그 (비우면 ref 이름 사용)'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-msix-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package-msix:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: 프런트엔드 의존성 설치 및 검증
+        run: |
+          npm ci
+          npm test
+          npm run check
+
+      - name: Tauri 릴리스 실행 파일 빌드 (--no-bundle)
+        run: npm run tauri -w @screen-ink/app -- build --no-bundle
+
+      - name: Microsoft Store용 무서명 MSIX 포장 및 검증
+        if: ${{ github.event_name == 'push' || inputs.channel == 'both' || inputs.channel == 'store' }}
+        shell: pwsh
+        env:
+          STORE_PACKAGE_NAME: ${{ vars.STORE_PACKAGE_NAME }}
+          STORE_PUBLISHER: ${{ vars.STORE_PUBLISHER }}
+        run: |
+          $args = @('-Channel', 'store', '-SkipBuild', '-OutDir', 'dist/msix/store', '-Verify')
+          if ($env:STORE_PACKAGE_NAME) {
+            $args += @('-PackageName', $env:STORE_PACKAGE_NAME)
+          }
+          if ($env:STORE_PUBLISHER) {
+            $args += @('-Publisher', $env:STORE_PUBLISHER)
+          }
+          & .\scripts\package-msix.ps1 @args
+
+      - name: 직접 배포용 MSIX 및 .appinstaller 포장 및 검증
+        if: ${{ github.event_name == 'push' || inputs.channel == 'both' || inputs.channel == 'direct' }}
+        shell: pwsh
+        env:
+          SIGNPATH_PUBLISHER: ${{ vars.SIGNPATH_PUBLISHER }}
+          INPUT_TAG: ${{ inputs.release_tag }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          $tag = if ($env:INPUT_TAG) { $env:INPUT_TAG } else { $env:REF_NAME }
+          $args = @('-Channel', 'direct', '-SkipBuild', '-OutDir', 'dist/msix/direct', '-EmitAppInstaller', '-ReleaseTag', $tag, '-Verify')
+          if ($env:SIGNPATH_PUBLISHER) {
+            $args += @('-Publisher', $env:SIGNPATH_PUBLISHER)
+          }
+          & .\scripts\package-msix.ps1 @args
+
+      - name: 직접 배포용 무서명 MSIX 및 .appinstaller 아티팩트 업로드
+        id: upload-direct-unsigned
+        if: ${{ github.event_name == 'push' || inputs.channel == 'both' || inputs.channel == 'direct' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: screen-ink-msix-direct-unsigned
+          path: |
+            dist/msix/direct/*.msix
+            dist/msix/direct/shookshok.appinstaller
+          if-no-files-found: error
+
+      - name: SignPath Foundation 코드 서명 요청 (자리표시 — 활성화 시 실행)
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' && (github.event_name == 'push' || inputs.channel == 'both' || inputs.channel == 'direct') }}
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
+          project-slug: '${{ vars.SIGNPATH_PROJECT_SLUG }}'
+          signing-policy-slug: '${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}'
+          artifact-configuration-slug: 'msix'
+          github-artifact-id: '${{ steps.upload-direct-unsigned.outputs.artifact-id }}'
+          wait-for-completion: true
+          output-artifact-directory: 'dist/msix/direct-signed'
+
+      - name: SignPath 서명 완료 MSIX 아티팩트 업로드
+        if: ${{ vars.SIGNPATH_ENABLED == 'true' && (github.event_name == 'push' || inputs.channel == 'both' || inputs.channel == 'direct') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: screen-ink-msix-direct-signed
+          path: dist/msix/direct-signed/*.msix
+          if-no-files-found: error
+
+      - name: SignPath 미설정 안내 (건너뜀)
+        if: ${{ vars.SIGNPATH_ENABLED != 'true' }}
+        shell: pwsh
+        run: |
+          Write-Host "SignPath 서명이 아직 비활성 상태입니다(vars.SIGNPATH_ENABLED != 'true')."
+          Write-Host "필요한 비밀값/변수: secrets.SIGNPATH_API_TOKEN, vars.SIGNPATH_ORGANIZATION_ID, vars.SIGNPATH_PROJECT_SLUG, vars.SIGNPATH_SIGNING_POLICY_SLUG, vars.SIGNPATH_PUBLISHER"
+
+      - name: 스토어용 MSIX 아티팩트 업로드
+        if: ${{ github.event_name == 'push' || inputs.channel == 'both' || inputs.channel == 'store' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: screen-ink-msix-store
+          path: dist/msix/store/*.msix
+          if-no-files-found: error
