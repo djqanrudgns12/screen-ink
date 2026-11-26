@@ -24,6 +24,8 @@ mod pixels;
 #[cfg(target_os = "macos")]
 pub mod window;
 #[cfg(target_os = "macos")]
+pub mod window_shot;
+#[cfg(target_os = "macos")]
 pub mod windows;
 
 #[cfg(target_os = "macos")]
@@ -70,6 +72,14 @@ mod mac {
 
         fn cursor_sprite(&mut self) -> Option<ink_domain::image::CursorSprite> {
             cursor::sprite(&space())
+        }
+
+        fn prepare_window(&mut self, window: Option<u64>) {
+            crate::window_shot::prepare(window);
+        }
+
+        fn capture_window(&mut self, window: u64, bounds: ink_domain::geometry::PhysRect) -> Result<ink_app::WindowShot, String> {
+            crate::window_shot::shoot(window, bounds)
         }
     }
 

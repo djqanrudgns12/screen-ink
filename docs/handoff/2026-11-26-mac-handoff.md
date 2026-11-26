@@ -111,6 +111,11 @@
 
 **M-sign 준비(2026-11-26 밤)** — `scripts/mac-build-dmg.sh`(신원 확인 → `tauri build --bundles app,dmg` → `codesign --verify` · DR을 `target/mac-dr.txt`에 남기고 지난번과 비교), 안내 `docs/handoff/mac-self-sign.md`(만드는 사람: 키체인에서 자체 서명 코드 서명 인증서 한 번 / 받는 사람: "그래도 열기"). **막힘: 이 맥 키체인에 코드 서명 신원이 없다**(`security find-identity -v -p codesigning` = 0) — 인증서 만들기는 사람이 한다(§4).
 
+**M14 결과(2026-11-26 밤)** — `crates/ink-platform-macos/src/window_shot.rs`, `MacScreen::prepare_window`·`capture_window`(포트 그대로).
+- F2 고르기 중 창이 정해지면 뒤에서 SCK 창 목록을 받아 그 창을 쥐어 둔다 → 확정 때 `SCContentFilter(desktopIndependentWindow:)` + `ignoreShadowsSingleWindow` + sRGB BGRA(곧은 알파), 크기 = 서비스가 넘긴 창 사각형. 300 ms 안에 안 오거나 RGB 전부 0이면 오류 → 서비스가 정지 스냅숏 자르기로 대체(`windowshot::after_primary`, 맥은 표시 선호도 없음 = 0).
+- 실측(이 셸, `cargo test -p ink-platform-macos window_shot::tests -- --ignored --nocapture`): FHD 창 1920×1050 **48 ms**, 4K 창 3840×2100 **114~161 ms**(준비 뒤). 그림은 저장하지 않는다.
+- **[확인 필요]** 둥근 창 귀 투명: Chromium 계열 창(Claude·Aside, 화면을 채운 창)은 SCK가 네모 그대로 줬다(모서리 알파 255). 네이티브 창(Finder·메모)에서 귀가 투명으로 오는지, 아니면 Windows처럼 반지름으로 깎아야 하는지(macOS 판마다 반지름이 다름) 확인. 실제 앱 F2 흐름(가려진 창·보호 화면 안내)도 확인 남음.
+
 ### 2.2 맥 트랙 원래 순서 — M9·M10·M17·M-sign
 - **M9 AX 요소 색인**(P0, 1.5일): 시안 [I-mac.md](../plans/2026-11-26/I-mac.md) §2.1. Windows UIA 일꾼(`ink-platform-windows/src/uia.rs`)과 MSAA 대체(`msaa.rs`)의 구조·시간 예산을 본보기로.
 - **M10 권한 스마트 흐름**(1일): I-mac.md §2.2. 권한 허용은 사용자에게 부탁(직접 바꾸지 않음).
