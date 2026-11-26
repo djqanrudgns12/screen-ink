@@ -14,17 +14,22 @@ set -eu
 cd "$(dirname "$0")/.."
 
 ID="${APPLE_SIGNING_IDENTITY:-}"
-list_identities() { security find-identity -v -p codesigning | sed -E 's/[0-9A-F]{40}/…/'; }
+list_identities() { security find-identity -p codesigning | sed -E 's/[0-9A-F]{40}/…/'; }
 if [ -z "$ID" ]; then
   echo "APPLE_SIGNING_IDENTITY가 비어 있어요. 키체인의 코드 서명 신원:"
   list_identities
-  echo "만드는 법: docs/handoff/mac-self-sign.md"
+  echo "만드는 법: sh scripts/mac-make-cert.sh (또는 docs/handoff/mac-self-sign.md 1절)"
   exit 2
 fi
-if ! security find-identity -v -p codesigning | grep -qF "\"$ID\""; then
+if ! security find-identity -p codesigning | grep -qF "\"$ID\""; then
   echo "키체인에 코드 서명 신원 '$ID'이 없어요. 있는 것:"
   list_identities
+  echo "만들기: sh scripts/mac-make-cert.sh"
   exit 2
+fi
+# 신뢰를 정하지 않은 인증서도 서명은 된다(받는 맥에서는 어차피 "그래도 열기"). 알려만 준다
+if ! security find-identity -v -p codesigning | grep -qF "\"$ID\""; then
+  echo "알림: '$ID'은 '항상 신뢰'가 아니에요(서명은 됩니다). docs/handoff/mac-self-sign.md 1절 5번"
 fi
 export APPLE_SIGNING_IDENTITY="$ID"
 
