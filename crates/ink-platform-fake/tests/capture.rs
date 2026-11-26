@@ -72,7 +72,8 @@ fn f2_두_번은_활성_창_요청으로_넘긴다() {
     let w = FakeWorld::new();
     let mut s = service(&w);
     s.on_hotkey("window");
-    assert_eq!(s.on_hotkey("window"), HotkeyOutcome::Start("active".into()));
+    // 단계 6.1부터 서비스가 활성 창을 바로 찍는다(자세한 흐름은 tests/window_record.rs)
+    assert_eq!(s.on_hotkey("window"), HotkeyOutcome::Captured);
     assert_eq!(s.mode(), Mode::Idle);
 }
 

@@ -314,7 +314,13 @@ impl InkService {
 
     /// 오버레이 입력 한 건.
     pub fn capture_input(&mut self, input: CaptureInput) {
+        // F2는 창 하나만 고른다(요소 사슬 없음, 02 §2) — 단계 6 창 캡처
+        if self.window_picking() {
+            return self.window_input(input);
+        }
         let (Some(_), Some(mut sel), Some(snap)) = (self.session(), self.cap.selector.take(), self.snapshot.take()) else { return };
+        // F3: 확정 직전 고르기 방식(창 단계였는지)으로 녹화 대상을 정한다
+        let before = (sel.mode_name(), sel.rect());
         let is_move = matches!(input, CaptureInput::Move { .. });
         let t = Instant::now();
         let effect = {
@@ -326,6 +332,9 @@ impl InkService {
         }
         self.cap.selector = Some(sel);
         self.snapshot = Some(snap);
+        if self.record_picking() && self.record_effect(&effect, before) {
+            return;
+        }
         self.apply(effect);
     }
 
@@ -474,7 +483,7 @@ impl InkService {
     }
 
     /// 범위 확정 → 자르기 → (복사 | 저장) → 기록 → 모드 끝 → 결과 섬.
-    fn finish(&mut self, rect: PhysRect, save: bool, _quick: bool) {
+    pub(crate) fn finish(&mut self, rect: PhysRect, save: bool, _quick: bool) {
         if self.cap.case_dir.is_some() {
             self.write_case(rect);
         }
@@ -592,7 +601,7 @@ impl InkService {
     }
 
     /// 범위 기록(사각형만 — R·쉼표·마침표로 다시 고르기).
-    fn remember_range(&mut self, rect: PhysRect) {
+    pub(crate) fn remember_range(&mut self, rect: PhysRect) {
         let Some(snap) = self.snapshot.as_ref() else { return };
         let mode_name = self.cap.selector.as_ref().map(|s| s.mode_name()).unwrap_or("drag");
         let layout = snap.layout.fingerprint();
@@ -682,7 +691,7 @@ impl InkService {
         }
     }
 
-    fn save_last_inner(&mut self) -> Option<IslandEvent> {
+    pub(crate) fn save_last_inner(&mut self) -> Option<IslandEvent> {
         let last = self.cap.last.clone()?;
         Some(self.save_image(&last))
     }

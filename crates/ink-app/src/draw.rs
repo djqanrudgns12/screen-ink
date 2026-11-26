@@ -555,7 +555,7 @@ impl InkService {
             Mode::LiveZoom { .. } => {
                 self.end_zoom_settled();
             }
-            Mode::Idle => {}
+            Mode::Idle | Mode::Recording { .. } => {}
         }
     }
 
@@ -737,7 +737,8 @@ impl InkService {
     fn close_draw(&mut self) -> Option<DrawSession> {
         let Mode::Draw { session, .. } = self.mode else { return None };
         self.ports.overlay.hide(session);
-        self.mode = Mode::Idle;
+        // 녹화 중이면 녹화 상태로 돌아간다(단계 6)
+        self.mode = self.rest_mode();
         self.draw.entry = None;
         let ds = self.draw.session.take();
         self.island(IslandEvent::new(IslandKind::End, ""));

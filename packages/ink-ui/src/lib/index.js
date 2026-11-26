@@ -26,6 +26,7 @@ export { default as MakerCredit } from './components/MakerCredit.svelte';
 // 화면
 export { default as TrayPopoverScreen } from './screens/TrayPopoverScreen.svelte';
 export { default as SettingsWindow } from './screens/SettingsWindow.svelte';
+export { default as RecordFrame } from './screens/RecordFrame.svelte';
 export { default as ShortcutsPage } from './screens/ShortcutsPage.svelte';
 export { default as CapturePage } from './screens/CapturePage.svelte';
 export { default as DrawZoomPage } from './screens/DrawZoomPage.svelte';

@@ -47,6 +47,19 @@ pub struct ConflictSummary {
 pub struct Recording {
     pub active: bool,
     pub elapsed_ms: u64,
+    // ── 단계 6(05 §8) ──
+    pub phase: ink_domain::recording::RecPhase,
+    pub bytes: u64,
+    pub width: u32,
+    pub height: u32,
+    pub fps: u32,
+    pub mic_on: bool,
+    /// 녹화 범위(물리 px, 시작 순간) — 빨간 꺾쇠 창 자리
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rect: Option<ink_domain::geometry::PhysRect>,
+    /// "monitor" | "region" | "window"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target: Option<&'static str>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -188,6 +201,12 @@ pub struct IslandEvent {
     /// 커서가 섬 가까이 오면 비켜 감(04 S12)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avoid: Option<bool>,
+    /// 지연 캡처 섬의 남은 초(`variant: "delay"`)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub countdown: Option<u32>,
+    /// 녹화 섬의 마이크 꺼짐 아이콘
+    #[serde(rename = "micOff", skip_serializing_if = "std::ops::Not::not")]
+    pub mic_off: bool,
 }
 
 impl IslandEvent {
@@ -210,6 +229,8 @@ impl IslandEvent {
             secondary_button_key: None,
             idle_dim: None,
             avoid: None,
+            countdown: None,
+            mic_off: false,
         }
     }
 

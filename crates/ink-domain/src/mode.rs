@@ -15,6 +15,8 @@ pub enum Mode {
     Draw { session: u64, board: bool, monitor_id: u32, started_ms: u64 },
     /// 실시간 확대(Alt+2, 단계 5) — 커서 모니터 하나. 판정은 `zoom::on_hotkey`가 먼저 한다.
     LiveZoom { session: u64, monitor_id: u32, started_ms: u64 },
+    /// 녹화 중이고 다른 모드가 없음(05 §8). 녹화는 판서·확대·캡처와 겹칠 수 있어 이 값은 "쉬는 중 + 녹화"를 뜻한다
+    Recording { started_ms: u64 },
 }
 
 /// 판서 전역 칸: `draw` = Alt+1 · `board` = Alt+3 · `restore` = Alt+Shift+1(직전 판서 바로 열기, R-DRAW-2).
@@ -67,7 +69,8 @@ pub enum ModeCommand {
 pub fn on_hotkey(mode: &Mode, slot: &str, now_ms: u64) -> ModeCommand {
     if let Some(d) = DrawKind::from_slot(slot) {
         return match *mode {
-            Mode::Idle => ModeCommand::StartDraw(d),
+            // 녹화 위에서도 판서를 연다(녹화는 계속, 판서가 영상에 찍힘 — R-REC-2)
+            Mode::Idle | Mode::Recording { .. } => ModeCommand::StartDraw(d),
             Mode::Draw { board: false, .. } if d == DrawKind::Restore => ModeCommand::DrawRestore,
             Mode::Draw { board, .. } if d != DrawKind::Restore && (d == DrawKind::Board) == board => ModeCommand::End,
             _ => ModeCommand::SwitchDraw(d),
@@ -84,6 +87,9 @@ pub fn on_hotkey(mode: &Mode, slot: &str, now_ms: u64) -> ModeCommand {
             }
         }
         Mode::Capture { .. } | Mode::Draw { .. } | Mode::LiveZoom { .. } => ModeCommand::Switch(k),
+        // 녹화 위에서: F3 = 녹화 끝, F1·F2 = 캡처 시작(녹화는 계속)
+        Mode::Recording { .. } if k == CaptureKind::Record => ModeCommand::End,
+        Mode::Recording { .. } => ModeCommand::Start(k),
     }
 }
 
@@ -143,5 +149,16 @@ mod tests {
     fn 판서_모드는_ui로_camel_case() {
         let m = Mode::Draw { session: 4, board: true, monitor_id: 1, started_ms: 9 };
         assert_eq!(serde_json::to_value(m).unwrap(), serde_json::json!({ "mode": "draw", "session": 4, "board": true, "monitorId": 1, "startedMs": 9 }));
+    }
+
+    #[test]
+    fn 녹화_중에는_f3가_끝_다른_캡처는_시작() {
+        let m = Mode::Recording { started_ms: 0 };
+        assert_eq!(on_hotkey(&m, "record", 100), ModeCommand::End);
+        assert_eq!(on_hotkey(&m, "region", 100), ModeCommand::Start(CaptureKind::Region));
+        assert_eq!(on_hotkey(&m, "window", 100), ModeCommand::Start(CaptureKind::Window));
+        let json = serde_json::to_value(m).unwrap();
+        assert_eq!(on_hotkey(&m, "draw", 100), ModeCommand::StartDraw(DrawKind::Draw), "녹화 위 판서");
+        assert_eq!(json, serde_json::json!({"mode": "recording", "startedMs": 0}));
     }
 }

@@ -2,10 +2,10 @@
   import { onMount, untrack } from 'svelte';
   import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
   import { listen } from '@tauri-apps/api/event';
-  import { CaptureOverlay, DrawOverlay, IslandHost, PinView, SettingsWindow, TrayPopoverScreen, applyTheme, watchSystemTheme } from '@screen-ink/ui';
+  import { CaptureOverlay, DrawOverlay, IslandHost, PinView, RecordFrame, SettingsWindow, TrayPopoverScreen, applyTheme, watchSystemTheme } from '@screen-ink/ui';
   import { ZoomHud } from '@screen-ink/ui';
 
-  /** @type {{ client: import('@screen-ink/client').InkClient, view: 'popover'|'settings'|'island'|'overlay'|'pin'|'zoom-hud', firstRun?: boolean, monitorId?: number, pinId?: number }} */
+  /** @type {{ client: import('@screen-ink/client').InkClient, view: 'popover'|'settings'|'island'|'overlay'|'pin'|'zoom-hud'|'recframe', firstRun?: boolean, monitorId?: number, pinId?: number }} */
   let { client, view, firstRun = false, monitorId = 0, pinId = 0 } = $props();
 
   let pref = $state('system');
@@ -75,6 +75,14 @@
     return () => ro.disconnect();
   });
 
+  // 녹화 범위 꺾쇠(단계 6.4): Rust가 창 안 논리 px로 범위를 알린다
+  let recRect = $state(null);
+  onMount(() => {
+    if (view !== 'recframe') return;
+    const un = listen('screen-ink://recframe', (e) => (recRect = e.payload));
+    return () => un.then((f) => f());
+  });
+
   // 섬: 화면에서 섬이 사라지면 창도 숨긴다(투명 창이 클릭을 가로막지 않게).
   onMount(() => {
     if (view !== 'island' || !shell) return;
@@ -106,6 +114,10 @@
   <PinView {client} {pinId} />
 {:else if view === 'zoom-hud'}
   <ZoomHud {client} />
+{:else if view === 'recframe'}
+  {#if recRect}
+    <RecordFrame {...recRect} />
+  {/if}
 {:else}
   {#key firstRunKey}
     <SettingsWindow {client} firstRun={showFirstRun} onClose={() => client.run('settings.close')} />
@@ -116,5 +128,12 @@
   .popover-shell {
     display: inline-block;
     padding: 8px;
+  }
+
+  /* 녹화 범위 꺾쇠 창: 투명·넘침 숨김(모니터 전체를 덮는 클릭 통과 창) */
+  :global(html[data-view='recframe']),
+  :global(html[data-view='recframe'] body) {
+    background: transparent;
+    overflow: hidden;
   }
 </style>

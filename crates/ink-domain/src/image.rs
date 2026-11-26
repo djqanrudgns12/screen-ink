@@ -410,3 +410,152 @@ mod tests {
         assert_eq!(r, MosaicRect { x: 1, y: -2, w: 30, h: 40, block: 15 });
     }
 }
+
+// ───────────── F2 창 캡처: 검은 화면 판정 · 둥근 모서리 (R-WIN-1·3, spikes §1) ─────────────
+
+/// 창 한 장의 화소가 "내용"인지. 문턱값을 두지 않는다 — 어두운 앱(Windows Terminal ≈ 12,12,12)을 잘못 거르지 않게.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Blankness {
+    /// RGB가 0이 아닌 화소가 하나라도 있다
+    Content,
+    /// RGB가 모두 정확히 0이고 불투명한 화소가 있다 — 보호 화면(WDA_MONITOR·DRM)이 주는 (0,0,0,255)
+    Black,
+    /// RGB도 알파도 모두 0 — 그려진 적 없는 표면(화면 밖 창). 비어 있는 그림도 여기
+    Unpainted,
+}
+
+/// 전수 검사(1080p ≈ 1~2 ms). 내용이 있으면 첫 색 화소에서 바로 끝난다.
+pub fn blankness(bgra: &[u8]) -> Blankness {
+    let mut any_alpha = false;
+    for px in bgra.chunks_exact(4) {
+        if px[0] | px[1] | px[2] != 0 {
+            return Blankness::Content;
+        }
+        any_alpha |= px[3] != 0;
+    }
+    if any_alpha {
+        Blankness::Black
+    } else {
+        Blankness::Unpainted
+    }
+}
+
+/// 알파를 모두 255로(창 그림의 반투명 배경을 지우고 귀만 깎기 전에 — 사용자 결정: 귀만 투명).
+pub fn make_opaque(bgra: &mut [u8]) {
+    for px in bgra.chunks_exact_mut(4) {
+        px[3] = 255;
+    }
+}
+
+/// 불투명 화소와 덜 불투명한 화소가 섞였는지(둥근 모서리를 깎은 창 그림) — 이때만 RGBA PNG로 저장·복사한다.
+/// 알파가 모두 0인 그림(GDI가 남긴 원본)과 모두 255인 그림은 `false` → 지금처럼 RGB(R-OUT-3).
+pub fn has_mixed_alpha(bgra: &[u8]) -> bool {
+    let (mut opaque, mut clear) = (false, false);
+    for px in bgra.chunks_exact(4) {
+        if px[3] == 255 {
+            opaque = true;
+        } else {
+            clear = true;
+        }
+        if opaque && clear {
+            return true;
+        }
+    }
+    false
+}
+
+/// 보호 콘텐츠처럼 RGB가 모두 0인지(R-WIN-3) — 빈 이미지를 클립보드에 넣지 않는 판정.
+pub fn is_all_black(bgra: &[u8]) -> bool {
+    blankness(bgra) != Blankness::Content
+}
+
+/// Win11 둥근 모서리(반지름 `radius` 물리 px) 바깥 알파를 0으로, 경계는 덮인 넓이만큼 줄인다(곧은 알파 — RGB는 그대로).
+/// 반지름이 0이거나 그림보다 크면 손대지 않는다.
+pub fn mask_round_corners(bgra: &mut [u8], w: u32, h: u32, radius: u32) {
+    if radius == 0 || radius * 2 > w || radius * 2 > h || bgra.len() < (w as usize * h as usize * 4) {
+        return;
+    }
+    let r = radius as f64;
+    for cy in 0..radius {
+        for cx in 0..radius {
+            // 모서리 사각형 안 화소 가운데에서 원 중심까지 — 4×4 표본으로 덮인 비율
+            let mut inside = 0u32;
+            for sy in 0..4 {
+                for sx in 0..4 {
+                    let dx = r - (cx as f64 + (sx as f64 + 0.5) / 4.0);
+                    let dy = r - (cy as f64 + (sy as f64 + 0.5) / 4.0);
+                    if dx * dx + dy * dy <= r * r {
+                        inside += 1;
+                    }
+                }
+            }
+            if inside == 16 {
+                continue;
+            }
+            for (x, y) in [(cx, cy), (w - 1 - cx, cy), (cx, h - 1 - cy), (w - 1 - cx, h - 1 - cy)] {
+                let a = &mut bgra[(y as usize * w as usize + x as usize) * 4 + 3];
+                *a = (*a as u32 * inside / 16) as u8;
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod window_shot_tests {
+    use super::*;
+
+    #[test]
+    fn 검은화면_보호콘텐츠_판정_및_둥근모서리_알파마스크() {
+        // 보호 화면 = (0,0,0,255) 전부
+        let black: Vec<u8> = (0..64).flat_map(|_| [0, 0, 0, 255]).collect();
+        assert_eq!(blankness(&black), Blankness::Black);
+        assert!(is_all_black(&black));
+        // 그려진 적 없는 표면 = 알파까지 0
+        assert_eq!(blankness(&vec![0; 256]), Blankness::Unpainted);
+        assert_eq!(blankness(&[]), Blankness::Unpainted);
+        // 1픽셀이라도 색이 있으면 내용(문턱값 없음: 아주 어두운 1도 내용)
+        let mut one = black.clone();
+        one[40 * 4 + 1] = 1;
+        assert_eq!(blankness(&one), Blankness::Content);
+        assert!(!is_all_black(&one));
+        // 어두운 터미널 배경(12,12,12)은 내용
+        let dark: Vec<u8> = (0..64).flat_map(|_| [12, 12, 12, 255]).collect();
+        assert_eq!(blankness(&dark), Blankness::Content);
+
+        // 둥근 모서리: 20×10, 반지름 4 → 네 귀 맨 끝은 투명, 가운데·변 가운데는 그대로
+        let (w, h) = (20u32, 10u32);
+        let mut img: Vec<u8> = (0..w * h).flat_map(|_| [10, 20, 30, 255]).collect();
+        mask_round_corners(&mut img, w, h, 4);
+        let a = |x: u32, y: u32| img[((y * w + x) * 4 + 3) as usize];
+        for (x, y) in [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)] {
+            assert_eq!(a(x, y), 0, "귀 ({x},{y})");
+        }
+        assert_eq!(a(10, 5), 255, "가운데");
+        assert_eq!(a(10, 0), 255, "윗변 가운데");
+        assert_eq!(a(0, 5), 255, "왼변 가운데");
+        assert_eq!(a(3, 3), 255, "모서리 사각형 안쪽 끝은 원 안");
+        let edge = a(1, 1);
+        assert!(edge > 0 && edge < 255, "경계는 부드럽게: {edge}");
+        assert_eq!(&img[0..3], &[10, 20, 30], "RGB는 그대로");
+        // 반지름 0·너무 큰 반지름은 그대로
+        let mut same: Vec<u8> = (0..16).flat_map(|_| [1, 1, 1, 255]).collect();
+        mask_round_corners(&mut same, 4, 4, 3);
+        assert!(same.chunks_exact(4).all(|p| p[3] == 255));
+    }
+}
+
+#[cfg(test)]
+mod alpha_tests {
+    use super::*;
+
+    #[test]
+    fn 귀만_투명한_그림만_알파가_섞였다고_본다() {
+        let mut img: Vec<u8> = (0..100).flat_map(|_| [9, 9, 9, 128]).collect();
+        assert!(!has_mixed_alpha(&img), "모두 반투명 = 섞이지 않음");
+        make_opaque(&mut img);
+        assert!(!has_mixed_alpha(&img), "모두 불투명 = RGB");
+        mask_round_corners(&mut img, 10, 10, 3);
+        assert!(has_mixed_alpha(&img), "귀만 깎음 = RGBA");
+        assert!(!has_mixed_alpha(&[0; 400]), "GDI 원본(알파 0) = RGB");
+    }
+}

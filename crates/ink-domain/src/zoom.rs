@@ -297,7 +297,8 @@ pub fn on_hotkey(mode: &Mode, slot: &str) -> Option<ZoomCommand> {
     if slot == ZOOM_SLOT {
         return if zooming {
             Some(ZoomCommand::End)
-        } else if matches!(mode, Mode::Idle) {
+        } else if matches!(mode, Mode::Idle | Mode::Recording { .. }) {
+            // 녹화 위에서도 확대(녹화는 계속)
             Some(ZoomCommand::Start)
         } else if matches!(mode, Mode::Capture { .. }) {
             Some(ZoomCommand::SwitchFromCapture)

@@ -231,7 +231,8 @@ impl InkService {
         }
         self.zoom.magnifier.stop();
         self.unregister_zoom_keys();
-        self.mode = Mode::Idle;
+        // 녹화 중이면 녹화 상태로 돌아간다(단계 6)
+        self.mode = self.rest_mode();
         if let Some(at) = self.zoom.entered.take() {
             log::info!("mode exit zoom ({} ticks, {:.1} s)", self.zoom.ticks, at.elapsed().as_secs_f64());
         }

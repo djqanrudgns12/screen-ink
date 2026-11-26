@@ -7,16 +7,21 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, Runtime};
 
-/// BGRA → PNG(RGB, 알파 없음 — R-OUT-3, 빠른 압축).
+/// BGRA → PNG(RGB, 알파 없음 — R-OUT-3, 빠른 압축). 예외: 불투명·투명 화소가 섞인 그림(F2 둥근 창의 귀)은
+/// RGBA로 — 사용자 결정 "귀만 투명"(저장 파일과 클립보드 PNG 형식 모두).
 pub fn encode_png(w: u32, h: u32, bgra: &[u8]) -> Result<Vec<u8>, String> {
-    let mut rgb = Vec::with_capacity(w as usize * h as usize * 3);
+    let alpha = ink_domain::image::has_mixed_alpha(bgra);
+    let mut rgb = Vec::with_capacity(w as usize * h as usize * if alpha { 4 } else { 3 });
     for px in bgra.chunks_exact(4) {
         rgb.extend_from_slice(&[px[2], px[1], px[0]]);
+        if alpha {
+            rgb.push(px[3]);
+        }
     }
     let mut out = Vec::new();
     {
         let mut enc = png::Encoder::new(&mut out, w, h);
-        enc.set_color(png::ColorType::Rgb);
+        enc.set_color(if alpha { png::ColorType::Rgba } else { png::ColorType::Rgb });
         enc.set_depth(png::BitDepth::Eight);
         enc.set_compression(png::Compression::Fast);
         let mut writer = enc.write_header().map_err(|e| e.to_string())?;
@@ -197,6 +202,20 @@ mod tests {
         let info = r.next_frame(&mut buf).unwrap();
         assert_eq!((info.width, info.height, info.color_type), (64, 64, png::ColorType::Rgb));
         assert_eq!(&buf[0..3], &[255, 0, 0], "BGRA → RGB");
+    }
+
+    #[test]
+    fn 귀만_투명한_창_그림은_rgba_png() {
+        let mut bgra: Vec<u8> = (0..32 * 32).flat_map(|_| [10u8, 20, 30, 255]).collect();
+        ink_domain::image::mask_round_corners(&mut bgra, 32, 32, 8);
+        let p = encode_png(32, 32, &bgra).unwrap();
+        let mut r = png::Decoder::new(std::io::Cursor::new(&p)).read_info().unwrap();
+        let mut buf = vec![0; r.output_buffer_size().unwrap()];
+        let info = r.next_frame(&mut buf).unwrap();
+        assert_eq!(info.color_type, png::ColorType::Rgba);
+        assert_eq!(&buf[0..4], &[30, 20, 10, 0], "귀는 투명");
+        let mid = (16 * 32 + 16) * 4;
+        assert_eq!(&buf[mid..mid + 4], &[30, 20, 10, 255], "가운데는 불투명");
     }
 
     #[test]

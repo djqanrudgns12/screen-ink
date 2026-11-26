@@ -7,15 +7,20 @@ pub mod draw;
 pub mod live_zoom;
 pub mod package;
 pub mod ports;
+mod quick;
+pub mod record;
 pub mod service;
 pub mod state;
 pub mod vision;
+mod window_capture;
 
 pub use ports::{
     AutostartControl, Clipboard, Clock, ElementSource, FileSink, Frame, HotkeyError, HotkeyRegistry, Loaded, MonitorProbe, NoPins, NoVision, NoopAutostart, NoopUpdater, Notifier,
     OverlayHost, PackageRuntime, PinHost, Ports, ReadyUpdate, SavedFile, ScreenSource, SettingsStore, StoreError, StoreLocation, SystemEvent, SystemProbe, UnpackagedRuntime, Updater,
     VisionSource, WindowCatalog, NO_SCREEN_PERMISSION,
 };
+pub use ports::{NoRecorder, RecStartOpts, RecStats, Recorder, WindowShot, REC_ENCODER_FAILED, REC_UNSUPPORTED, REC_WINDOW_CLOSED, WINDOW_PROTECTED};
+pub use quick::Delay;
 pub use capture::CaptureInput;
 pub use draw::{DrawExportMeta, DrawExported, DrawFinish, DrawIslandPatch, DrawRestoreResult, ExportAction, KeptInk, KeptPayload, PenSample};
 pub use ink_domain::mode::DrawKind;

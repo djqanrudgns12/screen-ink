@@ -48,6 +48,8 @@ pub struct ProbeScene {
     pub running: Vec<String>,
     pub live: Option<Vec<LiveBinding>>,
     pub secure_desktop: bool,
+    /// 지금 활성 창(Shift+F2·F2 두 번)
+    pub foreground: Option<u64>,
 }
 
 #[derive(Clone, Default)]
@@ -65,6 +67,10 @@ impl SystemProbe for FakeProbe {
     fn secure_desktop(&self) -> bool {
         self.0.lock().unwrap().secure_desktop
     }
+
+    fn foreground_window(&self) -> Option<u64> {
+        self.0.lock().unwrap().foreground
+    }
 }
 
 /// 화면 장면: 모니터 배치·커서·창 목록·캡처 실패 여부.
@@ -81,6 +87,12 @@ pub struct Screen {
     pub frames: Option<Vec<Frame>>,
     /// 창 → H 자식 창
     pub children: HashMap<u64, Vec<PhysRect>>,
+    /// 창 → WGC 결과(없으면 "지원 안 함" — 서비스가 스냅숏 자르기로 대체)
+    pub window_shots: HashMap<u64, Result<ink_app::WindowShot, String>>,
+    /// `prepare_window` 기록(F2 고르기 중 미리 준비)
+    pub prepared_windows: Vec<Option<u64>>,
+    /// `capture_window`를 부른 창
+    pub window_captures: Vec<u64>,
 }
 
 impl Default for Screen {
@@ -105,6 +117,9 @@ impl Default for Screen {
             captures: 0,
             frames: None,
             children: HashMap::new(),
+            window_shots: HashMap::new(),
+            prepared_windows: Vec::new(),
+            window_captures: Vec::new(),
         }
     }
 }
@@ -123,6 +138,16 @@ impl ScreenSource for FakeScreen {
             return Ok(f.clone());
         }
         Ok(layout.monitors.iter().map(|m| Frame { monitor_id: m.id, width: m.bounds.w as u32, height: m.bounds.h as u32, bgra: Arc::new(vec![0; 64]) }).collect())
+    }
+
+    fn prepare_window(&mut self, window: Option<u64>) {
+        self.0.lock().unwrap().prepared_windows.push(window);
+    }
+
+    fn capture_window(&mut self, window: u64, _bounds: PhysRect) -> Result<ink_app::WindowShot, String> {
+        let mut s = self.0.lock().unwrap();
+        s.window_captures.push(window);
+        s.window_shots.get(&window).cloned().unwrap_or_else(|| Err("window capture not supported".into()))
     }
 }
 
@@ -441,6 +466,16 @@ impl ScreenSource for TracedScreen {
     fn cursor_sprite(&mut self) -> Option<ink_domain::image::CursorSprite> {
         self.0.cursor_sprite()
     }
+
+    // 단계 6 창 캡처도 그대로 넘긴다(감싸개가 기본 구현 "지원 안 함"으로 가리지 않게)
+    fn prepare_window(&mut self, window: Option<u64>) {
+        self.0.prepare_window(window);
+    }
+
+    fn capture_window(&mut self, window: u64, bounds: PhysRect) -> Result<ink_app::WindowShot, String> {
+        self.1.push("screen.captureWindow");
+        self.0.capture_window(window, bounds)
+    }
 }
 
 struct TracedOverlay(FakeOverlay, Timeline);
@@ -524,6 +559,8 @@ pub struct FakeWorld {
     pub vision: bool,
     /// 화면·돋보기·오버레이 호출 순서
     pub timeline: Timeline,
+    /// 녹화기(`install_recorder`로 서비스에 끼운다)
+    pub recorder: FakeRecorder,
 }
 
 impl FakeWorld {
@@ -574,6 +611,136 @@ impl FakeWorld {
 
     pub fn saved(&self) -> Option<Value> {
         self.store.0.lock().unwrap().file.clone()
+    }
+
+    /// 가짜 녹화기를 서비스에 끼운다(끼우는 순간 남은 녹화를 찾는다).
+    pub fn install_recorder(&self, svc: &mut ink_app::InkService) {
+        svc.set_recorder(Box::new(self.recorder.clone()));
+    }
+
+    pub fn islands(&self) -> Vec<IslandEvent> {
+        self.notifier.0.lock().unwrap().islands.clone()
+    }
+}
+
+// ───────────── 녹화(단계 6) ─────────────
+
+/// 녹화기 흉내: 파일은 메모리 표(경로 → 바이트)에만 쓴다.
+#[derive(Debug, Default)]
+pub struct RecBook {
+    pub prepared: usize,
+    pub started: Vec<ink_app::RecStartOpts>,
+    pub active: bool,
+    pub stopped: usize,
+    pub aborted: usize,
+    /// 다음 `start`가 이 오류로 실패
+    pub fail_start: Option<String>,
+    /// 다음 `stop`이 이 오류로 실패(임시 파일은 남김)
+    pub fail_stop: Option<String>,
+    /// 다음 상태 틱에 "스스로 멈춤"으로 돌려줄 이유
+    pub failure: Option<String>,
+    pub mic: bool,
+    pub free: Option<u64>,
+    /// 녹화가 쓴 바이트(멈출 때 통계로)
+    pub bytes: u64,
+    pub elapsed_ms: u64,
+    /// 임시 폴더의 파일(경로 → 바이트)
+    pub temp_files: BTreeMap<String, u64>,
+    /// 저장 폴더로 옮긴 것: (임시 경로, 폴더, 이름)
+    pub kept: Vec<(String, String, String)>,
+    pub deleted: Vec<String>,
+    pub leftovers: Vec<ink_domain::recording::Leftover>,
+}
+
+#[derive(Clone, Default)]
+pub struct FakeRecorder(pub Arc<Mutex<RecBook>>);
+
+pub const FAKE_TEMP_DIR: &str = "T:/tmp/shookshok";
+
+impl ink_app::Recorder for FakeRecorder {
+    fn prepare(&mut self) {
+        self.0.lock().unwrap().prepared += 1;
+    }
+
+    fn start(&mut self, opts: ink_app::RecStartOpts) -> Result<(), String> {
+        let mut b = self.0.lock().unwrap();
+        if let Some(e) = b.fail_start.take() {
+            return Err(e);
+        }
+        b.temp_files.insert(opts.temp_path.to_string_lossy().into_owned(), 0);
+        b.started.push(opts);
+        b.active = true;
+        Ok(())
+    }
+
+    fn stats(&self) -> ink_app::RecStats {
+        let b = self.0.lock().unwrap();
+        let (width, height) = b.started.last().map(|o| ink_domain::recording::even_size(o.target.rect().w as u32, o.target.rect().h as u32)).unwrap_or((0, 0));
+        ink_app::RecStats { elapsed_ms: b.elapsed_ms, bytes: b.bytes, frames: b.elapsed_ms * 30 / 1000, width, height }
+    }
+
+    fn stop(&mut self) -> Result<ink_app::RecStats, String> {
+        let stats = self.stats();
+        let mut b = self.0.lock().unwrap();
+        b.active = false;
+        b.stopped += 1;
+        if let Some(e) = b.fail_stop.take() {
+            return Err(e);
+        }
+        if let Some(o) = b.started.last() {
+            let path = o.temp_path.to_string_lossy().into_owned();
+            let bytes = b.bytes;
+            b.temp_files.insert(path, bytes);
+        }
+        Ok(stats)
+    }
+
+    fn abort(&mut self) {
+        let mut b = self.0.lock().unwrap();
+        b.active = false;
+        b.aborted += 1;
+        if let Some(o) = b.started.last() {
+            let path = o.temp_path.to_string_lossy().into_owned();
+            b.temp_files.remove(&path);
+        }
+    }
+
+    fn take_failure(&mut self) -> Option<String> {
+        self.0.lock().unwrap().failure.take()
+    }
+
+    fn mic_supported(&self) -> bool {
+        self.0.lock().unwrap().mic
+    }
+
+    fn temp_dir(&self) -> Option<std::path::PathBuf> {
+        Some(std::path::PathBuf::from(FAKE_TEMP_DIR))
+    }
+
+    fn leftovers(&self) -> Vec<ink_domain::recording::Leftover> {
+        self.0.lock().unwrap().leftovers.clone()
+    }
+
+    fn free_bytes(&self, _folder: &str) -> Option<u64> {
+        self.0.lock().unwrap().free
+    }
+
+    fn keep_file(&mut self, temp: &std::path::Path, folder: &str, stem: &str) -> Result<ink_app::SavedFile, String> {
+        let mut b = self.0.lock().unwrap();
+        let t = temp.to_string_lossy().into_owned();
+        if b.temp_files.remove(&t).is_none() && !b.leftovers.iter().any(|l| l.path == t) {
+            return Err("no such temp file".into());
+        }
+        b.kept.push((t, folder.into(), stem.into()));
+        Ok(ink_app::SavedFile { name: format!("{stem}.mp4"), path: format!("{folder}/{stem}.mp4"), fell_back: folder.is_empty() })
+    }
+
+    fn delete_file(&mut self, temp: &std::path::Path) -> Result<(), String> {
+        let mut b = self.0.lock().unwrap();
+        let t = temp.to_string_lossy().into_owned();
+        b.temp_files.remove(&t);
+        b.deleted.push(t);
+        Ok(())
     }
 }
 
