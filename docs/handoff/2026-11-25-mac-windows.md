@@ -374,6 +374,7 @@ $env:CARGO_HTTP_CHECK_REVOKE='false'
 | 2026-11-26 | 개인정보 처리방침·지원·`.appinstaller`는 저장소 GitHub Pages, 주소 **`ink.ssamuniverse.com`**(Cloudflare CNAME, DNS 전용, 본 사이트는 건드리지 않음). 처리방침 `https://ink.ssamuniverse.com/privacy/` | `.appinstaller` 주소는 바꿀 수 없음. 11 §10.2 |
 | 2026-11-26 | 업데이트 안내는 배너가 아니라 **팝업**. 클릭 한 번에 몇 초 안 설치·자동 재시작, 모드·전체 화면 발표 중엔 미룸. PRD R-NET-1 문장 수정 필요(원래 세션) | Tidy 배너는 사용자가 못 알아챔(사용자 경험). 11 §7.2 |
 | 2026-11-26 | 스토어 게시자 표시 이름 **`찰떡쌤`**. 앱 이름은 아이콘과 함께 다른 세션에서 정함. 개발자 계정은 신분증 인증으로 보류 | 게시자 이름은 등록 뒤 못 바꿀 수 있음. `docs/store/microsoft-store-listing.md` |
+| 2026-11-26 | 공개 저장소의 **기본 브랜치를 `feat/foundation`으로** 바꿨다(`main`에는 초기 문서·LICENSE만 있었음). PR의 기준 브랜치도 이제 `feat/foundation` | 저장소 첫 화면에 코드가 보이게, SignPath 심사(활발한 공개 저장소) |
 
 ---
 
