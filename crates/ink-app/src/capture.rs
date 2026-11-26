@@ -282,7 +282,7 @@ impl InkService {
     fn session(&self) -> Option<u64> {
         match self.mode {
             Mode::Capture { session, .. } => Some(session),
-            Mode::Idle => None,
+            _ => None,
         }
     }
 
