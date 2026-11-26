@@ -22,12 +22,15 @@ pub fn label(monitor: u32) -> String {
 }
 
 /// 오버레이 창 이름 → 모니터 id(`label`의 반대). 오버레이 창이 아니면 None.
+/// 지금은 맥 입력 경로만 쓴다(순수 함수라 시험은 모든 OS에서 돈다).
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub fn monitor_of(label: &str) -> Option<u32> {
     label.strip_prefix(PREFIX)?.parse().ok()
 }
 
 /// 오버레이가 보낸 포인터 점이 자기 모니터 밖이면 `outside()`(실제 커서 등)로 바꾼다.
 /// 맥은 누른 모니터의 웹뷰가 창 밖 이동까지 받고 자기 배율로 환산하므로, 배율이 다른 옆 모니터에서는 점이 어긋난다.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub fn pointer_inside(input: ink_app::CaptureInput, monitor: PhysRect, outside: impl FnOnce() -> ink_domain::geometry::PhysPoint) -> ink_app::CaptureInput {
     use ink_app::CaptureInput as I;
     let (x, y) = match &input {
