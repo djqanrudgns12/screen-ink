@@ -98,12 +98,12 @@
           "name": "단계 4 — 판서·칠판",
           "items": [
             { "id": "4.1", "title": "inkEngine.js(순수)", "platform": "common", "days": 0.375, "status": "done", "note": "packages/ink-ui/src/lib/ink — 시험 69개" },
-            { "id": "4.2", "title": "DrawCanvas 렌더러 + M5(G5) 측정", "platform": "common", "days": 0.375, "status": "partial", "note": "canvasRender·DrawCanvas·펜 지연 계측 끝, 판서 모드 연결·G5 측정(학교 PC) 남음", "level": "hard" },
-            { "id": "4.3", "title": "도구·도형·색·굵기 키, 칠판", "platform": "common", "days": 0.375, "status": "partial", "note": "엔진 쪽 29칸·W/K 끝, 화면 연결 남음", "level": "mid" },
-            { "id": "4.4", "title": "휠 확대·가장자리 밀기·스마트 우클릭", "platform": "common", "days": 0.375, "status": "todo", "level": "hard" },
-            { "id": "4.5", "title": "글자 T(IME 보호)·고르기·다시 고치기", "platform": "common", "days": 0.375, "status": "todo", "level": "hard" },
-            { "id": "4.6", "title": "나가기·보관·복원", "platform": "common", "days": 0.375, "status": "todo", "level": "mid" },
-            { "id": "4.7", "title": "판서 결과 복사·저장", "platform": "common", "days": 0.375, "status": "todo", "level": "easy" },
+            { "id": "4.2", "title": "DrawCanvas 렌더러 + M5(G5) 측정", "platform": "common", "days": 0.375, "status": "verify", "note": "canvasRender·DrawCanvas·Mode::Draw 진입·펜 지연 로그 끝, G5 측정(학교 PC) 남음", "level": "hard" },
+            { "id": "4.3", "title": "도구·도형·색·굵기 키, 칠판", "platform": "common", "days": 0.375, "status": "verify", "note": "판서 키 29칸·칠판 W/K·Alt+3 구현, 화면 확인 남음", "level": "mid" },
+            { "id": "4.4", "title": "휠 확대·가장자리 밀기·스마트 우클릭", "platform": "common", "days": 0.375, "status": "verify", "note": "휠 확대(첫 휠 시작 배율)·가장자리 밀기·스마트 우클릭 구현, 화면 확인 남음", "level": "hard" },
+            { "id": "4.5", "title": "글자 T(IME 보호)·고르기·다시 고치기", "platform": "common", "days": 0.375, "status": "verify", "note": "글자 T·IME 조합 보호·고르기·다시 고치기 구현, 한글 IME 실기 확인 남음", "level": "hard" },
+            { "id": "4.6", "title": "나가기·보관·복원", "platform": "common", "days": 0.375, "status": "verify", "note": "나가기·keptInk 메모리 보관·복원(배율 맞춤·다른 모니터 거절·실행 취소 가능) 구현, 화면 확인 남음", "level": "mid" },
+            { "id": "4.7", "title": "판서 결과 복사·저장", "platform": "common", "days": 0.375, "status": "verify", "note": "복사·저장 = 늘 모니터 전체(원본 바이트 IPC), 4K 멈칫 측정 남음", "level": "easy" },
             { "id": "4.8", "title": "판서 섬·펜 색 고리·MiniMap·칠판 미리 보기", "platform": "common", "days": 0.375, "status": "todo", "level": "mid" },
             { "id": "4.9", "title": "캡처 주석(R-CAP-28): 툴바 도구 = 4.1 엔진·범위 안·결과 합성·모자이크", "platform": "common", "days": 1, "status": "todo", "note": "2026-11-26 사용자 요청으로 1차", "level": "hard" }
           ]
