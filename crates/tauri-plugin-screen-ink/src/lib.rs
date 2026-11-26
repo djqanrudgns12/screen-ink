@@ -11,6 +11,7 @@
 mod adapters;
 mod overlay;
 mod pins;
+mod rec_frame;
 mod tray_art;
 
 use ink_app::{
@@ -128,6 +129,8 @@ struct TauriNotifier<R: Runtime> {
 impl<R: Runtime> Notifier for TauriNotifier<R> {
     fn state(&self, state: &InkState) {
         let _ = self.app.emit(EVT_STATE, state);
+        // 녹화 범위 꺾쇠 창(단계 6.4) — 녹화 중이면 그 모니터를 덮고, 아니면 숨김
+        rec_frame::sync(&self.app, &state.recording);
         let mode = if state.recording.active {
             TrayMode::Recording
         } else if state.hotkeys_enabled {
@@ -418,6 +421,7 @@ fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .focused(false)
         .visible(false)
         .build()?;
+    rec_frame::build(app)?;
     Ok(())
 }
 
@@ -1000,6 +1004,7 @@ fn finish_setup<R: Runtime>(app: &AppHandle<R>, initial: InkState, first_run: bo
     }
     exclude_from_capture(app, ISLAND);
     exclude_from_capture(app, POPOVER);
+    exclude_from_capture(app, rec_frame::REC_FRAME);
     listen_system_events(app);
     start_ticker(app);
     let mode = if initial.hotkeys_enabled { TrayMode::Ready } else { TrayMode::Off };
