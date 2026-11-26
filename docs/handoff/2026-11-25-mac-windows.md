@@ -356,7 +356,7 @@ $env:CARGO_HTTP_CHECK_REVOKE='false'
 | 2026-11-26 | 진척도는 `docs/progress/progress.json` 하나에서 작업일 가중으로 계산(완료 1 · 확인 남음 0.8 · 진행 중 0.5 · 안 함 0) | 두 컴퓨터가 같은 기준으로 % 보고 |
 | 2026-11-26 (맥) | 맥 자동 입력 시험은 `bench/mac/keys.swift`·`drag.swift`(CGEvent)로 한다. osascript System Events는 쓰지 않는다 | System Events는 자동화 권한 창이 따로 뜬다. CGEvent는 손쉬운 사용 권한만으로 F1·Esc·끌기를 반복할 수 있다 |
 | 2026-11-26 | **저장소를 공개한다**(SignPath 무료 서명용), 라이선스 **MIT**. 공개 전 점검: 비밀값 없음, 작성자 이메일은 이력에 남음 | 무료 서명 조건(사용자). 11 §10 |
-| 2026-11-26 | 개인정보 처리방침·지원·`.appinstaller`는 저장소 GitHub Pages, 주소는 쌤유니버스.com 하위 도메인 CNAME(본 사이트는 건드리지 않음). 첫 `.appinstaller` 릴리스는 도메인 연결 뒤 | `.appinstaller` 주소는 바꿀 수 없음. 11 §10.2 |
+| 2026-11-26 | 개인정보 처리방침·지원·`.appinstaller`는 저장소 GitHub Pages, 주소 **`ink.ssamuniverse.com`**(Cloudflare CNAME, DNS 전용, 본 사이트는 건드리지 않음). 처리방침 `https://ink.ssamuniverse.com/privacy/` | `.appinstaller` 주소는 바꿀 수 없음. 11 §10.2 |
 | 2026-11-26 | 업데이트 안내는 배너가 아니라 **팝업**. 클릭 한 번에 몇 초 안 설치·자동 재시작, 모드·전체 화면 발표 중엔 미룸. PRD R-NET-1 문장 수정 필요(원래 세션) | Tidy 배너는 사용자가 못 알아챔(사용자 경험). 11 §7.2 |
 
 ---

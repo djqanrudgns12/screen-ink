@@ -112,10 +112,10 @@ Certum(€49/년)은 SignPath를 못 쓸 때만 고려한다(게시자 이름을
 
 ```xml
 <AppInstaller xmlns="http://schemas.microsoft.com/appx/appinstaller/2021"
-  Uri="https://<호스트>/screen-ink.appinstaller" Version="0.2.0.0">
+  Uri="https://ink.ssamuniverse.com/screen-ink.appinstaller" Version="0.2.0.0">
   <MainPackage Name="<패키지 이름>" Publisher="<Certum 인증서 주체와 같게>"
     Version="0.2.0.0" ProcessorArchitecture="x64"
-    Uri="https://<호스트>/screen-ink_0.2.0.0_x64.msix" />
+    Uri="https://github.com/djqanrudgns12/screen-ink/releases/download/v0.2.0/screen-ink_0.2.0.0_x64.msix" />
   <UpdateSettings>
     <OnLaunch HoursBetweenUpdateChecks="0" ShowPrompt="false" UpdateBlocksActivation="false" />
     <AutomaticBackgroundTask />
@@ -169,7 +169,7 @@ Certum(€49/년)은 SignPath를 못 쓸 때만 고려한다(게시자 이름을
 | 1 | **저장소를 공개한다**(SignPath 무료 서명을 쓰기 위해). 라이선스 **MIT**(사용자 확정) | **끝(2026-11-26)**: `LICENSE`(feat/foundation·main), `Cargo.toml`·`package.json` 라이선스 필드, GitHub 공개 전환 | `D7` |
 | 2 | Microsoft Store 개발자 계정은 **등록 중**(사용자) | 승인되면 앱 이름 예약 | `D1` |
 | 3 | 학교 PC에서 스토어가 **열린다** | winget(msstore) 설치만 확인 | `D6` |
-| 4 | 개인정보 처리방침·지원 페이지·업데이트 주소는 **저장소의 GitHub Pages**에 두고, 주소는 **쌤유니버스.com의 하위 도메인**(예: `ink.쌤유니버스.com`)을 CNAME으로 붙인다 | §10.2 | `D12` |
+| 4 | 개인정보 처리방침·지원 페이지·업데이트 주소는 **저장소의 GitHub Pages**에 두고, 주소는 쌤유니버스의 실제 도메인 **`ssamuniverse.com`의 하위 도메인 `ink.ssamuniverse.com`** 을 CNAME으로 붙인다(한글 `쌤유니버스.com`은 등록된 도메인이 아님) | **끝(2026-11-26)**: Cloudflare DNS에 CNAME `ink` → `djqanrudgns12.github.io`(DNS 전용), Pages 사용자 도메인·HTTPS 강제 | `D12` |
 | 5 | 업데이트 안내는 **팝업**, 클릭 한 번에 몇 초 안 업데이트(§7.2) | 구현(코드) | `D10` |
 | 6 | 직접 배포판 서명은 **SignPath Foundation 신청** | §10.3 | `D11` |
 
@@ -187,14 +187,17 @@ Certum(€49/년)은 SignPath를 못 쓸 때만 고려한다(게시자 이름을
 ### 10.2 배포 주소 — 도메인만 빌려 쓴다
 
 - **왜 GitHub Pages + 하위 도메인인가**
-  - 쌤유니버스.com 본 사이트(classlearning)는 건드리지 않는다. DNS에 **CNAME 한 줄**(예: `ink` → `djqanrudgns12.github.io`)만 더한다. 본 사이트 메뉴·링크와 연결되지 않으니 겉으로 티가 나지 않는다.
+  - 쌤유니버스 본 사이트(`ssamuniverse.com`, classlearning)는 건드리지 않는다. DNS에 **CNAME 한 줄**(예: `ink` → `djqanrudgns12.github.io`)만 더한다. 본 사이트 메뉴·링크와 연결되지 않으니 겉으로 티가 나지 않는다.
   - 페이지는 이 저장소에 있으니 앱과 같이 버전 관리된다.
   - `.appinstaller` 주소는 **한 번 정하면 바꿀 수 없다**(설치된 앱이 계속 그 주소를 본다). 내 도메인 아래에 두면 나중에 호스팅을 옮겨도 주소가 유지된다.
 - **순서**
   1. **끝(2026-11-26)**: GitHub Pages를 켰다. 지금 주소는 아래와 같다. 스토어의 개인정보 처리방침 주소는 나중에 바꿀 수 있어서 이걸로 먼저 등록하면 된다.
      - 개인정보 처리방침: `https://djqanrudgns12.github.io/screen-ink/privacy/`
      - 지원: `https://djqanrudgns12.github.io/screen-ink/support/`
-  2. 쌤유니버스.com DNS에 CNAME을 더하고 Pages에 사용자 도메인을 넣는다(HTTPS 자동). 한글 도메인은 퓨니코드(`xn--…`)로 들어간다. DNS 관리 화면 접근은 사용자 몫이다.
+  2. **끝(2026-11-26)**: `ssamuniverse.com`(Cloudflare) DNS에 CNAME `ink` → `djqanrudgns12.github.io`를 **DNS 전용(프록시 끔)** 으로 더했다(Aside로, 다른 레코드 변경 없음). Pages 사용자 도메인 `ink.ssamuniverse.com`, 인증서 승인, HTTPS 강제. 이제 주소는 아래와 같다.
+     - 개인정보 처리방침: `https://ink.ssamuniverse.com/privacy/` ← **스토어에 넣을 주소**
+     - 지원: `https://ink.ssamuniverse.com/support/`
+     - `github.io` 주소는 이 도메인으로 자동으로 넘어간다. Cloudflare 프록시(주황 구름)를 켜면 GitHub 인증서 갱신이 깨지니 켜지 않는다.
   3. **첫 `.appinstaller` 릴리스는 반드시 2가 끝난 뒤에 낸다.**
 - **올릴 것:** `/privacy`(개인정보 처리방침), `/support`(문의 = GitHub Issues 링크, 이메일은 싣지 않음), `/screen-ink.appinstaller`. `.msix` 파일은 GitHub Releases에 두고 `.appinstaller`가 그 정확한 주소를 가리킨다.
 - **원본과 발행:**

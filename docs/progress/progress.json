@@ -197,7 +197,7 @@
             { "id": "D1", "title": "개발자 계정(개인, 무료: 신분증·셀카)", "platform": "common", "days": 0.25, "status": "partial", "note": "사용자 등록 중(2026-11-26)" },
             { "id": "D2", "title": "MSIX 포장 파이프라인(Tauri 빌드 → 매니페스트·아이콘·makeappx)", "platform": "win", "days": 1.0, "status": "todo" },
             { "id": "D3", "title": "패키지 모드 대응: 자동 실행 StartupTask·포터블 표시 무시·저장 위치", "platform": "win", "days": 0.5, "status": "todo" },
-            { "id": "D4", "title": "스토어 등록 자료(설명·스크린숏·개인정보 처리방침 URL·연령 등급)", "platform": "common", "days": 0.5, "status": "todo", "note": "개인정보 처리방침 주소 준비됨: djqanrudgns12.github.io/screen-ink/privacy/" },
+            { "id": "D4", "title": "스토어 등록 자료(설명·스크린숏·개인정보 처리방침 URL·연령 등급)", "platform": "common", "days": 0.5, "status": "todo", "note": "개인정보 처리방침 주소: https://ink.ssamuniverse.com/privacy/" },
             { "id": "D5", "title": "인증 제출·통과", "platform": "win", "days": 0.5, "status": "todo" },
             { "id": "D6", "title": "winget(msstore) 설치 확인·학교 PC Store 허용 여부 확인", "platform": "win", "days": 0.25, "status": "partial", "note": "학교 PC 스토어 열림 확인(사용자 2026-11-26), winget 확인 남음" }
           ]
@@ -211,7 +211,7 @@
             { "id": "D9", "title": "자동 업데이트: .appinstaller 호스팅·릴리스 스크립트·실행 중 적용 시점 확인", "platform": "win", "days": 0.5, "status": "todo", "note": "11 §7. 주소는 D12 끝난 뒤 확정" },
             { "id": "D10", "title": "업데이트 팝업: 준비되면 바로 띄우고 클릭 한 번에 몇 초 안 설치·자동 재시작(모드·전체 화면 중엔 미룸)", "platform": "win", "days": 1.0, "status": "todo", "note": "11 §7.2, 코드 — 원래 세션. PRD R-NET-1 문장 수정 함께" },
             { "id": "D11", "title": "SignPath Foundation 신청: 서명 정책 문구·GitHub Actions 릴리스 빌드·2단계 인증", "platform": "common", "days": 0.5, "status": "todo", "note": "11 §10.3, D7 다음" },
-            { "id": "D12", "title": "배포 주소: GitHub Pages(개인정보 처리방침·지원·.appinstaller) + 쌤유니버스.com 하위 도메인 CNAME", "platform": "common", "days": 0.5, "status": "partial", "note": "Pages 발행 끝(site/ → gh-pages). 하위 도메인 DNS(사용자)·.appinstaller 남음" }
+            { "id": "D12", "title": "배포 주소: GitHub Pages(개인정보 처리방침·지원) + ink.ssamuniverse.com", "platform": "common", "days": 0.5, "status": "done", "note": "2026-11-26 HTTPS 강제까지. .appinstaller 파일 올리기는 D9" }
           ]
         }
       ]
