@@ -3,7 +3,7 @@
   import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
   import { listen } from '@tauri-apps/api/event';
   import { CaptureOverlay, DrawOverlay, IslandHost, PinView, RecordFrame, SettingsWindow, TrayPopoverScreen, applyTheme, watchSystemTheme } from '@screen-ink/ui';
-  import { ZoomHud } from '@screen-ink/ui';
+  import { ZoomHud, syncLang } from '@screen-ink/ui';
 
   /** @type {{ client: import('@screen-ink/client').InkClient, view: 'popover'|'settings'|'island'|'overlay'|'pin'|'zoom-hud'|'recframe', firstRun?: boolean, monitorId?: number, pinId?: number }} */
   let { client, view, firstRun = false, monitorId = 0, pinId = 0 } = $props();
@@ -26,13 +26,16 @@
   );
 
   $effect(() => {
+    // 언어·OS는 모든 창(8개)이 여기서 맞춘다(R2-I18N-2 — 바꾸면 다시 시작 없이 바로)
     client.getState().then((s) => {
       pref = s.theme;
+      syncLang(s);
       if (s.mode) mode = s.mode;
     });
     const off = client.subscribe((e) => {
       if (e.type === 'state') {
         pref = e.state.theme;
+        syncLang(e.state);
         if (e.state.mode) mode = e.state.mode;
       } else if (e.type === 'draw') {
         // 세션이 상태보다 먼저 온다 — 상태가 draw로 바뀌는 순간 이미 쥐고 있다

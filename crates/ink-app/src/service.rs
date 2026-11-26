@@ -634,13 +634,14 @@ impl InkService {
     }
 
     /// 지금 언어로 키의 글(Rust가 만드는 섬·오류·메뉴 글은 이것으로 — 문자열을 코드에 박지 않는다).
+    /// 지금 OS 변형(`key~mac`·`key~win`)이 있으면 그것을 쓴다(R2-OSFIT-1).
     pub(crate) fn t(&self, key: &str) -> String {
-        ink_domain::i18n::tr(self.lang(), key)
+        ink_domain::i18n::tr_os(self.lang(), self.platform, key)
     }
 
     /// [`Self::t`] + `{이름}` 끼우기.
     pub(crate) fn tf(&self, key: &str, args: &[(&str, &dyn std::fmt::Display)]) -> String {
-        ink_domain::i18n::trf(self.lang(), key, args)
+        ink_domain::i18n::trf_os(self.lang(), self.platform, key, args)
     }
 
     /// 단축키 잠시 끄기(`` Alt+` ``만 남김) · 다시 켜기(실패 줄 보고).

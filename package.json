@@ -15,6 +15,8 @@
     "app:build": "npm run tauri -w @screen-ink/app -- build",
     "shortcuts:data": "node scripts/extract-shortcut-data.mjs",
     "progress": "node scripts/progress.mjs",
+    "i18n": "node scripts/i18n-build.mjs",
+    "i18n:check": "node scripts/i18n-build.mjs --check",
     "msix:store": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-msix.ps1 -Channel store -Verify",
     "msix:direct": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-msix.ps1 -Channel direct -EmitAppInstaller -Verify"
   },

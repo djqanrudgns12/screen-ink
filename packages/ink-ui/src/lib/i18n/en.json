@@ -1,10 +1,10 @@
 {
-  "settings.tab.shortcuts": "Shortcuts",
+  "island.hotkeys.off": "Shortcuts paused",
+  "island.hotkeys.on": "Shortcuts are back on",
+  "island.hotkeys.onSome": "Shortcuts are on · {n} are used by other apps",
   "settings.tab.capture": "Capture & recording",
   "settings.tab.draw": "Draw & zoom",
   "settings.tab.general": "General",
   "settings.tab.help": "User guide",
-  "island.hotkeys.on": "Shortcuts are back on",
-  "island.hotkeys.onSome": "Shortcuts are on · {n} are used by other apps",
-  "island.hotkeys.off": "Shortcuts paused"
+  "settings.tab.shortcuts": "Shortcuts"
 }

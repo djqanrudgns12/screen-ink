@@ -3,6 +3,10 @@
 //! 카탈로그는 화면과 **같은 파일**(`packages/ink-ui/src/lib/i18n/ko.json`·`en.json`)을 읽는다 — 키 하나에 두 쪽이 같은 글.
 //! 지금 언어는 전역에 두지 않고 부르는 쪽이 넘긴다(서비스는 설정 `general.lang`에서 — 시험이 서로 섞이지 않게).
 //! 키는 점 표기, 값 끼우기는 `{이름}`. 없는 키는 한국어 → 키 그대로 순서로 대신한다.
+//! OS별 글(R2-OSFIT-1): 같은 키에 `~mac`·`~win`을 붙인 변형이 있으면 그 OS에서 먼저 쓴다([`tr_os`]).
+//! ko.json·en.json은 `areas/<영역>.<언어>.json`을 합친 결과(`node scripts/i18n-build.mjs`).
+
+use crate::shortcuts::Platform;
 
 use serde_json::{Map, Value};
 use std::collections::BTreeMap;
@@ -60,13 +64,27 @@ pub fn tr(lang: Lang, key: &str) -> String {
     catalog(lang).get(key).or_else(|| catalog(Lang::Ko).get(key)).cloned().unwrap_or_else(|| key.to_string())
 }
 
-/// 키의 글 + `{이름}` 끼우기. 없는 이름은 자리 표시 그대로 둔다.
-pub fn trf(lang: Lang, key: &str, args: &[(&str, &dyn std::fmt::Display)]) -> String {
-    let mut s = tr(lang, key);
+/// 그 OS 변형(`key~mac`·`key~win`)이 있으면 그것, 없으면 [`tr`].
+pub fn tr_os(lang: Lang, os: Platform, key: &str) -> String {
+    let v = format!("{key}~{}", if os == Platform::Mac { "mac" } else { "win" });
+    catalog(lang).get(&v).or_else(|| catalog(Lang::Ko).get(&v)).cloned().unwrap_or_else(|| tr(lang, key))
+}
+
+/// [`tr_os`] + `{이름}` 끼우기.
+pub fn trf_os(lang: Lang, os: Platform, key: &str, args: &[(&str, &dyn std::fmt::Display)]) -> String {
+    fill(tr_os(lang, os, key), args)
+}
+
+fn fill(mut s: String, args: &[(&str, &dyn std::fmt::Display)]) -> String {
     for (name, v) in args {
         s = s.replace(&format!("{{{name}}}"), &v.to_string());
     }
     s
+}
+
+/// 키의 글 + `{이름}` 끼우기. 없는 이름은 자리 표시 그대로 둔다.
+pub fn trf(lang: Lang, key: &str, args: &[(&str, &dyn std::fmt::Display)]) -> String {
+    fill(tr(lang, key), args)
 }
 
 /// 글 안의 `{이름}` 목록(시험·검사용, 정렬).
@@ -100,6 +118,9 @@ mod tests {
             for (k, v) in c {
                 assert_eq!(placeholders(v), placeholders(&ko[k]), "{lang:?}:{k}");
                 assert!(!v.trim().is_empty(), "{lang:?}:{k} 비어 있음");
+                if let Some((base, _)) = k.split_once('~') {
+                    assert!(c.contains_key(base), "{lang:?}:{k} — OS 변형은 기본 키도 있어야 해요");
+                }
             }
         }
     }
@@ -113,5 +134,7 @@ mod tests {
         assert_eq!(Lang::from_setting("ko"), Lang::Ko);
         assert_eq!(Lang::from_setting(""), Lang::Ko);
         assert_eq!(placeholders("{a} 와 {b} {} {x y}"), ["a", "b"]);
+        // 변형이 없으면 기본 키
+        assert_eq!(tr_os(Lang::Ko, Platform::Mac, "island.hotkeys.off"), tr(Lang::Ko, "island.hotkeys.off"));
     }
 }

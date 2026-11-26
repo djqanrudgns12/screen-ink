@@ -185,3 +185,6 @@ export {
   drawMinimapState,
   buildBoardPreviewSamples,
 } from './models/drawUi.js';
+
+// 다국어(R2-I18N): 지금 언어·OS의 글 t(), 상태에서 맞추기 syncLang
+export { locale, setLang, setOs, syncLang, t, translate } from './i18n/index.svelte.js';
