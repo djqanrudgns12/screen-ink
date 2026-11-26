@@ -62,6 +62,10 @@ fn fields() -> &'static [Field] {
             f("capture.delay", IntSet(&[3, 5, 10]), json!(3)),
             f("draw.color", Choice(&["R", "Y", "G", "O", "B", "L", "W", "K"]), json!("R")),
             f("draw.width", IntRange(1, 30), json!(4)),
+            // 캡처·그리기 표시 도구의 마지막 색·굵기·최근 색(R2-ANN-4) — 화면이 JSON 글로 쓰고 읽는다(숨은 값)
+            f("annotate.style", Text(2000), json!("")),
+            // 글자 도구의 마지막 글꼴 이름(R2-TXT-2, 숨은 값 — 이 컴퓨터 글꼴 이름은 밖으로 내보내지 않는다)
+            f("annotate.font", Text(200), json!("")),
             f("draw.smoothing", Choice(&["off", "light", "strong"]), json!("light")),
             f("draw.straighten", Bool, json!(true)),
             f("draw.shapeOnHold", Bool, json!(true)),
