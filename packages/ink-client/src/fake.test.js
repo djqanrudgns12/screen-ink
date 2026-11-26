@@ -342,3 +342,48 @@ test('이어받기 흉내: 결과 섬 [판서로]는 고른 범위를 꽉 차게
   await c.run('draw');
   assert.deepEqual(seen.filter((e) => e.type === 'draw').at(-1).draw.initialView, { s: 1, tx: 0, ty: 0 });
 });
+
+test('온보딩 단계와 맥 권한 흉내: perm.refresh는 바뀔 때만 알리고 settings.reveal은 무시한다', async () => {
+  const c = createFakeClient({
+    platform: 'macos',
+    permissions: { screen: false, accessibility: false, screenRevoked: true, accessibilityRevoked: false },
+  });
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+
+  assert.equal((await c.updateSetting('onboarding.step', 2)).ok, true);
+  assert.equal((await c.updateSetting('onboarding.step', 9)).ok, false);
+  assert.equal((await c.getState()).settings['onboarding.step'], 2);
+
+  await c.run('perm.refresh');
+  assert.equal(seen.filter((e) => e.type === 'state').length, 1, '권한 변화가 없으면 state를 다시 보내지 않는다');
+
+  await c.run('perm.accessibility');
+  await c.run('perm.refresh');
+  let s = await c.getState();
+  assert.equal(s.permissions.accessibility, true);
+  assert.equal(s.permissions.screen, false);
+
+  await c.run('perm.screen');
+  await c.run('perm.refresh');
+  s = await c.getState();
+  assert.equal(s.permissions.screen, true);
+  assert.equal(s.permissions.screenRevoked, false);
+
+  // screenNeedsRelaunch면 app.relaunch로 켜진다
+  const c2 = createFakeClient({
+    platform: 'macos',
+    permissions: { screen: false, accessibility: true },
+    screenNeedsRelaunch: true,
+  });
+  await c2.run('perm.screen');
+  await c2.run('perm.refresh');
+  assert.equal((await c2.getState()).permissions.screen, false);
+  await c2.run('app.relaunch');
+  assert.equal((await c2.getState()).permissions.screen, true);
+
+  // settings.reveal은 섬 알림 없이 조용히 무시된다
+  const beforeReveal = seen.length;
+  await c.run('settings.reveal');
+  assert.equal(seen.length, beforeReveal);
+});

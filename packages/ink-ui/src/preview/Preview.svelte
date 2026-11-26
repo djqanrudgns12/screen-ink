@@ -36,13 +36,18 @@
   const initialScreen = params.get('screen') || 'settings';
   const initialTheme = params.get('theme') || (initialScreen === 'first' || initialScreen === 'cheat' ? 'dark' : 'light');
   const initialPlatform = params.get('platform') || 'windows';
+  const initialLang = params.get('lang') === 'en' ? 'en' : 'ko';
   const initialTab = params.get('tab') || 'shortcuts';
   const initialFirstRun = params.get('firstRun') === '1';
+  const initialGuide = params.get('guide') || null;
+  const stepRaw = params.get('step');
+  const initialStep = stepRaw !== null && stepRaw !== '' ? Number(stepRaw) : undefined;
   const hideBar = params.get('chrome') === '0';
 
   let screen = $state(initialScreen);
   let theme = $state(initialTheme);
   let tab = $state(initialTab);
+  let lang = $state(initialLang);
   let systemDark = $state(false);
   let boardSeg = $state('copy');
   let boardSwitchOn = $state(true);
@@ -115,6 +120,9 @@
     const off = client.subscribe((e) => {
       if (e.type === 'state') {
         overlayActive = e.state?.mode?.mode === 'capture';
+        if (e.state?.settings?.['general.lang']) {
+          lang = e.state.settings['general.lang'];
+        }
         if (e.state?.theme) {
           if (e.state.theme === 'light' || e.state.theme === 'dark') {
             theme = e.state.theme;
@@ -198,8 +206,10 @@
           {#each [
             { id: 'shortcuts', label: '단축키' },
             { id: 'capture', label: '캡처·녹화' },
-            { id: 'draw', label: '판서·확대' },
+            { id: 'draw', label: '그리기·확대' },
             { id: 'general', label: '일반' },
+            { id: 'help', label: '사용 설명서' },
+            { id: 'info', label: '정보' },
           ] as t (t.id)}
             <button
               type="button"
@@ -237,6 +247,28 @@
           >
             겹침 없음(F키 안내)
           </button>
+          {#if initialPlatform === 'macos'}
+            <button
+              type="button"
+              class="pv-pill ink-focus"
+              onclick={() => {
+                /** @type {any} */ (client).setPermissions?.({ screen: false, accessibility: false, screenRevoked: false, accessibilityRevoked: false });
+                firstOpen = true;
+              }}
+            >
+              권한 모두 꺼짐
+            </button>
+            <button
+              type="button"
+              class="pv-pill ink-focus"
+              onclick={() => {
+                /** @type {any} */ (client).setPermissions?.({ screen: true, accessibility: true, screenRevoked: false, accessibilityRevoked: false });
+                firstOpen = true;
+              }}
+            >
+              권한 모두 켜짐
+            </button>
+          {/if}
         </div>
       {:else if screen === 'cheat'}
         <div class="pv-bar-group">
@@ -260,6 +292,22 @@
       <div class="pv-bar-spacer"></div>
 
       <div class="pv-bar-group">
+        <button
+          type="button"
+          class="pv-pill ink-focus"
+          data-active={lang === 'ko' ? 'true' : undefined}
+          onclick={() => client.updateSetting('general.lang', 'ko')}
+        >
+          한국어
+        </button>
+        <button
+          type="button"
+          class="pv-pill ink-focus"
+          data-active={lang === 'en' ? 'true' : undefined}
+          onclick={() => client.updateSetting('general.lang', 'en')}
+        >
+          EN
+        </button>
         <button
           type="button"
           class="pv-pill ink-focus"
@@ -298,8 +346,9 @@
     <div class="pv-stage">
       <SettingsWindow
         {client}
-        initialTab={tab}
+        initialTab={/** @type {any} */ (tab)}
         firstRun={settingsFirstRun}
+        initialHelpGuide={initialGuide}
         onFirstRunClose={() => (settingsFirstRun = false)}
       />
     </div>
@@ -313,6 +362,7 @@
       <FirstRunSheet
         client={firstConflict ? client : cleanTrayClient}
         bind:open={firstOpen}
+        {initialStep}
         onChangeShortcuts={() => updateQuery('settings', theme, 'shortcuts')}
       />
     </div>

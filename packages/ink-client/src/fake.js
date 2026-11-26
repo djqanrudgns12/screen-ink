@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   'draw.startZoom': 1.75, 'draw.keep': true, 'draw.esc': 'step', 'draw.rightClickPan': true,
   'zoom.follow': 'pointer', 'zoom.minimap': true,
   'general.theme': 'system', 'general.lang': 'ko', 'general.autostart': true,
+  'onboarding.done': false, 'onboarding.step': 0,
   'topmost.border': 4, 'topmost.sound': false,
 };
 
@@ -35,12 +36,24 @@ const inkItems = (doc) => {
 };
 
 /**
- * @param {{platform?: 'windows'|'macos', snipasteRunning?: boolean, frameUrl?: string, channel?: 'unpackaged'|'msix-store'|'msix-direct', autostartNotice?: string}} [opts]
+ * @param {{platform?: 'windows'|'macos', snipasteRunning?: boolean, frameUrl?: string, channel?: 'unpackaged'|'msix-store'|'msix-direct', autostartNotice?: string, permissions?: {screen?: boolean, accessibility?: boolean, screenRevoked?: boolean, accessibilityRevoked?: boolean}, lang?: 'ko'|'en', screenNeedsRelaunch?: boolean}} [opts]
  *   frameUrl = 미리보기에서 오버레이 바탕으로 쓸 정지 이미지(없으면 오버레이가 빈 바탕)
  */
-export function createFakeClient({ platform = 'windows', snipasteRunning = true, frameUrl = undefined, channel = 'unpackaged', autostartNotice = undefined, permissions = undefined } = {}) {
+export function createFakeClient({ platform = 'windows', snipasteRunning = true, frameUrl = undefined, channel = 'unpackaged', autostartNotice = undefined, permissions = undefined, lang = 'ko', screenNeedsRelaunch = false } = {}) {
   const combos = Object.fromEntries(Object.entries(defaults.slots).map(([id, v]) => [id, (platform === 'macos' ? v.mac : v.win) || '']));
-  const settings = { ...DEFAULT_SETTINGS };
+  const settings = { ...DEFAULT_SETTINGS, 'general.lang': lang };
+  /** @type {{ screen: boolean, accessibility: boolean, screenRevoked: boolean, accessibilityRevoked: boolean } | undefined} */
+  let perms = permissions
+    ? {
+        screen: Boolean(permissions.screen),
+        accessibility: Boolean(permissions.accessibility),
+        screenRevoked: Boolean(permissions.screenRevoked),
+        accessibilityRevoked: Boolean(permissions.accessibilityRevoked),
+      }
+    : platform === 'macos'
+      ? { screen: true, accessibility: true, screenRevoked: false, accessibilityRevoked: false }
+      : undefined;
+  const pendingPerms = { screen: false, accessibility: false };
   /** 캡처 핀 흉내: id → {w, h, zoom} */
   const pins = new Map();
   let pinSeq = 0;
@@ -110,13 +123,17 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       settings: { ...settings }, shortcuts: r, version: '0.1.0',
       conflicts: { count: bad.length, app: owners.length === 1 && owners[0] !== '슉쇽' ? owners[0] : undefined, combos: bad.map((x) => x.combo) },
       readonly: false,
-      location: { path: 'C:\\Users\\…\\AppData\\Roaming\\Shookshok\\settings.json', portable: false, readOnly: false },
+      location: {
+        path: platform === 'macos' ? '~/Library/Application Support/Shookshok/settings.json' : 'C:\\Users\\…\\AppData\\Roaming\\Shookshok\\settings.json',
+        portable: false,
+        readOnly: false,
+      },
       channel,
       ...(autostartNotice ? { autostartNotice } : {}),
       notices: [],
       mode,
-      // 맥 권한(M10) — 미리보기 ?perm=screen-off 등으로 넘긴다
-      ...(permissions ? { permissions } : {}),
+      // 맥 권한(M10·R2-ONB) — 미리보기 ?perm=screen-off 등으로 넘긴다
+      ...(perms ? { permissions: { ...perms } } : {}),
     };
   };
   // 가져오기 장면: 다른 PC에서 내보낸 파일(3개가 다름)
@@ -229,6 +246,12 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     async getState() { return state(); },
     async updateSetting(path, value) {
       if (!(path in settings)) return { ok: false, error: `모르는 설정: ${path}`, state: state() };
+      if (path === 'onboarding.step') {
+        const step = Number(value);
+        if (!Number.isInteger(step) || step < 0 || step > 4) {
+          return { ok: false, error: '0~4만 가능해요', state: state() };
+        }
+      }
       history.push({ kind: 'setting', path, prev: settings[path] });
       settings[path] = value; changed();
       return { ok: true, state: state() };
@@ -495,6 +518,42 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     /** 시험용: 잠금 같은 시스템 사건 흉내 — Rust처럼 판서를 먼저 끝낸다(늦은 끝으로 보관) */
     simulateLock() { endDraw(true); },
     async run(action) {
+      if (action === 'settings.reveal' || action === 'firstRun.open') return;
+      if (action === 'perm.screen') {
+        if (perms && !screenNeedsRelaunch) pendingPerms.screen = true;
+        return;
+      }
+      if (action === 'perm.accessibility') {
+        if (perms) pendingPerms.accessibility = true;
+        return;
+      }
+      if (action === 'perm.refresh') {
+        if (!perms) return;
+        let dirty = false;
+        if (pendingPerms.screen && !perms.screen) {
+          perms.screen = true;
+          perms.screenRevoked = false;
+          pendingPerms.screen = false;
+          dirty = true;
+        }
+        if (pendingPerms.accessibility && !perms.accessibility) {
+          perms.accessibility = true;
+          perms.accessibilityRevoked = false;
+          pendingPerms.accessibility = false;
+          dirty = true;
+        }
+        if (dirty) changed();
+        return;
+      }
+      if (action === 'app.relaunch') {
+        if (perms && (!perms.screen || pendingPerms.screen)) {
+          perms.screen = true;
+          perms.screenRevoked = false;
+          pendingPerms.screen = false;
+          changed();
+        }
+        return;
+      }
       if (action === 'pins.closeAll') { pins.clear(); changed(); return; }
       if (action === 'draw.acceptSuggestion' || action === 'draw.undo') {
         if (mode.mode === 'draw') emit({ type: 'drawCommand', session: mode.session, command: action.slice('draw.'.length) });
@@ -591,6 +650,13 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         return;
       }
       island({ kind: 'info', text: `미리보기: ${action}` });
+    },
+    /** 시험용: 권한 상태를 직접 바꾼다 */
+    setPermissions(patch) {
+      if (!perms) return state();
+      Object.assign(perms, patch);
+      changed();
+      return state();
     },
     subscribe(handler) { subs.add(handler); return () => subs.delete(handler); },
   };
