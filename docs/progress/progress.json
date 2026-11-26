@@ -205,7 +205,7 @@
           "id": "direct",
           "name": "파일 직접 공유(선택)",
           "items": [
-            { "id": "D7", "title": "저장소 공개: 라이선스 → 라이선스 필드 → 공개 전환", "platform": "common", "days": 0.25, "status": "partial", "note": "공개 결정·공개 전 점검 끝(11 §10.1), 라이선스 확정 대기(제안 MIT)" },
+            { "id": "D7", "title": "저장소 공개: 라이선스 → 라이선스 필드 → 공개 전환", "platform": "common", "days": 0.25, "status": "done", "note": "MIT, 2026-11-26 공개 전환" },
             { "id": "D8", "title": "서명한 MSIX 한 파일 배포판(직접 배포 Publisher·WebView2 없을 때 안내·내려받은 파일 경고 확인)", "platform": "win", "days": 0.5, "status": "todo", "note": "D2·D7 다음, 11-distribution §6" },
             { "id": "D9", "title": "자동 업데이트: .appinstaller 호스팅·릴리스 스크립트·실행 중 적용 시점 확인", "platform": "win", "days": 0.5, "status": "todo", "note": "11 §7. 주소는 D12 끝난 뒤 확정" },
             { "id": "D10", "title": "업데이트 팝업: 준비되면 바로 띄우고 클릭 한 번에 몇 초 안 설치·자동 재시작(모드·전체 화면 중엔 미룸)", "platform": "win", "days": 1.0, "status": "todo", "note": "11 §7.2, 코드 — 원래 세션. PRD R-NET-1 문장 수정 함께" },

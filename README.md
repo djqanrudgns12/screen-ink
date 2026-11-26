@@ -84,3 +84,7 @@ apps/screen-ink              단독 앱 셸
 - [docs/WINDOWS-SETUP.md](docs/WINDOWS-SETUP.md) — Windows PC 개발 환경 준비
 - [docs/아이디어-고도화-1차.md](docs/아이디어-고도화-1차.md) — 벤치마크·기회·기능 아이디어·플랫폼·배포·13절 프로토타입 목표 v0.1(구글 독스 사본)
 - [docs/research/](docs/research/) — 조사 원문(Antigravity 딥서칭 · Codex 아이디어 · Claude 사실 확인 · 오픈소스 조사)
+
+## 라이선스
+
+[MIT](LICENSE) © 2026 djqanrudgns12

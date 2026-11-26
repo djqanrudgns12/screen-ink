@@ -1,6 +1,7 @@
 {
   "name": "screen-ink-workspace",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "workspaces": [
     "packages/*",
