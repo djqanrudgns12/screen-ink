@@ -10,6 +10,7 @@ import {
   invertCommand,
 } from './inkEngine.js';
 import { withBBox } from './hitTest.js';
+import { DRAW_KEY_IDS, defaultDrawCombo } from './drawKeys.js';
 
 const DOC = { w: 1920, h: 1080 };
 
@@ -674,6 +675,112 @@ test('칠판_여러장_자리와_되돌리기', () => {
   b.undo();
   assert.equal(b.doc.pages.length, 1);
   assert.equal(b.doc.activePage, 0);
+});
+
+/**
+ * 확정본 조합 → 키 사건(시험용).
+ * @param {string} combo
+ * @param {'windows'|'macos'} platform
+ */
+function comboEvent(combo, platform) {
+  const parts = combo.split('+');
+  const k = parts.pop() ?? '';
+  const named = /** @type {Record<string, string>} */ ({ Esc: 'Escape', Space: 'Space', Up: 'ArrowUp', Down: 'ArrowDown', '/': 'Slash' });
+  return {
+    code: named[k] ?? (/^[A-Z]$/.test(k) ? `Key${k}` : k),
+    key: k,
+    ctrlKey: parts.includes('Ctrl'),
+    altKey: parts.includes('Alt') || parts.includes('Option'),
+    shiftKey: parts.includes('Shift'),
+    metaKey: parts.includes(platform === 'macos' ? 'Cmd' : 'Win'),
+    t: 10_000,
+  };
+}
+
+test('판서_키_29칸_엔진_동작표_윈도우_맥', () => {
+  /** @type {Record<string, { setup?: (e: InkEngine) => void, check: (e: InkEngine, effects: any[]) => void }>} */
+  const table = {
+    'd-pen': { setup: (e) => e.setTool('marker'), check: (e) => assert.equal(e.tool, 'pen') },
+    'd-marker': { check: (e) => assert.equal(e.tool, 'marker') },
+    'd-text': { check: (e) => assert.equal(e.tool, 'text') },
+    'd-select': { check: (e) => assert.equal(e.tool, 'select') },
+    'd-eraser': { check: (e) => assert.equal(e.tool, 'eraser') },
+    'd-clear': {
+      setup: (e) => drag(e, line(10, 10, 100, 10, 4)),
+      check: (e, fx) => {
+        assert.equal(e.items.length, 0);
+        assert.equal(fx[0].text, INK_NOTICES.cleared);
+      },
+    },
+    'd-red': { setup: (e) => e.setColor('B'), check: (e) => assert.equal(e.color, 'R') },
+    'd-yellow': { check: (e) => assert.equal(e.color, 'Y') },
+    'd-green': { check: (e) => assert.equal(e.color, 'G') },
+    'd-orange': { check: (e) => assert.equal(e.color, 'O') },
+    'd-blue': { check: (e) => assert.equal(e.color, 'B') },
+    'd-lime': { check: (e) => assert.equal(e.color, 'L') },
+    'd-white': { check: (e) => assert.equal(e.background, 'white') },
+    'd-black': { check: (e) => assert.equal(e.background, 'black') },
+    'd-undo': { setup: (e) => drag(e, line(10, 10, 100, 10, 4)), check: (e) => assert.equal(e.items.length, 0) },
+    'd-redo': {
+      setup: (e) => {
+        drag(e, line(10, 10, 100, 10, 4));
+        e.undo();
+      },
+      check: (e) => assert.equal(e.items.length, 1),
+    },
+    'd-copy': { check: (_e, fx) => assert.deepEqual(fx, [{ type: 'copy' }]) },
+    'd-save': { check: (_e, fx) => assert.deepEqual(fx, [{ type: 'save' }]) },
+    'd-restore': { check: (_e, fx) => assert.deepEqual(fx, [{ type: 'restore' }]) },
+    'd-center': {
+      setup: (e) => e.setView({ s: 3, tx: -100, ty: -100 }),
+      check: (e, fx) => {
+        assert.deepEqual(fx, [{ type: 'centerCursor' }]);
+        assert.equal(e.view.s, 1);
+      },
+    },
+    'd-zin': { check: (e) => assert.equal(e.view.s, 1.75) },
+    'd-zout': { setup: (e) => e.setView({ s: 3, tx: 0, ty: 0 }), check: (e) => assert.equal(e.view.s, 2) },
+    'd-wup': { check: (e) => assert.equal(e.widthPx, 5) },
+    'd-wdown': { check: (e) => assert.equal(e.widthPx, 3) },
+    'd-help': { check: (e, fx) => assert.deepEqual([e.helpOpen, fx], [true, [{ type: 'help', open: true }]]) },
+    'd-exit': { check: (_e, fx) => assert.deepEqual(fx, [{ type: 'exit', reason: 'esc' }]) },
+    // 후속(R-DRAW-7): 키는 먹지만(다른 앱으로 새지 않게) 아무 일 없음
+    'd-spot': { check: (e, fx) => assert.deepEqual([fx, e.undoStack.length, e.tool], [[], 0, 'pen']) },
+    'd-check': { check: (e, fx) => assert.deepEqual([fx, e.undoStack.length], [[], 0]) },
+    'd-number': { check: (e, fx) => assert.deepEqual([fx, e.undoStack.length], [[], 0]) },
+  };
+  assert.deepEqual(Object.keys(table).sort(), [...DRAW_KEY_IDS].sort(), '29칸 모두');
+  for (const platform of /** @type {const} */ (['windows', 'macos'])) {
+    for (const id of DRAW_KEY_IDS) {
+      const e = engine({ platform });
+      e.pointerMove({ x: 960, y: 540, t: 0 });
+      const row = table[id];
+      row.setup?.(e);
+      const r = e.keyDown(comboEvent(defaultDrawCombo(id, platform), platform));
+      assert.equal(r.handled, true, `${platform} ${id} 처리`);
+      row.check(e, r.effects);
+    }
+  }
+});
+
+test('설정에서_판서키를_바꾸면_바로_새키로_판정', () => {
+  const e = engine({ shortcuts: [{ id: 'd-pen', combo: 'P' }] });
+  key(e, 'KeyM');
+  e.setShortcuts([
+    { id: 'd-pen', combo: 'A' },
+    { id: 'd-marker', combo: '' },
+  ]);
+  assert.equal(key(e, 'KeyP').handled, false, '옛 키는 화면 안 키가 아님');
+  assert.equal(key(e, 'KeyM').handled, false, '비운 칸');
+  assert.equal(e.tool, 'marker');
+  key(e, 'KeyA');
+  assert.equal(e.tool, 'pen');
+  e.setShortcuts([{ id: 'd-undo', combo: 'Ctrl+Shift+Z' }]);
+  drag(e, line(10, 10, 100, 10, 4));
+  assert.equal(key(e, 'KeyZ', { ctrlKey: true }).handled, false);
+  key(e, 'KeyZ', { ctrlKey: true, shiftKey: true });
+  assert.equal(e.items.length, 0);
+  assert.equal(e.undoLabel, 'Ctrl+Shift+Z', '섬 문구도 바뀐 키');
 });
 
 test('세션에서_문서_만들기와_렌더_변경_표시', () => {
