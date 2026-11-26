@@ -5,8 +5,10 @@
 //! UIA는 UIA 핵심이 바꿔 주므로 대상이 아니다(08 D12 "UIA는 정상").
 //!
 //! 순서:
-//! 1. 창의 DPI 문맥(`GetWindowDpiAwarenessContext`)·창 DPI(`GetDpiForWindow`)·모니터 DPI로 배율 비를 구한다.
-//!    창 DPI = 창이 자기 좌표를 계산하는 DPI(Unaware 96 · System = 그 프로세스의 시스템 DPI · Per-Monitor = 모니터 DPI).
+//! 1. 창의 DPI 문맥(`GetWindowDpiAwarenessContext`)·창 DPI·모니터 DPI로 배율 비를 구한다(`logical_dpi`).
+//!    창 DPI = 창이 자기 좌표를 계산하는 DPI(Unaware 96 · System = 그 앱이 가정한 시스템 DPI · Per-Monitor = 모니터 DPI).
+//!    System은 `GetDpiFromDpiAwarenessContext`를 먼저 보고, Per-Monitor 문맥에서 그 값이 0인 것은 96으로 치지 않는다
+//!    (스파이크 보고서 §7 실측). 값을 모르면(0) 바꾸지 않는다.
 //! 2. 비가 1이 아니면, MSAA 뿌리(OBJID_CLIENT) 사각형이 **물리 클라이언트 사각형**과 맞는지 **논리 클라이언트 사각형**과
 //!    맞는지 보고 좌표 공간을 판정한다(`classify_space`). oleacc 대리 객체(표준 컨트롤)는 우리 프로세스에서 돌아
 //!    이미 물리 px일 수 있어서, 무조건 바꾸면 오히려 틀린다.
@@ -42,6 +44,16 @@ impl DpiAwareness {
     /// 좌표가 가상화될 수 있는 창(보정 대상).
     pub fn virtualized(self) -> bool {
         matches!(self, DpiAwareness::Unaware | DpiAwareness::System)
+    }
+}
+
+/// 창이 자기 좌표를 계산하는 DPI. `ctx_dpi` = `GetDpiFromDpiAwarenessContext`(System 문맥에서만 > 0),
+/// `window_dpi` = `GetDpiForWindow`. 0 = 모름(96으로 치지 않는다 — `scale_ratio`가 1로 둔다).
+pub fn logical_dpi(awareness: DpiAwareness, ctx_dpi: u32, window_dpi: u32) -> u32 {
+    match awareness {
+        DpiAwareness::Unaware => 96,
+        DpiAwareness::System if ctx_dpi > 0 => ctx_dpi,
+        _ => window_dpi,
     }
 }
 
@@ -110,12 +122,14 @@ pub struct WindowDpi {
     pub monitor_dpi: u32,
     /// 창이 있는 모니터의 물리 왼쪽 위(순수 폴백의 원점)
     pub monitor_origin: PhysPoint,
+    /// 자식 창의 DPI 인식이 다를 수 있음(`DPI_HOSTING_BEHAVIOR_MIXED`) — 뿌리 하나로 판정하면 틀릴 수 있다 [확인 필요]
+    pub mixed_hosting: bool,
 }
 
 impl WindowDpi {
     /// 보정하지 않는 값(Per-Monitor 창·읽기 실패).
     pub const fn identity() -> WindowDpi {
-        WindowDpi { awareness: DpiAwareness::PerMonitor, window_dpi: 96, monitor_dpi: 96, monitor_origin: PhysPoint { x: 0, y: 0 } }
+        WindowDpi { awareness: DpiAwareness::PerMonitor, window_dpi: 96, monitor_dpi: 96, monitor_origin: PhysPoint { x: 0, y: 0 }, mixed_hosting: false }
     }
 
     pub fn ratio(&self) -> f64 {
@@ -130,13 +144,13 @@ impl WindowDpi {
 
 #[cfg(windows)]
 mod win {
-    use super::{scale_unaware_rect, unscale_rect, DpiAwareness, WindowDpi};
+    use super::{logical_dpi, scale_unaware_rect, unscale_rect, DpiAwareness, WindowDpi};
     use ink_domain::geometry::{PhysPoint, PhysRect};
     use windows_sys::Win32::Foundation::{HWND, POINT, RECT};
     use windows_sys::Win32::Graphics::Gdi::{ClientToScreen, GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONEAREST};
     use windows_sys::Win32::UI::HiDpi::{
-        GetAwarenessFromDpiAwarenessContext, GetDpiForMonitor, GetDpiForWindow, GetWindowDpiAwarenessContext, LogicalToPhysicalPointForPerMonitorDPI, PhysicalToLogicalPointForPerMonitorDPI,
-        MDT_EFFECTIVE_DPI,
+        GetAwarenessFromDpiAwarenessContext, GetDpiForMonitor, GetDpiForWindow, GetDpiFromDpiAwarenessContext, GetWindowDpiAwarenessContext, GetWindowDpiHostingBehavior,
+        LogicalToPhysicalPointForPerMonitorDPI, PhysicalToLogicalPointForPerMonitorDPI, DPI_HOSTING_BEHAVIOR_MIXED, MDT_EFFECTIVE_DPI,
     };
     use windows_sys::Win32::UI::WindowsAndMessaging::GetClientRect;
 
@@ -151,14 +165,14 @@ mod win {
                     return WindowDpi::identity();
                 }
                 let awareness = DpiAwareness::from_raw(GetAwarenessFromDpiAwarenessContext(ctx));
-                let window_dpi = GetDpiForWindow(h);
+                let window_dpi = logical_dpi(awareness, GetDpiFromDpiAwarenessContext(ctx), GetDpiForWindow(h));
                 let mon = MonitorFromWindow(h, MONITOR_DEFAULTTONEAREST);
                 let (mut dx, mut dy) = (96u32, 96u32);
                 let monitor_dpi = if !mon.is_null() && GetDpiForMonitor(mon, MDT_EFFECTIVE_DPI, &mut dx, &mut dy) == 0 { dx } else { window_dpi };
                 let mut info: MONITORINFO = std::mem::zeroed();
                 info.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
                 let monitor_origin = if !mon.is_null() && GetMonitorInfoW(mon, &mut info) != 0 { PhysPoint { x: info.rcMonitor.left, y: info.rcMonitor.top } } else { PhysPoint::default() };
-                WindowDpi { awareness, window_dpi, monitor_dpi, monitor_origin }
+                WindowDpi { awareness, window_dpi, monitor_dpi, monitor_origin, mixed_hosting: GetWindowDpiHostingBehavior(h) == DPI_HOSTING_BEHAVIOR_MIXED }
             }
         }
     }
@@ -229,8 +243,22 @@ mod tests {
         assert_eq!(scale_ratio(DpiAwareness::Unaware, 0, 144), 1.0);
         assert_eq!(DpiAwareness::from_raw(-1), DpiAwareness::Unknown);
         assert_eq!(DpiAwareness::from_raw(0), DpiAwareness::Unaware);
-        assert!(WindowDpi { awareness: DpiAwareness::Unaware, window_dpi: 96, monitor_dpi: 144, monitor_origin: O }.virtualized());
+        assert!(WindowDpi { awareness: DpiAwareness::Unaware, window_dpi: 96, monitor_dpi: 144, monitor_origin: O, mixed_hosting: false }.virtualized());
         assert!(!WindowDpi::identity().virtualized());
+    }
+
+    #[test]
+    fn dpi_pm_문맥의_0은_96으로_치지_않는다() {
+        // 스파이크 §7: GetDpiFromDpiAwarenessContext는 Per-Monitor 문맥에서 0
+        assert_eq!(logical_dpi(DpiAwareness::PerMonitor, 0, 144), 144);
+        assert_eq!(scale_ratio(DpiAwareness::PerMonitor, logical_dpi(DpiAwareness::PerMonitor, 0, 144), 144), 1.0);
+        // System: 앱이 가정한 시스템 DPI(문맥 값)를 먼저, 없으면 GetDpiForWindow
+        assert_eq!(logical_dpi(DpiAwareness::System, 120, 96), 120);
+        assert_eq!(logical_dpi(DpiAwareness::System, 0, 120), 120);
+        // 둘 다 모르면 0 → 바꾸지 않는다(96으로 쳐서 1.5배로 늘리지 않음)
+        assert_eq!(scale_ratio(DpiAwareness::System, logical_dpi(DpiAwareness::System, 0, 0), 144), 1.0);
+        // Unaware는 언제나 96
+        assert_eq!(logical_dpi(DpiAwareness::Unaware, 0, 0), 96);
     }
 
     #[test]
