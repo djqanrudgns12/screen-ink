@@ -84,17 +84,12 @@
   --ink-island-danger: #FF5A5F;
   --ink-island-danger-glow: rgba(255, 90, 95, 0.22);
 
-  /* 확대경·지도·앱 아이콘 */
+  /* 확대경·지도 */
   --ink-minimap-bg: rgba(0, 0, 0, 0.85);
   --ink-minimap-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
   --ink-mag-bg: #FFFFFF;
   --ink-mag-shadow: 0 0 0 1.5px #000000, 0 10px 26px rgba(0, 0, 0, 0.35);
   --ink-mag-grid: rgba(18, 18, 18, 0.1);
-  --ink-brand-top: #2F2F32;
-  --ink-brand-bottom: #141416;
-  --ink-brand-frame: #F2F2EE;
-  --ink-brand-rim: rgba(255, 255, 255, 0.12);
-  --ink-brand-highlight: rgba(255, 255, 255, 0.55);
 
   /* 그림자 */
   --ink-shadow-popover: 0 0 0 1px #D4D4CF, 0 16px 40px rgba(0, 0, 0, 0.18);

@@ -87,14 +87,17 @@ Tailwind 4 연결(값은 `[data-theme]`에서 바꾼다):
 
 | 에셋 | 형태 | 크기 |
 |---|---|---|
-| 앱 아이콘 | 흑연 squircle(위 #2F2F32 → 아래 #141416) + 흰 조준틀 네 귀 + 가운데 주황 잉크 방울(빛 한 점) | 1024 마스터 → `tauri icon`(ico 16~256 · icns 16~1024) |
-| 작은 앱 아이콘 | 32 이하: 선을 굵게, 방울은 원으로 | 16 · 32 별도 그림 |
-| 트레이(Windows) | 투명 바탕 위 조준틀 + 가운데 점 / 녹화 = 큰 빨간 원 + 짧은 모서리 / 꺼짐 = 조준틀 45% + 대각선 한 줄 — **모양만으로도 세 상태가 갈림** | 16 · 20 · 24 · 32 PNG × 라이트·다크 |
-| 트레이(macOS) | 단색 템플릿(위 모양 규칙 그대로) | 16pt(@1x·@2x), `iconAsTemplate` |
-| 작은 크기 규칙 | 16px: 바깥 1px 여백, 꺾쇠 2px 정수 맞춤(길이 4px), 안쪽 6×6 비움 · 20px 이하는 방울 대신 r=2 원 · 32px 이상만 방울 | — |
+**공식 아이콘(2026-11-26 확정) — 정본은 [docs/brand/README.md](../brand/README.md).** 이 표는 요약이다.
+
+| 에셋 | 형태 | 크기 |
+|---|---|---|
+| 앱 아이콘 | 먹색 무광 6날 조리개 원반 + 날개 사이 흰 음각 만년필 펜촉 + 펜촉 숨구멍 주황 점. **원형, 원 바깥 투명**(둥근 사각 타일 없음) | 1024 원본(`docs/brand/official/shookshok-icon-1024.png`) → `npx tauri icon`(ico 16·24·32·48·64·256 · icns 16~1024 · 스토어 로고) |
+| 앱 안 아이콘 | `AppIcon.svelte` = 위 PNG 축소본(32·64·128)을 보이는 크기의 2배로 골라 그린다 | 16 · 24 · 28 · 32 · 56 · 64 |
+| 트레이(Windows) | 준비 = 공식 아이콘 32px / 꺼짐 = 회색으로 바랜 아이콘 45% + 대각선 한 줄 / 녹화 = 큰 빨간 원 + 바깥 고리 — **모양만으로도 세 상태가 갈림**. 어두운 작업 표시줄에서는 먹색 원이 묻히므로 원 둘레에 밝은 고리를 더한다 | 32 PNG 한 벌(Windows가 16·20·24로 줄임), `tray_art.rs` |
+| 트레이(macOS) | 단색 템플릿 — 아직 안 만듦(맥판 때) | 16pt(@1x·@2x), `iconAsTemplate` |
 | 고정 개수 | 트레이 아이콘에 배지를 붙이지 않는다(16px·Win32 한계) → 팝오버 "창 항상 위" 줄과 트레이 툴팁에 숫자 | — |
 
-최종 앱 아이콘은 F01 벡터를 원본으로 다듬고, 이미지 생성은 참고용 초안에만 쓴다(벡터가 작은 크기에서 더 또렷함). 초안 프롬프트(Antigravity): `Precision minimalist desktop utility app icon on a clean macOS squircle tile, anodized matte dark graphite surface (#2F2F32 to #141416) with a subtle 1px top-inner bevel rim, four crisp rounded white viewfinder corner brackets (#F2F2EE) framing a single plump glossy amber-orange ink drop (#FF9F0A) with a soft top-left highlight, 824px safe zone, centered, transparent background, no text, no neon glow, no drop shadow`
+옛 아이콘(흑연 squircle + 흰 조준틀 + 주황 잉크 방울, F01 벡터)은 2026-11-26에 공식 아이콘으로 바꿨다. 시안 과정은 `docs/brand/icon-drafts/`(1차 01~10 · 2차 11~20 · 최종 21~23).
 
 ## 5. 부품
 
