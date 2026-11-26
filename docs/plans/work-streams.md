@@ -45,7 +45,9 @@
 | (조사) | Claude | 스파이크: WGC·녹화·확대·MSIX·업데이트 API·MSAA·DPI — 끝, [spikes-windows.md](2026-11-26/spikes-windows.md) | `spikes/target` |
 | `window-record` | Claude(2차) | E 6.1 F2 WGC·6.2 바로 캡처 키·6.3 F3 녹화(MF 직접, windows-capture 안 씀)·6.5 자동 중지·복구·마이크·여유 있으면 6.4 | `target-ink-engine` |
 
-병합 기록: `cap-chip` 병합(3e-chip). 잔상은 지금 `overlay.rs`가 오버레이 웹뷰에 `eval`로 그린다 — 2차 캡처 주석 흐름(4.9)이 `CaptureOverlay.svelte`를 맡을 때 `screen-ink://afterimage` 이벤트 + `SelectionFrame state="afterimage"`로 옮기고 `eval`을 지운다. `msix`는 브랜드 커밋(8796250) 전 기준으로 출발했다 — 병합 때 Identity를 `com.ssamuniverse.shookshok`, 표시 이름 `슉쇽 (ShookShok)`, `.appinstaller` 파일 이름 `shookshok.appinstaller`로 맞춘다.
+| `cap-annotate` | Claude(2차) | B 4.9 캡처 주석(판서 엔진 재사용·Rust 합성·모자이크) + 잔상 eval → CaptureOverlay 이벤트로 | `target`(공용) |
+
+병합 기록: `cap-chip` 병합(3e-chip) · `ink-engine` 병합(4.1 엔진·4.2 렌더러·미리보기 `?draw=1`) + 메인 수정 c8aec99(DrawCanvas가 tick 효과를 버리던 것 — 제안 4초 만료가 섬에서 안 걷힘). 잔상은 지금 `overlay.rs`가 오버레이 웹뷰에 `eval`로 그린다 — 2차 캡처 주석 흐름(4.9)이 `CaptureOverlay.svelte`를 맡을 때 `screen-ink://afterimage` 이벤트 + `SelectionFrame state="afterimage"`로 옮기고 `eval`을 지운다. `msix`는 브랜드 커밋(8796250) 전 기준으로 출발했다 — 병합 때 Identity를 `com.ssamuniverse.shookshok`, 표시 이름 `슉쇽 (ShookShok)`, `.appinstaller` 파일 이름 `shookshok.appinstaller`로 맞춘다.
 
 - 빌드 폴더를 같이 쓰는 흐름은 cargo 잠금으로 빌드가 차례로 돈다 — 메모리(16GB 중 여유 4GB대)를 넘기지 않으려는 의도.
 - 같은 폴더(원본)에서 사용자의 브랜드 세션이 아이콘·`tokens.css`·`04-screens.md`·`10-design-system.md`·`tray_art.rs`를 고친다 — 모든 흐름에서 손대지 않는다.
