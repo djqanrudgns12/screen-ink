@@ -6,10 +6,10 @@
 use serde::{Deserialize, Serialize};
 
 /// MSIX 매니페스트 `<desktop:StartupTask TaskId="...">` 식별자.
-pub const STARTUP_TASK_ID: &str = "ScreenInkStartup";
+pub const STARTUP_TASK_ID: &str = "ShookshokStartup";
 
 /// 직접 배포판 `.appinstaller` 고정 주소(D12 확정, 11-distribution §7.1·§10.2).
-pub const APPINSTALLER_URI: &str = "https://ink.ssamuniverse.com/screen-ink.appinstaller";
+pub const APPINSTALLER_URI: &str = "https://ink.ssamuniverse.com/shookshok.appinstaller";
 
 /// 설치 경로(채널) — 패키지 여부와 서명·AppInstaller 존재 여부로 나눈다.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -99,11 +99,11 @@ pub fn classify_channel(is_packaged: bool, has_app_installer: bool, signature: P
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum StorageMode {
-    /// 비패키지 + 실행 파일 옆 `screen-ink.portable` 있음 → `exe_dir/data`.
+    /// 비패키지 + 실행 파일 옆 `Shookshok.portable`(또는 옛 `screen-ink.portable`) 있음 → `exe_dir/data`.
     Portable,
-    /// 비패키지 + 표시 파일 없음 → `%APPDATA%\screen-ink`.
+    /// 비패키지 + 표시 파일 없음 → `%APPDATA%\Shookshok`.
     Installed,
-    /// MSIX 패키지 → 설치 폴더 읽기 전용, `screen-ink.portable` 무시, 패키지 가상화 `%APPDATA%\screen-ink`.
+    /// MSIX 패키지 → 설치 폴더 읽기 전용, 포터블 표시 파일 무시, 패키지 가상화 `%APPDATA%\Shookshok`.
     MsixPackaged,
 }
 
@@ -207,7 +207,7 @@ pub fn resolve_log_policy(channel: InstallChannel, has_portable_marker: bool) ->
 pub enum AutostartBackend {
     /// 비패키지: Run 레지스트리(`tauri-plugin-autostart`).
     RegistryRun,
-    /// MSIX 패키지: `Windows.ApplicationModel.StartupTask` (`ScreenInkStartup`).
+    /// MSIX 패키지: `Windows.ApplicationModel.StartupTask` (`ShookshokStartup`).
     StartupTask,
 }
 

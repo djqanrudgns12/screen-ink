@@ -35,10 +35,10 @@ const inkItems = (doc) => {
 };
 
 /**
- * @param {{platform?: 'windows'|'macos', snipasteRunning?: boolean, frameUrl?: string}} [opts]
+ * @param {{platform?: 'windows'|'macos', snipasteRunning?: boolean, frameUrl?: string, channel?: 'unpackaged'|'msix-store'|'msix-direct', autostartNotice?: string}} [opts]
  *   frameUrl = 미리보기에서 오버레이 바탕으로 쓸 정지 이미지(없으면 오버레이가 빈 바탕)
  */
-export function createFakeClient({ platform = 'windows', snipasteRunning = true, frameUrl = undefined } = {}) {
+export function createFakeClient({ platform = 'windows', snipasteRunning = true, frameUrl = undefined, channel = 'unpackaged', autostartNotice = undefined } = {}) {
   const combos = Object.fromEntries(Object.entries(defaults.slots).map(([id, v]) => [id, (platform === 'macos' ? v.mac : v.win) || '']));
   const settings = { ...DEFAULT_SETTINGS };
   /** 캡처 핀 흉내: id → {w, h, zoom} */
@@ -90,6 +90,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       conflicts: { count: bad.length, app: owners.length === 1 && owners[0] !== '슉쇽' ? owners[0] : undefined, combos: bad.map((x) => x.combo) },
       readonly: false,
       location: { path: 'C:\\Users\\…\\AppData\\Roaming\\Shookshok\\settings.json', portable: false, readOnly: false },
+      channel,
+      ...(autostartNotice ? { autostartNotice } : {}),
       notices: [],
       mode,
     };

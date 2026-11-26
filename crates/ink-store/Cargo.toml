@@ -9,5 +9,6 @@ publish = false
 
 [dependencies]
 ink-app.workspace = true
+ink-domain.workspace = true
 serde_json.workspace = true
 log.workspace = true

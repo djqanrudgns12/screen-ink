@@ -37,6 +37,8 @@
  * @property {string} version
  * @property {boolean} readonly      더 새 버전 설정·쓸 수 없는 폴더 → 바꿔도 저장 안 함(안내 띠)
  * @property {{path: string, portable: boolean, readOnly: boolean}} location  설정 파일 위치(S05 데이터 > 설정 위치)
+ * @property {'unpackaged'|'msix-store'|'msix-direct'} [channel]  설치 채널(MSIX 패키지/설치/포터블 구분)
+ * @property {string} [autostartNotice]  MSIX StartupTask 차단(DisabledByUser·정책) 시 설정 화면 한 줄 안내
  * @property {string[]} notices      시작할 때 한 번 알려 줄 문구(손상 복구 등)
  * @property {Mode} [mode]          지금 모드(오버레이 창이 캡처·판서 화면을 고른다)
  *

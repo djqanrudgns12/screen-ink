@@ -43,7 +43,7 @@ test('describes setting and shortcut import changes', () => {
   assert.equal(vChange.afterText, '8px');
 });
 
-test('formats settings location with portable/installed prefix and shortened path', () => {
+test('formats settings location with MSIX/portable/installed prefix and shortened path', () => {
   assert.equal(
     formatLocationSub({ path: 'C:\\Users\\Teacher\\AppData\\Roaming\\screen-ink\\settings.json', portable: false }, 26),
     '설치 · …\\screen-ink\\settings.json',
@@ -51,6 +51,22 @@ test('formats settings location with portable/installed prefix and shortened pat
   assert.equal(
     formatLocationSub({ path: 'D:\\screen-ink\\data\\settings.json', portable: true }, 40),
     '포터블 · D:\\screen-ink\\data\\settings.json',
+  );
+  assert.equal(
+    formatLocationSub(
+      { path: 'C:\\Users\\Teacher\\AppData\\Roaming\\Shookshok\\settings.json', portable: false },
+      26,
+      'msix-store',
+    ),
+    'MSIX 패키지 · …\\Shookshok\\settings.json',
+  );
+  assert.equal(
+    formatLocationSub(
+      { path: 'C:\\Users\\Teacher\\AppData\\Roaming\\Shookshok\\settings.json', portable: true },
+      26,
+      'msix-direct',
+    ),
+    'MSIX 패키지 · …\\Shookshok\\settings.json',
   );
 });
 

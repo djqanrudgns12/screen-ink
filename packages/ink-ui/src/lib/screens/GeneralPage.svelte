@@ -37,7 +37,8 @@
   let settings = $derived(state?.settings ?? {});
   let platform = $derived(state?.platform ?? 'windows');
   let pinnedCount = $derived(state?.pinnedCount ?? 0);
-  let locationText = $derived(formatLocationSub(state?.location, 32));
+  let locationText = $derived(formatLocationSub(state?.location, 32, state?.channel));
+  let autostartNotice = $derived(state?.autostartNotice ?? '');
   let importChanges = $derived(
     (importPreview?.changes ?? []).map((c) => describeSettingChange(c, state?.shortcuts ?? [])),
   );
@@ -116,7 +117,7 @@
   <section class="ink-section">
     <SectionLabel title="시작" />
     <Group>
-      <Row label="로그인하면 실행" sub="트레이에만 조용히">
+      <Row label="로그인하면 실행" sub="트레이에만 조용히" warning={autostartNotice}>
         <Switch
           checked={Boolean(settings['general.autostart'])}
           label="로그인하면 실행"

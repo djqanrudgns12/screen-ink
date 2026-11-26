@@ -5,14 +5,16 @@ pub mod capture;
 pub mod case;
 pub mod draw;
 pub mod live_zoom;
+pub mod package;
 pub mod ports;
 pub mod service;
 pub mod state;
 pub mod vision;
 
 pub use ports::{
-    Clipboard, Clock, ElementSource, FileSink, Frame, HotkeyError, HotkeyRegistry, Loaded, MonitorProbe, NoPins, NoVision, Notifier, OverlayHost, PinHost, Ports, SavedFile, ScreenSource, NO_SCREEN_PERMISSION,
-    SettingsStore, StoreError, StoreLocation, SystemEvent, SystemProbe, VisionSource, WindowCatalog,
+    AutostartControl, Clipboard, Clock, ElementSource, FileSink, Frame, HotkeyError, HotkeyRegistry, Loaded, MonitorProbe, NoPins, NoVision, NoopAutostart, NoopUpdater, Notifier,
+    OverlayHost, PackageRuntime, PinHost, Ports, ReadyUpdate, SavedFile, ScreenSource, SettingsStore, StoreError, StoreLocation, SystemEvent, SystemProbe, UnpackagedRuntime, Updater,
+    VisionSource, WindowCatalog, NO_SCREEN_PERMISSION,
 };
 pub use capture::CaptureInput;
 pub use draw::{DrawExportMeta, DrawExported, DrawFinish, DrawIslandPatch, DrawRestoreResult, ExportAction, KeptInk, KeptPayload, PenSample};
