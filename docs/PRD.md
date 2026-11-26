@@ -197,7 +197,7 @@
 
 | ID | 우선 | 요구사항 | 합격 기준 | 근거 |
 |---|---|---|---|---|
-| R-NET-1 | P0 | **네트워크 0**: 1차 빌드(앱 프로세스)에 업데이트 확인·통계·오류 보고를 넣지 않는다. 업데이트는 **Windows가 한다** — 스토어판은 Microsoft Store, 직접 배포판은 서명 MSIX + `.appinstaller`(앱 설치 관리자). 그 밖의 형태는 GitHub 릴리스를 사용자가 직접 받는다([11 §7](prd/11-distribution.md)). | 학교망(SSL 검사)에서 오류·지연 0(S14) | SP 5절(SSL 실패 95회) · IZ 6절 |
+| R-NET-1 | P0 | **네트워크 0**: 앱 프로세스는 스스로 통신하지 않는다(통계·오류 보고 없음, 우리 실행 파일에 HTTP 클라이언트 없음 — R-NET-2). **업데이트 확인·받기·설치는 Windows API**(스토어판 `StoreContext`, 직접 배포판 `.appinstaller`·`PackageManager`)를 부르고 **통신은 OS가 한다**. 새 버전이 준비되면 팝업으로 바로 알린다(배너 아님, 모드·전체 화면 앱·보안 데스크톱 중에는 미룸 — [11 §7.2](prd/11-distribution.md)). 그 밖의 형태(포터블 ZIP)는 GitHub 릴리스를 사용자가 직접 받는다 | 학교망(SSL 검사)에서 오류·지연 0(S14) · 업데이트 실패가 앱 동작에 영향 0 | SP 5절(SSL 실패 95회) · IZ 6절 · 2026-11-26 사용자 결정(팝업) |
 | R-NET-2 | P0 | 검증 가능하게: Rust 의존성에 HTTP 클라이언트 없음(`cargo tree` 검사), 웹뷰 CSP `connect-src 'none'`(로컬 IPC만), 릴리스 때 rea `inspect-pe-imports`로 `winhttp`·`wininet`·`ws2_32` import 없음 확인. WebView2 런타임 자체 통신은 [확인 필요] — 끌 수 있는 실행 옵션 조사. | 릴리스 체크리스트 통과 | IZ 6절 |
 | R-LOG-1 | P0 | 로그는 로컬 파일만, 7일 순환. **창 제목·창 안 글자·파일 이름을 남기지 않는다**(학생 이름·업무 화면 보호). 모니터 구성·시간·오류 코드만. | 로그 검사 스크립트로 창 제목 0건 | SP 로그는 포그라운드 창 제목을 남김 |
 | R-BENCH-1 | P0 | 벤치마크 계측 줄: `overlay ready [N ms] (capture N, show N)`, `launch time N ms`, 모드별 진입 시간, 모니터별 `rect · dpi · scale`. Snipaste 로그와 같은 정의라 `bench/` 스크립트로 바로 비교 | M1·M2·M4를 로그만으로 집계 | 벤치마크 README 1절 |
@@ -359,3 +359,4 @@ PowerToys "항상 위"와 같은 기능. PowerToys가 없는 학교 PC에서도 
 | 2026-11-26 | v3.0.2 | 배포 채널·서명 결정(11-distribution 신설): Microsoft Store MSIX 기본, 직접 배포는 서명 MSIX + `.appinstaller`. R-NET-1 개정 — 자동 업데이트는 운영체제(스토어·앱 설치 관리자)가 하고 앱 프로세스는 네트워크 0 유지 |
 | 2026-11-26 | v3.0.3 | 사용자 요청: 선택 툴바(R-CAP-27, Snipaste식)·캡처 주석(R-CAP-28)을 1차로, 화면 안 키 설정 반영(R-KEY-6) 명시. R-CAP-15 느린 앱 문턱 150 → 500 ms(실측) |
 | 2026-11-26 | v3.0.4 | 사용자 요청: 캡처 핀(R-CAP-29)을 후속에서 1차로 — 선택 툴바에 [고정] |
+| 2026-11-26 | v3.0.5 | R-NET-1 개정: 업데이트 확인은 앱이 Windows API로(통신은 OS, exe에 HTTP 없음) + 새 버전 팝업(11 §7.2, 사용자 결정) |
