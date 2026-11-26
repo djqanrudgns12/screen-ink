@@ -227,9 +227,10 @@
       <Row label="커서 따라가기">
         <Segmented
           label="커서 따라가기"
-          value={settings['zoom.follow'] ?? 'smooth'}
+          value={settings['zoom.follow'] ?? 'pointer'}
           options={[
-            { value: 'smooth', label: '부드럽게' },
+            { value: 'pointer', label: '마우스 위치대로' },
+            { value: 'smooth', label: '가운데로' },
             { value: 'instant', label: '바로' },
           ]}
           onChange={(v) => setSetting('zoom.follow', v)}

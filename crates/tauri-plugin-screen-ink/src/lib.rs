@@ -1222,7 +1222,7 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
     if channel.is_packaged() {
         service.set_autostart(Box::new(ink_platform_windows::package::WindowsStartupTaskAutostart::default()));
     }
-    // 실시간 확대(Alt+2): Windows = Magnification API + HUD, 그 밖 = 없음
+    // 실시간 확대(Alt+2): Windows = Magnification API + HUD, 맥 = SCStream 돋보기 + HUD(M13), 그 밖 = 없음
     service.set_magnifier(zoom_hud::magnifier(app));
     // 녹화(단계 6.3): 임시 파일은 %TEMP%의 shookshok 폴더, 저장 폴더가 비면 사진 폴더의 shookshok
     #[cfg(windows)]

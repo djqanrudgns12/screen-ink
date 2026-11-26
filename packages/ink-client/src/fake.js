@@ -13,7 +13,7 @@ const DEFAULT_SETTINGS = {
   'record.fps': 30, 'record.mic': false, 'record.micDevice': '', 'record.cursor': true, 'record.firstHintDone': false, 'capture.delay': 3,
   'draw.color': 'R', 'draw.width': 4, 'draw.smoothing': 'light', 'draw.straighten': true, 'draw.shapeOnHold': true, 'draw.shapeApply': 'suggest',
   'draw.startZoom': 1.75, 'draw.keep': true, 'draw.esc': 'step', 'draw.rightClickPan': true,
-  'zoom.follow': 'smooth', 'zoom.minimap': true,
+  'zoom.follow': 'pointer', 'zoom.minimap': true,
   'general.theme': 'system', 'general.lang': 'ko', 'general.autostart': true,
   'topmost.border': 4, 'topmost.sound': false,
 };
@@ -168,11 +168,9 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     island({ kind: 'end', text: '' });
   };
   // ── 실시간 확대 흉내(진짜 계산은 Rust ink-domain::zoom) ──
-  const ZOOM_STEPS = [1.25, 1.5, 2, 2.5, 3, 4, 6, 8];
-  const scaleLabel = (s) => {
-    const r = Math.round(s * 100);
-    return r % 10 === 0 ? `×${(r / 100).toFixed(1)}` : `×${(r / 100).toFixed(2)}`;
-  };
+  // 배율 = 2^(k/8), 1×~8×(k 0~24) — Rust `wheel_target`. 미리보기는 부드러운 전환 없이 목표로 바로 간다
+  const NOTCHES_PER_DOUBLE = 8;
+  const scaleLabel = (s) => `×${(Math.round(s * 10) / 10).toFixed(1)}`;
   const zoomView = () => ({
     session: mode.session, monitorId: 0, monitorLabel: '모니터 1', scale: zoomScale, scaleLabel: scaleLabel(zoomScale),
     viewport: { x: (1 - 1 / zoomScale) / 2, y: (1 - 1 / zoomScale) / 2, w: 1 / zoomScale, h: 1 / zoomScale },
@@ -200,10 +198,12 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     zoomIsland();
     emit({ type: 'zoom', zoom: zoomView() });
   };
-  const stepZoom = (dy) => {
-    const i = ZOOM_STEPS.indexOf(zoomScale);
-    const next = ZOOM_STEPS[Math.max(0, Math.min(ZOOM_STEPS.length - 1, i - Math.sign(dy)))];
-    if (next === zoomScale) return;
+  const stepZoom = (notches, snap) => {
+    const now = Math.log2(zoomScale) * NOTCHES_PER_DOUBLE;
+    const n = Math.max(1, Math.round(Math.abs(notches)));
+    const k = snap ? (notches < 0 ? Math.floor(now + 1e-6) + n : Math.ceil(now - 1e-6) - n) : now - notches;
+    const next = Math.min(8, Math.max(1, 2 ** (k / NOTCHES_PER_DOUBLE)));
+    if (Math.abs(next - zoomScale) < 1e-9) return;
     zoomScale = next;
     zoomIsland();
     emit({ type: 'zoom', zoom: zoomView() });
@@ -392,7 +392,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     },
     async zoomInput(input) {
       if (mode.mode !== 'liveZoom' || !input) return;
-      if (input.type === 'wheel') stepZoom(input.dy);
+      if (input.type === 'wheel') stepZoom(input.dy, true);
+      else if (input.type === 'scroll') stepZoom(input.notches, false);
       else if ((input.type === 'key' && input.slot === 'z-exit') || input.type === 'exit') endZoom();
     },
     async overlayReady(session) {

@@ -78,14 +78,14 @@ fn 확대중_alt1은_그_순간_배율과_위치를_그대로_판서로_이어�
     cursor(&w, 960, 540);
     let mut s = service(&w);
     s.on_hotkey("zoom");
-    // 휠로 2.5배, 커서를 옮겨 따라가게 한 뒤의 값
-    s.zoom_input(ZoomInput::Wheel { dy: -1 });
+    // 휠 네 칸(2 × 2^(4/8) = 2√2배), 커서를 옮겨 따라가게 한 뒤의 값(배율 전환도 끝남)
+    s.zoom_input(ZoomInput::Wheel { dy: -4 });
     cursor(&w, 1500, 700);
     for _ in 0..30 {
         s.tick_zoom_with(DT);
     }
     let h = s.zoom_handoff().expect("확대 중");
-    assert_eq!(h.scale, 2.5);
+    assert!((h.scale - 2.0 * 2f64.sqrt()).abs() < 1e-9, "{}", h.scale);
     assert!(h.tx < 0.0 && h.ty < 0.0, "가운데가 아닌 곳: {h:?}");
     let before = captures(&w);
 
@@ -104,7 +104,7 @@ fn 확대중_alt1은_그_순간_배율과_위치를_그대로_판서로_이어�
     assert!(!w.is_registered("Escape"));
     // 판서 섬은 처음부터 이어받은 배율
     let island = w.last_island().unwrap();
-    assert_eq!((island.variant.as_deref(), island.value.as_deref()), (Some("draw"), Some("×2.5")));
+    assert_eq!((island.variant.as_deref(), island.value.as_deref()), (Some("draw"), Some("×2.83")));
 }
 
 #[test]

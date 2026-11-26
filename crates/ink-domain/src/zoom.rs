@@ -1,4 +1,5 @@
-//! 실시간 확대(Alt+2, 02 §4 · R-ZOOM-1·2) 순수 계산 — 휠 단계 · 커서 고정점 · 부드러운 추적(0.35 + 10% 죽은 영역) ·
+//! 실시간 확대(Alt+2, 02 §4 · R-ZOOM-1·2) 순수 계산 — 연속 배율(1×~8×, 휠 한 칸 ≈9%) · 목표 배율로 부드럽게 ·
+//! 커서 고정점 · 따라가기(기본 = 마우스 위치 비례 지도, 그 밖 0.35 + 10% 죽은 영역 / 바로) ·
 //! 원본 사각형 모니터 가두기 · 위치 지도·후광 자리 · 판서 초기 변환(5.3 `Alt+1` 이어받기).
 //!
 //! 좌표는 모두 가상 화면 물리 px. 돋보기는 원본 사각형(`source`)을 배율만큼 키워 모니터 전체를 덮는다:
@@ -8,10 +9,18 @@ use crate::geometry::{LogicalPoint, PhysPoint, PhysRect};
 use crate::mode::Mode;
 use serde::{Deserialize, Serialize};
 
-/// 휠 배율 단계(R-ZOOM-2).
-pub const LIVE_ZOOM_STEPS: &[f64] = &[1.25, 1.5, 2.0, 2.5, 3.0, 4.0, 6.0, 8.0];
+/// 배율 범위(R-ZOOM-2). 1×(확대 없음)까지 내려가도 끝내지 않는다 — 끝은 Esc·Alt+2(2026-11-27 사용자 요청).
+pub const LIVE_ZOOM_MIN: f64 = 1.0;
+pub const LIVE_ZOOM_MAX: f64 = 8.0;
+/// 휠 한 칸 = 두 배의 1/8(×2^(1/8) ≈ 9%) — 옛 단계표(1.25·1.5·2·2.5…)는 너무 성겨서 바꿨다(2026-11-27 사용자 요청).
+/// 휠 칸은 이 격자 위에 바로 선다(×1.0·×2.0·×4.0·×8.0이 정확히). 트랙패드는 칸의 소수배(격자 없이 연속).
+pub const ZOOM_NOTCHES_PER_DOUBLE: f64 = 8.0;
 /// 들어갈 때 배율(F14 섬 `×2.0`).
 pub const LIVE_ZOOM_START: f64 = 2.0;
+/// 배율 바꾸기는 목표 배율로 부드럽게: 60 Hz 한 프레임에 남은 로그 거리의 이만큼(≈ 140 ms에 95%).
+pub const SCALE_ALPHA: f64 = 0.3;
+/// 남은 로그 거리가 이보다 작으면 목표에 붙인다(0.2%).
+const SCALE_SNAP: f64 = 0.002;
 /// 60 Hz 한 프레임에 남은 거리의 몇 배를 따라가나(02 §4).
 pub const FOLLOW_ALPHA: f64 = 0.35;
 /// 죽은 영역 = 원본 폭·높이의 10%(중심 ±5%) — 작은 손떨림에 화면이 흔들리지 않게.
@@ -46,7 +55,11 @@ pub const DRAW_MAX_ZOOM: f64 = 8.0;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FollowMode {
-    /// 0.35 감쇠 + 10% 죽은 영역
+    /// 기본(2026-11-27): 마우스 위치 비례 지도 — 커서가 모니터의 어디에 있든 **확대 화면에서도 같은 자리**에 보이고,
+    /// 그 둘레가 확대된다(왼쪽 위를 가리키면 왼쪽 위, 가운데면 가운데). 가장자리까지 커서만 옮기면 닿고,
+    /// 배율을 바꿔도 커서 아래 점이 제자리다. 커서와 확대 그림이 어긋나지 않아 클릭 자리가 곧 보이는 자리다.
+    Pointer,
+    /// 0.35 감쇠 + 10% 죽은 영역(커서를 가운데 근처로 끌어온다)
     Smooth,
     /// 중심 = 커서(죽은 영역 없음)
     Instant,
@@ -54,10 +67,10 @@ pub enum FollowMode {
 
 impl FollowMode {
     pub fn from_setting(v: &str) -> Self {
-        if v == "instant" {
-            FollowMode::Instant
-        } else {
-            FollowMode::Smooth
+        match v {
+            "smooth" => FollowMode::Smooth,
+            "instant" => FollowMode::Instant,
+            _ => FollowMode::Pointer,
         }
     }
 }
@@ -77,19 +90,24 @@ pub struct NormRect {
 pub struct LiveZoomView {
     pub monitor_id: u32,
     pub monitor_bounds: PhysRect,
-    /// 배율(1.25 ~ 8.0)
+    /// 지금 비추는 배율(1.0 ~ 8.0) — 목표로 부드럽게 다가간다([`step_scale`])
     pub scale: f64,
+    /// 휠이 정한 목표 배율(섬 글자는 이것)
+    #[serde(default = "start_scale")]
+    pub target: f64,
     /// 돋보기가 비추는 원본 사각형(가상 화면 물리 px, 모니터 안에 가둠)
     pub source: PhysRect,
     pub center_x: f64,
     pub center_y: f64,
 }
 
+fn start_scale() -> f64 {
+    LIVE_ZOOM_START
+}
+
 fn clamp_scale(s: f64) -> f64 {
-    let lo = LIVE_ZOOM_STEPS[0];
-    let hi = LIVE_ZOOM_STEPS[LIVE_ZOOM_STEPS.len() - 1];
     if s.is_finite() {
-        s.clamp(lo, hi)
+        s.clamp(LIVE_ZOOM_MIN, LIVE_ZOOM_MAX)
     } else {
         LIVE_ZOOM_START
     }
@@ -107,14 +125,37 @@ fn clamp_f(v: f64, lo: f64, hi: f64) -> f64 {
 impl LiveZoomView {
     /// 커서 자리를 중심으로 시작(모니터 밖으로 나가지 않게 가둔다).
     pub fn new(monitor_id: u32, monitor_bounds: PhysRect, scale: f64, cursor: PhysPoint) -> Self {
-        let mut v = LiveZoomView { monitor_id, monitor_bounds, scale: clamp_scale(scale), source: PhysRect::default(), center_x: cursor.x as f64, center_y: cursor.y as f64 };
+        let scale = clamp_scale(scale);
+        let mut v = LiveZoomView { monitor_id, monitor_bounds, scale, target: scale, source: PhysRect::default(), center_x: cursor.x as f64, center_y: cursor.y as f64 };
         v.settle();
         v
+    }
+
+    /// 따라가기 방식에 맞춘 첫 화면: `Pointer`면 커서 자리 비례 지도, 그 밖은 커서 중심.
+    pub fn start(monitor_id: u32, monitor_bounds: PhysRect, scale: f64, cursor: PhysPoint, mode: FollowMode) -> Self {
+        let mut v = Self::new(monitor_id, monitor_bounds, scale, cursor);
+        if mode == FollowMode::Pointer {
+            step_follow(&mut v, cursor, mode, 0.0);
+        }
+        v
+    }
+
+    /// 목표 배율에 닿았는지(부드러운 전환이 끝남).
+    pub fn settled(&self) -> bool {
+        (self.scale - self.target).abs() < EPS
     }
 
     /// 원본 크기(실수) = 모니터 / 배율.
     pub fn source_size(&self) -> (f64, f64) {
         (self.monitor_bounds.w.max(1) as f64 / self.scale, self.monitor_bounds.h.max(1) as f64 / self.scale)
+    }
+
+    /// 돋보기에 넘길 정수 원본 크기. 올림 — 원본 × 배율이 모니터보다 작으면 확대 화면 오른쪽·아래에
+    /// 빈 줄이 생긴다(1366 / 2.5 등). 돋보기는 배율을 그대로 쓰고(고른 배율) 넘치는 줄은 화면 밖이다.
+    fn source_px(&self) -> (i32, i32) {
+        let m = self.monitor_bounds;
+        let (wf, hf) = self.source_size();
+        (((wf - 1e-6).ceil() as i32).clamp(1, m.w.max(1)), ((hf - 1e-6).ceil() as i32).clamp(1, m.h.max(1)))
     }
 
     /// 중심을 모니터 안으로 가두고 정수 원본 사각형을 다시 만든다.
@@ -123,24 +164,50 @@ impl LiveZoomView {
         let (wf, hf) = self.source_size();
         self.center_x = clamp_f(self.center_x, m.x as f64 + wf / 2.0, m.right() as f64 - wf / 2.0);
         self.center_y = clamp_f(self.center_y, m.y as f64 + hf / 2.0, m.bottom() as f64 - hf / 2.0);
-        // 올림 — 원본 × 배율이 모니터보다 작으면 확대 화면 오른쪽·아래에 빈 줄이 생긴다(1366 / 2.5 등)
-        let w = ((wf - 1e-6).ceil() as i32).clamp(1, m.w.max(1));
-        let h = ((hf - 1e-6).ceil() as i32).clamp(1, m.h.max(1));
+        let (w, h) = self.source_px();
         let x = ((self.center_x - w as f64 / 2.0).round() as i32).clamp(m.x, (m.right() - w).max(m.x));
         let y = ((self.center_y - h as f64 / 2.0).round() as i32).clamp(m.y, (m.bottom() - h).max(m.y));
         self.source = PhysRect::new(x, y, w, h);
     }
 }
 
-/// 휠·키 한 칸: `dy < 0` = 더 확대(위), `dy > 0` = 덜 확대(아래). 끝 단계에서는 멈춘다.
-/// 단계에 없는 배율이면 그 방향의 다음 단계로 간다(판서 단계표에도 같은 함수를 쓸 수 있다).
-pub fn next_zoom_step(current: f64, dy: i32, steps: &[f64]) -> f64 {
-    let (Some(&first), Some(&last)) = (steps.first(), steps.last()) else { return current };
-    let mut s = current;
-    for _ in 0..dy.unsigned_abs().min(steps.len() as u32) {
-        s = if dy < 0 { steps.iter().copied().find(|&x| x > s + EPS).unwrap_or(last) } else { steps.iter().rev().copied().find(|&x| x < s - EPS).unwrap_or(first) };
+/// 휠 `notches`칸(`< 0` = 더 확대(위), `> 0` = 덜 확대(아래)) 뒤의 목표 배율. 한 칸 = ×2^(1/8).
+/// `snap`(마우스 휠)이면 격자(2^(k/8)) 위에 선다 — 트랙패드로 격자 밖에 있어도 그 방향의 다음 격자로 간다.
+/// 트랙패드(소수 칸)는 `snap = false`로 연속. 1×·8×에서 멈춘다.
+pub fn wheel_target(current: f64, notches: f64, snap: bool) -> f64 {
+    let cur = clamp_scale(current);
+    if !notches.is_finite() || notches == 0.0 {
+        return cur;
     }
-    s
+    let now = cur.log2() * ZOOM_NOTCHES_PER_DOUBLE;
+    let k = if snap {
+        // 격자 위면 정확히 n칸, 격자 밖이면 가는 방향의 첫 격자부터 센다
+        let n = notches.abs().round().max(1.0);
+        if notches < 0.0 { (now + 1e-6).floor() + n } else { (now - 1e-6).ceil() - n }
+    } else {
+        now - notches
+    };
+    clamp_scale((k / ZOOM_NOTCHES_PER_DOUBLE).exp2())
+}
+
+/// 프레임 하나 배율 전환(로그 공간 지수 감쇠, 프레임 독립): 목표로 다가가며 커서 아래 점을 화면에서 제자리에 둔다
+/// ([`zoom_to`]). 바뀌었으면 true.
+pub fn step_scale(view: &mut LiveZoomView, cursor: PhysPoint, dt_sec: f64) -> bool {
+    view.target = clamp_scale(view.target);
+    if view.settled() {
+        return false;
+    }
+    let (now, goal) = (view.scale.ln(), view.target.ln());
+    let next = if (goal - now).abs() < SCALE_SNAP {
+        view.target
+    } else {
+        let dt = if dt_sec.is_finite() { dt_sec.clamp(0.0, MAX_DT) } else { 0.0 };
+        let a = 1.0 - (1.0 - SCALE_ALPHA).powf(dt * 60.0);
+        let l = now + (goal - now) * a;
+        if (goal - l).abs() < SCALE_SNAP { view.target } else { l.exp() }
+    };
+    zoom_to(view, cursor, next);
+    true
 }
 
 /// 죽은 영역을 넘은 양(안이면 0): `d − clamp(d, −half, half)`.
@@ -158,6 +225,18 @@ pub fn step_follow(view: &mut LiveZoomView, cursor: PhysPoint, mode: FollowMode,
     let (w, h) = view.source_size();
     let (cx, cy) = (cursor.x as f64, cursor.y as f64);
     match mode {
+        FollowMode::Pointer => {
+            // 원본 왼쪽 = 모니터 왼쪽 + (커서 − 모니터 왼쪽) × (1 − 1/배율) → 커서의 확대 화면 자리 = 커서 자리.
+            // 커서 화소의 가운데(+0.5)로 재서 배율이 바뀌어도 그 화소가 제자리에 있게 한다.
+            // 중심은 정수 원본 크기의 반으로 잰다(반올림한 왼쪽이 곧 이 식이 되게).
+            let m = view.monitor_bounds;
+            let k = 1.0 - 1.0 / view.scale;
+            let (wi, hi) = view.source_px();
+            view.center_x = m.x as f64 + (cx + 0.5 - m.x as f64) * k + wi as f64 / 2.0;
+            view.center_y = m.y as f64 + (cy + 0.5 - m.y as f64) * k + hi as f64 / 2.0;
+            view.settle();
+            return;
+        }
         FollowMode::Instant => {
             view.center_x = cx;
             view.center_y = cy;
@@ -261,6 +340,11 @@ pub fn fit_rect_view(monitor_bounds: PhysRect, monitor_scale: f64, rect: PhysRec
     (s, tx, ty)
 }
 
+/// 실시간 확대 섬·HUD 글자: 소수 한 자리(`×2.0`, `×2.2`) — 9% 격자는 한 자리로도 칸마다 다르게 읽힌다.
+pub fn format_live_scale(s: f64) -> String {
+    format!("×{:.1}", (s * 10.0).round() / 10.0)
+}
+
 /// 섬·배지 글자: `×2.0`, `×1.25`.
 pub fn format_scale(s: f64) -> String {
     let hundredths = (s * 100.0).round() as i64;
@@ -328,18 +412,121 @@ mod tests {
         PhysPoint { x, y }
     }
 
+    fn close(a: f64, b: f64) -> bool {
+        (a - b).abs() < 1e-9
+    }
+
     #[test]
-    fn 휠_단계는_끝에서_멈추고_단계_밖_값은_다음_단계로() {
-        let s = LIVE_ZOOM_STEPS;
-        assert_eq!(next_zoom_step(2.0, -1, s), 2.5);
-        assert_eq!(next_zoom_step(2.0, 1, s), 1.5);
-        assert_eq!(next_zoom_step(8.0, -1, s), 8.0);
-        assert_eq!(next_zoom_step(1.25, 1, s), 1.25);
-        assert_eq!(next_zoom_step(1.75, -1, s), 2.0);
-        assert_eq!(next_zoom_step(1.75, 1, s), 1.5);
-        assert_eq!(next_zoom_step(2.0, -3, s), 4.0);
-        assert_eq!(next_zoom_step(2.0, 0, s), 2.0);
-        assert_eq!(next_zoom_step(3.0, 1, &[]), 3.0);
+    fn 휠_한_칸은_두_배의_8분의_1이고_격자_위에_서며_1배와_8배에서_멈춘다() {
+        let up = |s: f64| wheel_target(s, -1.0, true);
+        let down = |s: f64| wheel_target(s, 1.0, true);
+        assert!(close(up(2.0), 2f64.powf(9.0 / 8.0)), "{}", up(2.0));
+        assert!(close(down(2.0), 2f64.powf(7.0 / 8.0)));
+        // 여덟 칸 = 두 배, 격자 위 값은 정확히
+        let mut s = 2.0;
+        for _ in 0..8 {
+            s = up(s);
+        }
+        assert_eq!(s, 4.0);
+        for _ in 0..16 {
+            s = down(s);
+        }
+        assert_eq!(s, 1.0, "1×까지 내려간다");
+        assert_eq!(down(1.0), 1.0, "1×에서 멈춘다");
+        assert_eq!(up(8.0), 8.0, "8×에서 멈춘다");
+        assert_eq!(wheel_target(2.0, -24.0, true), 8.0);
+        // 격자 밖(트랙패드 뒤)이면 가는 방향의 첫 격자로
+        let off = 2f64.powf(8.6 / 8.0);
+        assert!(close(up(off), 2f64.powf(9.0 / 8.0)));
+        assert!(close(down(off), 2.0));
+        // 트랙패드: 소수 칸, 격자 없이 연속
+        assert!(close(wheel_target(2.0, -0.5, false), 2f64.powf(8.5 / 8.0)));
+        assert_eq!(wheel_target(2.0, 0.0, true), 2.0);
+        assert_eq!(wheel_target(2.0, f64::NAN, false), 2.0);
+        // 섬 글자는 칸마다 다르게 읽힌다(소수 한 자리)
+        let labels: Vec<String> = (0..=24).map(|k| format_live_scale(2f64.powf(k as f64 / 8.0))).collect();
+        assert_eq!(&labels[..9], ["×1.0", "×1.1", "×1.2", "×1.3", "×1.4", "×1.5", "×1.7", "×1.8", "×2.0"]);
+        assert!(labels.windows(2).all(|w| w[0] != w[1]), "{labels:?}");
+        assert_eq!(labels[24], "×8.0");
+    }
+
+    #[test]
+    fn 배율_전환은_목표로_부드럽게_가며_커서_아래_점이_제자리() {
+        let mut v = LiveZoomView::new(0, FHD, 2.0, p(960, 540));
+        let c = p(1100, 600);
+        let before = screen_of(&v, c);
+        v.target = 4.0;
+        // 한 프레임에 남은 로그 거리의 0.3
+        assert!(step_scale(&mut v, c, 1.0 / 60.0));
+        let want = (2f64.ln() + (4f64.ln() - 2f64.ln()) * SCALE_ALPHA).exp();
+        assert!(close(v.scale, want), "{} vs {want}", v.scale);
+        let mut frames = 1;
+        while step_scale(&mut v, c, 1.0 / 60.0) {
+            frames += 1;
+            let after = screen_of(&v, c);
+            assert!((after.0 - before.0).abs() <= v.scale && (after.1 - before.1).abs() <= v.scale, "{before:?} → {after:?}");
+            assert!(frames < 60, "1초 안에 닿는다");
+        }
+        assert_eq!(v.scale, 4.0, "끝에서 목표에 붙는다");
+        assert!((8..=20).contains(&frames), "{frames} 프레임(≈ 140~330 ms)");
+        assert!(v.settled() && !step_scale(&mut v, c, 1.0 / 60.0));
+        // 프레임 독립: 30 Hz 한 번 ≈ 60 Hz 두 번
+        let (mut a, mut b) = (LiveZoomView::new(0, FHD, 2.0, c), LiveZoomView::new(0, FHD, 2.0, c));
+        a.target = 1.0;
+        b.target = 1.0;
+        step_scale(&mut a, c, 1.0 / 30.0);
+        step_scale(&mut b, c, 1.0 / 60.0);
+        step_scale(&mut b, c, 1.0 / 60.0);
+        assert!((a.scale - b.scale).abs() < 1e-9, "{} vs {}", a.scale, b.scale);
+        // 1×: 원본 = 모니터 전체
+        for _ in 0..60 {
+            step_scale(&mut a, c, 1.0 / 60.0);
+        }
+        assert_eq!((a.scale, a.source), (1.0, FHD));
+    }
+
+    #[test]
+    fn 마우스_위치대로는_커서가_확대_화면에서도_같은_자리이고_가장자리까지_닿는다() {
+        // 커서 화소가 확대된 칸(배율 크기)의 가운데 ↔ 실제 커서 화소의 가운데
+        let pos = |v: &LiveZoomView, c: PhysPoint| {
+            let (x, y) = screen_of(v, c);
+            ((x + v.scale / 2.0 - (c.x as f64 + 0.5)).abs(), (y + v.scale / 2.0 - (c.y as f64 + 0.5)).abs())
+        };
+        for scale in [1.0, 1.5, 2.0, 3.0, 4.0, 8.0] {
+            let mut v = LiveZoomView::start(0, FHD, scale, p(300, 200), FollowMode::Pointer);
+            for c in [p(0, 0), p(1919, 1079), p(960, 540), p(1500, 100), p(7, 1000)] {
+                step_follow(&mut v, c, FollowMode::Pointer, 1.0 / 60.0);
+                let (dx, dy) = pos(&v, c);
+                // 원본 좌표는 정수라 반 화소 × 배율까지만 어긋난다
+                assert!(dx <= scale / 2.0 + 1e-6 && dy <= scale / 2.0 + 1e-6, "{scale} {c:?}: ({dx}, {dy}) {:?}", v.source);
+                assert!(FHD.intersect(&v.source) == Some(v.source), "{:?}", v.source);
+            }
+        }
+        // 모서리를 가리키면 그 모서리가 확대된다
+        let mut v = LiveZoomView::start(0, FHD, 4.0, p(0, 0), FollowMode::Pointer);
+        assert_eq!(v.source, PhysRect::new(0, 0, 480, 270));
+        step_follow(&mut v, p(1919, 1079), FollowMode::Pointer, 1.0 / 60.0);
+        assert_eq!(v.source, PhysRect::new(1440, 810, 480, 270));
+        // 가운데면 가운데
+        step_follow(&mut v, p(959, 539), FollowMode::Pointer, 1.0 / 60.0);
+        assert_eq!(v.source, PhysRect::new(720, 405, 480, 270));
+        // 배율을 바꿔도(부드러운 전환 중에도) 커서 아래 점이 제자리
+        let c = p(1300, 300);
+        let mut v = LiveZoomView::start(0, FHD, 2.0, c, FollowMode::Pointer);
+        v.target = 8.0;
+        while step_scale(&mut v, c, 1.0 / 60.0) {
+            step_follow(&mut v, c, FollowMode::Pointer, 1.0 / 60.0);
+            let (dx, dy) = pos(&v, c);
+            assert!(dx <= v.scale / 2.0 + 1e-6 && dy <= v.scale / 2.0 + 1e-6, "{}: ({dx}, {dy})", v.scale);
+        }
+        // 오른쪽 음수 좌표·다른 배율 모니터도 같은 식
+        let left = PhysRect::new(-2880, -200, 2880, 1800);
+        let mut v = LiveZoomView::start(3, left, 3.0, p(-1, 1599), FollowMode::Pointer);
+        assert!(left.intersect(&v.source) == Some(v.source) && v.source.right() == left.right() && v.source.bottom() == left.bottom(), "{:?}", v.source);
+        // 커서가 다른 모니터로 가면 그대로 둔다
+        let before = v;
+        step_follow(&mut v, p(100, 100), FollowMode::Pointer, 1.0 / 60.0);
+        assert_eq!(v, before);
     }
 
     #[test]
@@ -350,12 +537,14 @@ mod tests {
         let v = LiveZoomView::new(0, FHD, 2.0, p(5, 5));
         assert_eq!(v.source, PhysRect::new(0, 0, 960, 540));
         assert_eq!((v.center_x, v.center_y), (480.0, 270.0));
-        // 이상한 배율은 단계 범위로
+        // 이상한 배율은 1~8 범위로
         assert_eq!(LiveZoomView::new(0, FHD, 50.0, p(0, 0)).scale, 8.0);
+        assert_eq!(LiveZoomView::new(0, FHD, 0.5, p(0, 0)).scale, 1.0);
         assert_eq!(LiveZoomView::new(0, FHD, f64::NAN, p(0, 0)).scale, LIVE_ZOOM_START);
         // 나누어떨어지지 않는 모니터: 원본 × 배율 ≥ 모니터(빈 줄 없음)
         let odd = PhysRect::new(0, 0, 1366, 768);
-        for s in LIVE_ZOOM_STEPS {
+        for k in 0..=24 {
+            let s = &2f64.powf(k as f64 / ZOOM_NOTCHES_PER_DOUBLE);
             let v = LiveZoomView::new(0, odd, *s, p(683, 384));
             assert!(v.source.w as f64 * s >= 1366.0 && v.source.h as f64 * s >= 768.0, "{s}: {:?}", v.source);
             assert!(v.source.right() <= 1366 && v.source.bottom() <= 768);
@@ -416,7 +605,8 @@ mod tests {
         assert_eq!((v.center_x, v.center_y), (970.0, 545.0));
         assert_eq!(FollowMode::from_setting("instant"), FollowMode::Instant);
         assert_eq!(FollowMode::from_setting("smooth"), FollowMode::Smooth);
-        assert_eq!(FollowMode::from_setting("??"), FollowMode::Smooth);
+        assert_eq!(FollowMode::from_setting("pointer"), FollowMode::Pointer);
+        assert_eq!(FollowMode::from_setting("??"), FollowMode::Pointer, "모르는 값은 기본(마우스 위치대로)");
     }
 
     #[test]

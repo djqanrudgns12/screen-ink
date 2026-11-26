@@ -71,7 +71,7 @@ fn fields() -> &'static [Field] {
             f("draw.keep", Bool, json!(true)),
             f("draw.esc", Choice(&["step", "exit"]), json!("step")),
             f("draw.rightClickPan", Bool, json!(true)),
-            f("zoom.follow", Choice(&["smooth", "instant"]), json!("smooth")),
+            f("zoom.follow", Choice(&["pointer", "smooth", "instant"]), json!("pointer")),
             f("zoom.minimap", Bool, json!(true)),
             f("general.theme", Choice(&["system", "light", "dark"]), json!("system")),
             f("general.lang", Choice(&["ko", "en"]), json!("ko")),
@@ -95,7 +95,11 @@ const RENAMED: [(&str, &str); 3] = [("detection.excluded", "capture.excluded"), 
 
 /// 옛 기본값 → 지금 기본값(앱 이름을 슉쇽으로 바꾸기 전 파일). 설정 파일은 값을 모두 적어 두어서,
 /// 이름을 바꾸기 전에 쓴 PC는 옛 기본 파일 이름 틀(`screen-ink_…`)을 그대로 읽었다(2026-11-26 맥에서 발견).
-const OLD_DEFAULTS: [(&str, &str); 1] = [("output.template", "screen-ink_{yyyy}{MM}{dd}_{HH}{mm}{ss}")];
+const OLD_DEFAULTS: [(&str, &str); 2] = [
+    ("output.template", "screen-ink_{yyyy}{MM}{dd}_{HH}{mm}{ss}"),
+    // 실시간 확대 따라가기 기본값이 마우스 위치 비례 지도로 바뀌었다(2026-11-27) — 옛 기본값을 저장해 둔 사람도 새 기본값으로
+    ("zoom.follow", "smooth"),
+];
 
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum SettingError {

@@ -197,8 +197,9 @@
  * @property {{x: number, y: number}} [cursorCss]  확대 화면 위 커서(HUD 창 안 CSS px) — 44px 주황 후광 중심. 확대 화면 밖이면 없음
  * @property {boolean} showMinimap   설정 zoom.minimap
  *
- * @typedef {{type:'wheel', dy:-1|1} | {type:'key', slot:'z-exit'} | {type:'exit'}} ZoomInput
- *   실시간 확대 입력(미리보기·HUD). wheel dy = -1 위(더 확대) / 1 아래(덜 확대). 배율은 휠로만, 키는 끝내기(z-exit) 하나.
+ * @typedef {{type:'wheel', dy:number} | {type:'scroll', notches:number} | {type:'key', slot:'z-exit'} | {type:'exit'}} ZoomInput
+ *   실시간 확대 입력(미리보기·HUD). wheel dy = 음수 위(더 확대) / 양수 아래(덜 확대), 한 칸 = ×2^(1/8)(격자 위, 1×~8×).
+ *   scroll = 트랙패드 같은 연속 스크롤(칸의 소수배, 격자 없이). 배율은 휠로만, 키는 끝내기(z-exit) 하나.
  *   실제 앱의 휠은 Rust 돋보기 훅이 받는다(확대 모니터 안 세로 휠, Shift+휠은 아래 앱으로).
  */
 

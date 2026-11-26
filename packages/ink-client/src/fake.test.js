@@ -329,12 +329,12 @@ test('이어받기 흉내: 결과 섬 [판서로]는 고른 범위를 꽉 차게
   await c.run('capture.toDraw');
   assert.equal(seen.at(-1).island.text, '판서로 넘길 캡처가 없어요');
 
-  // 확대 중 판서 = 가운데 확대 그대로
+  // 확대 중 판서 = 가운데 확대 그대로(휠 여덟 칸 = 두 배 → ×4)
   await c.run('zoom');
-  await c.zoomInput({ type: 'wheel', dy: -1 });
+  await c.zoomInput({ type: 'wheel', dy: -8 });
   await c.run('draw');
   const fromZoom = seen.filter((e) => e.type === 'draw').at(-1).draw;
-  assert.deepEqual(fromZoom.initialView, { s: 2.5, tx: -1440, ty: -810 });
+  assert.deepEqual(fromZoom.initialView, { s: 4, tx: -2880, ty: -1620 });
   assert.equal(seen.filter((e) => e.type === 'zoom').at(-1).zoom, null, '확대는 끝난다');
   await c.drawFinish({ session: fromZoom.session, keep: false });
 

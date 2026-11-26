@@ -43,8 +43,8 @@ fn 쉬다가_alt2는_커서_모니터에_돋보기와_확대_섬을_띄우고_es
     assert_eq!(s.on_hotkey("zoom"), HotkeyOutcome::Zoom);
     assert!(matches!(s.mode(), Mode::LiveZoom { monitor_id: 0, .. }));
     assert!(matches!(s.state().mode, Mode::LiveZoom { .. }));
-    // 커서 (400, 300), ×2 → 원본 960×540, 왼쪽 가장자리에 가둠
-    assert_eq!(running(&w), Some((FHD, PhysRect::new(0, 30, 960, 540), 2.0)));
+    // 커서 (400, 300), ×2 → 원본 960×540. 기본(마우스 위치대로): 원본 왼쪽 = 커서 × (1 − 1/2)
+    assert_eq!(running(&w), Some((FHD, PhysRect::new(200, 150, 960, 540), 2.0)));
 
     let island = w.last_island().unwrap();
     assert_eq!((island.kind, island.variant.as_deref(), island.mode.as_deref()), (IslandKind::Mode, Some("zoom"), Some("zoom")));
@@ -60,9 +60,16 @@ fn 쉬다가_alt2는_커서_모니터에_돋보기와_확대_섬을_띄우고_es
 
     let hud = w.last_zoom().flatten().expect("HUD 상태");
     assert_eq!((hud.monitor_label.as_str(), hud.scale_label.as_str(), hud.show_minimap), ("모니터 1", "×2.0", true));
-    assert_eq!((hud.viewport.x, hud.viewport.w, hud.viewport.h), (0.0, 0.5, 0.5));
+    assert_eq!((hud.viewport.x, hud.viewport.w, hud.viewport.h), (200.0 / 1920.0, 0.5, 0.5));
+    // 확대 화면의 커서 = 실제 커서 자리(그 화소 가운데) — 클릭 자리가 곧 보이는 자리
     let c = hud.cursor_css.expect("커서가 확대 화면 안");
-    assert_eq!((c.x, c.y), (801.0, 541.0));
+    assert_eq!((c.x, c.y), (401.0, 301.0));
+    // 커서를 옮기면 다음 틱에 그 자리 둘레가 확대된다(모서리 → 모서리)
+    cursor(&w, 1919, 1079);
+    assert!(s.tick_zoom_with(DT));
+    assert_eq!(running(&w).unwrap().1, PhysRect::new(960, 540, 960, 540));
+    let c = w.last_zoom().flatten().unwrap().cursor_css.unwrap();
+    assert_eq!((c.x, c.y), (1919.0, 1079.0));
 }
 
 #[test]
@@ -89,43 +96,73 @@ fn 같은_키나_esc로_끝내면_돋보기와_확대_키를_푼다() {
     assert_eq!(s.zoom_handoff(), None);
 }
 
+/// 배율 전환이 끝날 때까지 틱(1초 넘게 걸리면 실패).
+fn settle(s: &mut InkService) {
+    for _ in 0..60 {
+        if s.zoom_view().is_some_and(|v| v.settled()) {
+            return;
+        }
+        assert!(s.tick_zoom_with(DT));
+    }
+    panic!("배율 전환이 1초 안에 끝나지 않았다: {:?}", s.zoom_view());
+}
+
 #[test]
-fn 휠은_단계를_오르내리고_커서_아래_점이_제자리() {
+fn 휠은_목표_배율을_9퍼센트씩_옮기고_화면은_틱마다_부드럽게_따라가며_1배까지() {
     let w = FakeWorld::new();
+    cursor(&w, 1100, 600);
     let mut s = service(&w);
     s.on_hotkey("zoom");
     let at = |w: &FakeWorld| w.last_zoom().flatten().unwrap().cursor_css.unwrap();
     let before = at(&w);
 
+    // 휠 한 칸: 목표 = 2 × 2^(1/8), 섬 글자는 바로·화면은 아직 그대로
     s.zoom_input(ZoomInput::Wheel { dy: -1 });
-    assert_eq!(running(&w).unwrap().2, 2.5);
-    assert_eq!(w.last_island().unwrap().value.as_deref(), Some("×2.5"));
+    let up = 2f64.powf(9.0 / 8.0);
+    assert!((s.zoom_view().unwrap().target - up).abs() < 1e-9);
+    assert_eq!(w.last_island().unwrap().value.as_deref(), Some("×2.2"));
+    assert_eq!(running(&w).unwrap().2, 2.0, "화면은 틱이 옮긴다");
+    // 첫 틱 = 남은 로그 거리의 0.3만큼 — 사이 배율을 거쳐 간다
+    s.tick_zoom_with(DT);
+    let mid = running(&w).unwrap().2;
+    assert!(mid > 2.0 && mid < up, "{mid}");
+    settle(&mut s);
+    assert!((running(&w).unwrap().2 - up).abs() < 1e-9);
+    assert_eq!(w.last_zoom().flatten().unwrap().scale_label, "×2.2");
+    // 커서 아래 점이 제자리(배율 한 화소 안)
     let after = at(&w);
-    assert!((after.x - before.x).abs() <= 2.5 && (after.y - before.y).abs() <= 2.5, "{before:?} → {after:?}");
+    assert!((after.x - before.x).abs() <= up && (after.y - before.y).abs() <= up, "{before:?} → {after:?}");
 
+    // 여러 칸을 빨리 돌려도 목표만 쌓이고 화면은 한 번에 부드럽게
     s.zoom_input(ZoomInput::Wheel { dy: -1 });
-    assert_eq!(running(&w).unwrap().2, 3.0);
-    let after = at(&w);
-    assert!((after.x - before.x).abs() <= 3.0 && (after.y - before.y).abs() <= 3.0, "{before:?} → {after:?}");
+    s.zoom_input(ZoomInput::Wheel { dy: -1 });
     s.zoom_input(ZoomInput::Wheel { dy: 1 });
-    assert_eq!(running(&w).unwrap().2, 2.5);
+    settle(&mut s);
+    assert!((running(&w).unwrap().2 - 2f64.powf(10.0 / 8.0)).abs() < 1e-9);
     // 없어진 칸(z-in·z-out)과 확대 화면 안 다른 키 이름은 아무 일도 안 한다
     assert_eq!(s.on_hotkey("z-in"), HotkeyOutcome::Ignored);
     s.zoom_input(ZoomInput::Key { slot: "z-in".into() });
-    assert_eq!(running(&w).unwrap().2, 2.5);
+    assert!((s.zoom_view().unwrap().target - 2f64.powf(10.0 / 8.0)).abs() < 1e-9);
 
-    for _ in 0..10 {
+    // 1×까지 내려가도 끝내지 않는다 — 원본 = 모니터 전체
+    for _ in 0..30 {
         s.zoom_input(ZoomInput::Wheel { dy: 1 });
     }
-    assert_eq!(running(&w).unwrap().2, 1.25, "가장 작은 단계에서 멈춘다(끝내지 않음)");
-    assert_eq!(w.last_island().unwrap().value.as_deref(), Some("×1.25"));
+    settle(&mut s);
+    assert_eq!(running(&w).unwrap(), (FHD, FHD, 1.0));
+    assert_eq!(w.last_island().unwrap().value.as_deref(), Some("×1.0"));
     assert!(zooming(&s));
-    for _ in 0..10 {
+    for _ in 0..30 {
         s.zoom_input(ZoomInput::Wheel { dy: -1 });
     }
+    settle(&mut s);
     assert_eq!(running(&w).unwrap().2, 8.0);
     let src = running(&w).unwrap().1;
     assert!(FHD.intersect(&src) == Some(src), "원본은 모니터 안: {src:?}");
+    // 트랙패드(연속): 칸의 소수배, 격자 없이
+    s.zoom_input(ZoomInput::Scroll { notches: 0.5 });
+    settle(&mut s);
+    assert!((running(&w).unwrap().2 - 8.0 / 2f64.powf(0.5 / 8.0)).abs() < 1e-9);
 
     s.zoom_input(ZoomInput::Key { slot: "z-exit".into() });
     assert_eq!(s.mode(), Mode::Idle);
@@ -135,10 +172,11 @@ fn 휠은_단계를_오르내리고_커서_아래_점이_제자리() {
 }
 
 #[test]
-fn 틱은_부드럽게_따라가고_죽은_영역에서는_멈추고_설정은_바로_반영() {
+fn 가운데로_따라가기는_부드럽고_죽은_영역에서는_멈추고_설정은_바로_반영() {
     let w = FakeWorld::new();
     cursor(&w, 960, 540);
     let mut s = service(&w);
+    s.update_setting("zoom.follow", &json!("smooth"));
     s.on_hotkey("zoom");
     assert_eq!(running(&w).unwrap().1, PhysRect::new(480, 270, 960, 540));
     let sent = || w.notifier.0.lock().unwrap().zooms.len();

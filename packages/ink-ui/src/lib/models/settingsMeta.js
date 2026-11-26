@@ -41,7 +41,7 @@ const VALUE_MAPS = {
   'draw.smoothing': { off: '끔', light: '약', strong: '강' },
   'draw.shapeApply': { suggest: '물어보고 바꾸기', auto: '바로 바꾸기' },
   'draw.esc': { step: '한 단계씩', exit: '바로 나가기' },
-  'zoom.follow': { smooth: '부드럽게', instant: '바로' },
+  'zoom.follow': { pointer: '마우스 위치대로', smooth: '가운데로 부드럽게', instant: '가운데로 바로' },
   'general.theme': { system: '시스템 따라', light: '라이트', dark: '다크' },
   'general.lang': { ko: '한국어', en: 'English' },
 };

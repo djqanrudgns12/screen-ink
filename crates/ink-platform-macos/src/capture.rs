@@ -140,6 +140,15 @@ pub(crate) fn shareable_display(display: u32) -> Result<Retained<SCDisplay>, Str
     content.displays.iter().find(|(id, _)| *id == display).map(|(_, d)| d.clone()).ok_or_else(|| "display not shareable".to_string())
 }
 
+/// 실시간 확대(M13)용 우리 앱(필터에서 뺄 것) — 받아 둔 내용 목록에서(없으면 새로 받는다).
+pub(crate) fn shareable_me() -> Option<Retained<SCRunningApplication>> {
+    let mut cache = CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    if cache.as_ref().map_or(true, |c| c.0.me.is_none()) {
+        *cache = Some(Shared(fetch_content().ok()?));
+    }
+    cache.as_ref().and_then(|c| c.0.me.clone())
+}
+
 /// 모니터마다 정지 이미지. 크기가 어긋나면(배율이 그 사이 바뀜) 실패로 알린다.
 pub fn capture(layout: &MonitorLayout, space: &Space) -> Result<Vec<Frame>, String> {
     if !has_permission() {

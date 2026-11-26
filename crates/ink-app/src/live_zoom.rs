@@ -1,4 +1,5 @@
-//! 실시간 확대(Alt+2, 단계 5): 진입 → 60 Hz 틱(커서 따라가기) → 휠·키 배율 → 끝.
+//! 실시간 확대(Alt+2, 단계 5): 진입 → 60 Hz 틱(배율 전환 + 커서 따라가기) → 휠 = 목표 배율 → 끝.
+//! 휠은 목표 배율만 바꾸고 화면은 틱마다 그쪽으로 부드럽게 간다(커서 아래 점 고정). 1×까지 내려가도 끝내지 않는다.
 //!
 //! 판단은 `ink_domain::zoom`(순수), 창은 `Magnifier` 포트. 틱은 어댑터가 메인 스레드에서 부른다(`tick_zoom`).
 //! 배율은 휠로만 바꾼다(어댑터 훅 — Shift+휠은 아래 앱으로). 확대 중 잠시 잡는 전역 키는 끝내기(`z-exit`, Esc) 하나뿐이고
@@ -14,7 +15,7 @@ use crate::state::{IslandEvent, IslandKind, LiveZoomState};
 use ink_domain::geometry::{PhysPoint, PhysRect};
 use ink_domain::mode::{DrawKind, Mode};
 use ink_domain::shortcuts::{spoken, to_accelerator};
-use ink_domain::zoom::{self, FollowMode, LiveZoomView, ZoomCommand, LIVE_ZOOM_START, LIVE_ZOOM_STEPS, ZOOM_KEYS};
+use ink_domain::zoom::{self, FollowMode, LiveZoomView, ZoomCommand, LIVE_ZOOM_START, ZOOM_KEYS};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::time::Instant;
@@ -23,11 +24,13 @@ use std::time::Instant;
 const FRAME_SEC: f64 = 1.0 / 60.0;
 
 /// 확대 HUD·가짜 클라이언트가 넘기는 입력(packages/ink-client `ZoomInput`). 실제 앱의 휠은 어댑터 훅이 넘긴다.
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum ZoomInput {
-    /// 휠 한 칸: -1 위(더 확대) / 1 아래(덜 확대)
+    /// 마우스 휠 칸: 음수 위(더 확대) / 양수 아래(덜 확대). 한 칸 = ×2^(1/8), 격자 위에 선다
     Wheel { dy: i32 },
+    /// 트랙패드 같은 연속 스크롤: 칸의 소수배(부호는 `Wheel`과 같음), 격자 없이 연속
+    Scroll { notches: f64 },
     /// 확대 화면 안 키 칸: "z-exit"(끝). 다른 칸은 무시
     Key { slot: String },
     Exit,
@@ -186,7 +189,8 @@ impl InkService {
             return;
         };
         let index = layout.monitors.iter().position(|m| m.id == monitor.id).unwrap_or(0);
-        let view = LiveZoomView::new(monitor.id, monitor.bounds, LIVE_ZOOM_START, cursor);
+        let follow = FollowMode::from_setting(self.settings.str("zoom.follow"));
+        let view = LiveZoomView::start(monitor.id, monitor.bounds, LIVE_ZOOM_START, cursor, follow);
         let probe_ms = ms(t.elapsed());
 
         let t = Instant::now();
@@ -263,6 +267,8 @@ impl InkService {
         let cursor = self.ports.monitors.cursor();
         // 설정을 바꾸면 바로(R-SET-0)
         let follow = FollowMode::from_setting(self.settings.str("zoom.follow"));
+        // 배율 전환(커서 아래 점 고정) → 따라가기. 전환이 끝나면 HUD 글자도 목표와 같아진다
+        zoom::step_scale(&mut view, cursor, dt_sec);
         zoom::step_follow(&mut view, cursor, follow, dt_sec);
         self.zoom.view = Some(view);
         self.zoom.cursor = cursor;
@@ -280,7 +286,8 @@ impl InkService {
             return;
         }
         match input {
-            ZoomInput::Wheel { dy } => self.zoom_step(dy.signum()),
+            ZoomInput::Wheel { dy } => self.zoom_step(dy as f64, true),
+            ZoomInput::Scroll { notches } => self.zoom_step(notches, false),
             ZoomInput::Key { slot } => {
                 if slot == zoom::ZOOM_EXIT_SLOT {
                     self.end_zoom();
@@ -305,22 +312,20 @@ impl InkService {
         }
     }
 
-    /// 한 단계 위·아래(커서 아래 점 고정). 끝 단계면 아무 일도 없다.
-    fn zoom_step(&mut self, dy: i32) {
+    /// 목표 배율을 휠 칸만큼 옮긴다(화면은 틱이 부드럽게 따라간다). 1×·8×에서 멈춘다(끝내지 않음).
+    /// 섬은 목표 배율을 바로 보인다 — 같은 글자면 다시 띄우지 않는다(트랙패드는 한 칸 안에서도 자주 온다).
+    fn zoom_step(&mut self, notches: f64, snap: bool) {
         let Some(mut view) = self.zoom_view() else { return };
-        let next = zoom::next_zoom_step(view.scale, dy, LIVE_ZOOM_STEPS);
-        if (next - view.scale).abs() < 1e-9 {
+        let next = zoom::wheel_target(view.target, notches, snap);
+        if (next - view.target).abs() < 1e-9 {
             return;
         }
-        let cursor = self.ports.monitors.cursor();
-        zoom::zoom_to(&mut view, cursor, next);
+        let before = zoom::format_live_scale(view.target);
+        view.target = next;
         self.zoom.view = Some(view);
-        self.zoom.cursor = cursor;
-        if !self.push_view(view) {
-            return;
+        if zoom::format_live_scale(next) != before {
+            self.island(self.zoom_island(next));
         }
-        self.island(self.zoom_island(view.scale));
-        self.emit_zoom();
     }
 
     /// 돋보기에 지금 원본·배율. 돋보기가 스스로 멈췄으면 확대를 끝내고 `false`.
@@ -350,7 +355,7 @@ impl InkService {
         let pairs: Vec<(&str, &str)> = hints.iter().map(|(k, l)| (k.as_str(), *l)).collect();
         let mut ev = IslandEvent::new(IslandKind::Mode, "실시간 확대").variant("zoom").detail("움직이는 화면 그대로").hints(&pairs);
         ev.mode = Some(zoom::ZOOM_SLOT.into());
-        ev.value = Some(zoom::format_scale(scale));
+        ev.value = Some(zoom::format_live_scale(scale));
         ev
     }
 
@@ -362,7 +367,7 @@ impl InkService {
             monitor_id: view.monitor_id,
             monitor_label: self.zoom.monitor_label.clone(),
             scale: view.scale,
-            scale_label: zoom::format_scale(view.scale),
+            scale_label: zoom::format_live_scale(view.scale),
             viewport: zoom::viewport(&view),
             cursor_css: zoom::cursor_css(&view, self.zoom.cursor, self.zoom.monitor_scale),
             show_minimap: self.settings.bool("zoom.minimap"),

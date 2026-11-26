@@ -18,6 +18,8 @@ pub mod events;
 #[cfg(target_os = "macos")]
 pub mod freeze;
 #[cfg(target_os = "macos")]
+pub mod magnifier;
+#[cfg(target_os = "macos")]
 pub mod permissions;
 #[cfg(target_os = "macos")]
 mod pixels;
@@ -25,6 +27,8 @@ mod pixels;
 pub mod recorder;
 #[cfg(target_os = "macos")]
 pub mod window;
+#[cfg(target_os = "macos")]
+pub mod wheel;
 #[cfg(target_os = "macos")]
 pub mod window_shot;
 #[cfg(target_os = "macos")]

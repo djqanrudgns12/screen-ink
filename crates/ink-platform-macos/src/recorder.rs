@@ -95,7 +95,7 @@ impl Sink {
 }
 
 /// 표본 첨부 사전의 `SCStreamFrameInfoStatus`가 완전한 프레임인지.
-unsafe fn frame_complete(buf: &CMSampleBuffer) -> bool {
+pub(crate) unsafe fn frame_complete(buf: &CMSampleBuffer) -> bool {
     // SAFETY: 살아 있는 표본. CFArray ↔ NSArray 무료 다리, 원소는 SCK가 만든 사전(NSString → NSNumber).
     unsafe {
         let Some(arr) = buf.sample_attachments_array(false) else { return false };
