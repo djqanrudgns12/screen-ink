@@ -40,6 +40,8 @@
   let settings = $derived(state?.settings ?? {});
   let penColor = $derived(settings['draw.color'] ?? 'R');
   let penWidth = $derived(Number(settings['draw.width'] ?? 4));
+  // "멈추면 도형으로"가 꺼져 있으면 도형 보정 방식은 쓸 일이 없다 — 흐리게
+  let shapeOff = $derived(!settings['draw.shapeOnHold']);
 
   function setSetting(path, value) {
     client.updateSetting(path, value);
@@ -126,6 +128,18 @@
           onCheckedChange={(v) => setSetting('draw.shapeOnHold', v)}
         />
       </Row>
+      <Row label="도형 보정" class={shapeOff ? 'ink-row-off' : ''}>
+        <Segmented
+          label="도형 보정"
+          value={settings['draw.shapeApply'] ?? 'suggest'}
+          disabled={shapeOff}
+          options={[
+            { value: 'suggest', label: '물어보고 바꾸기' },
+            { value: 'auto', label: '바로 바꾸기' },
+          ]}
+          onChange={(v) => setSetting('draw.shapeApply', v)}
+        />
+      </Row>
     </Group>
   </section>
 
@@ -202,6 +216,10 @@
 </div>
 
 <style>
+  :global(.ink-row-wrap.ink-row-off) {
+    opacity: 0.45;
+  }
+
   .ink-page {
     flex: 1;
     min-height: 0;

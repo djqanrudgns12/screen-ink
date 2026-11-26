@@ -11,6 +11,8 @@ test('formats setting values into short Korean labels', () => {
   assert.equal(formatSettingValue('general.theme', 'dark'), '다크');
   assert.equal(formatSettingValue('general.theme', 'system'), '시스템 따라');
   assert.equal(formatSettingValue('draw.width', 8), '8px');
+  assert.equal(formatSettingValue('draw.shapeApply', 'suggest'), '물어보고 바꾸기');
+  assert.equal(formatSettingValue('draw.shapeApply', 'auto'), '바로 바꾸기');
   assert.equal(formatSettingValue('record.fps', 60), '60fps');
   assert.equal(formatSettingValue('draw.startZoom', 1.75), '×1.75');
   assert.equal(formatSettingValue('record.micDevice', ''), '기본 장치');
