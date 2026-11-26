@@ -14,7 +14,7 @@
   "next": {
     "win": ["3f-win-cases", "4.2", "5.4", "6.1", "D10"],
     "mac": ["M12", "M16", "M9", "M10", "M14"],
-    "common": ["4.9", "3e-handoff", "D11", "D1", "7.7"]
+    "common": ["3e-handoff", "4.9", "D11", "D1", "7.7"]
   },
   "tracks": [
     {
@@ -105,7 +105,7 @@
             { "id": "4.6", "title": "나가기·보관·복원", "platform": "common", "days": 0.375, "status": "verify", "note": "나가기·keptInk 메모리 보관·복원(배율 맞춤·다른 모니터 거절·실행 취소 가능) 구현, 화면 확인 남음", "level": "mid" },
             { "id": "4.7", "title": "판서 결과 복사·저장", "platform": "common", "days": 0.375, "status": "verify", "note": "복사·저장 = 늘 모니터 전체(원본 바이트 IPC), 4K 멈칫 측정 남음", "level": "easy" },
             { "id": "4.8", "title": "판서 섬·펜 색 고리·MiniMap·칠판 미리 보기", "platform": "common", "days": 0.375, "status": "verify", "note": "판서 섬 6색·4초 물러남·커서 비킴·펜 색 고리·MiniMap·칠판 미리 보기 구현, 미리보기·화면 확인 남음", "level": "mid" },
-            { "id": "4.9", "title": "캡처 주석(R-CAP-28): 툴바 도구 = 4.1 엔진·범위 안·결과 합성·모자이크", "platform": "common", "days": 1, "status": "todo", "note": "2026-11-26 사용자 요청으로 1차", "level": "hard" }
+            { "id": "4.9", "title": "캡처 주석(R-CAP-28): 툴바 도구 = 4.1 엔진·범위 안·결과 합성·모자이크", "platform": "common", "days": 1, "status": "verify", "note": "주석 도구 8종·실행 취소·Rust 모자이크+알파 합성(복사·저장·핀), 첫 Esc = 도구 해제. 화면 확인·여러 모니터 동기화 남음", "level": "hard" }
           ]
         },
         {
