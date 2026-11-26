@@ -157,7 +157,9 @@ fn f2_400ms_두번_활성창_및_바로캡처_4종() {
     s.on_hotkey("delay");
     let island = w.last_island().unwrap();
     assert_eq!((island.variant.as_deref(), island.countdown, island.text.as_str()), (Some("delay"), Some(3), "초 뒤 범위 캡처"));
-    assert_eq!(island.hints[0].key, "Alt+F1");
+    assert_eq!(island.hints[0].key, "Esc", "카운트다운 동안만 Esc로 취소");
+    let esc = ink_domain::shortcuts::to_accelerator("Esc", Platform::Win).unwrap();
+    assert!(w.is_registered(&esc), "Esc 임시 전역 등록");
     s.tick_at(t0 + 1_100);
     assert_eq!(w.last_island().unwrap().countdown, Some(2));
     let n = w.islands().len();
@@ -166,12 +168,15 @@ fn f2_400ms_두번_활성창_및_바로캡처_4종() {
     s.tick_at(t0 + 3_500);
     assert!(matches!(s.mode(), Mode::Capture { kind: CaptureKind::Region, .. }));
     assert!(s.delay_pending().is_none());
+    assert!(!w.is_registered(&esc), "끝나면 Esc를 놓는다");
     s.end_capture();
 
-    // 카운트다운 중 같은 키 = 취소
+    // 카운트다운 중 Esc(어댑터가 칸 delay로 넘김)·같은 키 = 취소
     s.on_hotkey("delay");
+    assert_eq!(w.hotkeys.0.lock().unwrap().registered.get(&esc).map(String::as_str), Some("delay"));
     s.on_hotkey("delay");
     assert_eq!(w.last_island().unwrap().text, "지연 캡처를 취소했어요");
+    assert!(!w.is_registered(&esc));
     s.tick_at(s.clock_ms() + 10_000);
     assert_eq!(s.mode(), Mode::Idle);
 }

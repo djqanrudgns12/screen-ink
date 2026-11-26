@@ -7,6 +7,7 @@ use crate::service::InkService;
 use crate::state::{IslandEvent, IslandHint, IslandKind};
 use ink_domain::geometry::{MonitorLayout, PhysRect};
 use ink_domain::settings::ExcludedApp;
+use ink_domain::shortcuts::to_accelerator;
 use ink_domain::snapshot::{filter_windows, CaptureKind, Snapshot};
 
 /// 지연 캡처: 서비스 시계로 끝나는 때와 섬에 보인 남은 초.
@@ -104,6 +105,7 @@ impl InkService {
     /// `Alt+F1`: 3·5·10초(`capture.delay`) 뒤 F1. 카운트다운 중 같은 키 = 취소.
     pub fn toggle_delay(&mut self) {
         if self.rec.delay.take().is_some() {
+            self.release_delay_esc();
             self.island(IslandEvent::new(IslandKind::End, ""));
             self.island(IslandEvent::new(IslandKind::Info, "지연 캡처를 취소했어요"));
             return;
@@ -114,7 +116,29 @@ impl InkService {
         self.end_capture();
         let secs = self.settings.get("capture.delay").and_then(|v| v.as_u64()).unwrap_or(3).clamp(1, 60) as u32;
         self.rec.delay = Some(Delay { due_ms: self.clock_ms() + secs as u64 * 1000, shown: secs });
+        self.hold_delay_esc();
         self.island(self.delay_island(secs));
+    }
+
+    /// 사용자 결정: 카운트다운 동안만 Esc를 전역으로 잡는다(실시간 확대 `z-exit`와 같은 방식). 칸은 `delay` —
+    /// Esc와 Alt+F1이 같은 칸으로 들어와 둘 다 취소가 된다. 다른 앱이 Esc를 쥐고 있으면 Alt+F1로만 취소.
+    fn hold_delay_esc(&mut self) {
+        let combo = self.settings.shortcut("c-cancel").to_string();
+        let combo = if combo.is_empty() { "Esc".to_string() } else { combo };
+        let Some(accel) = to_accelerator(&combo, self.platform) else { return };
+        if self.registered.values().any(|a| *a == accel) {
+            return;
+        }
+        match self.ports.hotkeys.register("delay", &accel) {
+            Ok(()) => self.rec.delay_esc = Some(accel),
+            Err(e) => log::info!("delay cancel key not registered: {e}"),
+        }
+    }
+
+    fn release_delay_esc(&mut self) {
+        if let Some(accel) = self.rec.delay_esc.take() {
+            self.ports.hotkeys.unregister(&accel);
+        }
     }
 
     pub fn delay_pending(&self) -> Option<Delay> {
@@ -125,7 +149,7 @@ impl InkService {
         let mut ev = IslandEvent::new(IslandKind::Mode, "초 뒤 범위 캡처").variant("delay");
         ev.countdown = Some(left);
         ev.mode = Some("delay".into());
-        let key = self.settings.shortcut("delay");
+        let key = if self.rec.delay_esc.is_some() { self.settings.shortcut("c-cancel") } else { self.settings.shortcut("delay") };
         if !key.is_empty() {
             ev.hints = vec![IslandHint { key: key.to_string(), label: "취소".into() }];
         }
@@ -137,6 +161,7 @@ impl InkService {
         let Some(d) = self.rec.delay else { return };
         if now >= d.due_ms {
             self.rec.delay = None;
+            self.release_delay_esc();
             self.island(IslandEvent::new(IslandKind::End, ""));
             self.start_capture(CaptureKind::Region);
             return;

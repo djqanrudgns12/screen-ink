@@ -247,6 +247,30 @@ pub fn blankness(bgra: &[u8]) -> Blankness {
     }
 }
 
+/// 알파를 모두 255로(창 그림의 반투명 배경을 지우고 귀만 깎기 전에 — 사용자 결정: 귀만 투명).
+pub fn make_opaque(bgra: &mut [u8]) {
+    for px in bgra.chunks_exact_mut(4) {
+        px[3] = 255;
+    }
+}
+
+/// 불투명 화소와 덜 불투명한 화소가 섞였는지(둥근 모서리를 깎은 창 그림) — 이때만 RGBA PNG로 저장·복사한다.
+/// 알파가 모두 0인 그림(GDI가 남긴 원본)과 모두 255인 그림은 `false` → 지금처럼 RGB(R-OUT-3).
+pub fn has_mixed_alpha(bgra: &[u8]) -> bool {
+    let (mut opaque, mut clear) = (false, false);
+    for px in bgra.chunks_exact(4) {
+        if px[3] == 255 {
+            opaque = true;
+        } else {
+            clear = true;
+        }
+        if opaque && clear {
+            return true;
+        }
+    }
+    false
+}
+
 /// 보호 콘텐츠처럼 RGB가 모두 0인지(R-WIN-3) — 빈 이미지를 클립보드에 넣지 않는 판정.
 pub fn is_all_black(bgra: &[u8]) -> bool {
     blankness(bgra) != Blankness::Content
@@ -324,5 +348,21 @@ mod window_shot_tests {
         let mut same: Vec<u8> = (0..16).flat_map(|_| [1, 1, 1, 255]).collect();
         mask_round_corners(&mut same, 4, 4, 3);
         assert!(same.chunks_exact(4).all(|p| p[3] == 255));
+    }
+}
+
+#[cfg(test)]
+mod alpha_tests {
+    use super::*;
+
+    #[test]
+    fn 귀만_투명한_그림만_알파가_섞였다고_본다() {
+        let mut img: Vec<u8> = (0..100).flat_map(|_| [9, 9, 9, 128]).collect();
+        assert!(!has_mixed_alpha(&img), "모두 반투명 = 섞이지 않음");
+        make_opaque(&mut img);
+        assert!(!has_mixed_alpha(&img), "모두 불투명 = RGB");
+        mask_round_corners(&mut img, 10, 10, 3);
+        assert!(has_mixed_alpha(&img), "귀만 깎음 = RGBA");
+        assert!(!has_mixed_alpha(&[0; 400]), "GDI 원본(알파 0) = RGB");
     }
 }

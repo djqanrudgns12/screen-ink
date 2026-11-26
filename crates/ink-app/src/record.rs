@@ -45,6 +45,8 @@ pub struct RecordState {
     pub(crate) mic_notice_done: bool,
     /// 지연 캡처 카운트다운(R-CAP-13 `Alt+F1`)
     pub(crate) delay: Option<crate::quick::Delay>,
+    /// 카운트다운 동안만 잡은 Esc(가속기) — 끝나면 놓는다
+    pub(crate) delay_esc: Option<String>,
     /// F2 고르기 중 커서 아래 창(준비해 둔 창 캡처)
     pub(crate) hovered: Option<u64>,
 }
@@ -68,6 +70,7 @@ impl Default for RecordState {
             leftovers_pending: false,
             mic_notice_done: false,
             delay: None,
+            delay_esc: None,
             hovered: None,
         }
     }

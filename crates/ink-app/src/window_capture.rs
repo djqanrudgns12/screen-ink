@@ -117,6 +117,8 @@ impl InkService {
     fn grab_window(&mut self, w: &WindowInfo) -> Option<(u32, u32, Vec<u8>, &'static str)> {
         match self.ports.screen.capture_window(w.handle, w.rect) {
             Ok(mut s) if s.width > 0 && s.height > 0 && image::blankness(&s.bgra) == Blankness::Content => {
+                // 사용자 결정: 귀만 투명 — 창 안 반투명(아크릴 등)은 불투명으로, 둥근 모서리 바깥만 알파 0
+                image::make_opaque(&mut s.bgra);
                 if s.corner_radius > 0 {
                     image::mask_round_corners(&mut s.bgra, s.width, s.height, s.corner_radius);
                 }
