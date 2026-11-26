@@ -123,9 +123,24 @@
   --ink-close-bg: transparent;
   --ink-close-r: 6px;
 
-  /* 글꼴 */
-  --ink-font-sans: 'IBM Plex Sans KR', system-ui, sans-serif;
-  --ink-font-mono: 'IBM Plex Mono', 'IBM Plex Sans KR', monospace;
+  /* 글꼴 (R2-FONT · PRD §4.1) */
+  --ink-font-body: 'Freesentation', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', 'Malgun Gothic', system-ui, sans-serif;
+  --ink-font-display: 'Paperlogy', 'Freesentation', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', 'Malgun Gothic', system-ui, sans-serif;
+  --ink-font-mono: 'IBM Plex Mono', -apple-system, BlinkMacSystemFont, 'Segoe UI Symbol', 'Apple Symbols', monospace;
+  --ink-font-sans: var(--ink-font-body);
+
+  /* 글자 크기·줄 높이·자간 표 (11·12·13·15·20) */
+  --ink-text-xs: 11px;
+  --ink-text-sm: 12px;
+  --ink-text-base: 13px;
+  --ink-text-md: 15px;
+  --ink-text-lg: 20px;
+  --ink-leading-xs: 1.36;
+  --ink-leading-sm: 1.40;
+  --ink-leading-base: 1.45;
+  --ink-leading-md: 1.35;
+  --ink-leading-lg: 1.25;
+  --ink-tracking-ko: -0.003em;
 
   /* 판서 펜 색 (UI 토큰과 분리, 10 §2) */
   --ink-pen-R: #E5484D;
@@ -347,7 +362,8 @@
   --radius-ink-window: var(--ink-r-window);
   --radius-ink-island: var(--ink-r-island);
 
-  --font-sans: var(--ink-font-sans);
+  --font-sans: var(--ink-font-body);
+  --font-display: var(--ink-font-display);
   --font-mono: var(--ink-font-mono);
 }
 
@@ -355,7 +371,7 @@
 html,
 body {
   margin: 0;
-  font-family: var(--ink-font-sans);
+  font-family: var(--ink-font-body);
   color: var(--ink-text);
   background: var(--ink-bg);
   word-break: keep-all;

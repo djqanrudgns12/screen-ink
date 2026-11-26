@@ -1,13 +1,16 @@
 <script>
   import { DropdownMenu, Separator } from 'bits-ui';
+  import { t } from '../i18n/index.svelte.js';
+  import { resolveMenuKeyAction } from '../models/trayMenu.js';
 
   /**
-   * 트레이 팝오버 컨테이너(F03 · 10 §5).
-   * - `trigger` 스니펫이 주어지면 bits-ui DropdownMenu 위에 띄운다.
-   * - 단독 창(Tauri 트레이 창·미리보기)에서는 role="menu" 패널로 동작하며 ↑↓/Home/End/Esc 키보드 이동을 지원한다(첫 글자 점프 없음 — 한글 IME 보호).
+   * 메뉴 막대 / 작업 표시줄 팝오버 컨테이너(F03 · R2-UI-TRAY · D3).
+   * - 너비 252pt, Paperlogy 기반 표시 글꼴, macOS vibrancy / Windows Mica 반투명 표면.
+   * - ↑↓·Home·End·Enter·Esc·첫 글자(한글 초성/음절·영어) 키보드 이동을 지원한다.
    * @type {{
    *   open?: boolean,
    *   label?: string,
+   *   platform?: 'windows' | 'macos',
    *   onClose?: () => void,
    *   onOpenChange?: (open: boolean) => void,
    *   trigger?: import('svelte').Snippet,
@@ -19,7 +22,8 @@
    */
   let {
     open = $bindable(true),
-    label = '슉쇽 메뉴',
+    label = '',
+    platform = 'windows',
     onClose = undefined,
     onOpenChange = undefined,
     trigger = undefined,
@@ -30,37 +34,46 @@
   } = $props();
 
   let menuEl = $state(null);
+  let resolvedLabel = $derived(label || t('tray.menu.aria'));
 
   function handleMenuKeydown(e) {
-    if (e.key === 'Escape') {
+    if (!menuEl && e.key !== 'Escape') return;
+
+    const nodes = menuEl
+      ? /** @type {HTMLElement[]} */ (
+          Array.from(menuEl.querySelectorAll('[role="menuitem"], [role="menuitemcheckbox"]'))
+        )
+      : [];
+    const items = nodes.map((el) => ({
+      label: el.dataset.menuLabel || el.textContent || '',
+      disabled: el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true',
+    }));
+    const currentIdx = nodes.indexOf(/** @type {HTMLElement} */ (document.activeElement));
+
+    const result = resolveMenuKeyAction(
+      {
+        key: e.key,
+        isComposing: e.isComposing,
+        ctrlKey: e.ctrlKey,
+        metaKey: e.metaKey,
+        altKey: e.altKey,
+      },
+      items,
+      currentIdx,
+    );
+
+    if (result.type === 'close') {
       e.preventDefault();
       open = false;
       onOpenChange?.(false);
       onClose?.();
-      return;
+    } else if (result.type === 'focus') {
+      e.preventDefault();
+      nodes[result.index]?.focus();
+    } else if (result.type === 'activate') {
+      e.preventDefault();
+      nodes[result.index]?.click();
     }
-
-    if (!menuEl) return;
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') {
-      return;
-    }
-
-    const items = Array.from(
-      menuEl.querySelectorAll('[role="menuitem"]:not(:disabled), [role="menuitemcheckbox"]:not(:disabled)'),
-    );
-    if (items.length === 0) return;
-
-    e.preventDefault();
-    const currentIdx = items.indexOf(document.activeElement);
-    let nextIdx = 0;
-    if (e.key === 'ArrowDown') {
-      nextIdx = currentIdx < 0 ? 0 : (currentIdx + 1) % items.length;
-    } else if (e.key === 'ArrowUp') {
-      nextIdx = currentIdx <= 0 ? items.length - 1 : currentIdx - 1;
-    } else if (e.key === 'End') {
-      nextIdx = items.length - 1;
-    }
-    items[nextIdx]?.focus();
   }
 </script>
 
@@ -77,7 +90,12 @@
       {@render trigger()}
     </DropdownMenu.Trigger>
     <DropdownMenu.Portal>
-      <DropdownMenu.Content class="ink-popover {className}" aria-label={label} sideOffset={8}>
+      <DropdownMenu.Content
+        class="ink-popover {className}"
+        data-platform={platform}
+        aria-label={resolvedLabel}
+        sideOffset={8}
+      >
         {#if header}
           <div class="ink-popover-head">{@render header()}</div>
           <Separator.Root class="ink-popover-sep" />
@@ -94,7 +112,8 @@
   <div
     bind:this={menuEl}
     role="menu"
-    aria-label={label}
+    aria-label={resolvedLabel}
+    data-platform={platform}
     tabindex="-1"
     onkeydown={handleMenuKeydown}
     class="ink-popover ink-popover-open {className}"
@@ -112,16 +131,88 @@
 {/if}
 
 <style>
+  /* 라이트: macOS vibrancy / Windows Mica 반투명 + 흐림 기본값 */
   :global(.ink-popover) {
-    width: 288px;
+    width: 252px;
     box-sizing: border-box;
-    padding: var(--ink-popover-pad);
-    border-radius: var(--ink-r-popover);
-    background: var(--ink-popover-bg);
+    padding: 8px;
+    border-radius: 12px;
+    background: rgba(250, 250, 248, 0.88);
+    backdrop-filter: blur(22px) saturate(1.35);
+    -webkit-backdrop-filter: blur(22px) saturate(1.35);
     color: var(--ink-text);
-    box-shadow: var(--ink-shadow-popover);
-    font-family: var(--ink-font-sans);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.72),
+      0 0 0 1px rgba(18, 18, 18, 0.09),
+      0 14px 36px rgba(0, 0, 0, 0.16);
+    font-family: var(--ink-font-display);
+    font-size: var(--ink-text-base);
+    letter-spacing: var(--ink-tracking-ko);
     outline: none;
+  }
+
+  :global(.ink-popover[data-platform='macos']) {
+    background: rgba(250, 250, 248, 0.82);
+    backdrop-filter: blur(28px) saturate(1.6);
+    -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  }
+
+  :global(.ink-popover[data-platform='windows']) {
+    background: rgba(246, 246, 243, 0.9);
+    backdrop-filter: blur(18px) saturate(1.18);
+    -webkit-backdrop-filter: blur(18px) saturate(1.18);
+  }
+
+  /* 다크: macOS vibrancy / Windows Mica dark */
+  :global([data-theme='dark'] .ink-popover) {
+    background: rgba(26, 27, 31, 0.86);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 0 0 1px rgba(255, 255, 255, 0.09),
+      0 20px 48px rgba(0, 0, 0, 0.52);
+  }
+
+  :global([data-theme='dark'] .ink-popover[data-platform='macos']) {
+    background: rgba(24, 25, 29, 0.8);
+    backdrop-filter: blur(28px) saturate(1.55);
+    -webkit-backdrop-filter: blur(28px) saturate(1.55);
+  }
+
+  :global([data-theme='dark'] .ink-popover[data-platform='windows']) {
+    background: rgba(30, 31, 36, 0.91);
+    backdrop-filter: blur(18px) saturate(1.15);
+    -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme='light']) .ink-popover) {
+      background: rgba(26, 27, 31, 0.86);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 0 1px rgba(255, 255, 255, 0.09),
+        0 20px 48px rgba(0, 0, 0, 0.52);
+    }
+
+    :global(:root:not([data-theme='light']) .ink-popover[data-platform='macos']) {
+      background: rgba(24, 25, 29, 0.8);
+    }
+
+    :global(:root:not([data-theme='light']) .ink-popover[data-platform='windows']) {
+      background: rgba(30, 31, 36, 0.91);
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    :global(.ink-popover),
+    :global(.ink-popover[data-platform='macos']),
+    :global(.ink-popover[data-platform='windows']),
+    :global([data-theme='dark'] .ink-popover),
+    :global([data-theme='dark'] .ink-popover[data-platform='macos']),
+    :global([data-theme='dark'] .ink-popover[data-platform='windows']) {
+      background: var(--ink-popover-bg);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
   }
 
   .ink-popover-open {
@@ -142,8 +233,8 @@
   .ink-popover-head {
     display: flex;
     align-items: center;
-    gap: 9px;
-    padding: 6px 10px 8px;
+    gap: 8px;
+    padding: 3px 6px 5px;
   }
 
   .ink-popover-body {
@@ -155,13 +246,13 @@
   .ink-popover-foot {
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 2px;
   }
 
   :global(.ink-popover-sep) {
     height: 1px;
     background: var(--ink-line-soft);
-    margin: 5px 10px;
+    margin: 5px 6px;
     border: 0;
   }
 </style>

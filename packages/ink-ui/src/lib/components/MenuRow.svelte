@@ -3,7 +3,7 @@
   import Keycap from './Keycap.svelte';
 
   /**
-   * 트레이 팝오버 메뉴 한 줄(F01 · F03).
+   * 메뉴 한 줄(F01 · F03 · R2-UI-TRAY).
    * 상태: default | hover | press | selected | disabled
    * @type {{
    *   icon?: string,
@@ -56,6 +56,7 @@
   disabled={isDisabled}
   data-state={isSelected ? 'selected' : visualState}
   data-muted={muted ? 'true' : undefined}
+  data-menu-label={label}
   {onclick}
   class="ink-menu-row {className}"
 >
@@ -69,7 +70,7 @@
     <span class="ink-menu-trailing">{@render trailing()}</span>
   {/if}
   {#if combo || (keys && keys.length)}
-    <Keycap {combo} {keys} {platform} variant={keyVariant} />
+    <Keycap {combo} {keys} {platform} variant={keyVariant} class="ink-menu-keycap" />
   {/if}
 </button>
 
@@ -77,22 +78,24 @@
   .ink-menu-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
-    height: 29px;
-    padding: 0 10px;
+    height: 28px;
+    padding: 0 8px;
     box-sizing: border-box;
     border: 0;
     border-radius: var(--ink-r-row);
     background: transparent;
     color: var(--ink-text);
     font-family: inherit;
-    font-size: 13px;
-    font-weight: 400;
+    font-size: var(--ink-text-base);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: var(--ink-tracking-ko);
     text-align: left;
     cursor: pointer;
     outline: none;
-    transition: background-color 60ms ease, color 60ms ease;
+    transition: background-color 80ms ease-out, color 80ms ease-out;
   }
 
   .ink-menu-row[data-muted='true'] {
@@ -108,6 +111,7 @@
 
   .ink-menu-label {
     flex: 1;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -116,8 +120,13 @@
   .ink-menu-trailing {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     flex: none;
+  }
+
+  .ink-menu-row :global(.ink-menu-keycap .ink-kbd[data-variant='default']) {
+    color: var(--ink-sub);
+    font-weight: 400;
   }
 
   .ink-menu-row:hover:not(:disabled),

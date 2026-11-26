@@ -17,7 +17,6 @@
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.2.6",
-    "@fontsource/ibm-plex-sans-kr": "^5.2.6",
     "@screen-ink/client": "*",
     "bits-ui": "2.19.2"
   },
