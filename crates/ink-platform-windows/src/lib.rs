@@ -13,6 +13,13 @@ pub mod uia;
 pub mod freeze;
 #[cfg(windows)]
 pub mod screen;
+// 단계 6: 공용 D3D11 장치 · F2 창 캡처(WGC) · F3 녹화(WGC + Media Foundation)
+#[cfg(windows)]
+pub mod gpu;
+#[cfg(windows)]
+pub mod wgc_window;
+#[cfg(windows)]
+pub mod recorder;
 
 use ink_app::SystemProbe;
 use ink_domain::shortcuts::LiveBinding;
@@ -56,6 +63,20 @@ impl SystemProbe for WindowsProbe {
         #[cfg(not(windows))]
         {
             false
+        }
+    }
+
+    fn foreground_window(&self) -> Option<u64> {
+        #[cfg(windows)]
+        {
+            use windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+            // SAFETY: 읽기 전용 질의.
+            let h = unsafe { GetForegroundWindow() };
+            (!h.is_null()).then_some(h as usize as u64)
+        }
+        #[cfg(not(windows))]
+        {
+            None
         }
     }
 }

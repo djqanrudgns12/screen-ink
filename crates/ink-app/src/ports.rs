@@ -299,6 +299,8 @@ pub struct WindowShot {
 pub const REC_UNSUPPORTED: &str = "recording not supported";
 /// 녹화하던 창이 닫혀 스스로 멈춤(`Recorder::take_failure`).
 pub const REC_WINDOW_CLOSED: &str = "rec:window-closed";
+/// 인코더를 만들지 못해 녹화가 시작되지 못함(`Recorder::take_failure`) — 저장할 것이 없다.
+pub const REC_ENCODER_FAILED: &str = "rec:encoder";
 
 #[derive(Clone, Debug)]
 pub struct RecStartOpts {

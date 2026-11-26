@@ -15,7 +15,7 @@ pub use ports::{
     Clipboard, Clock, ElementSource, FileSink, Frame, HotkeyError, HotkeyRegistry, Loaded, MonitorProbe, NoPins, NoVision, Notifier, OverlayHost, PinHost, Ports, SavedFile, ScreenSource, NO_SCREEN_PERMISSION,
     SettingsStore, StoreError, StoreLocation, SystemEvent, SystemProbe, VisionSource, WindowCatalog,
 };
-pub use ports::{NoRecorder, RecStartOpts, RecStats, Recorder, WindowShot, REC_UNSUPPORTED, REC_WINDOW_CLOSED, WINDOW_PROTECTED};
+pub use ports::{NoRecorder, RecStartOpts, RecStats, Recorder, WindowShot, REC_ENCODER_FAILED, REC_UNSUPPORTED, REC_WINDOW_CLOSED, WINDOW_PROTECTED};
 pub use quick::Delay;
 pub use capture::CaptureInput;
 pub use vision::VisionEngine;

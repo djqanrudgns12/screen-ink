@@ -4,7 +4,7 @@
 //! 녹화 중에도 F1·판서·확대에 들어가고, 그 모드가 끝나면 `Mode::Recording`으로 돌아온다(`rest_mode`).
 //! 잠금·절전·녹화하던 모니터가 사라지면 자동 중지·저장, 마무리하지 못한 임시 파일은 다음 시작 때 복구를 제안한다.
 
-use crate::ports::{NoRecorder, RecStartOpts, Recorder, SystemEvent, REC_UNSUPPORTED, REC_WINDOW_CLOSED};
+use crate::ports::{NoRecorder, RecStartOpts, Recorder, SystemEvent, REC_ENCODER_FAILED, REC_UNSUPPORTED, REC_WINDOW_CLOSED};
 use crate::service::{HotkeyOutcome, InkService};
 use crate::state::{IslandButton, IslandEvent, IslandKind, Recording};
 use ink_domain::geometry::{MonitorLayout, PhysPoint, PhysRect};
@@ -430,6 +430,15 @@ impl InkService {
         }
         if let Some(f) = self.rec.recorder.take_failure() {
             log::warn!("recording stopped by itself: {f}");
+            if f.starts_with(REC_ENCODER_FAILED) {
+                // 인코더가 처음부터 서지 못함 — 저장할 것이 없다(임시 파일은 어댑터가 지움)
+                self.rec.recorder.abort();
+                self.rec.temp = None;
+                self.rec.app = None;
+                self.reset_recording();
+                self.island(IslandEvent::new(IslandKind::Problem, "녹화를 시작할 수 없어요(코덱)"));
+                return;
+            }
             let why = if f.starts_with(REC_WINDOW_CLOSED) { "창이 닫혀" } else { "녹화가 멈춰" };
             self.finish_recording(Some(why));
             return;
