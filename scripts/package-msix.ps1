@@ -1,11 +1,11 @@
 ﻿<#
 .SYNOPSIS
-  screen-ink Windows MSIX 포장 파이프라인(D2 · 11-distribution §5·§6·§7).
+  슉쇽 (ShookShok) Windows MSIX 포장 파이프라인(D2 · 11-distribution §5·§6·§7).
 
 .DESCRIPTION
   1. `npm run tauri -w @screen-ink/app -- build --no-bundle`로 release exe를 빌드하거나(-SkipBuild로 기존 exe 재사용)
   2. `apps/screen-ink/src-tauri/icons/`의 기존 아이콘을 읽기 전용으로 복사하고
-  3. `apps/screen-ink/src-tauri/packaging/msix/AppxManifest.template.xml`을 치환해
+  3. `apps/screen-ink/src-tauri/packaging/msix/msix.config.json`에서 이름·ID·주소를 읽어 `AppxManifest.template.xml`을 치환한 뒤
   4. Windows SDK `makeappx.exe pack`(의미 검사 활성, `/nv` 미사용)으로 `.msix`를 만든다.
 
   안전 규칙:
@@ -32,6 +32,8 @@ param(
   [string]$Publisher = '',
   [string]$PublisherDisplayName = '',
   [string]$Description = '',
+  [string]$StartupTaskId = '',
+  [string]$AppInstallerUri = '',
 
   [ValidateSet('x64', 'arm64')]
   [string]$Arch = 'x64',
@@ -64,7 +66,7 @@ $IconsDir = Join-Path $TauriDir 'icons'
 $PackagingDir = Join-Path $TauriDir 'packaging\msix'
 $ConfigPath = Join-Path $PackagingDir 'msix.config.json'
 $ManifestTemplatePath = Join-Path $PackagingDir 'AppxManifest.template.xml'
-$AppInstallerTemplatePath = Join-Path $PackagingDir 'screen-ink.appinstaller.template.xml'
+$AppInstallerTemplatePath = Join-Path $PackagingDir 'shookshok.appinstaller.template.xml'
 
 function ConvertTo-MsixVersion {
   param([Parameter(Mandatory)][string]$Raw)
@@ -138,7 +140,7 @@ function Find-WindowsSdkTool {
 function Resolve-ReleaseExe {
   param(
     [string]$ExplicitPath,
-    [string]$ExecutableName
+    [string[]]$ExecutableNames
   )
   if ($ExplicitPath) {
     if (-not (Test-Path $ExplicitPath)) {
@@ -147,16 +149,19 @@ function Resolve-ReleaseExe {
     return (Resolve-Path $ExplicitPath).Path
   }
 
-  $candidates = @()
+  $dirs = @()
   if ($env:CARGO_TARGET_DIR) {
-    $candidates += (Join-Path $env:CARGO_TARGET_DIR "release\$ExecutableName")
+    $dirs += (Join-Path $env:CARGO_TARGET_DIR 'release')
   }
-  $candidates += (Join-Path $RepoRoot "target\release\$ExecutableName")
-  $candidates += (Join-Path $TauriDir "target\release\$ExecutableName")
+  $dirs += (Join-Path $RepoRoot 'target\release')
+  $dirs += (Join-Path $TauriDir 'target\release')
 
-  foreach ($c in $candidates) {
-    if (Test-Path $c) {
-      return (Resolve-Path $c).Path
+  foreach ($dir in $dirs) {
+    foreach ($name in $ExecutableNames) {
+      $candidate = Join-Path $dir $name
+      if (Test-Path $candidate) {
+        return (Resolve-Path $candidate).Path
+      }
     }
   }
   return $null
@@ -182,7 +187,7 @@ function Expand-Template {
   return $content
 }
 
-# ── 1. 설정·메타데이터 읽기 ──
+# ── 1. 설정·메타데이터 읽기 (msix.config.json 단일 원본) ──
 if (-not (Test-Path $TauriConfPath)) { throw "tauri.conf.json을 찾을 수 없습니다: $TauriConfPath" }
 if (-not (Test-Path $ConfigPath)) { throw "msix.config.json을 찾을 수 없습니다: $ConfigPath" }
 if (-not (Test-Path $ManifestTemplatePath)) { throw "AppxManifest.template.xml을 찾을 수 없습니다: $ManifestTemplatePath" }
@@ -209,7 +214,32 @@ $resolvedPackageName = if ($PackageName) {
 $resolvedPublisher = if ($Publisher) { $Publisher } else { [string]$channelCfg.publisher }
 $resolvedPublisherDisplayName = if ($PublisherDisplayName) { $PublisherDisplayName } else { [string]$msixConfig.publisherDisplayName }
 $resolvedDescription = if ($Description) { $Description } else { [string]$msixConfig.description }
-$executableName = if ($msixConfig.executable) { [string]$msixConfig.executable } else { 'screen-ink.exe' }
+$resolvedStartupTaskId = if ($StartupTaskId) {
+  $StartupTaskId
+} elseif ($msixConfig.startupTaskId) {
+  [string]$msixConfig.startupTaskId
+} else {
+  'ShookshokStartup'
+}
+$artifactPrefix = if ($msixConfig.artifactPrefix) { [string]$msixConfig.artifactPrefix } else { 'shookshok' }
+$appInstallerFileName = if ($msixConfig.appInstallerFileName) { [string]$msixConfig.appInstallerFileName } else { 'shookshok.appinstaller' }
+$resolvedAppInstallerUri = if ($AppInstallerUri) { $AppInstallerUri } else { [string]$msixConfig.appInstallerUri }
+
+$exeCandidates = @()
+if ($msixConfig.executableCandidates) {
+  foreach ($c in $msixConfig.executableCandidates) {
+    if ($c) { $exeCandidates += [string]$c }
+  }
+}
+if ($tauriConf.productName) {
+  $productExe = "$($tauriConf.productName).exe"
+  if ($exeCandidates -notcontains $productExe) {
+    $exeCandidates = @($productExe) + $exeCandidates
+  }
+}
+if ($exeCandidates.Count -eq 0) {
+  $exeCandidates = @('shookshok.exe', 'screen-ink.exe')
+}
 
 $resolvedOutDir = if ($OutDir) { $OutDir } else { Join-Path $RepoRoot 'dist\msix' }
 
@@ -253,11 +283,13 @@ if (-not $SkipBuild) {
   }
 }
 
-$resolvedExe = Resolve-ReleaseExe -ExplicitPath $ExePath -ExecutableName $executableName
+$resolvedExe = Resolve-ReleaseExe -ExplicitPath $ExePath -ExecutableNames $exeCandidates
 if (-not $resolvedExe) {
-  throw "릴리스 실행 파일($executableName)을 찾을 수 없습니다. -SkipBuild를 빼거나 -ExePath를 지정하세요."
+  $joined = $exeCandidates -join ', '
+  throw "릴리스 실행 파일($joined)을 찾을 수 없습니다. -SkipBuild를 빼거나 -ExePath를 지정하세요."
 }
-Write-Host "[msix] 입력 exe: $resolvedExe"
+$actualExeName = (Get-Item -Path $resolvedExe).Name
+Write-Host "[msix] 입력 exe: $resolvedExe (매니페스트 Executable=$actualExeName)"
 
 # ── 4. 스테이징 폴더 조립 (아이콘은 읽기·복사만, 원본 무수정) ──
 $requiredIcons = @(
@@ -273,12 +305,12 @@ foreach ($icon in $requiredIcons) {
   }
 }
 
-$stagingRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("screen-ink-msix-stage-" + [System.Guid]::NewGuid().ToString('N'))
+$stagingRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("shookshok-msix-stage-" + [System.Guid]::NewGuid().ToString('N'))
 $assetsDir = Join-Path $stagingRoot 'Assets'
 New-Item -ItemType Directory -Path $assetsDir -Force | Out-Null
 
 try {
-  Copy-Item -Path $resolvedExe -Destination (Join-Path $stagingRoot $executableName) -Force
+  Copy-Item -Path $resolvedExe -Destination (Join-Path $stagingRoot $actualExeName) -Force
   foreach ($icon in $requiredIcons) {
     Copy-Item -Path (Join-Path $IconsDir $icon) -Destination (Join-Path $assetsDir $icon) -Force
   }
@@ -290,8 +322,9 @@ try {
     ARCH                   = $Arch
     DISPLAY_NAME           = $resolvedDisplayName
     PUBLISHER_DISPLAY_NAME = $resolvedPublisherDisplayName
-    EXECUTABLE             = $executableName
+    EXECUTABLE             = $actualExeName
     DESCRIPTION            = $resolvedDescription
+    STARTUP_TASK_ID        = $resolvedStartupTaskId
   }
   $manifestOut = Join-Path $stagingRoot 'AppxManifest.xml'
   $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
@@ -300,7 +333,7 @@ try {
   # ── 5. makeappx pack (의미 검사 활성 — /nv 사용 안 함) ──
   New-Item -ItemType Directory -Path $resolvedOutDir -Force | Out-Null
   $channelSuffix = if ($Channel -eq 'store') { 'store' } else { 'direct' }
-  $msixFileName = "screen-ink_${resolvedVersion}_${Arch}_${channelSuffix}.msix"
+  $msixFileName = "${artifactPrefix}_${resolvedVersion}_${Arch}_${channelSuffix}.msix"
   $msixOutPath = Join-Path $resolvedOutDir $msixFileName
 
   Write-Host "[msix] makeappx pack -> $msixOutPath"
@@ -363,21 +396,21 @@ try {
       "$($msixConfig.releaseBaseUrl)/$tag/$msixFileName"
     }
     $appInstallerXml = Expand-Template -TemplatePath $AppInstallerTemplatePath -Tokens @{
-      APPINSTALLER_URI = [string]$msixConfig.appInstallerUri
+      APPINSTALLER_URI = $resolvedAppInstallerUri
       VERSION          = $resolvedVersion
       PACKAGE_NAME     = $resolvedPackageName
       PUBLISHER        = $resolvedPublisher
       ARCH             = $Arch
       PACKAGE_URI      = $pkgUri
     }
-    $appInstallerOut = Join-Path $resolvedOutDir 'screen-ink.appinstaller'
+    $appInstallerOut = Join-Path $resolvedOutDir $appInstallerFileName
     [System.IO.File]::WriteAllText($appInstallerOut, $appInstallerXml, $utf8NoBom)
     Write-Host "[msix] .appinstaller 생성 -> $appInstallerOut"
   }
 
-  # ── 8. (선택) makeappx unpack + 매니페스트 무결성 검사 ──
+  # ── 8. (선택) makeappx unpack + 매니페스트·.appinstaller 무결성 검사 ──
   if ($Verify) {
-    $unpackDir = Join-Path ([System.IO.Path]::GetTempPath()) ("screen-ink-msix-verify-" + [System.Guid]::NewGuid().ToString('N'))
+    $unpackDir = Join-Path ([System.IO.Path]::GetTempPath()) ("shookshok-msix-verify-" + [System.Guid]::NewGuid().ToString('N'))
     try {
       Write-Host "[msix] makeappx unpack 검증 중..."
       & $makeappx unpack /p $msixOutPath /d $unpackDir /o | Out-Null
@@ -387,7 +420,7 @@ try {
 
       $unpackedManifestPath = Join-Path $unpackDir 'AppxManifest.xml'
       if (-not (Test-Path $unpackedManifestPath)) { throw "검증 실패: AppxManifest.xml 누락" }
-      if (-not (Test-Path (Join-Path $unpackDir $executableName))) { throw "검증 실패: $executableName 누락" }
+      if (-not (Test-Path (Join-Path $unpackDir $actualExeName))) { throw "검증 실패: $actualExeName 누락" }
       foreach ($icon in $requiredIcons) {
         if (-not (Test-Path (Join-Path $unpackDir "Assets\$icon"))) {
           throw "검증 실패: Assets\$icon 누락"
@@ -397,11 +430,14 @@ try {
       [xml]$doc = Get-Content -Path $unpackedManifestPath -Raw -Encoding UTF8
       $ns = New-Object System.Xml.XmlNamespaceManager($doc.NameTable)
       $ns.AddNamespace('m', 'http://schemas.microsoft.com/appx/manifest/foundation/windows10')
+      $ns.AddNamespace('uap', 'http://schemas.microsoft.com/appx/manifest/uap/windows10')
       $ns.AddNamespace('d', 'http://schemas.microsoft.com/appx/manifest/desktop/windows10')
       $ns.AddNamespace('r', 'http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities')
 
       $ident = $doc.SelectSingleNode('/m:Package/m:Identity', $ns)
       $props = $doc.SelectSingleNode('/m:Package/m:Properties', $ns)
+      $appNode = $doc.SelectSingleNode('/m:Package/m:Applications/m:Application', $ns)
+      $visual = $doc.SelectSingleNode('/m:Package/m:Applications/m:Application/uap:VisualElements', $ns)
       $startup = $doc.SelectSingleNode('//d:StartupTask', $ns)
       $fullTrust = $doc.SelectSingleNode("//r:Capability[@Name='runFullTrust']", $ns)
 
@@ -410,10 +446,25 @@ try {
       if ($ident.Version -ne $resolvedVersion) { throw "매니페스트 Identity.Version 불일치" }
       if ($props.DisplayName -ne $resolvedDisplayName) { throw "매니페스트 DisplayName 불일치" }
       if ($props.PublisherDisplayName -ne $resolvedPublisherDisplayName) { throw "매니페스트 PublisherDisplayName 불일치" }
-      if (-not $startup -or $startup.TaskId -ne 'ScreenInkStartup') { throw "매니페스트 StartupTask(ScreenInkStartup) 누락" }
+      if (-not $appNode -or $appNode.Executable -ne $actualExeName) { throw "매니페스트 Application.Executable 불일치" }
+      if (-not $visual -or $visual.DisplayName -ne $resolvedDisplayName) { throw "매니페스트 VisualElements.DisplayName 불일치" }
+      if (-not $startup -or $startup.TaskId -ne $resolvedStartupTaskId) { throw "매니페스트 StartupTask($resolvedStartupTaskId) 누락" }
       if (-not $fullTrust) { throw "매니페스트 runFullTrust 기능 누락" }
 
-      Write-Host "[msix] 검증 통과: Identity=$($ident.Name) v$($ident.Version) ($($ident.ProcessorArchitecture)), DisplayName=$($props.DisplayName), PublisherDisplayName=$($props.PublisherDisplayName), StartupTask=$($startup.TaskId)"
+      if ($appInstallerOut) {
+        [xml]$aiDoc = Get-Content -Path $appInstallerOut -Raw -Encoding UTF8
+        $aiNs = New-Object System.Xml.XmlNamespaceManager($aiDoc.NameTable)
+        $aiNs.AddNamespace('a', 'http://schemas.microsoft.com/appx/appinstaller/2021')
+        $aiRoot = $aiDoc.SelectSingleNode('/a:AppInstaller', $aiNs)
+        $aiMain = $aiDoc.SelectSingleNode('/a:AppInstaller/a:MainPackage', $aiNs)
+        if ($aiRoot.Uri -ne $resolvedAppInstallerUri) { throw ".appinstaller Uri 불일치" }
+        if ($aiMain.Name -ne $resolvedPackageName) { throw ".appinstaller MainPackage.Name 불일치" }
+        if ($aiMain.Publisher -ne $resolvedPublisher) { throw ".appinstaller MainPackage.Publisher 불일치" }
+        if ($aiMain.Version -ne $resolvedVersion) { throw ".appinstaller MainPackage.Version 불일치" }
+        if (-not $aiMain.Uri.EndsWith("/$msixFileName")) { throw ".appinstaller MainPackage.Uri 산출물 이름 불일치" }
+      }
+
+      Write-Host "[msix] 검증 통과: Identity=$($ident.Name) v$($ident.Version) ($($ident.ProcessorArchitecture)), DisplayName=$($props.DisplayName), PublisherDisplayName=$($props.PublisherDisplayName), Executable=$($appNode.Executable), StartupTask=$($startup.TaskId)"
     } finally {
       if (Test-Path $unpackDir) {
         Remove-Item -Path $unpackDir -Recurse -Force -ErrorAction SilentlyContinue

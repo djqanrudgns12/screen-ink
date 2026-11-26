@@ -89,3 +89,7 @@ apps/screen-ink              단독 앱 셸
 ## 라이선스
 
 [MIT](LICENSE) © 2026 djqanrudgns12
+
+## Code Signing Policy
+
+Free code signing provided by SignPath.io, certificate by SignPath Foundation

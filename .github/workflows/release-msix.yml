@@ -8,6 +8,7 @@
 #       SIGNPATH_PROJECT_SLUG         (예: screen-ink)
 #       SIGNPATH_SIGNING_POLICY_SLUG  (예: release-signing)
 #       SIGNPATH_PUBLISHER            (SignPath 인증서 Subject, 글자 그대로 일치)
+#       STORE_PACKAGE_NAME            (Partner Center 예약 Identity Name, 비우면 msix.config.json 기본값)
 #       STORE_PUBLISHER               (Partner Center 발급 CN=...)
 #   - Repository Secrets:
 #       SIGNPATH_API_TOKEN            (SignPath CI submit 토큰)
@@ -71,9 +72,13 @@ jobs:
         if: ${{ github.event_name == 'push' || inputs.channel == 'both' || inputs.channel == 'store' }}
         shell: pwsh
         env:
+          STORE_PACKAGE_NAME: ${{ vars.STORE_PACKAGE_NAME }}
           STORE_PUBLISHER: ${{ vars.STORE_PUBLISHER }}
         run: |
           $args = @('-Channel', 'store', '-SkipBuild', '-OutDir', 'dist/msix/store', '-Verify')
+          if ($env:STORE_PACKAGE_NAME) {
+            $args += @('-PackageName', $env:STORE_PACKAGE_NAME)
+          }
           if ($env:STORE_PUBLISHER) {
             $args += @('-Publisher', $env:STORE_PUBLISHER)
           }
@@ -102,7 +107,7 @@ jobs:
           name: screen-ink-msix-direct-unsigned
           path: |
             dist/msix/direct/*.msix
-            dist/msix/direct/screen-ink.appinstaller
+            dist/msix/direct/shookshok.appinstaller
           if-no-files-found: error
 
       - name: SignPath Foundation 코드 서명 요청 (자리표시 — 활성화 시 실행)

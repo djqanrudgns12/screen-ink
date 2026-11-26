@@ -56,7 +56,7 @@
           Executable="{{EXECUTABLE}}"
           EntryPoint="Windows.FullTrustApplication">
           <desktop:StartupTask
-            TaskId="ScreenInkStartup"
+            TaskId="{{STARTUP_TASK_ID}}"
             Enabled="true"
             DisplayName="{{DISPLAY_NAME}}" />
         </desktop:Extension>

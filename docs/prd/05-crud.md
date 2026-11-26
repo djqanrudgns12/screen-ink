@@ -5,6 +5,7 @@
 공통 규칙:
 - **저장 방식**(Tidy `scores.rs` 패턴): JSON 파일 하나에 `{ "schemaVersion": 3, "sections": { "<이름>": { "revision": n, "data": {...} } } }`. 쓰기는 임시 파일 → fsync → 이름 바꾸기(원자적). 직렬 쓰기 큐(Tidy `serialQueue.js`와 같은 생각)로 한 번에 하나씩. revision이 다르면 CONFLICT(다른 창이 먼저 고침) → 최신을 다시 읽고 병합.
 - **위치**: 포터블 = `<실행 파일 폴더>\data\`, 설치 = `%APPDATA%\screen-ink\`, Tidy 안 = Tidy 저장 파일의 `screen-ink` 구역.
+- **MSIX 패키지**: 패키지 모드에서는 포터블 표시 파일을 무시하고 가상화된 설정·로그 경로를 쓰며, MSIX 제거 시 가상화된 설정·로그도 함께 지워짐([11-distribution](11-distribution.md) §5).
 - **백업**: 시작할 때와 5분마다 `settings.json.bak` 교대. 새 파일이 이전의 절반 이하로 줄면 백업을 덮지 않는다(Tidy `lib.rs` 규칙).
 - **손상**: 읽기 실패 → 원본을 `settings.json.broken-<시각>`으로 보관 → 백업으로 복구 → 그것도 실패하면 기본값 + 말풍선 "설정 파일이 손상돼 처음 값으로 시작했어요(원본은 보관했어요)".
 - **더 새 스키마**(다른 버전에서 열림): 읽기 전용으로 쓰고 저장하지 않음 + 안내.
