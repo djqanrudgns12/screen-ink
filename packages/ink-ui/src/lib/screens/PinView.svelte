@@ -1,9 +1,10 @@
 <script>
-  import { anchorOf, isDoublePress, nextOpacity } from '../models/pin.js';
+  import { DRAG_START_PX, anchorOf, nextOpacity } from '../models/pin.js';
 
   /**
    * 캡처 핀 창(R-CAP-29, 04 S08): 창 = 그림. 끌기 = 옮기기 · 휠 = 확대·축소(커서 기준) · Ctrl+휠 = 투명도 ·
-   * 두 번 누르기·Esc = 닫기 · Ctrl+C 복사 · Ctrl+S 저장 · 오른쪽 클릭 = 메뉴(앱이 띄움).
+   * 두 번 클릭·Esc = 닫기 · Ctrl+C 복사 · Ctrl+S 저장 · 오른쪽 클릭 = 메뉴(앱이 띄움).
+   * 끌기는 누른 채 3px 넘게 움직일 때만 OS에 넘긴다 — 누르자마자 넘기면 두 번째 클릭을 OS가 삼킨다(실측 2026-11-26).
    * @type {{ client: import('@screen-ink/client').InkClient, pinId: number }}
    */
   let { client, pinId } = $props();
@@ -15,8 +16,9 @@
   let hover = $state(false);
   /** @type {ReturnType<typeof setTimeout> | null} */
   let badgeTimer = null;
-  /** @type {{ t: number, x: number, y: number } | null} */
-  let lastPress = null;
+  /** @type {{ x: number, y: number } | null} */
+  let pressAt = null;
+  let dragging = false;
 
   $effect(() => {
     let alive = true;
@@ -55,14 +57,22 @@
   /** @param {PointerEvent} e */
   function onPointerDown(e) {
     if (e.button !== 0) return;
-    const now = { t: e.timeStamp, x: e.clientX, y: e.clientY };
-    if (isDoublePress(lastPress, now)) {
-      lastPress = null;
-      client.pinAction(pinId, 'close');
-      return;
+    pressAt = { x: e.clientX, y: e.clientY };
+    dragging = false;
+  }
+
+  /** @param {PointerEvent} e */
+  function onPointerMove(e) {
+    if (!pressAt || dragging || (e.buttons & 1) === 0) return;
+    if (Math.abs(e.clientX - pressAt.x) > DRAG_START_PX || Math.abs(e.clientY - pressAt.y) > DRAG_START_PX) {
+      dragging = true;
+      client.pinAction(pinId, 'drag');
     }
-    lastPress = now;
-    client.pinAction(pinId, 'drag');
+  }
+
+  function onPointerUp() {
+    pressAt = null;
+    dragging = false;
   }
 
   /** @param {KeyboardEvent} e */
@@ -97,6 +107,9 @@
   onpointerenter={() => (hover = true)}
   onpointerleave={() => (hover = false)}
   onpointerdown={onPointerDown}
+  onpointermove={onPointerMove}
+  onpointerup={onPointerUp}
+  ondblclick={() => client.pinAction(pinId, 'close')}
   oncontextmenu={(e) => {
     e.preventDefault();
     client.pinAction(pinId, 'menu');

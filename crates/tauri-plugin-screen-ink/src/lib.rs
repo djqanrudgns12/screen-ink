@@ -666,8 +666,18 @@ fn pin_action<R: Runtime>(window: tauri::WebviewWindow<R>, ink: State<'_, Ink>, 
         }
         "copy" => ink.lock().pin_copy(id),
         "save" => ink.lock().pin_save(id),
-        "drag" => window.start_dragging().map_err(|e| e.to_string())?,
-        "menu" => pins::popup_menu(&window, id).map_err(|e| e.to_string())?,
+        "drag" => window.start_dragging().map_err(|e| {
+            log::warn!("pin {id} drag: {e}");
+            e.to_string()
+        })?,
+        "menu" => {
+            // 앞에 있지 않은 창의 팝업 메뉴는 바로 닫힌다 → 먼저 초점
+            let _ = window.set_focus();
+            pins::popup_menu(&window, id).map_err(|e| {
+                log::warn!("pin {id} menu: {e}");
+                e.to_string()
+            })?
+        }
         other => return Err(format!("unknown pin action: {other}")),
     }
     Ok(())
