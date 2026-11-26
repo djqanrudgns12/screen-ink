@@ -34,9 +34,22 @@
   let importError = $state('');
   let screenAsked = $state(false);
   let howtoOpen = $state(false);
+  let checkingUpdate = $state(false);
 
   function runAction(action) {
     return client.run(/** @type {any} */ (action));
+  }
+
+  async function handleCheckUpdate() {
+    if (checkingUpdate) return;
+    checkingUpdate = true;
+    try {
+      await runAction('update.check');
+    } catch {
+      // 확인 실패 안내는 Rust 섬에서 처리
+    } finally {
+      checkingUpdate = false;
+    }
   }
 
   function refreshPermsIfMac() {
@@ -444,6 +457,37 @@
               onclick={() => (resetSheetOpen = true)}
             >
               {t('general.data.resetBtn')}
+            </button>
+          </Row>
+        </div>
+      </Group>
+    </section>
+
+    <section class="ink-section" data-setting-id="general.update">
+      <SectionLabel title={t('updateUi.sectionTitle')} />
+      <Group>
+        <div data-setting-id="update.auto">
+          <Row label={t('updateUi.autoLabel')} sub={t('updateUi.autoSub')}>
+            <Switch
+              checked={settings['update.auto'] ?? true}
+              label={t('updateUi.autoLabel')}
+              onCheckedChange={(v) => setSetting('update.auto', v)}
+            />
+          </Row>
+        </div>
+        <div data-setting-id="update.check">
+          <Row
+            label={t('updateUi.versionLabel')}
+            sub={`v${state?.version ?? '0.1.0'}`}
+            subMono={true}
+          >
+            <button
+              type="button"
+              class="ink-sec-btn ink-focus"
+              disabled={checkingUpdate}
+              onclick={handleCheckUpdate}
+            >
+              {checkingUpdate ? t('updateUi.checkingBtn') : t('updateUi.checkBtn')}
             </button>
           </Row>
         </div>

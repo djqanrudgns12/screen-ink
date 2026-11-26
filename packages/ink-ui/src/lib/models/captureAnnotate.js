@@ -5,10 +5,18 @@
 // 주석은 화면 같은 자리에 남고 지금 범위로만 잘라 보인다(B §5 위험 1).
 // 결과(B §2.1 "합성 결과 전달 계약"): 펜·도형·글자 = 투명 RGBA 층(물리 px, 범위 크기), 모자이크 = 사각형 목록 → Rust가 원본에 합성.
 
-import { drawItem } from '../ink/canvasRender.js';
+import { drawItem, resolveInkColor } from '../ink/canvasRender.js';
+import { TEXT_LINE_HEIGHT } from '../ink/inkEngine.js';
 import { withBBox } from '../ink/hitTest.js';
 import { matchDrawKey } from '../ink/drawKeys.js';
 import { physicalToClient } from './captureOverlay.js';
+import {
+  DEFAULT_FONT_FAMILY,
+  DEFAULT_FONT_WEIGHT,
+  formatCanvasFont,
+  normalizeFontWeight,
+  sanitizeFontName,
+} from './fontPicker.js';
 import { colorForKey } from './palette.js';
 
 /** 모자이크 칸(논리 px): 기본 10, 범위 4~48(R2-ANN-2). */
@@ -206,12 +214,140 @@ export function exportTransform(anchor, rect, scale) {
 }
 
 /**
+ * 글자 항목에서 굵기·폴백 스택까지 포함해 캔버스에 그린다.
+ * @param {import('../ink/canvasRender.js').Ctx2D} ctx
+ * @param {any} item
+ * @param {string} fallbackFamily
+ */
+function drawBakedTextItem(ctx, item, fallbackFamily) {
+  ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = resolveInkColor(item.color, 'frame');
+  const family = sanitizeFontName(item.fontFamily) || fallbackFamily;
+  const weight = normalizeFontWeight(item.fontWeight ?? DEFAULT_FONT_WEIGHT);
+  ctx.font = formatCanvasFont(item.fontSize, family, weight);
+  ctx.textBaseline = 'top';
+  const lh = item.fontSize * TEXT_LINE_HEIGHT;
+  const lead = (lh - item.fontSize) / 2;
+  const lines = String(item.text ?? '').split('\n');
+  for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], item.x, item.y + i * lh + lead);
+  ctx.restore();
+}
+
+/**
+ * 주석 층에 들어 있는 글자 항목들의 고유 글꼴 목록을 뽑는다.
+ * @param {ReadonlyArray<import('../ink/inkEngine.js').Item>} items
+ * @param {string} [fallbackFamily]
+ * @returns {Array<{ fontFamily: string, fontWeight: number, fontSize: number, sampleText: string }>}
+ */
+export function collectTextFonts(items, fallbackFamily = DEFAULT_FONT_FAMILY) {
+  /** @type {Map<string, { fontFamily: string, fontWeight: number, fontSize: number, sampleText: string }>} */
+  const map = new Map();
+  for (const it of items) {
+    if (!it || it.kind !== 'text') continue;
+    const anyIt = /** @type {any} */ (it);
+    const fontFamily = sanitizeFontName(anyIt.fontFamily) || fallbackFamily;
+    const fontWeight = normalizeFontWeight(anyIt.fontWeight ?? DEFAULT_FONT_WEIGHT);
+    const fontSize = Number.isFinite(anyIt.fontSize) && anyIt.fontSize > 0 ? anyIt.fontSize : 24;
+    const key = `${fontFamily.toLowerCase()}|${fontWeight}`;
+    if (!map.has(key)) {
+      map.set(key, {
+        fontFamily,
+        fontWeight,
+        fontSize,
+        sampleText: String(anyIt.text || '가A1').slice(0, 16) || '가A1',
+      });
+    }
+  }
+  return [...map.values()];
+}
+
+/**
+ * 저장·복사 이미지 굽기 전 `document.fonts.load()` 완료를 기다린다(최대 timeoutMs).
+ * 불러오지 못한 글꼴은 기본 글꼴로 대체한 항목 목록과 실패 목록을 돌려준다.
+ * @param {ReadonlyArray<import('../ink/inkEngine.js').Item>} items
+ * @param {{
+ *   fonts?: { load?: (font: string, text?: string) => Promise<unknown>, ready?: Promise<unknown> } | null,
+ *   timeoutMs?: number,
+ *   fallbackFamily?: string,
+ * }} [opts]
+ */
+export async function ensureAnnotationFontsLoaded(items, opts = {}) {
+  const fallbackFamily = opts.fallbackFamily ?? DEFAULT_FONT_FAMILY;
+  const timeoutMs = typeof opts.timeoutMs === 'number' && opts.timeoutMs > 0 ? opts.timeoutMs : 500;
+  const fonts = opts.fonts !== undefined ? opts.fonts : typeof document !== 'undefined' ? document.fonts : null;
+  const specs = collectTextFonts(items, fallbackFamily);
+  if (!specs.length || !fonts || typeof fonts.load !== 'function') {
+    return { ok: true, loaded: /** @type {string[]} */ ([]), failed: /** @type {string[]} */ ([]), items: items.slice() };
+  }
+
+  /** @type {string[]} */
+  const loaded = [];
+  /** @type {string[]} */
+  const failed = [];
+  const failedKeys = new Set();
+
+  const waitTimeout = (/** @type {Promise<unknown>} */ p) =>
+    Promise.race([
+      p.then(() => ({ timedOut: false })),
+      new Promise((resolve) => setTimeout(() => resolve({ timedOut: true }), timeoutMs)),
+    ]);
+
+  await Promise.all(
+    specs.map(async (spec) => {
+      const desc = formatCanvasFont(spec.fontSize, spec.fontFamily, spec.fontWeight);
+      const key = `${spec.fontFamily.toLowerCase()}|${spec.fontWeight}`;
+      try {
+        const res = /** @type {{ timedOut?: boolean }} */ (await waitTimeout(Promise.resolve(fonts.load(desc, spec.sampleText))));
+        if (res?.timedOut) {
+          failed.push(spec.fontFamily);
+          failedKeys.add(key);
+        } else {
+          loaded.push(spec.fontFamily);
+        }
+      } catch {
+        failed.push(spec.fontFamily);
+        failedKeys.add(key);
+      }
+    }),
+  );
+
+  if (fonts.ready) {
+    try {
+      await waitTimeout(Promise.resolve(fonts.ready));
+    } catch {
+      // ignore
+    }
+  }
+
+  if (failedKeys.size === 0) {
+    return { ok: true, loaded, failed, items: items.slice() };
+  }
+
+  const normalizedItems = items.map((it) => {
+    if (!it || it.kind !== 'text') return it;
+    const anyIt = /** @type {any} */ (it);
+    const fam = sanitizeFontName(anyIt.fontFamily) || fallbackFamily;
+    const w = normalizeFontWeight(anyIt.fontWeight ?? DEFAULT_FONT_WEIGHT);
+    if (!failedKeys.has(`${fam.toLowerCase()}|${w}`)) return it;
+    return /** @type {import('../ink/inkEngine.js').Item} */ ({
+      ...anyIt,
+      fontFamily: fallbackFamily,
+      fontWeight: DEFAULT_FONT_WEIGHT,
+    });
+  });
+
+  return { ok: false, loaded, failed: [...new Set(failed)], items: normalizedItems };
+}
+
+/**
  * 주석 층 그리기(투명 캔버스 ctx, 범위 물리 크기). 항목 순서대로 그리되 모자이크는 **그 자리를 비운다** —
  * 먼저 그린 획 위에 모자이크를 덮으면 결과에서도 획이 모자이크 아래로 사라지게(Rust: 원본 모자이크 → 이 층 합성).
  * 화면 미리보기(canvasRender)와 같은 source-over·같은 알파(밝은 바탕 multiply 없음).
  * @param {import('../ink/canvasRender.js').Ctx2D} ctx
  * @param {ReadonlyArray<import('../ink/inkEngine.js').Item>} items
- * @param {{ anchor: Point, rect: PhysRect, scale: number }} o
+ * @param {{ anchor: Point, rect: PhysRect, scale: number, defaultFontFamily?: string }} o
  * @returns {{ mosaics: MosaicRect[], painted: number }}
  */
 export function renderAnnotationLayer(ctx, items, o) {
@@ -222,13 +358,18 @@ export function renderAnnotationLayer(ctx, items, o) {
   /** @type {MosaicRect[]} */
   const mosaics = [];
   let painted = 0;
+  const fallback = o.defaultFontFamily || DEFAULT_FONT_FAMILY;
   for (const it of items) {
     if (it.kind === 'mosaic') {
       mosaics.push(mosaicToPhys(it, o.anchor, o.rect, o.scale));
       ctx.clearRect(it.x, it.y, it.w, it.h);
       continue;
     }
-    drawItem(ctx, it, { background: 'frame' });
+    if (it.kind === 'text') {
+      drawBakedTextItem(ctx, it, fallback);
+    } else {
+      drawItem(ctx, it, { background: 'frame' });
+    }
     painted++;
   }
   return { mosaics, painted };
@@ -237,7 +378,7 @@ export function renderAnnotationLayer(ctx, items, o) {
 /**
  * 결과로 보낼 주석: 모자이크 목록 + (획·도형·글자가 있으면) 투명 RGBA 층.
  * @param {ReadonlyArray<import('../ink/inkEngine.js').Item>} items
- * @param {{ anchor: Point, rect: PhysRect, scale: number, createCanvas: (w: number, h: number) => any }} o
+ * @param {{ anchor: Point, rect: PhysRect, scale: number, defaultFontFamily?: string, createCanvas: (w: number, h: number) => any }} o
  * @returns {{ w: number, h: number, rgba: Uint8ClampedArray | null, mosaics: MosaicRect[] }}
  */
 export function exportAnnotation(items, o) {
@@ -255,6 +396,33 @@ export function exportAnnotation(items, o) {
   canvas.width = 0;
   canvas.height = 0;
   return { w, h, rgba, mosaics };
+}
+
+/**
+ * 글꼴 불러오기를 기다린 뒤 주석 층을 내보낸다(R2-TXT-3).
+ * @param {ReadonlyArray<import('../ink/inkEngine.js').Item>} items
+ * @param {{
+ *   anchor: Point,
+ *   rect: PhysRect,
+ *   scale: number,
+ *   defaultFontFamily?: string,
+ *   createCanvas: (w: number, h: number) => any,
+ *   fonts?: { load?: (font: string, text?: string) => Promise<unknown>, ready?: Promise<unknown> } | null,
+ *   timeoutMs?: number,
+ * }} o
+ */
+export async function exportAnnotationAsync(items, o) {
+  const res = await ensureAnnotationFontsLoaded(items, {
+    fonts: o.fonts,
+    timeoutMs: o.timeoutMs,
+    fallbackFamily: o.defaultFontFamily || DEFAULT_FONT_FAMILY,
+  });
+  const out = exportAnnotation(res.items, o);
+  return {
+    ...out,
+    fontFallback: !res.ok,
+    failedFonts: res.failed,
+  };
 }
 
 /**

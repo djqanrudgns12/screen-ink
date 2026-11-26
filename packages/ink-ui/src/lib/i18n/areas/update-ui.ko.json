@@ -1,0 +1,9 @@
+{
+  "updateUi.autoLabel": "자동으로 새 판 확인",
+  "updateUi.autoSub": "하루 한 번 확인해요 · 끄면 통신하지 않아요",
+  "updateUi.checkBtn": "지금 확인",
+  "updateUi.checkingBtn": "확인 중...",
+  "updateUi.sectionTitle": "업데이트",
+  "updateUi.snoozeBtn": "오늘은 그만",
+  "updateUi.versionLabel": "지금 판"
+}

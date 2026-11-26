@@ -3,6 +3,7 @@
   import Icon from '../icons/Icon.svelte';
   import AnnotateGlyph from './AnnotateGlyph.svelte';
   import { t } from '../i18n/index.svelte.js';
+  import { buildFontFamilyStack, compactFontLabel, normalizeFontWeight } from '../models/fontPicker.js';
   import { resolvePaletteHex } from '../models/palette.js';
 
   /**
@@ -17,6 +18,8 @@
    *   panelOpen?: boolean,
    *   activeColor?: string,
    *   activeSize?: number,
+   *   activeFont?: string,
+   *   activeFontWeight?: number,
    *   isMarker?: boolean,
    *   canUndo?: boolean,
    *   canRedo?: boolean,
@@ -40,6 +43,8 @@
     panelOpen = false,
     activeColor = 'R',
     activeSize = 4,
+    activeFont = '',
+    activeFontWeight = 400,
     isMarker = false,
     canUndo = false,
     canRedo = false,
@@ -104,7 +109,12 @@
 
   let previewColor = $derived(resolvePaletteHex(activeColor));
   let previewDotPx = $derived(Math.max(4, Math.min(14, Math.round(3 + Math.sqrt(Math.max(1, activeSize)) * 1.4))));
-  let styleLabel = $derived(tooltips.style ?? t('capture.action.style'));
+  let isTextTool = $derived(activeTool === 'text');
+  let styleLabel = $derived(
+    isTextTool && activeFont
+      ? `${tooltips.style ?? t('capture.action.style')} · ${compactFontLabel(activeFont, activeFontWeight)}`
+      : tooltips.style ?? t('capture.action.style'),
+  );
 
   // 고른 도구 단추(없으면 색·굵기 단추)의 툴바 안 가운데 X를 부모에 알려 패널 자리를 맞춘다(R2-FIX-11).
   $effect(() => {
@@ -194,13 +204,24 @@
       onStyleToggle();
     }}
   >
-    <span
-      class="ink-toolbar-style-dot"
-      class:marker={isMarker}
-      style:width={`${previewDotPx}px`}
-      style:height={`${previewDotPx}px`}
-      style:background={previewColor}
-    ></span>
+    {#if isTextTool && activeFont}
+      <span
+        class="ink-toolbar-style-font"
+        style:font-family={buildFontFamilyStack(activeFont)}
+        style:font-weight={normalizeFontWeight(activeFontWeight)}
+        style:color={previewColor}
+      >
+        Aa
+      </span>
+    {:else}
+      <span
+        class="ink-toolbar-style-dot"
+        class:marker={isMarker}
+        style:width={`${previewDotPx}px`}
+        style:height={`${previewDotPx}px`}
+        style:background={previewColor}
+      ></span>
+    {/if}
   </button>
 
   {#if history.length}
@@ -387,6 +408,13 @@
 
   .ink-toolbar-style-dot.marker {
     opacity: 0.55;
+  }
+
+  .ink-toolbar-style-font {
+    font-size: 12px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.35);
   }
 
   .ink-toolbar-divider {

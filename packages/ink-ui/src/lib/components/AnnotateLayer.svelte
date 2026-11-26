@@ -5,6 +5,7 @@
   import { TEXT_LINE_HEIGHT } from '../ink/inkEngine.js';
   import { bakeItem, createCanvasTextMeasurer, renderActive, renderItems, resolveInkColor } from '../ink/canvasRender.js';
   import { annotTarget, applyToolMods, layerView, mosaicItem } from '../models/captureAnnotate.js';
+  import { DEFAULT_FONT_FAMILY, DEFAULT_FONT_WEIGHT, buildFontFamilyStack, formatCanvasFont, normalizeFontWeight } from '../models/fontPicker.js';
 
   /**
    * 캡처 주석 층(4.9, R-CAP-28) — 판서 엔진(InkEngine)·렌더러(canvasRender)를 그대로 쓰는 얇은 부품.
@@ -22,6 +23,9 @@
    *   platform?: 'windows' | 'macos',
    *   mosaicBlock?: number,
    *   mosaicImage?: CanvasImageSource | null,
+   *   fontFamily?: string,
+   *   fontWeight?: number,
+   *   onFontFallback?: (family: string) => void,
    *   onRightClick?: () => void,
    *   class?: string,
    * }}
@@ -35,6 +39,9 @@
     platform = 'windows',
     mosaicBlock = 10,
     mosaicImage = null,
+    fontFamily = '',
+    fontWeight = DEFAULT_FONT_WEIGHT,
+    onFontFallback = undefined,
     onRightClick = () => {},
     class: className = '',
   } = $props();
@@ -80,6 +87,8 @@
 
   let view = $derived(layerView(anchorCss, frame));
   let layoutKey = $derived(`${frame.x}|${frame.y}|${frame.width}|${frame.height}|${anchorCss.x}|${anchorCss.y}|${scale}`);
+  let activeFont = $derived(fontFamily || DEFAULT_FONT_FAMILY);
+  let activeWeight = $derived(normalizeFontWeight(fontWeight));
 
   /** @param {number} w @param {number} h */
   function createCanvas(w, h) {
@@ -226,6 +235,10 @@
       return;
     }
     engine.pointerDown(s);
+    if (tool === 'text' && engine.editing && !engine.editing.id) {
+      engine.editing = { ...engine.editing, fontFamily: activeFont, fontWeight: activeWeight };
+      engine.notify();
+    }
     schedule();
   }
 
@@ -345,6 +358,29 @@
     schedule();
   });
 
+  $effect(() => {
+    const fam = activeFont;
+    const w = activeWeight;
+    if (engine.editing) {
+      const cur = /** @type {any} */ (engine.editing);
+      if (cur.fontFamily !== fam || cur.fontWeight !== w) {
+        engine.editing = { ...cur, fontFamily: fam, fontWeight: w };
+        engine.revs.active++;
+        engine.notify();
+      }
+    }
+    if (typeof document !== 'undefined' && document.fonts && typeof document.fonts.load === 'function') {
+      Promise.resolve(document.fonts.load(formatCanvasFont(24, fam, w), '가A1'))
+        .then(() => {
+          drawn.doc = -1;
+          schedule();
+        })
+        .catch(() => {
+          onFontFallback?.(fam);
+        });
+    }
+  });
+
   // 글자 입력 상자가 열리면 포커스(커서는 끝으로)
   $effect(() => {
     const ed = editing;
@@ -365,7 +401,9 @@
     if (!editing) return null;
     const p = docToView(editing.x, editing.y, view);
     const fs = editing.fontSize;
-    const m = engine.measureText(editing.text || ' ', editing.fontSize, editing.fontFamily);
+    const fam = editing.fontFamily || activeFont;
+    const weight = normalizeFontWeight(/** @type {any} */ (editing).fontWeight ?? activeWeight);
+    const m = engine.measureText(editing.text || ' ', editing.fontSize, fam);
     return {
       left: p.vx,
       top: p.vy,
@@ -373,7 +411,9 @@
       width: m.w + fs,
       height: Math.max(m.h, editing.fontSize * TEXT_LINE_HEIGHT),
       color: resolveInkColor(editing.color, 'frame'),
-      family: editing.fontFamily,
+      family: fam,
+      familyStack: buildFontFamilyStack(fam),
+      weight,
     };
   });
 
@@ -422,7 +462,8 @@
       style:width={`${textBox.width}px`}
       style:height={`${textBox.height}px`}
       style:font-size={`${textBox.fontSize}px`}
-      style:font-family={`"${textBox.family}", sans-serif`}
+      style:font-family={textBox.familyStack}
+      style:font-weight={textBox.weight}
       style:color={textBox.color}
       oninput={handleTextInput}
       onkeydown={handleTextKey}

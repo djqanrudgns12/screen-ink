@@ -9,8 +9,11 @@ import {
   anchorToCss,
   applyToolMods,
   clampMosaicBlock,
+  collectTextFonts,
   cssToDoc,
+  ensureAnnotationFontsLoaded,
   exportAnnotation,
+  exportAnnotationAsync,
   exportTransform,
   layerView,
   matchCaptureAnnotKey,
@@ -232,4 +235,58 @@ test('확정 뒤 도구 한 글자 키(R·O·A·P·H·M·T·E), 크기([·], ⇧
   // 조합 중·글자 입력 중·수정키는 무시
   assert.equal(matchCaptureAnnotKey(k('KeyR', { ctrlKey: true }), { confirmed: true }), null);
   assert.deepEqual(matchCaptureAnnotKey(k('KeyR'), { confirmed: true, editing: true }), { type: 'text' });
+});
+
+test('글꼴 전달·document.fonts.load() 대기·실패 시 기본 글꼴 폴백 굽기(R2-TXT-3)', async () => {
+  const t1 = withBBox({ id: 't1', kind: 'text', color: 'R', fontFamily: 'Paperlogy', fontWeight: 600, fontSize: 28, x: 4, y: 8, w: 40, h: 36, text: '제목' });
+  const t2 = withBBox({ id: 't2', kind: 'text', color: 'B', fontFamily: 'BrokenFont', fontWeight: 400, fontSize: 20, x: 4, y: 50, w: 40, h: 26, text: '본문' });
+
+  const fontsSpec = collectTextFonts([t1, t2]);
+  assert.equal(fontsSpec.length, 2);
+  assert.equal(fontsSpec[0].fontFamily, 'Paperlogy');
+  assert.equal(fontsSpec[0].fontWeight, 600);
+
+  /** @type {string[]} */
+  const loadedCalls = [];
+  const fakeFonts = {
+    load: async (/** @type {string} */ desc) => {
+      loadedCalls.push(desc);
+      if (desc.includes('BrokenFont')) throw new Error('font load fail');
+      return [];
+    },
+    ready: Promise.resolve(),
+  };
+
+  const made = [];
+  const createCanvas = (/** @type {number} */ w, /** @type {number} */ h) => {
+    const r = recorder();
+    const c = { width: w, height: h, getContext: () => r.ctx, _r: r };
+    made.push(c);
+    return c;
+  };
+
+  const out = await exportAnnotationAsync(/** @type {any} */ ([t1, t2]), {
+    anchor: { x: 0, y: 0 },
+    rect: { x: 0, y: 0, w: 100, h: 100 },
+    scale: 1,
+    createCanvas,
+    fonts: fakeFonts,
+    timeoutMs: 100,
+  });
+
+  assert.equal(loadedCalls.length, 2);
+  assert.equal(out.fontFallback, true, 'BrokenFont 실패 시 폴백 플래그');
+  assert.deepEqual(out.failedFonts, ['BrokenFont']);
+  assert.equal(out.rgba?.length, 100 * 100 * 4);
+  const fillCalls = made[0]._r.log.filter((e) => e[0] === 'fillText');
+  assert.equal(fillCalls.length, 2);
+
+  // 타임아웃 시에도 멈추지 않고 폴백으로 내보냄
+  const slowFonts = {
+    load: () => new Promise(() => {}),
+  };
+  const slowOut = await ensureAnnotationFontsLoaded(/** @type {any} */ ([t1]), { fonts: slowFonts, timeoutMs: 15 });
+  assert.equal(slowOut.ok, false);
+  assert.deepEqual(slowOut.failed, ['Paperlogy']);
+  assert.equal(/** @type {any} */ (slowOut.items[0]).fontFamily, 'Freesentation');
 });

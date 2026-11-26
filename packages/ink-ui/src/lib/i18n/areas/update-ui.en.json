@@ -1,0 +1,9 @@
+{
+  "updateUi.autoLabel": "Check for updates automatically",
+  "updateUi.autoSub": "Checks once a day · No network use when off",
+  "updateUi.checkBtn": "Check now",
+  "updateUi.checkingBtn": "Checking...",
+  "updateUi.sectionTitle": "Updates",
+  "updateUi.snoozeBtn": "Not today",
+  "updateUi.versionLabel": "Current version"
+}

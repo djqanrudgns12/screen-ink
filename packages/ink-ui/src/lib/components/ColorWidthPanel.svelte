@@ -1,6 +1,17 @@
 <script>
   import Icon from '../icons/Icon.svelte';
+  import FontPicker from './FontPicker.svelte';
   import { t } from '../i18n/index.svelte.js';
+  import {
+    DEFAULT_FONT_FAMILY,
+    DEFAULT_FONT_WEIGHT,
+    buildFontFamilyStack,
+    compactFontLabel,
+    normalizeFontWeight,
+    parseFontSetting,
+    pushRecentFont,
+    serializeFontSetting,
+  } from '../models/fontPicker.js';
   import {
     BASIC_COLORS,
     EXTENDED_COLORS,
@@ -24,12 +35,17 @@
    * - 기본 8색(R·Y·G·O·B·L·K·W) + 넓힌 8색 + 내 색(색상 고르기 + 최근 5) + 스포이트
    * - 도구별 범위 로그 슬라이더 + 가늘게·보통·굵게 자석(±8%) + 손잡이 숫자 말풍선 + 상시 숫자
    * - 실제 배율·확대 반영 미리보기(칸을 넘으면 줄이고 "실제의 n%")
-   * - 글자 도구에는 다음 갈래(R2-TXT)용 글꼴 단추 자리를 비활성으로 남긴다
+   * - 글자 도구에는 Tidy식 글꼴 단추 + 바로 위에 붙는 팝오버(FontPicker)를 띄운다(R2-TXT-1·2·6)
    * @type {{
    *   toolId: string | null,
    *   color?: string,
    *   size?: number,
    *   recentColors?: ReadonlyArray<string>,
+   *   font?: string,
+   *   fontWeight?: number,
+   *   recentFonts?: ReadonlyArray<string>,
+   *   systemFonts?: ReadonlyArray<string>,
+   *   client?: import('@screen-ink/client').InkClient | null,
    *   eyedropperActive?: boolean,
    *   showEyedropper?: boolean,
    *   displayScale?: number,
@@ -40,6 +56,9 @@
    *   arrowX?: number,
    *   onColor?: (codeOrHex: string, opts?: { recordRecent?: boolean }) => void,
    *   onSize?: (val: number) => void,
+   *   onFont?: (family: string, weight: number) => void,
+   *   onFontPreview?: (preview: { family: string, weight: number } | null) => void,
+   *   onFontOpenChange?: (open: boolean) => void,
    *   onEyedropper?: () => void,
    *   onHover?: (over: boolean) => void,
    *   boxWidth?: number,
@@ -51,6 +70,11 @@
     color = 'R',
     size = 4,
     recentColors = [],
+    font = undefined,
+    fontWeight = undefined,
+    recentFonts = undefined,
+    systemFonts = undefined,
+    client = null,
     eyedropperActive = false,
     showEyedropper = true,
     displayScale = 1,
@@ -61,6 +85,9 @@
     arrowX = 140,
     onColor = () => {},
     onSize = () => {},
+    onFont = undefined,
+    onFontPreview = undefined,
+    onFontOpenChange = undefined,
     onEyedropper = () => {},
     onHover = () => {},
     boxWidth = $bindable(0),
@@ -71,15 +98,34 @@
   let trackEl = $state(null);
   /** @type {HTMLInputElement | null} */
   let colorInputEl = $state(null);
+  /** @type {HTMLButtonElement | null} */
+  let fontBtnEl = $state(null);
   let dragging = $state(false);
   let trackHover = $state(false);
   let trackFocus = $state(false);
+  let fontOpen = $state(false);
+  let localFont = $state(DEFAULT_FONT_FAMILY);
+  let localWeight = $state(DEFAULT_FONT_WEIGHT);
+  /** @type {string[]} */
+  let localRecentFonts = $state([]);
+  /** @type {string[]} */
+  let fetchedSystemFonts = $state([]);
+  let systemFontsFetched = false;
+  /** @type {{ family: string, weight: number } | null} */
+  let fontPreview = $state(null);
   let wheelAcc = 0;
 
   let spec = $derived(getToolSizeSpec(toolId));
   let showColor = $derived(toolId !== 'mosaic' && toolId !== 'eraser');
   let isMarker = $derived(toolId === 'marker');
   let isText = $derived(toolId === 'text');
+  let activeFont = $derived(font || localFont);
+  let activeFontWeight = $derived(normalizeFontWeight(fontWeight ?? localWeight));
+  let activeRecentFonts = $derived(recentFonts ?? localRecentFonts);
+  let activeSystemFonts = $derived(systemFonts ?? fetchedSystemFonts);
+  let previewFontFamily = $derived(fontPreview?.family ?? activeFont);
+  let previewFontWeight = $derived(fontPreview?.weight ?? activeFontWeight);
+  let fontLabelText = $derived(compactFontLabel(activeFont, activeFontWeight));
   let sliderPos = $derived(valueToSlider(size, spec));
   let sliderPct = $derived(Math.round(sliderPos * 1000) / 10);
   let activeHex = $derived(resolvePaletteHex(color));
@@ -87,6 +133,74 @@
   let preview = $derived(computePreviewMetrics({ value: size, displayScale, zoomScale, maxPx: 40 }));
   let showThumbBubble = $derived(dragging || trackHover || trackFocus);
   let sizeLabelText = $derived(formatSizeValue(size, spec));
+
+  $effect(() => {
+    if (!isText && fontOpen) {
+      fontOpen = false;
+      fontPreview = null;
+      onFontOpenChange?.(false);
+    }
+  });
+
+  // 글자 도구일 때 client가 있으면 설정 annotate.font + 이 컴퓨터 글꼴(systemFonts) 1회 로드(이름은 로그에 남기지 않음)
+  $effect(() => {
+    if (!isText || !client) return;
+    let alive = true;
+    if (font === undefined && typeof client.getState === 'function') {
+      Promise.resolve(client.getState())
+        .then((s) => {
+          if (!alive) return;
+          const parsed = parseFontSetting(s?.settings?.['annotate.font']);
+          localFont = parsed.family;
+          localWeight = parsed.weight;
+          localRecentFonts = parsed.recent;
+        })
+        .catch(() => {});
+    }
+    if (systemFonts === undefined && !systemFontsFetched && typeof client.systemFonts === 'function') {
+      systemFontsFetched = true;
+      Promise.resolve(client.systemFonts())
+        .then((list) => {
+          if (alive && Array.isArray(list)) fetchedSystemFonts = list;
+        })
+        .catch(() => {});
+    }
+    return () => {
+      alive = false;
+    };
+  });
+
+  /** @param {boolean} next */
+  function setFontOpen(next) {
+    if (fontOpen === next) return;
+    fontOpen = next;
+    if (!next) {
+      fontPreview = null;
+      onFontPreview?.(null);
+    }
+    onFontOpenChange?.(next);
+  }
+
+  /** @param {string} family @param {number} weight */
+  function handleFontSelect(family, weight) {
+    const normW = normalizeFontWeight(weight);
+    localFont = family;
+    localWeight = normW;
+    localRecentFonts = pushRecentFont(activeRecentFonts, family, normW);
+    if (onFont) {
+      onFont(family, normW);
+    } else if (typeof client?.updateSetting === 'function') {
+      const serialized = serializeFontSetting({ family, weight: normW, recent: localRecentFonts });
+      Promise.resolve(client.updateSetting('annotate.font', serialized)).catch(() => {});
+    }
+    setFontOpen(false);
+  }
+
+  /** @param {{ family: string, weight: number } | null} pv */
+  function handleFontPreview(pv) {
+    fontPreview = pv;
+    onFontPreview?.(pv);
+  }
 
   /** @param {Event} e */
   function stop(e) {
@@ -302,15 +416,55 @@
   {#if isText}
     <div class="ink-cw-font-row">
       <button
+        bind:this={fontBtnEl}
         type="button"
         class="ink-cw-font-btn"
-        disabled
-        aria-label={t('capture.panel.fontSoon')}
-        title={t('capture.panel.fontSoon')}
+        class:open={fontOpen}
+        data-action="font-picker"
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-controls="ink-font-picker-listbox"
+        aria-expanded={fontOpen}
+        aria-label={t('font.trigger.label')}
+        title={fontLabelText}
+        onmousedown={(e) => e.preventDefault()}
+        onclick={(e) => {
+          e.stopPropagation();
+          setFontOpen(!fontOpen);
+        }}
       >
-        <Icon name="font" size={16} accent={false} />
-        <span>{t('capture.panel.fontSoon')}</span>
+        <Icon name="font" size={15} accent={fontOpen} />
+        <span
+          class="ink-cw-font-name"
+          style:font-family={buildFontFamilyStack(activeFont)}
+          style:font-weight={activeFontWeight}
+        >
+          {fontLabelText}
+        </span>
+        <svg
+          class="ink-cw-font-caret"
+          class:open={fontOpen}
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
       </button>
+
+      <FontPicker
+        open={fontOpen}
+        value={activeFont}
+        weight={activeFontWeight}
+        recentFonts={activeRecentFonts}
+        systemFonts={activeSystemFonts}
+        anchorEl={fontBtnEl}
+        onSelect={handleFontSelect}
+        onPreview={handleFontPreview}
+        onClose={() => setFontOpen(false)}
+      />
     </div>
   {/if}
 
@@ -387,6 +541,8 @@
             <span
               class="ink-cw-preview-text"
               style:font-size={`${Math.max(10, preview.drawPx)}px`}
+              style:font-family={buildFontFamilyStack(previewFontFamily)}
+              style:font-weight={previewFontWeight}
               style:color={previewColor}
             >
               {t('capture.preview.sample')}
@@ -692,23 +848,64 @@
   }
 
   .ink-cw-font-row {
+    position: relative;
     display: flex;
   }
 
   .ink-cw-font-btn {
     width: 100%;
-    height: 28px;
-    padding: 0 10px;
-    border: 1px dashed var(--cw-border);
+    height: 30px;
+    padding: 0 9px;
+    border: 1px solid var(--cw-border);
     border-radius: 8px;
     background: var(--cw-soft);
-    color: var(--cw-sub);
-    font-size: 12px;
+    color: var(--cw-fg);
+    font-size: 12.5px;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    opacity: 0.65;
-    cursor: not-allowed;
+    gap: 7px;
+    cursor: pointer;
+    transition:
+      background-color 110ms ease,
+      border-color 110ms ease;
+  }
+
+  .ink-cw-font-btn:hover {
+    background: rgba(255, 255, 255, 0.13);
+  }
+
+  :global([data-theme='light']) .ink-cw-font-btn:hover {
+    background: rgba(0, 0, 0, 0.09);
+  }
+
+  .ink-cw-font-btn.open {
+    border-color: var(--ink-accent);
+    box-shadow: inset 0 0 0 1px var(--ink-accent);
+  }
+
+  .ink-cw-font-btn:focus-visible {
+    outline: 2px solid var(--ink-accent);
+    outline-offset: 1px;
+  }
+
+  .ink-cw-font-name {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ink-cw-font-caret {
+    flex: none;
+    color: var(--cw-sub);
+    transition: transform 140ms ease;
+  }
+
+  .ink-cw-font-caret.open {
+    transform: rotate(180deg);
+    color: var(--ink-accent);
   }
 
   .ink-cw-size-body {
