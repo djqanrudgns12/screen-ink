@@ -119,3 +119,152 @@ test('키캡은 Windows에서 Shift, 맥에서 기호', () => {
   assert.deepEqual(keycaps('Alt+Shift+D'), ['Alt', 'Shift', 'D']);
   assert.deepEqual(keycaps('Option+Shift+1', 'macos'), ['⌥', '⇧', '1']);
 });
+
+/** 항목 n개 InkDocument(모양만). */
+const inkDoc = (n) => ({ schemaVersion: 1, pages: [{ id: 'page-1', items: Array.from({ length: n }, (_, i) => ({ id: `it-${i}`, kind: 'stroke' })) }] });
+
+test('판서 진입: 세션이 상태보다 먼저 오고 모드 섬은 판서 · 펜 4px', async () => {
+  const c = createFakeClient({ frameUrl: 'frame.png' });
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+  await c.run('draw');
+  const drawAt = seen.findIndex((e) => e.type === 'draw');
+  const stateAt = seen.findIndex((e) => e.type === 'state');
+  assert.ok(drawAt >= 0 && drawAt < stateAt, '세션 먼저, 상태 나중');
+  const ds = seen[drawAt].draw;
+  assert.equal(ds.board, false);
+  assert.equal(ds.monitor.frameUrl, 'frame.png');
+  assert.deepEqual(ds.initialView, { s: 1, tx: 0, ty: 0 });
+  assert.equal(ds.keptCompatible, 'none');
+  const s = await c.getState();
+  assert.deepEqual([s.mode.mode, s.mode.session, s.mode.board, s.mode.monitorId], ['draw', ds.session, false, 0]);
+  const isl = seen.at(-1).island;
+  assert.deepEqual([isl.kind, isl.variant, isl.text, isl.penColor, isl.penWidth], ['mode', 'draw', '판서 · 펜', 'R', '4px']);
+  await c.drawReady(ds.session, 12);
+  await c.drawReady(ds.session + 1, 12);
+  assert.equal(c.drawLog.filter((l) => l.type === 'ready').length, 1);
+});
+
+test('칠판은 배경 주소 없이 흰 바탕과 쪽 표시', async () => {
+  const c = createFakeClient({ frameUrl: 'frame.png' });
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+  await c.run('board');
+  const ds = seen.find((e) => e.type === 'draw').draw;
+  assert.equal(ds.board, true);
+  assert.equal(ds.monitor.frameUrl, undefined);
+  assert.deepEqual([seen.at(-1).island.text, seen.at(-1).island.value], ['칠판 · 흰색', '1 / 1']);
+});
+
+test('끝내기: 항목이 있으면 보관 + 섬, 다음 판서에서 같은 모니터로 복원', async () => {
+  const c = createFakeClient();
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+  await c.run('draw');
+  let s = await c.getState();
+  await c.drawFinish({ session: s.mode.session, keep: true, kept: { document: inkDoc(2) } });
+  assert.equal((await c.getState()).mode.mode, 'idle');
+  assert.equal(seen.at(-1).island.text, '판서를 보관했어요 · Alt+Shift+1');
+  assert.equal(c.keptInk.document.pages[0].items.length, 2);
+
+  await c.run('draw');
+  const ds = seen.filter((e) => e.type === 'draw').at(-1).draw;
+  assert.deepEqual([ds.hasKept, ds.keptCompatible], [true, 'same']);
+  assert.equal(seen.at(-1).island.detail, 'Ctrl+Shift+R 이전 판서');
+  const before = seen.length;
+  const r = await c.drawRestore(ds.session);
+  assert.equal(r.status, 'same');
+  assert.equal(r.kept.document.pages[0].items.length, 2);
+  assert.equal(seen.length, before, '불러왔어요 문구는 엔진 몫(restoreKept → drawIsland)');
+  // 빈 판서로 끝내면 덮지 않고, 보관 섬도 없다
+  await c.drawFinish({ session: ds.session, keep: true, kept: { document: inkDoc(0) } });
+  assert.equal(seen.at(-1).island.kind, 'end');
+  assert.equal(c.keptInk.document.pages[0].items.length, 2);
+  // 설정을 끄면 보관하지 않고 있던 것도 지운다
+  await c.updateSetting('draw.keep', false);
+  await c.run('draw');
+  s = await c.getState();
+  await c.drawFinish({ session: s.mode.session, keep: true, kept: { document: inkDoc(3) } });
+  assert.equal(c.keptInk, null);
+});
+
+test('먼저 끝난 세션(잠금·다른 모드 키)의 늦은 끝은 한 번만 조용히 보관', async () => {
+  const c = createFakeClient();
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+  await c.run('draw');
+  const session = (await c.getState()).mode.session;
+  c.simulateLock();
+  assert.equal((await c.getState()).mode.mode, 'idle');
+  await c.drawFinish({ session, keep: true, kept: { document: inkDoc(1) } });
+  assert.equal(c.keptInk.document.pages[0].items.length, 1);
+  assert.equal(seen.at(-1).island.kind, 'end', '잠금이면 보관 섬 없음');
+  await c.drawFinish({ session, keep: true, kept: { document: inkDoc(5) } });
+  assert.equal(c.keptInk.document.pages[0].items.length, 1, '두 번째 끝은 무시');
+  // 판서 중 캡처 = 판서를 끝내고 캡처
+  await c.run('draw');
+  const drawing = (await c.getState()).mode.session;
+  await c.run('capture.region');
+  assert.equal((await c.getState()).mode.mode, 'capture');
+  await c.drawFinish({ session: drawing, keep: true, kept: { document: inkDoc(4) } });
+  assert.equal(c.keptInk.document.pages[0].items.length, 4);
+});
+
+test('직전 판서 열기: 열자마자 복원, 판서 중이면 같은 세션을 복원 표시로', async () => {
+  const c = createFakeClient();
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+  await c.run('draw.restore');
+  const first = seen.filter((e) => e.type === 'draw').at(-1).draw;
+  assert.equal(first.restoreOnOpen, true);
+  assert.equal((await c.drawRestore(first.session)).status, 'none');
+  assert.equal(seen.at(-1).island.text, '불러올 판서가 없어요');
+  await c.run('draw.restore');
+  const again = seen.filter((e) => e.type === 'draw').at(-1).draw;
+  assert.deepEqual([again.session, again.restoreOnOpen], [first.session, true]);
+});
+
+test('내보내기는 늘 모니터 전체 원본 바이트 — 길이·크기를 검사하고 복사·저장 섬', async () => {
+  const c = createFakeClient();
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+  const full = 1920 * 1080 * 4;
+  assert.equal((await c.drawExport('copy', new Uint8Array(full), { w: 1920, h: 1080 })).ok, false, '판서 중이 아니면 거절');
+  await c.run('draw');
+  const session = (await c.getState()).mode.session;
+  assert.deepEqual(await c.drawExport('copy', new Uint8ClampedArray(full), { w: 1920, h: 1080, session }), { ok: true });
+  assert.deepEqual([seen.at(-1).island.text, seen.at(-1).island.value], ['복사했어요', '1920×1080']);
+  const saved = await c.drawExport('save', new ArrayBuffer(full), { w: 1920, h: 1080 });
+  assert.equal(saved.ok, true);
+  assert.match(saved.name, /\.png$/);
+  assert.equal((await c.drawExport('save', new Uint8Array(full - 1), { w: 1920, h: 1080 })).ok, false, '길이가 틀리면 거절');
+  assert.deepEqual(await c.drawExport('copy', new Uint8Array(32), { w: 4, h: 2 }), { ok: false, error: 'not monitor size' }, '확대 중 보이는 부분만은 거절');
+  assert.equal((await c.getState()).mode.mode, 'draw', '내보내기는 판서를 끝내지 않는다');
+});
+
+test('판서 섬 조각과 안내, 펜 지연 기록', async () => {
+  const c = createFakeClient();
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+  await c.drawIsland({ zoom: 2 });
+  assert.equal(seen.length, 0, '판서 중이 아니면 무시');
+  await c.run('draw');
+  await c.drawIsland({ color: 'G', zoom: 1.75, notice: '수평으로 맞췄어요' });
+  const [mode, notice] = seen.slice(-2).map((e) => e.island);
+  assert.deepEqual([mode.kind, mode.penColor, mode.value], ['mode', 'G', '×1.75']);
+  assert.deepEqual([notice.kind, notice.text], ['info', '수평으로 맞췄어요']);
+  await c.drawIsland({ tool: 'eraser', zoom: 2 });
+  assert.deepEqual([seen.at(-1).island.text, seen.at(-1).island.penColor, seen.at(-1).island.value], ['판서 · 지우개', 'G', '×2.0']);
+  await c.drawPenMetrics({ n: 120, p50: 7.5, p95: 13.25, max: 40 });
+  assert.equal(c.drawLog.at(-1).line, 'pen latency n=120 p50=7.5 p95=13.3 max=40.0 ms');
+
+  // 멈춤 도형 제안 → 섬 [바꾸기] → 오버레이 엔진 명령
+  await c.drawIsland({ suggestion: '원으로 바꿀까요? · Enter' });
+  assert.deepEqual([seen.at(-1).island.text, seen.at(-1).island.button.action], ['원으로 바꿀까요? · Enter', 'draw.acceptSuggestion']);
+  await c.run('draw.acceptSuggestion');
+  const cmd = seen.at(-1);
+  assert.deepEqual([cmd.type, cmd.command, cmd.session], ['drawCommand', 'acceptSuggestion', (await c.getState()).mode.session]);
+  await c.drawIsland({ notice: '판서를 모두 지웠어요', noticeAction: 'undo' });
+  assert.equal(seen.at(-1).island.button.action, 'draw.undo');
+  assert.equal(seen.at(-2).island.button, undefined, '제안 없이 오면 걷힌다');
+});
