@@ -33,6 +33,14 @@ if ! security find-identity -v -p codesigning | grep -qF "\"$ID\""; then
 fi
 export APPLE_SIGNING_IDENTITY="$ID"
 
+# cargo가 PATH에 없는 셸(앱 안 터미널 등)에서도 되게: rustup(Homebrew)·~/.cargo/bin에서 찾는다
+if ! command -v cargo >/dev/null 2>&1; then
+  for d in /opt/homebrew/opt/rustup/bin "$HOME/.cargo/bin" /usr/local/opt/rustup/bin; do
+    if [ -x "$d/cargo" ]; then PATH="$d:$PATH"; export PATH; break; fi
+  done
+fi
+command -v cargo >/dev/null 2>&1 || { echo "cargo를 찾지 못했어요(rustup 설치 확인: brew install rustup)"; exit 2; }
+
 npm run app:build -- --bundles app,dmg
 
 APP=$(ls -d target/release/bundle/macos/*.app 2>/dev/null | head -1)
