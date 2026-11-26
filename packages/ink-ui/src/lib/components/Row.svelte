@@ -1,4 +1,7 @@
 <script>
+  import { locale, t } from '../i18n/index.svelte.js';
+  import { formatComboReadable } from '../models/shortcutDisplay.js';
+
   /**
    * Group 안 한 줄(라벨 · 보조 · 컨트롤) + 단축키 입력 중/오류 상태 지원.
    * @type {{
@@ -16,6 +19,7 @@
    *   warning?: string,
    *   note?: string,
    *   suggestions?: string[],
+   *   platform?: 'windows' | 'macos',
    *   onSelectSuggestion?: (combo: string) => void,
    *   onclick?: () => void,
    *   children?: import('svelte').Snippet,
@@ -37,11 +41,14 @@
     warning = '',
     note = '',
     suggestions = [],
+    platform = undefined,
     onSelectSuggestion = undefined,
     onclick = undefined,
     children = undefined,
     class: className = '',
   } = $props();
+
+  let resolvedPlatform = $derived(platform ?? (locale.os === 'mac' ? 'macos' : 'windows'));
 
   function handleKeydown(e) {
     if (!clickable || !onclick) return;
@@ -68,7 +75,7 @@
       <span class="ink-row-label" data-danger={danger ? 'true' : undefined}>
         {label}
         {#if later}
-          <span class="ink-later-tag">후속</span>
+          <span class="ink-later-tag">{t('common.later')}</span>
         {/if}
       </span>
       {#if sub}
@@ -90,7 +97,7 @@
       <span class="ink-row-label" data-danger={danger ? 'true' : undefined}>
         {label}
         {#if later}
-          <span class="ink-later-tag">후속</span>
+          <span class="ink-later-tag">{t('common.later')}</span>
         {/if}
       </span>
       {#if sub}
@@ -120,14 +127,14 @@
       {/if}
       {#if suggestions.length > 0}
         <div class="ink-row-suggestions">
-          <span class="ink-suggest-label">추천</span>
+          <span class="ink-suggest-label">{t('common.recommended')}</span>
           {#each suggestions as combo (combo)}
             <button
               type="button"
               class="ink-suggest-chip ink-mono ink-focus"
               onclick={() => onSelectSuggestion?.(combo)}
             >
-              {combo.replaceAll('+', ' ')}
+              {formatComboReadable(combo, resolvedPlatform)}
             </button>
           {/each}
         </div>
@@ -167,6 +174,23 @@
 
   .ink-row-clickable {
     cursor: pointer;
+  }
+
+  /* R2-FIX-6: Group overflow:hidden에 초점 테두리가 잘리지 않도록 안쪽(inset) 링으로 그린다 */
+  .ink-row-clickable.ink-focus:focus-visible {
+    outline: none;
+    outline-offset: 0;
+    box-shadow: inset 0 0 0 2px var(--ink-accent);
+  }
+
+  .ink-row-wrap:first-child .ink-row-clickable {
+    border-top-left-radius: var(--ink-r-group);
+    border-top-right-radius: var(--ink-r-group);
+  }
+
+  .ink-row-wrap:last-child .ink-row-clickable {
+    border-bottom-left-radius: var(--ink-r-group);
+    border-bottom-right-radius: var(--ink-r-group);
   }
 
   .ink-row-clickable:hover {

@@ -33,13 +33,13 @@ test('formats conflict banner for F-key sets, PowerToys single/multiple combos, 
       { count: 4, app: 'Snipaste', combos: ['F1', 'F3', 'Shift+F1', 'Ctrl+F1'] },
       'windows',
     ),
-    { lead: 'Snipaste', message: '가 F1·F3 키 4개를 먼저 쓰고 있어요' },
+    { lead: 'Snipaste', message: '에서 F1·F3 등 4개를 쓰고 있어요' },
   );
 
   // Single F-key
   assert.deepEqual(
-    formatConflictBanner({ count: 1, app: 'Snipaste', combos: ['F1'] }, 'windows'),
-    { lead: 'Snipaste', message: '가 F1 키를 먼저 쓰고 있어요' },
+    formatConflictBanner({ count: 1, app: 'Snipaste', combos: ['F1'] }, 'windows', 'en'),
+    { lead: 'Snipaste', message: ' is using F1' },
   );
 
   // PowerToys Always On Top (Alt+Shift+D) on Windows
@@ -48,7 +48,7 @@ test('formats conflict banner for F-key sets, PowerToys single/multiple combos, 
       { count: 1, app: 'PowerToys 항상 위', combos: ['Alt+Shift+D'] },
       'windows',
     ),
-    { lead: 'PowerToys 항상 위', message: '가 Alt Shift D 키를 먼저 쓰고 있어요' },
+    { lead: 'PowerToys 항상 위', message: '에서 Alt Shift D 키를 쓰고 있어요' },
   );
 
   // Non-F-key multiple combos (up to 2 + 외 n개) on Windows and macOS
@@ -57,14 +57,14 @@ test('formats conflict banner for F-key sets, PowerToys single/multiple combos, 
       { count: 3, app: '카카오톡', combos: ['Alt+Shift+D', 'Alt+1', 'Alt+2'] },
       'windows',
     ),
-    { lead: '카카오톡', message: '이 Alt Shift D · Alt 1 외 1개를 먼저 쓰고 있어요' },
+    { lead: '카카오톡', message: '에서 Alt Shift D · Alt 1 외 1개를 쓰고 있어요' },
   );
   assert.deepEqual(
     formatConflictBanner(
       { count: 3, app: '카카오톡', combos: ['Option+Shift+D', 'Option+1', 'Option+2'] },
       'macos',
     ),
-    { lead: '카카오톡', message: '이 ⌥⇧D · ⌥1 외 1개를 먼저 쓰고 있어요' },
+    { lead: '카카오톡', message: '에서 ⌥⇧D · ⌥1 외 1개를 쓰고 있어요' },
   );
 
   // Two non-F-key combos
@@ -73,13 +73,13 @@ test('formats conflict banner for F-key sets, PowerToys single/multiple combos, 
       { count: 2, app: 'PowerToys 항상 위', combos: ['Alt+Shift+D', 'F1'] },
       'windows',
     ),
-    { lead: 'PowerToys 항상 위', message: '가 Alt Shift D · F1 키를 먼저 쓰고 있어요' },
+    { lead: 'PowerToys 항상 위', message: '에서 Alt Shift D · F1 키를 쓰고 있어요' },
   );
 
   // Unknown/multiple apps
   assert.deepEqual(
-    formatConflictBanner({ count: 2, combos: ['F1', 'Alt+Shift+D'] }, 'windows'),
-    { lead: '', message: '단축키 2개가 겹치고 있어요' },
+    formatConflictBanner({ count: 2, combos: ['F1', 'Alt+Shift+D'] }, 'windows', 'en'),
+    { lead: '', message: '2 shortcuts conflict' },
   );
 });
 
@@ -97,16 +97,21 @@ test('computes calm row display for warn vs conflict vs recording rows', () => {
     suggestions: [],
   });
 
-  // Recording warn row: recording prompt in sub, reason in note (--ink-sub)
+  // Recording warn row: recording prompt in sub (includes ⌫ clear hint), reason in note
   assert.deepEqual(getShortcutRowDisplay(warnRow, { isRecording: true, bannerApp: 'Snipaste' }), {
     dotStatus: '',
-    sub: '키를 누르세요 · Esc 취소',
+    sub: '새 키를 눌러요 · Esc 취소 · ⌫ 비우기',
     hoverSub: '',
     note: '도움말(거의 모든 앱)',
     error: '',
     warning: '',
     suggestions: [],
   });
+
+  assert.equal(
+    getShortcutRowDisplay(warnRow, { isRecording: true, lang: 'en' }).sub,
+    'Press a new key · Esc cancel · ⌫ clear',
+  );
 
   // Conflict row covered by top banner: dot only, no duplicate bottom text
   const snipConflict = { status: 'conflict', owner: 'Snipaste', reason: 'Snipaste가 먼저 쓰고 있어요' };
@@ -139,7 +144,7 @@ test('computes calm row display for warn vs conflict vs recording rows', () => {
     }),
     {
       dotStatus: '',
-      sub: '키를 누르세요 · Esc 취소',
+      sub: '새 키를 눌러요 · Esc 취소 · ⌫ 비우기',
       hoverSub: '',
       note: '',
       error: '이미 쓰고 있어요',

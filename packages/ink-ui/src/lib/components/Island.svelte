@@ -1,6 +1,7 @@
 <script>
   import { keycaps } from '@screen-ink/client';
   import Icon from '../icons/Icon.svelte';
+  import { locale, t } from '../i18n/index.svelte.js';
   import {
     DRAW_PALETTE_EXPAND_MS,
     formatBoardIslandMeta,
@@ -167,7 +168,7 @@
   let mutedSurface = $derived(variant === 'off' || variant === 'security');
   let activePenColor = $derived(penColor ?? (variant === 'draw' ? 'R' : undefined));
   let hasPenPalette = $derived((variant === 'draw' || variant === 'board') && Boolean(activePenColor));
-  let paletteSwatches = $derived(getDrawPaletteSwatches(variant === 'board'));
+  let paletteSwatches = $derived(getDrawPaletteSwatches(variant === 'board', locale.lang));
   let showExpandedPalette = $derived(hasPenPalette && (paletteExpanded || paletteHovered || paletteTransient));
   let boardMeta = $derived(variant === 'board' ? formatBoardIslandMeta({ text, detail, value }) : null);
   let hasSecondLine = $derived(showHints && Array.isArray(hints) && hints.length > 0);
@@ -252,7 +253,7 @@
         <span
           class="ink-island-palette"
           role="group"
-          aria-label="펜 색"
+          aria-label={t('islandUi.draw.penColorAria')}
           onmouseenter={handlePaletteEnter}
           onmouseleave={handlePaletteLeave}
         >
@@ -309,7 +310,7 @@
           <span
             class="ink-island-palette"
             role="group"
-            aria-label="칠판 펜 색"
+            aria-label={t('islandUi.board.penColorAria')}
             onmouseenter={handlePaletteEnter}
             onmouseleave={handlePaletteLeave}
           >
@@ -403,7 +404,7 @@
 
       {#if variant === 'record' && micOff}
         <span class="ink-island-icon" data-tone="sub">
-          <Icon name="mic-off" size={16} label="마이크 꺼짐" />
+          <Icon name="mic-off" size={16} label={t('islandUi.record.micOff')} />
         </span>
       {/if}
 
@@ -543,10 +544,12 @@
   }
 
   .ink-island-row {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 10px;
     min-height: 38px;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .ink-island[data-twoline='true'] .ink-island-row {
@@ -586,27 +589,38 @@
   }
 
   .ink-island-result-body {
-    display: inline-flex;
+    flex: 1 1 auto;
+    display: flex;
     flex-direction: column;
     gap: 2px;
     min-width: 0;
+    overflow: hidden;
   }
 
   .ink-island-result-title {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 6px;
+    min-width: 0;
     font-size: 13px;
     color: var(--ink-island-text);
   }
 
   .ink-island-result-title strong {
     font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .ink-island-result-meta {
     font-size: 11px;
     color: var(--ink-island-sub);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .ink-island-path {

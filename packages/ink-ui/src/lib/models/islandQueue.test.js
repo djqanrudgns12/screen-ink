@@ -192,9 +192,22 @@ test('updates active mode island in-place from CaptureView without incrementing 
     path: ['화면', '창', '표', '2행'],
     level: 3,
     value: '718×40',
-    tags: ['자석 끔', '커서 포함'],
+    tags: ['맞춤 끔', '커서 포함'],
     help: true,
   });
+
+  const patchEn = buildCaptureIslandPatch({
+    session: 1,
+    phase: 'hover',
+    rect: { x: 100, y: 200, w: 718, h: 40 },
+    path: ['Screen', 'Window'],
+    level: 1,
+    guides: [],
+    magnet: false,
+    cursorIncluded: true,
+    help: false,
+  }, 'en');
+  assert.deepEqual(patchEn?.tags, ['Snap off', 'Cursor on']);
 
   s = applyCaptureView(s, {
     session: 1,
@@ -210,7 +223,7 @@ test('updates active mode island in-place from CaptureView without incrementing 
   assert.equal(s.seq, seqBefore);
   assert.equal(s.modeUses.region, usesBefore);
   assert.equal(s.current.value, '718×40');
-  assert.deepEqual(s.current.tags, ['자석 끔', '커서 포함']);
+  assert.deepEqual(s.current.tags, ['맞춤 끔', '커서 포함']);
   assert.equal(s.current.level, 3);
   assert.equal(shouldShowHintLine(s), true);
 

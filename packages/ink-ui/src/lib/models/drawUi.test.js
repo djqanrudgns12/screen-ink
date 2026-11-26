@@ -95,6 +95,11 @@ test('칠판 섬 문구는 "칠판 · 흰색 · 1 / 1" 모양을 중복 구분�
   });
   assert.equal(formatBoardIslandMeta({ text: '칠판 · 흰색', value: '1 / 1' }).combined, '칠판 · 흰색 · 1 / 1');
   assert.equal(formatBoardIslandMeta({ text: '칠판', detail: '흰색', value: '1 / 3' }).combined, '칠판 · 흰색 · 1 / 3');
+  assert.deepEqual(formatBoardIslandText({ background: 'white', pageIndex: 0, pageCount: 1, lang: 'en' }), {
+    text: 'Board · White',
+    value: '1 / 1',
+    combined: 'Board · White · 1 / 1',
+  });
 });
 
 test('펜 색 고리 커서는 도구·색·화면 굵기·검은 칠판 치환을 반영한다', () => {

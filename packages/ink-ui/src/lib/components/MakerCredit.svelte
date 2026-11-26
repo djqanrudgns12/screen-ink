@@ -1,4 +1,6 @@
 <script>
+  import { t } from '../i18n/index.svelte.js';
+
   /**
    * 개발자 표기(docs/brand/README.md 2장) — Tidy Task·롤린썬더와 같은 찰떡쌤 마스코트 + 이름.
    * `copyright` = `© 2026 [마스코트] 찰떡쌤. MIT License.` / `maker` = `[마스코트] Made by. 찰떡쌤`
@@ -25,9 +27,9 @@
 
 <p class="ink-credit {className}" data-variant={variant}>
   {#if variant === 'maker'}
-    {@render mascot()}<span>Made by. 찰떡쌤</span>
+    {@render mascot()}<span>{t('common.credit.madeBy')}</span>
   {:else}
-    <span>© 2026</span>{@render mascot()}<span>찰떡쌤. MIT License.</span>
+    <span>© 2026</span>{@render mascot()}<span>{t('common.credit.copyrightHolder')}</span>
   {/if}
 </p>
 

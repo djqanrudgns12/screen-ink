@@ -1,4 +1,6 @@
 <script>
+  import { t } from '../i18n/index.svelte.js';
+
   /**
    * 캡처·녹화 선택 틀(F09 · F10 · F12 · 10 §5).
    * 상태: picking(고르는 중) | confirmed(확정·손잡이) | recording(녹화·빨강) | afterimage(잔상)
@@ -22,9 +24,11 @@
     state: frameState = 'picking',
     scrim = true,
     instant = false,
-    label = '고른 범위',
+    label = undefined,
     class: className = '',
   } = $props();
+
+  let resolvedLabel = $derived(label === undefined ? t('islandUi.selection.aria') : label);
 
   let pad = 8;
   let safeW = $derived(Math.max(0, width));
@@ -36,7 +40,7 @@
 </script>
 
 <div
-  aria-label={label}
+  aria-label={resolvedLabel}
   class="ink-sel-frame {className}"
   data-state={frameState}
   data-scrim={scrim && frameState !== 'afterimage' ? 'true' : undefined}

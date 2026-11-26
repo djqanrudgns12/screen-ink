@@ -1,78 +1,132 @@
 // 설정 키 메타데이터(이름·표시값)와 가져오기 변경 목록·겹침 문구 도우미 (순수 JS)
 import { shortenPath } from './template.js';
 import { formatComboReadable, subjectParticle } from './shortcutDisplay.js';
+import { normalizeOs, translate } from '../i18n/core.js';
 
-/** 설정 키 → S03~S05 화면 줄 이름 */
-export const SETTING_LABELS = {
-  'capture.result': 'Enter · 더블클릭 하면',
-  'capture.cursor': '마우스 커서도 찍기',
-  'capture.sound': '찰칵 소리',
-  'capture.element': 'UI 요소까지 찾기',
-  'capture.magnet': '모서리 자석',
-  'capture.historyMax': '캡처 기록',
-  'capture.excluded': '찾지 않을 앱',
-  'output.folder': '저장 폴더',
-  'output.template': '파일 이름',
-  'record.fps': '부드러움',
-  'record.mic': '마이크 소리',
-  'record.micDevice': '마이크 장치',
-  'draw.color': '처음 색',
-  'draw.width': '굵기',
-  'draw.smoothing': '떨림 보정',
-  'draw.straighten': '거의 곧은 선은 곧게',
-  'draw.shapeOnHold': '멈추면 도형으로',
-  'draw.shapeApply': '도형 보정',
-  'draw.startZoom': '첫 휠 배율',
-  'draw.keep': '나갈 때 보관',
-  'draw.esc': 'Esc 키',
-  'draw.rightClickPan': '확대 중 오른쪽 클릭',
-  'zoom.follow': '커서 따라가기',
-  'zoom.minimap': '위치 지도 보이기',
-  'general.theme': '테마',
-  'general.lang': '언어',
-  'general.autostart': '로그인하면 실행',
-  'topmost.border': '고정한 창 테두리',
-  'topmost.sound': '고정할 때 소리',
+/** @type {Record<string, string>} 설정 키 → 카탈로그 키 */
+export const SETTING_LABEL_KEYS = {
+  'capture.result': 'meta.setting.capture.result',
+  'capture.cursor': 'meta.setting.capture.cursor',
+  'capture.sound': 'meta.setting.capture.sound',
+  'capture.element': 'meta.setting.capture.element',
+  'capture.magnet': 'meta.setting.capture.magnet',
+  'capture.historyMax': 'meta.setting.capture.historyMax',
+  'capture.excluded': 'meta.setting.capture.excluded',
+  'output.folder': 'meta.setting.output.folder',
+  'output.template': 'meta.setting.output.template',
+  'record.fps': 'meta.setting.record.fps',
+  'record.mic': 'meta.setting.record.mic',
+  'record.micDevice': 'meta.setting.record.micDevice',
+  'draw.color': 'meta.setting.draw.color',
+  'draw.width': 'meta.setting.draw.width',
+  'draw.smoothing': 'meta.setting.draw.smoothing',
+  'draw.straighten': 'meta.setting.draw.straighten',
+  'draw.shapeOnHold': 'meta.setting.draw.shapeOnHold',
+  'draw.shapeApply': 'meta.setting.draw.shapeApply',
+  'draw.startZoom': 'meta.setting.draw.startZoom',
+  'draw.keep': 'meta.setting.draw.keep',
+  'draw.esc': 'meta.setting.draw.esc',
+  'draw.rightClickPan': 'meta.setting.draw.rightClickPan',
+  'zoom.follow': 'meta.setting.zoom.follow',
+  'zoom.minimap': 'meta.setting.zoom.minimap',
+  'general.theme': 'meta.setting.general.theme',
+  'general.lang': 'meta.setting.general.lang',
+  'general.autostart': 'meta.setting.general.autostart',
+  'topmost.border': 'meta.setting.topmost.border',
+  'topmost.sound': 'meta.setting.topmost.sound',
 };
 
-const VALUE_MAPS = {
-  'capture.result': { copy: '복사', save: '저장', both: '둘 다' },
-  'draw.color': { R: '빨강', Y: '노랑', G: '초록', O: '주황', B: '파랑', L: '연두' },
-  'draw.smoothing': { off: '끔', light: '약', strong: '강' },
-  'draw.shapeApply': { suggest: '물어보고 바꾸기', auto: '바로 바꾸기' },
-  'draw.esc': { step: '한 단계씩', exit: '바로 나가기' },
-  'zoom.follow': { pointer: '마우스 위치대로', smooth: '가운데로 부드럽게', instant: '가운데로 바로' },
-  'general.theme': { system: '시스템 따라', light: '라이트', dark: '다크' },
-  'general.lang': { ko: '한국어', en: 'English' },
+/** 설정 키 → 기본 한국어 쉬운 말 이름 (하위 호환용 export) */
+export const SETTING_LABELS = Object.fromEntries(
+  Object.entries(SETTING_LABEL_KEYS).map(([path, key]) => [path, translate('ko', key)]),
+);
+
+const VALUE_KEY_MAPS = {
+  'capture.result': {
+    copy: 'page.capture.result.copy',
+    save: 'page.capture.result.save',
+    both: 'page.capture.result.both',
+  },
+  'draw.color': {
+    R: 'capture.color.R',
+    Y: 'capture.color.Y',
+    G: 'capture.color.G',
+    O: 'capture.color.O',
+    B: 'capture.color.B',
+    L: 'capture.color.L',
+  },
+  'draw.smoothing': {
+    off: 'page.draw.smoothing.off',
+    light: 'page.draw.smoothing.light',
+    strong: 'page.draw.smoothing.strong',
+  },
+  'draw.shapeApply': {
+    suggest: 'page.draw.shapeApply.suggest',
+    auto: 'page.draw.shapeApply.auto',
+  },
+  'draw.esc': {
+    step: 'page.draw.esc.step',
+    exit: 'page.draw.esc.exit',
+  },
+  'zoom.follow': {
+    pointer: 'page.draw.zoomFollow.pointer',
+    smooth: 'meta.value.zoomFollow.smoothFull',
+    instant: 'meta.value.zoomFollow.instantFull',
+  },
+  'general.theme': {
+    system: 'general.appearance.themeSystem',
+    light: 'general.appearance.themeLight',
+    dark: 'general.appearance.themeDark',
+  },
+  'general.lang': {
+    ko: 'general.appearance.langKo',
+    en: 'general.appearance.langEn',
+  },
 };
 
 /**
- * 설정 값을 사용자가 읽을 짧은 한글 문자열로 바꾼다.
+ * 설정 키의 표시 이름을 돌려준다.
  * @param {string} path
- * @param {any} value
+ * @param {string} [lang='ko']
  * @returns {string}
  */
-export function formatSettingValue(path, value) {
-  if (typeof value === 'boolean') return value ? '켬' : '끔';
-  if (path === 'record.micDevice') return value ? String(value) : '기본 장치';
+export function getSettingLabel(path, lang = 'ko') {
+  const key = SETTING_LABEL_KEYS[path];
+  return key ? translate(lang, key) : path;
+}
+
+/**
+ * 설정 값을 사용자가 읽을 짧은 문자열로 바꾼다.
+ * @param {string} path
+ * @param {any} value
+ * @param {string} [lang='ko']
+ * @returns {string}
+ */
+export function formatSettingValue(path, value, lang = 'ko') {
+  if (typeof value === 'boolean') return translate(lang, value ? 'common.on' : 'common.off');
+  if (path === 'record.micDevice') return value ? String(value) : translate(lang, 'page.capture.micDefault');
   if (path === 'output.folder') return shortenPath(String(value ?? ''), 22);
   if (path === 'record.fps') return `${value}fps`;
   if (path === 'draw.width') return `${value}px`;
   if (path === 'draw.startZoom') return `×${value}`;
-  if (path === 'capture.historyMax') return `${value}개`;
-  if (path === 'topmost.border') return Number(value) === 0 ? '끔' : `${value}px`;
-  if (path === 'capture.excluded') return Array.isArray(value) ? `${value.length}개` : '0개';
-  const mapped = VALUE_MAPS[path]?.[String(value)];
-  if (mapped) return mapped;
-  return value === '' || value === null || value === undefined ? '비움' : String(value);
+  if (path === 'capture.historyMax') return translate(lang, 'meta.value.countItems', { n: value });
+  if (path === 'topmost.border') return Number(value) === 0 ? translate(lang, 'common.off') : `${value}px`;
+  if (path === 'capture.excluded') {
+    return translate(lang, 'meta.value.countItems', { n: Array.isArray(value) ? value.length : 0 });
+  }
+  const key = VALUE_KEY_MAPS[path]?.[String(value)];
+  if (key) return translate(lang, key);
+  return value === '' || value === null || value === undefined ? translate(lang, 'common.empty') : String(value);
 }
 
 /**
  * `previewImport()`의 `SettingChange` 한 건을 시트 표시용으로 변환한다.
  * @param {{ path: string, before: any, after: any }} change
  * @param {Array<{ id: string, label: string }>} [shortcuts=[]]
+ * @param {string} [lang='ko']
  */
-export function describeSettingChange(change, shortcuts = []) {
+export function describeSettingChange(change, shortcuts = [], lang = 'ko') {
+  const emptyText = translate(lang, 'common.empty');
   if (change.path.startsWith('shortcuts.')) {
     const id = change.path.slice('shortcuts.'.length);
     const row = shortcuts.find((s) => s.id === id);
@@ -82,28 +136,37 @@ export function describeSettingChange(change, shortcuts = []) {
       isShortcut: true,
       beforeCombo: String(change.before ?? ''),
       afterCombo: String(change.after ?? ''),
-      beforeText: change.before ? String(change.before) : '비움',
-      afterText: change.after ? String(change.after) : '비움',
+      beforeText: change.before ? String(change.before) : emptyText,
+      afterText: change.after ? String(change.after) : emptyText,
     };
   }
   return {
     path: change.path,
-    label: SETTING_LABELS[change.path] ?? change.path,
+    label: getSettingLabel(change.path, lang),
     isShortcut: false,
     beforeCombo: '',
     afterCombo: '',
-    beforeText: formatSettingValue(change.path, change.before),
-    afterText: formatSettingValue(change.path, change.after),
+    beforeText: formatSettingValue(change.path, change.before, lang),
+    afterText: formatSettingValue(change.path, change.after, lang),
   };
 }
 
 /**
- * "멈추면 도형으로" 줄의 보조 문구 — 고른 도형 보정 방식(draw.shapeApply)에 맞춘다.
+ * "멈추면 도형으로" 줄의 보조 문구 — 고른 도형 보정 방식(draw.shapeApply)과 OS 되돌리기 키에 맞춘다.
  * @param {'suggest' | 'auto' | string | null | undefined} shapeApply
+ * @param {'windows' | 'macos' | string} [platform='windows']
+ * @param {string} [lang='ko']
+ * @param {string} [undoCombo='']
  * @returns {string}
  */
-export function formatShapeOnHoldSub(shapeApply) {
-  return shapeApply === 'auto' ? '0.5초 · Ctrl+Z = 원래 획' : '0.5초 멈추면 바꿀지 물어봐요';
+export function formatShapeOnHoldSub(shapeApply, platform = 'windows', lang = 'ko', undoCombo = '') {
+  if (shapeApply !== 'auto') {
+    return translate(lang, 'page.draw.shapeOnHoldSubSuggest');
+  }
+  const resolvedOs = normalizeOs(platform) === 'mac' ? 'macos' : 'windows';
+  const fallback = resolvedOs === 'macos' ? 'Cmd+Z' : 'Ctrl+Z';
+  const undo = formatComboReadable(undoCombo || fallback, resolvedOs) || (resolvedOs === 'macos' ? '⌘Z' : 'Ctrl Z');
+  return translate(lang, 'page.draw.shapeOnHoldSubAuto', { undo });
 }
 
 /**
@@ -111,14 +174,26 @@ export function formatShapeOnHoldSub(shapeApply) {
  * @param {{ path: string, portable: boolean, readOnly?: boolean, packaged?: boolean } | null | undefined} location
  * @param {number} [maxPathLen=32]
  * @param {'unpackaged' | 'msix-store' | 'msix-direct' | string} [channel]
+ * @param {'windows' | 'macos' | string} [platform='windows']
+ * @param {string} [lang='ko']
  */
-export function formatLocationSub(location, maxPathLen = 32, channel = undefined) {
+export function formatLocationSub(
+  location,
+  maxPathLen = 32,
+  channel = undefined,
+  platform = 'windows',
+  lang = 'ko',
+) {
   if (!location) return '';
   const isMsix =
     Boolean(location.packaged) ||
     channel === 'msix-store' ||
     channel === 'msix-direct';
-  const kind = isMsix ? 'MSIX 패키지' : location.portable ? '포터블' : '설치';
+  const kind = isMsix
+    ? translate(lang, 'meta.storage.msix')
+    : location.portable
+      ? translate(lang, 'meta.storage.portable')
+      : translate(lang, 'meta.storage.installed', undefined, platform);
   const short = shortenPath(location.path ?? '', maxPathLen);
   return short ? `${kind} · ${short}` : kind;
 }
@@ -127,15 +202,17 @@ export function formatLocationSub(location, maxPathLen = 32, channel = undefined
  * 첫 실행 시트(S06) 겹침 줄 문구 생성.
  * @param {{ count: number, app?: string, combos: string[] } | null | undefined} conflicts
  * @param {'windows' | 'macos'} [platform='windows']
+ * @param {string} [lang='ko']
  */
-export function formatFirstRunConflict(conflicts, platform = 'windows') {
+export function formatFirstRunConflict(conflicts, platform = 'windows', lang = 'ko') {
   if (!conflicts || conflicts.count <= 0) return null;
   const app = conflicts.app || '';
   if (app.includes('PowerToys')) {
+    const combo = formatComboReadable('Alt+Shift+D', platform);
     return {
       prefix: '',
       app: 'PowerToys',
-      suffix: "에서 '항상 위'를 끄면 Alt+Shift+D를 써요",
+      suffix: translate(lang, 'meta.conflict.powertoys', { combo }),
       canHowto: true,
     };
   }
@@ -143,31 +220,40 @@ export function formatFirstRunConflict(conflicts, platform = 'windows') {
   const mainKeys = combos.map((c) => c.split('+').at(-1) || '').filter(Boolean);
   const allFKeys = mainKeys.length > 0 && mainKeys.every((k) => /^F([1-9]|1[0-9]|2[0-4])$/i.test(k));
 
-  let prefix = '';
-  if (allFKeys) {
-    const uniq = [...new Set(mainKeys)].slice(0, 2);
-    prefix = conflicts.count > 1 ? `${uniq.join('·')} 키 ${conflicts.count}개는 ` : `${uniq[0]} 키는 `;
-  } else if (combos.length > 0) {
-    const uniq = [...new Set(combos)].map((c) => formatComboReadable(c, platform)).filter(Boolean);
-    const shown = uniq.slice(0, 2).join(' · ');
-    const extra = Math.max(conflicts.count, uniq.length) - Math.min(2, uniq.length);
-    prefix = extra > 0 ? `${shown} 외 ${extra}개는 ` : `${shown} 키는 `;
-  } else {
-    prefix = `키 ${conflicts.count}개는 `;
-  }
-
   if (app) {
+    if (allFKeys) {
+      const uniq = [...new Set(mainKeys)].slice(0, 2);
+      const keys = uniq.join('·');
+      const suffix =
+        conflicts.count > 1
+          ? translate(lang, 'meta.conflict.appMulti', { keys, n: conflicts.count })
+          : translate(lang, 'meta.conflict.appSingle', { key: uniq[0] });
+      return { prefix: '', app, suffix, canHowto: true };
+    }
+    if (combos.length > 0) {
+      const uniq = [...new Set(combos)].map((c) => formatComboReadable(c, platform)).filter(Boolean);
+      const shown = uniq.slice(0, 2).join(' · ');
+      const extra = Math.max(conflicts.count, uniq.length) - Math.min(2, uniq.length);
+      const suffix =
+        extra > 0
+          ? translate(lang, 'meta.conflict.appOverflow', { keys: shown, extra })
+          : translate(lang, 'meta.conflict.appSingle', { key: shown });
+      return { prefix: '', app, suffix, canHowto: true };
+    }
     return {
-      prefix,
+      prefix: '',
       app,
-      suffix: `${subjectParticle(app)} 쓰고 있어요`,
+      suffix: translate(lang, 'meta.conflict.appCountOnly', { n: conflicts.count }),
       canHowto: true,
     };
   }
+
   return {
     prefix: '',
     app: '',
-    suffix: `단축키 ${conflicts.count}개가 겹치고 있어요`,
+    suffix: translate(lang, 'meta.conflict.generic', { n: conflicts.count }),
     canHowto: false,
   };
 }
+
+export { subjectParticle };

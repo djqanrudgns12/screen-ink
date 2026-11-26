@@ -1,6 +1,8 @@
 <script>
+  import { t } from '../i18n/index.svelte.js';
+
   /**
-   * 창 항상 위 고정 테두리(F16 · 10 §5).
+   * 창 맨 위에 고정 테두리(F16 · 10 §5).
    * 제목 막대 단추와 겹치지 않도록 배지 없이 주황 테두리만 그린다.
    * @type {{
    *   borderWidth?: 0 | 2 | 4 | 6,
@@ -20,7 +22,7 @@
 </script>
 
 <div
-  aria-label="고정한 창"
+  aria-label={t('pin.topmost.frameAria')}
   class="ink-pin-frame {className}"
   data-active={active && borderWidth > 0 ? 'true' : undefined}
   style:border-radius={`${radius}px`}

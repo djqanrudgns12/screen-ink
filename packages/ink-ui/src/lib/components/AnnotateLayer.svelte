@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { t } from '../i18n/index.svelte.js';
   import { docToView } from '../ink/coords.js';
   import { TEXT_LINE_HEIGHT } from '../ink/inkEngine.js';
   import { bakeItem, createCanvasTextMeasurer, renderActive, renderItems, resolveInkColor } from '../ink/canvasRender.js';
@@ -391,7 +392,7 @@
   data-tool={tool ?? undefined}
   data-ring={ring ? 'true' : undefined}
   role="application"
-  aria-label="캡처 주석"
+  aria-label={t('capture.layer.label')}
   style:left={`${frame.x}px`}
   style:top={`${frame.y}px`}
   style:width={`${Math.max(0, frame.width)}px`}
@@ -412,7 +413,7 @@
     <textarea
       bind:this={taEl}
       class="ink-annot-text"
-      aria-label="주석 글자"
+      aria-label={t('capture.layer.textLabel')}
       spellcheck="false"
       autocomplete="off"
       rows="1"

@@ -1,0 +1,12 @@
+{
+  "pin.topmost.frameAria": "Always-on-top window",
+  "pin.view.aria": "Pinned capture",
+  "pin.view.closeAria": "Close pin",
+  "pin.view.hint": "Double-click close · Scroll size · Ctrl+scroll opacity",
+  "pin.view.hint~mac": "Double-click close · Scroll size · ⌘+scroll opacity",
+  "pin.view.hint~win": "Double-click close · Scroll size · Ctrl+scroll opacity",
+  "pin.view.opacity": "Opacity {pct}%",
+  "recordUi.frame.aria": "Recording area",
+  "zoomUi.minimap.aria": "Minimap",
+  "zoomUi.minimap.defaultLabel": "Display 1"
+}

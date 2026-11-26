@@ -1,15 +1,17 @@
 // 파일 이름 템플릿 검사·미리보기 (S03 캡처·녹화)
+import { translate } from '../i18n/core.js';
 
 const FORBIDDEN_RE = /[\\/:*?"<>|]/;
 
 /**
- * Windows 파일 이름 금지 글자 검사.
+ * 파일 이름 금지 글자 검사.
  * @param {string} template
+ * @param {string} [lang='ko']
  * @returns {string | null} 오류 문구 또는 null
  */
-export function validateFilenameTemplate(template) {
-  if (!template || !template.trim()) return '파일 이름을 입력하세요';
-  if (FORBIDDEN_RE.test(template)) return '\\ / : * ? " < > | 는 쓸 수 없어요';
+export function validateFilenameTemplate(template, lang = 'ko') {
+  if (!template || !template.trim()) return translate(lang, 'page.capture.templateErrEmpty');
+  if (FORBIDDEN_RE.test(template)) return translate(lang, 'page.capture.templateErrForbidden');
   return null;
 }
 

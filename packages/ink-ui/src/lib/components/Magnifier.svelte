@@ -1,5 +1,6 @@
 <script>
   import { MAGNIFIER_LENS, formatColor, formatHex } from '../models/captureOverlay.js';
+  import { t } from '../i18n/index.svelte.js';
 
   /**
    * 108×84 확대경 + 색·좌표 알약(F09 · 10 §5).
@@ -66,7 +67,7 @@
 </script>
 
 <div
-  aria-label="확대경"
+  aria-label={t('islandUi.magnifier.aria')}
   class="ink-mag {className}"
   data-flip-x={flipX ? 'true' : undefined}
   data-flip-y={flipY ? 'true' : undefined}
@@ -91,7 +92,7 @@
     {#if coord}
       <span class="ink-mag-sub ink-mono">{coord.x},{coord.y}</span>
     {/if}
-    <span class="ink-mag-sub">C 복사</span>
+    <span class="ink-mag-sub">{t('islandUi.magnifier.copyHex')}</span>
   </div>
 </div>
 

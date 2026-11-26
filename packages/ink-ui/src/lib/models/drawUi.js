@@ -4,6 +4,7 @@
 import { INK_COLORS, MARKER_OPACITY } from '../ink/inkEngine.js';
 import { BOARD_COLORS, resolveInkColor } from '../ink/canvasRender.js';
 import { clamp, visibleDocFraction } from '../ink/coords.js';
+import { translate } from '../i18n/core.js';
 
 /** 색 키를 누르거나 색 점에 마우스를 올렸을 때 6/8색 팔레트가 펼쳐지는 시간(ms, 04 S12). */
 export const DRAW_PALETTE_EXPAND_MS = 800;
@@ -57,12 +58,15 @@ export function isDrawIslandVariant(variant) {
 }
 
 /**
- * 판서(6색) 또는 칠판(W·K 포함 8색) 팔레트 목록.
+ * 그리기(6색) 또는 칠판(W·K 포함 8색) 팔레트 목록.
  * @param {boolean} [includeBoard=false]
+ * @param {string} [lang='ko']
  * @returns {ReadonlyArray<PenSwatch>}
  */
-export function getDrawPaletteSwatches(includeBoard = false) {
-  return includeBoard ? BOARD_PEN_SWATCHES : DRAW_PEN_SWATCHES;
+export function getDrawPaletteSwatches(includeBoard = false, lang = 'ko') {
+  const base = includeBoard ? BOARD_PEN_SWATCHES : DRAW_PEN_SWATCHES;
+  if (lang === 'ko') return base;
+  return base.map((s) => ({ ...s, label: translate(lang, `capture.color.${s.code}`) }));
 }
 
 /**
@@ -155,13 +159,13 @@ export function formatBoardIslandMeta({ text = '', detail = '', value = '' } = {
 
 /**
  * 칠판 배경·쪽 번호로 표준 섬 문구("칠판 · 흰색" + "1 / 1")를 만든다.
- * @param {{ background?: 'frame' | 'white' | 'black', pageIndex?: number, pageCount?: number }} opts
+ * @param {{ background?: 'frame' | 'white' | 'black', pageIndex?: number, pageCount?: number, lang?: string }} opts
  */
-export function formatBoardIslandText({ background = 'white', pageIndex = 0, pageCount = 1 } = {}) {
-  const bgLabel = background === 'black' ? '검은색' : '흰색';
+export function formatBoardIslandText({ background = 'white', pageIndex = 0, pageCount = 1, lang = 'ko' } = {}) {
+  const bgLabel = translate(lang, background === 'black' ? 'island.draw.board.black' : 'island.draw.board.white');
   const total = Math.max(1, Math.floor(Number(pageCount) || 1));
   const current = clamp(Math.floor(Number(pageIndex) || 0) + 1, 1, total);
-  const text = `칠판 · ${bgLabel}`;
+  const text = translate(lang, 'island.draw.boardTitle', { bg: bgLabel });
   const value = `${current} / ${total}`;
   return { text, value, combined: `${text} · ${value}` };
 }
@@ -278,16 +282,16 @@ export function drawMinimapState(view, viewport, docSize) {
 /**
  * 설정 화면(DrawZoomPage)의 흰/검은 칠판 작은 미리 보기 데이터.
  * 고른 펜 색·굵기를 그대로 비추고, 검은 칠판의 검정 펜(K)은 흰색 자동 치환을 반영한다.
- * @param {{ penColor?: string, penWidth?: number }} [opts]
+ * @param {{ penColor?: string, penWidth?: number, lang?: string }} [opts]
  */
-export function buildBoardPreviewSamples({ penColor = 'R', penWidth = 4 } = {}) {
+export function buildBoardPreviewSamples({ penColor = 'R', penWidth = 4, lang = 'ko' } = {}) {
   const w = clamp(Number.isFinite(penWidth) ? penWidth : 4, 1, 30);
   const strokeWidth = Math.round(clamp(w * 0.45 + 0.8, 1.5, 6.5) * 10) / 10;
   return [
     {
       id: /** @type {'white'} */ ('white'),
       key: 'W',
-      label: '흰 칠판',
+      label: translate(lang, 'page.draw.boardWhite'),
       bg: BOARD_COLORS.white,
       strokeColor: resolveInkColor(penColor, 'white'),
       strokeWidth,
@@ -296,7 +300,7 @@ export function buildBoardPreviewSamples({ penColor = 'R', penWidth = 4 } = {}) 
     {
       id: /** @type {'black'} */ ('black'),
       key: 'K',
-      label: '검은 칠판',
+      label: translate(lang, 'page.draw.boardBlack'),
       bg: BOARD_COLORS.black,
       strokeColor: resolveInkColor(penColor, 'black'),
       strokeWidth,

@@ -1,5 +1,6 @@
 <script>
   import { Dialog } from 'bits-ui';
+  import { t } from '../i18n/index.svelte.js';
 
   /**
    * 가운데 확인 시트(bits-ui Dialog 기반). 위험 단추는 3초 뒤 활성(10 §5).
@@ -23,8 +24,8 @@
     open = $bindable(false),
     title,
     description = '',
-    confirmLabel = '확인',
-    cancelLabel = '취소',
+    confirmLabel = undefined,
+    cancelLabel = undefined,
     confirmDisabled = false,
     width = 'sm',
     danger = false,
@@ -34,6 +35,9 @@
     onOpenChange = undefined,
     children = undefined,
   } = $props();
+
+  let resolvedConfirmLabel = $derived(confirmLabel === undefined ? t('common.confirm') : confirmLabel);
+  let resolvedCancelLabel = $derived(cancelLabel === undefined ? t('common.cancel') : cancelLabel);
 
   let remaining = $state(0);
 
@@ -79,9 +83,9 @@
       {/if}
       <div class="ink-sheet-footer">
         <Dialog.Close class="ink-sheet-btn ink-sheet-cancel ink-focus">
-          {cancelLabel}
+          {resolvedCancelLabel}
         </Dialog.Close>
-        {#if confirmLabel}
+        {#if resolvedConfirmLabel}
           <button
             type="button"
             class="ink-sheet-btn ink-focus"
@@ -90,7 +94,7 @@
             disabled={confirmDisabled || (danger && remaining > 0)}
             onclick={handleConfirm}
           >
-            {confirmLabel}{#if danger && remaining > 0} <span class="ink-mono">({remaining})</span>{/if}
+            {resolvedConfirmLabel}{#if danger && remaining > 0} <span class="ink-mono">({remaining})</span>{/if}
           </button>
         {/if}
       </div>

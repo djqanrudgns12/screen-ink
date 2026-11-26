@@ -3,6 +3,7 @@
 // - 결과 1.2초 자동 닫힘(줄임 모드 2초, 마우스 올리면 멈춤)
 // - 새 알림이 오면 이전 것을 밀어냄; 모드 활성 중 결과는 0.8초 겹쳐 보인 뒤 모드 상태로 돌아감
 // - 키 안내 둘째 줄은 해당 모드 처음 3번 또는 '?' 요청 때만 표시
+import { translate } from '../i18n/core.js';
 
 export const ISLAND_DURATIONS = {
   result: 1200,
@@ -270,9 +271,10 @@ export function formatCapturePath(path, level, { maxChars = 20, maxItems = 4 } =
 /**
  * CaptureView에서 모드 섬에 반영할 필드(경로·크기·상태 태그·도움말)를 뽑는다.
  * @param {import('@screen-ink/client').CaptureView | null | undefined} view
+ * @param {string} [lang='ko']
  * @returns {{ path: string[], level: number, value: string, tags: string[], help: boolean } | null}
  */
-export function buildCaptureIslandPatch(view) {
+export function buildCaptureIslandPatch(view, lang = 'ko') {
   if (!view) return null;
   const rect = view.rect;
   const value =
@@ -280,8 +282,8 @@ export function buildCaptureIslandPatch(view) {
       ? `${Math.round(rect.w)}×${Math.round(rect.h)}`
       : '';
   const tags = [];
-  if (view.magnet === false) tags.push('자석 끔');
-  if (view.cursorIncluded) tags.push('커서 포함');
+  if (view.magnet === false) tags.push(translate(lang, 'islandUi.tag.snapOff'));
+  if (view.cursorIncluded) tags.push(translate(lang, 'islandUi.tag.cursorIncluded'));
   return {
     path: Array.isArray(view.path) ? view.path : [],
     level: typeof view.level === 'number' ? view.level : -1,
@@ -296,11 +298,12 @@ export function buildCaptureIslandPatch(view) {
  * 일시 결과 섬이 위에 떠 있으면 activeMode만 배경에서 갱신한다.
  * @param {IslandQueueState} state
  * @param {import('@screen-ink/client').CaptureView | null | undefined} view
+ * @param {string} [lang='ko']
  * @returns {IslandQueueState}
  */
-export function applyCaptureView(state, view) {
+export function applyCaptureView(state, view, lang = 'ko') {
   if (!state || !state.activeMode || !view) return state;
-  const patch = buildCaptureIslandPatch(view);
+  const patch = buildCaptureIslandPatch(view, lang);
   if (!patch) return state;
 
   const nextMode = {
