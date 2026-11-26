@@ -139,6 +139,7 @@ fn rb15_바탕_화면_첫_강조는_그_모니터_작업_영역() {
         vision: &[],
         monitor: m.bounds,
         virtual_bounds: l.virtual_bounds(),
+        occluders: &[],
         support: None,
         snap: None,
     };

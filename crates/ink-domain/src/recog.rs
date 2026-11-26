@@ -226,6 +226,8 @@ pub struct Evidence<'a> {
     pub vision: &'a [VisionCand],
     pub monitor: PhysRect,
     pub virtual_bounds: PhysRect,
+    /// 그 창보다 앞에 있어 겹치는 창들(R2-CAP-1 가림 인지) — 요소·자식 창 사각형에서 이 부분을 뺀다. 없으면 빈 칸.
+    pub occluders: &'a [PhysRect],
     /// 사각형의 경계 지지율(V). V가 없으면 None.
     pub support: Option<&'a dyn Fn(PhysRect) -> f32>,
     /// V 곧은 경계로 붙이기(±3 px). V가 없으면 None.
@@ -236,6 +238,50 @@ const MIN_SIDE: i32 = 4;
 const MIN_AREA: i64 = 16;
 const MERGE_IOU: f64 = 0.92;
 const HIDDEN_SUPPORT: f32 = 0.15;
+/// 가린 뒤 보이는 넓이가 원래의 이 비율보다 작으면 후보에서 뺀다(R2-CAP-1).
+pub const MIN_VISIBLE: f64 = 0.30;
+/// 가림 계산에 쓰는 앞 창 수 상한(갈래가 4^n으로 늘지 않게 — 커서를 담는 쪽만 따라가 실제로는 몇 갈래뿐).
+const MAX_OCCLUDERS: usize = 8;
+
+/// 그 창보다 앞(z가 작음)에 있고 겹치는 창 사각형들 — 근거의 `occluders`. 오버레이로 의심되는 창은 뺀다.
+pub fn occluders_of(windows: &[crate::snapshot::WindowInfo], target: u64) -> Vec<PhysRect> {
+    let Some(t) = windows.iter().find(|w| w.handle == target) else { return Vec::new() };
+    windows
+        .iter()
+        .filter(|w| w.handle != target && w.z < t.z && !w.suspect_overlay && w.rect.intersect(&t.rect).is_some_and(|r| r.area() > 0))
+        .map(|w| w.rect)
+        .take(MAX_OCCLUDERS)
+        .collect()
+}
+
+/// 가림 인지(R2-CAP-1): `rect`에서 앞 창들에 가린 곳을 뺀 "보이는 부분" 가운데 **커서를 담는 가장 큰 사각형**.
+/// 가림이 없으면 그대로, 보이는 넓이가 원래의 [`MIN_VISIBLE`]보다 작으면 None(후보에서 뺀다).
+/// 가린 창 하나를 빼면 남는 최대 사각형은 위·아래·왼쪽·오른쪽 띠 넷이다 — 커서를 담는 띠만 따라가며 다음 창을 뺀다.
+pub fn visible_part(rect: PhysRect, occluders: &[PhysRect], p: PhysPoint) -> Option<PhysRect> {
+    fn go(r: PhysRect, occ: &[PhysRect], p: PhysPoint) -> Option<PhysRect> {
+        let Some((o, rest)) = occ.split_first() else { return Some(r) };
+        let Some(i) = r.intersect(o).filter(|i| i.area() > 0) else { return go(r, rest, p) };
+        if i.contains(p) {
+            return None;
+        }
+        let strips = [
+            PhysRect::new(r.x, r.y, r.w, i.y - r.y),                     // 위
+            PhysRect::new(r.x, i.bottom(), r.w, r.bottom() - i.bottom()), // 아래
+            PhysRect::new(r.x, r.y, i.x - r.x, r.h),                     // 왼쪽
+            PhysRect::new(i.right(), r.y, r.right() - i.right(), r.h),   // 오른쪽
+        ];
+        strips
+            .into_iter()
+            .filter(|s| s.w > 0 && s.h > 0 && s.contains(p))
+            .filter_map(|s| go(s, rest, p))
+            .max_by_key(|s| s.area())
+    }
+    if occluders.is_empty() {
+        return Some(rect);
+    }
+    let v = go(rect, occluders, p)?;
+    (v.area() as f64 >= rect.area() as f64 * MIN_VISIBLE).then_some(v)
+}
 pub const FIRST_SCORE: f32 = 0.5;
 
 pub fn iou(a: &PhysRect, b: &PhysRect) -> f64 {
@@ -292,11 +338,16 @@ pub fn build_chain(ev: &Evidence) -> Vec<Node> {
         }
         raw.push(Node { rect: r, kind, score: 0.0, sources, hidden_container: false });
     };
+    // 요소·자식 창은 앞 창에 가린 곳을 빼고 보이는 부분만(R2-CAP-1) — 경계 붙이기 뒤에 자른다
     for e in ev.elements {
-        push(snap(e.rect), NodeKind::Element(e.control), if e.from_msaa { src::M } else { src::A });
+        if let Some(r) = visible_part(snap(e.rect), ev.occluders, p) {
+            push(r, NodeKind::Element(e.control), if e.from_msaa { src::M } else { src::A });
+        }
     }
     for c in ev.children {
-        push(snap(*c), NodeKind::Child, src::H);
+        if let Some(r) = visible_part(snap(*c), ev.occluders, p) {
+            push(r, NodeKind::Child, src::H);
+        }
     }
     for v in ev.vision {
         push(v.rect, NodeKind::Vision(v.kind), src::V);
@@ -446,7 +497,7 @@ mod tests {
     const WIN: PhysRect = PhysRect::new(100, 100, 1200, 800);
 
     fn ev<'a>(p: PhysPoint, elements: &'a [ElementCand], vision: &'a [VisionCand]) -> Evidence<'a> {
-        Evidence { point: p, window: Some(WIN), children: &[], elements, vision, monitor: MON, virtual_bounds: MON, support: None, snap: None }
+        Evidence { point: p, window: Some(WIN), children: &[], elements, vision, monitor: MON, virtual_bounds: MON, occluders: &[], support: None, snap: None }
     }
 
     #[test]
@@ -580,5 +631,63 @@ mod tests {
         ] {
             assert_eq!(Control::from_ax(role), want, "{role}");
         }
+    }
+
+    #[test]
+    fn 위가_가린_사진은_보이는_부분만_후보() {
+        let photo = PhysRect::new(100, 100, 400, 300);
+        // 위 60 px를 다른 창이 가림
+        let occ = [PhysRect::new(0, 0, 800, 160)];
+        assert_eq!(visible_part(photo, &occ, PhysPoint { x: 300, y: 300 }), Some(PhysRect::new(100, 160, 400, 240)));
+        // 가림이 없으면 그대로, 겹치지 않는 창은 무시
+        assert_eq!(visible_part(photo, &[], PhysPoint { x: 300, y: 300 }), Some(photo));
+        assert_eq!(visible_part(photo, &[PhysRect::new(600, 0, 100, 100)], PhysPoint { x: 300, y: 300 }), Some(photo));
+    }
+
+    #[test]
+    fn 모서리를_가리면_커서를_담는_가장_큰_띠() {
+        let photo = PhysRect::new(100, 100, 400, 300);
+        // 왼쪽 위 모서리 가림 → 아래 띠(400×200)와 오른쪽 띠(250×300) 중 커서를 담는 큰 것
+        let occ = [PhysRect::new(0, 0, 250, 200)];
+        assert_eq!(visible_part(photo, &occ, PhysPoint { x: 300, y: 300 }), Some(PhysRect::new(100, 200, 400, 200)));
+        // 커서가 오른쪽 위면 오른쪽 띠만 커서를 담는다
+        assert_eq!(visible_part(photo, &occ, PhysPoint { x: 400, y: 150 }), Some(PhysRect::new(250, 100, 250, 300)));
+        // 두 창이 위·왼쪽을 가림
+        let occ2 = [PhysRect::new(0, 0, 800, 150), PhysRect::new(0, 0, 180, 900)];
+        assert_eq!(visible_part(photo, &occ2, PhysPoint { x: 300, y: 300 }), Some(PhysRect::new(180, 150, 320, 250)));
+    }
+
+    #[test]
+    fn 거의_다_가리면_후보에서_뺀다() {
+        let photo = PhysRect::new(100, 100, 400, 300);
+        // 아래 40 px만 보임 → 13% < 30%
+        let occ = [PhysRect::new(0, 0, 800, 360)];
+        assert_eq!(visible_part(photo, &occ, PhysPoint { x: 300, y: 380 }), None);
+    }
+
+    #[test]
+    fn 사슬에서_가린_요소가_가린_창_위로_넘어가지_않는다() {
+        let p = PhysPoint { x: 300, y: 300 };
+        let img = [ElementCand { rect: PhysRect::new(100, 100, 400, 300), control: Control::Image, from_msaa: false }];
+        let occ = [PhysRect::new(0, 0, 1920, 160)];
+        let ev = Evidence { point: p, window: Some(WIN), children: &[], elements: &img, vision: &[], monitor: MON, virtual_bounds: MON, occluders: &occ, support: None, snap: None };
+        let chain = build_chain(&ev);
+        let first = chain.iter().find(|n| matches!(n.kind, NodeKind::Element(Control::Image))).expect("사진 마디");
+        assert_eq!(first.rect, PhysRect::new(100, 160, 400, 240));
+    }
+
+    #[test]
+    fn 앞_창만_가림으로_본다() {
+        use crate::snapshot::WindowInfo;
+        let w = |handle: u64, z: u32, rect: PhysRect, overlay: bool| WindowInfo { handle, pid: 1, exe: String::new(), class: String::new(), rect, z, topmost: false, window_only: false, suspect_overlay: overlay };
+        let wins = [
+            w(1, 0, PhysRect::new(0, 0, 1920, 1080), true),   // 오버레이 의심 — 뺀다
+            w(2, 1, PhysRect::new(0, 0, 800, 160), false),    // 앞, 겹침
+            w(3, 2, PhysRect::new(1500, 900, 100, 100), false), // 앞, 안 겹침
+            w(4, 3, PhysRect::new(50, 50, 900, 700), false),  // 대상
+            w(5, 4, PhysRect::new(0, 0, 1920, 1080), false),  // 뒤
+        ];
+        assert_eq!(occluders_of(&wins, 4), vec![PhysRect::new(0, 0, 800, 160)]);
+        assert!(occluders_of(&wins, 99).is_empty());
     }
 }

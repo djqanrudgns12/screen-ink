@@ -604,6 +604,23 @@ fn output_folder<R: Runtime>(app: &AppHandle<R>) -> Option<std::path::PathBuf> {
     app.path().picture_dir().ok().map(|p| p.join(APP_DIR))
 }
 
+/// 파일이면 그 파일을 고른 채로 폴더를 연다(맥 Finder `open -R`, Windows 탐색기 `/select,`). 폴더면 그 폴더.
+fn reveal_path(path: &std::path::Path) {
+    if !path.is_file() {
+        open_folder(path);
+        return;
+    }
+    #[cfg(target_os = "macos")]
+    let r = std::process::Command::new("open").arg("-R").arg(path).spawn();
+    #[cfg(windows)]
+    let r = std::process::Command::new("explorer").arg(format!("/select,{}", path.display())).spawn();
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    let r = std::process::Command::new("xdg-open").arg(path.parent().unwrap_or(path)).spawn();
+    if let Err(e) = r {
+        log::warn!("reveal failed: {e}");
+    }
+}
+
 fn open_folder(path: &std::path::Path) {
     let _ = std::fs::create_dir_all(path);
     #[cfg(windows)]
@@ -1042,6 +1059,11 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             if let Some(p) = output_folder(&app) {
                 open_folder(&p);
             }
+        }
+        // 설정 › 일반 › 설정 위치 [열기](R2-FIX-1): 저장 폴더가 아니라 설정 파일이 있는 곳을 그 파일을 고른 채로
+        "settings.reveal" => {
+            let path = app.state::<Ink>().lock().state().location.path;
+            reveal_path(std::path::Path::new(&path));
         }
         "folder.pick" => pick_output_folder(&app).await?,
         "settings.export" => export_settings(&app).await?,

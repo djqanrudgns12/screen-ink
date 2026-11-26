@@ -191,6 +191,8 @@ impl Context for Ctx<'_> {
         let v_ready = vision.support(monitor).is_some();
         let sup = |r: PhysRect| vision.support(r).unwrap_or(0.5);
         let snap = |r: PhysRect| vision.snap(r);
+        // 그 창보다 앞에 있는 창들(가림 인지 R2-CAP-1)
+        let occ = w.map(|w| ink_domain::recog::occluders_of(&self.snap.windows, w.handle)).unwrap_or_default();
         let ev = Evidence {
             point: p,
             window: w.map(|w| w.rect),
@@ -199,6 +201,7 @@ impl Context for Ctx<'_> {
             vision: &vis,
             monitor,
             virtual_bounds: virt,
+            occluders: &occ,
             support: if v_ready { Some(&sup) } else { None },
             snap: if v_ready { Some(&snap) } else { None },
         };
