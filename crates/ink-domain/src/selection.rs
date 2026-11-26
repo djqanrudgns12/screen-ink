@@ -7,7 +7,8 @@
 
 use crate::geometry::{PhysPoint, PhysRect};
 use crate::magnet::{guides, rect_between, snap_point, Edges, SnapState};
-use crate::recog::{first_level, window_index, LevelIntent, Node, NodeKind};
+use crate::modekeys::{matches, CaptureKeys};
+use crate::recog::{first_level, src, window_index, LevelIntent, Node, NodeKind};
 use serde::{Deserialize, Serialize};
 
 /// 진입 뒤 이만큼 움직여야 인식이 시작된다(손떨림·키 누를 때의 미세 이동).
@@ -34,6 +35,18 @@ pub struct Key {
     pub shift: bool,
     #[serde(default)]
     pub alt: bool,
+    /// 맥 Cmd · Windows 키
+    #[serde(default)]
+    pub meta: bool,
+}
+
+/// 선택 툴바 단추(R-CAP-27) — 키와 같은 결과를 낸다.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Command {
+    Copy,
+    Save,
+    QuickSave,
+    Cancel,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -45,6 +58,8 @@ pub enum Input {
     Up(PhysPoint, Button),
     DoubleClick(PhysPoint),
     Key(Key),
+    /// 선택 툴바 단추
+    Command(Command),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -96,6 +111,27 @@ pub struct Guide {
     pub y2: i32,
 }
 
+/// 숨은 "인식 근거 보기"(08 §4.5): 사슬 마디 하나.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EvidenceNode {
+    pub rect: PhysRect,
+    /// 종류 이름(창·표·상자…)
+    pub label: String,
+    pub score: f32,
+    /// 근거 글자 "W·A·V"(W 창 · H 자식 창 · A 접근성 · M 앱 가족 · V 이미지)
+    pub sources: String,
+    /// 지금 강조
+    pub current: bool,
+    /// 보이지 않는 그릇(첫 강조에서 뺌)
+    pub hidden: bool,
+}
+
+/// 근거 비트 → "W·A·V".
+pub fn source_letters(bits: u8) -> String {
+    [(src::W, "W"), (src::H, "H"), (src::A, "A"), (src::M, "M"), (src::V, "V")].iter().filter(|(b, _)| bits & b != 0).map(|(_, l)| *l).collect::<Vec<_>>().join("·")
+}
+
 /// UI로 나가는 모양(CaptureView의 고르기 부분).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -110,6 +146,9 @@ pub struct SelectionView {
     pub magnet: bool,
     pub cursor_included: bool,
     pub help: bool,
+    /// 숨은 설정 `capture.evidence`가 켜졌을 때만(작은 것 → 큰 것)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evidence: Vec<EvidenceNode>,
 }
 
 #[derive(Clone, Debug)]
@@ -130,6 +169,10 @@ pub struct Selector {
     help: bool,
     magnet: bool,
     history_at: Option<usize>,
+    /// 화면 안 키(R-KEY-6) — 설정된 `c-*` 값
+    keys: CaptureKeys,
+    /// 숨은 "인식 근거 보기"
+    show_evidence: bool,
 }
 
 fn fresh_chain(monitor: PhysRect, virt: PhysRect) -> Vec<Node> {
@@ -155,7 +198,21 @@ impl Selector {
             help: false,
             magnet: true,
             history_at: None,
+            keys: CaptureKeys::default(),
+            show_evidence: false,
         }
+    }
+
+    /// 숨은 설정 `capture.evidence` — 보기에 사슬 마디마다 근거·점수를 담는다.
+    pub fn with_evidence(mut self, on: bool) -> Selector {
+        self.show_evidence = on;
+        self
+    }
+
+    /// 설정된 화면 안 키로 판정한다(R-KEY-6).
+    pub fn with_keys(mut self, keys: CaptureKeys) -> Selector {
+        self.keys = keys;
+        self
     }
 
     /// 지금 범위.
@@ -203,7 +260,16 @@ impl Selector {
             }
             State::Confirmed { .. } => (Phase::Confirmed, Vec::new(), -1, Vec::new()),
         };
-        SelectionView { phase, rect: self.rect(), path, level, guides: guides_v, magnet: self.magnet, cursor_included: self.cursor_included, help: self.help }
+        let evidence = match (&self.state, self.show_evidence) {
+            (State::Hover { chain, level, .. }, true) => chain
+                .iter()
+                .enumerate()
+                .filter(|(_, n)| n.kind != NodeKind::Virtual)
+                .map(|(i, n)| EvidenceNode { rect: n.rect, label: n.kind.label().to_string(), score: n.score, sources: source_letters(n.sources), current: i == *level, hidden: n.hidden_container })
+                .collect(),
+            _ => Vec::new(),
+        };
+        SelectionView { phase, rect: self.rect(), path, level, guides: guides_v, magnet: self.magnet, cursor_included: self.cursor_included, help: self.help, evidence }
     }
 
     /// 근거가 늦게 도착했을 때(UIA 색인·V 전처리) — 강조 중이고 이미 움직였으면 사슬을 다시 만든다.
@@ -275,6 +341,12 @@ impl Selector {
                 self.rect().map_or(Effect::None, Effect::Copy)
             }
             Input::Key(k) => self.on_key(k, ctx),
+            Input::Command(c) => match c {
+                Command::Cancel => Effect::Cancel,
+                Command::Copy => self.rect().map_or(Effect::None, Effect::Copy),
+                Command::Save => self.rect().map_or(Effect::None, |rect| Effect::Save { rect, quick: false }),
+                Command::QuickSave => self.rect().map_or(Effect::None, |rect| Effect::Save { rect, quick: true }),
+            },
         }
     }
 
@@ -344,53 +416,63 @@ impl Selector {
 
     fn on_key(&mut self, k: Key, ctx: &mut dyn Context) -> Effect {
         let code = k.code.as_str();
-        match (code, k.key.as_str()) {
-            ("Escape", _) | (_, "Escape") => return Effect::Cancel,
-            ("Enter" | "NumpadEnter", _) => return self.rect().map_or(Effect::None, Effect::Copy),
-            ("KeyC", _) if k.ctrl => return self.rect().map_or(Effect::None, Effect::Copy),
-            ("KeyS", _) if k.ctrl => return self.rect().map_or(Effect::None, |rect| Effect::Save { rect, quick: k.shift }),
-            ("KeyA", _) if k.ctrl => {
-                let mon = ctx.monitor_at(self.cursor);
-                let target = if self.rect() == Some(mon) { ctx.virtual_bounds() } else { mon };
-                return self.confirm(target);
-            }
-            ("Tab", _) => {
-                self.elements = !self.elements;
-                self.intent = None;
-                self.rehover(ctx);
-                return Effect::Redraw;
-            }
-            ("Backquote", _) => {
-                self.cursor_included = !self.cursor_included;
-                return Effect::Redraw;
-            }
-            (_, "?") | ("Slash", _) if k.shift || k.key == "?" => {
-                self.help = !self.help;
-                return Effect::Redraw;
-            }
-            ("KeyR", _) if !k.ctrl => {
-                return match ctx.history().first() {
-                    Some(r) => {
-                        self.history_at = Some(0);
-                        self.confirm(*r)
-                    }
-                    None => Effect::Notice("지난 범위가 없어요"),
-                };
-            }
-            ("Comma" | "Period", _) => {
-                let list = ctx.history();
-                if list.is_empty() {
-                    return Effect::Notice("지난 범위가 없어요");
+        let on = |combo: &str| matches(combo, &k);
+        // Esc는 설정과 상관없이 늘 취소(빠져나갈 길)
+        if on(&self.keys.cancel) || code == "Escape" || k.key == "Escape" {
+            return Effect::Cancel;
+        }
+        // Ctrl+C·Cmd+C는 늘 복사(다른 앱과 같은 습관)
+        let plain_c = code == "KeyC" && (k.ctrl || k.meta) && !k.shift && !k.alt;
+        if on(&self.keys.copy) || plain_c {
+            return self.rect().map_or(Effect::None, Effect::Copy);
+        }
+        if on(&self.keys.quick) {
+            return self.rect().map_or(Effect::None, |rect| Effect::Save { rect, quick: true });
+        }
+        if on(&self.keys.save) {
+            return self.rect().map_or(Effect::None, |rect| Effect::Save { rect, quick: false });
+        }
+        if on(&self.keys.full) {
+            let mon = ctx.monitor_at(self.cursor);
+            let target = if self.rect() == Some(mon) { ctx.virtual_bounds() } else { mon };
+            return self.confirm(target);
+        }
+        if on(&self.keys.detect) {
+            self.elements = !self.elements;
+            self.intent = None;
+            self.rehover(ctx);
+            return Effect::Redraw;
+        }
+        if on(&self.keys.cursor) {
+            self.cursor_included = !self.cursor_included;
+            return Effect::Redraw;
+        }
+        if k.key == "?" || (code == "Slash" && k.shift) {
+            self.help = !self.help;
+            return Effect::Redraw;
+        }
+        if on(&self.keys.last) {
+            return match ctx.history().first() {
+                Some(r) => {
+                    self.history_at = Some(0);
+                    self.confirm(*r)
                 }
-                let i = match (self.history_at, code) {
-                    (None, _) => 0,
-                    (Some(i), "Comma") => (i + 1).min(list.len() - 1),
-                    (Some(i), _) => i.saturating_sub(1),
-                };
-                self.history_at = Some(i);
-                return self.confirm(list[i]);
+                None => Effect::Notice("지난 범위가 없어요"),
+            };
+        }
+        let (older, newer) = (on(&self.keys.prev), on(&self.keys.next));
+        if older || newer {
+            let list = ctx.history();
+            if list.is_empty() {
+                return Effect::Notice("지난 범위가 없어요");
             }
-            _ => {}
+            let i = match self.history_at {
+                None => 0,
+                Some(i) if older => (i + 1).min(list.len() - 1),
+                Some(i) => i.saturating_sub(1),
+            };
+            self.history_at = Some(i);
+            return self.confirm(list[i]);
         }
         // 방향키: 범위가 정해진 뒤(강조 중이면 그 범위를 확정하고) 1 px
         let dir = match code {
@@ -626,5 +708,56 @@ mod tests {
         // 한글 입력 중이어도 code로
         let e = s.handle(Input::Key(Key { code: "KeyD".into(), key: "ㅇ".into(), ..Default::default() }), &mut c);
         assert_eq!(e, Effect::SetCursor(PhysPoint { x: 401, y: 330 }));
+    }
+
+    #[test]
+    fn 화면_안_키는_설정값을_따른다() {
+        // R-KEY-6: 복사를 Space로 바꾸면 Space = 복사, Enter = 아무것도 안 함. Esc는 늘 취소.
+        let mut c = ctx();
+        let keys = CaptureKeys { copy: "Space".into(), cancel: "Q".into(), save: "Cmd+S".into(), ..CaptureKeys::default() };
+        let mut s = Selector::new(PhysPoint { x: 400, y: 330 }, &c).with_keys(keys);
+        s.handle(Input::Move(PhysPoint { x: 420, y: 330 }), &mut c);
+        let r = s.rect().unwrap();
+        assert_eq!(s.handle(key("Enter"), &mut c), Effect::None, "Enter는 이제 복사가 아님");
+        assert_eq!(s.handle(key("Space"), &mut c), Effect::Copy(r));
+        let ctrl_s = Input::Key(Key { code: "KeyS".into(), key: "s".into(), ctrl: true, ..Default::default() });
+        assert_ne!(s.handle(ctrl_s, &mut c), Effect::Save { rect: r, quick: false }, "맥 값 Cmd+S로 바뀌었으니 Ctrl+S는 저장 아님");
+        let cmd_s = Input::Key(Key { code: "KeyS".into(), key: "s".into(), meta: true, ..Default::default() });
+        assert_eq!(s.handle(cmd_s, &mut c), Effect::Save { rect: r, quick: false });
+        let cmd_c = Input::Key(Key { code: "KeyC".into(), key: "c".into(), meta: true, ..Default::default() });
+        assert_eq!(s.handle(cmd_c, &mut c), Effect::Copy(r), "Cmd+C·Ctrl+C는 늘 복사");
+        assert_eq!(s.handle(key("KeyQ"), &mut c), Effect::Cancel);
+        assert_eq!(s.handle(key("Escape"), &mut c), Effect::Cancel, "Esc는 늘 빠져나감");
+    }
+
+    #[test]
+    fn 툴바_단추는_키와_같은_결과() {
+        let mut c = ctx();
+        let mut s = Selector::new(PhysPoint { x: 400, y: 330 }, &c);
+        s.handle(Input::Move(PhysPoint { x: 420, y: 330 }), &mut c);
+        s.handle(Input::Down(PhysPoint { x: 420, y: 330 }, Button::Left), &mut c);
+        s.handle(Input::Up(PhysPoint { x: 420, y: 330 }, Button::Left), &mut c);
+        assert_eq!(s.view().phase, Phase::Confirmed);
+        let r = s.rect().unwrap();
+        assert_eq!(s.handle(Input::Command(Command::Copy), &mut c), Effect::Copy(r));
+        assert_eq!(s.handle(Input::Command(Command::Save), &mut c), Effect::Save { rect: r, quick: false });
+        assert_eq!(s.handle(Input::Command(Command::QuickSave), &mut c), Effect::Save { rect: r, quick: true });
+        assert_eq!(s.handle(Input::Command(Command::Cancel), &mut c), Effect::Cancel);
+    }
+
+    #[test]
+    fn 근거_보기는_켰을_때만_마디마다() {
+        let mut c = ctx();
+        let mut off = Selector::new(PhysPoint { x: 400, y: 330 }, &c);
+        off.handle(Input::Move(PhysPoint { x: 420, y: 330 }), &mut c);
+        assert!(off.view().evidence.is_empty(), "기본은 꺼짐");
+        let mut on = Selector::new(PhysPoint { x: 400, y: 330 }, &c).with_evidence(true);
+        on.handle(Input::Move(PhysPoint { x: 420, y: 330 }), &mut c);
+        let v = on.view();
+        assert!(!v.evidence.is_empty());
+        assert_eq!(v.evidence.iter().filter(|e| e.current).count(), 1, "지금 강조는 하나");
+        assert_eq!(v.evidence.iter().find(|e| e.current).map(|e| e.rect), v.rect);
+        assert_eq!(source_letters(src::W | src::A | src::V), "W·A·V");
+        assert_eq!(source_letters(0), "");
     }
 }

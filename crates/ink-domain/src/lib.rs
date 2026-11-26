@@ -6,6 +6,7 @@ pub mod geometry;
 pub mod history;
 pub mod image;
 pub mod magnet;
+pub mod modekeys;
 pub mod mode;
 pub mod naming;
 pub mod recog;

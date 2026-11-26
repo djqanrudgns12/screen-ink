@@ -32,7 +32,7 @@ fn mv(x: i32, y: i32) -> CaptureInput {
 }
 
 fn key(code: &str) -> CaptureInput {
-    CaptureInput::Key { key: code.into(), code: code.into(), ctrl: false, shift: false, alt: false }
+    CaptureInput::Key { key: code.into(), code: code.into(), ctrl: false, shift: false, alt: false, meta: false }
 }
 
 #[test]
@@ -87,7 +87,7 @@ fn ctrl_s는_이름_규칙으로_저장하고_순번이_오른다() {
     s.update_setting("output.template", &json!("수업_{yyyy}{MM}{dd}_{n}"));
     for _ in 0..2 {
         s.on_hotkey("region");
-        s.capture_input(CaptureInput::Key { key: "s".into(), code: "KeyS".into(), ctrl: true, shift: false, alt: false });
+        s.capture_input(CaptureInput::Key { key: "s".into(), code: "KeyS".into(), ctrl: true, shift: false, alt: false, meta: false });
     }
     let saved = w.desk.0.lock().unwrap().saved.clone();
     assert_eq!(saved.iter().map(|x| x.1.as_str()).collect::<Vec<_>>(), vec!["수업_20260304_1", "수업_20260304_2"]);
@@ -161,4 +161,33 @@ fn 보통_속도_색인은_강등하지_않는다() {
     }
     let list = s.settings().get("capture.excluded").cloned().unwrap_or_default();
     assert!(list.as_array().cloned().unwrap_or_default().is_empty(), "{list}");
+}
+
+#[test]
+fn 설정에서_바꾼_복사_키가_바로_먹는다() {
+    // R-KEY-6: 설정 c-copy = Space → 다음 진입부터 Space = 복사, Enter = 아무것도 안 함
+    let w = world();
+    let mut s = service(&w);
+    assert!(s.set_shortcut("c-copy", "Space").ok, "설정 저장");
+    s.on_hotkey("region");
+    s.capture_input(mv(420, 320));
+    s.capture_input(key("Enter"));
+    assert!(w.desk.0.lock().unwrap().images.is_empty(), "Enter는 복사 아님");
+    s.capture_input(key("Space"));
+    assert_eq!(w.desk.0.lock().unwrap().images, vec![(300, 40)]);
+}
+
+#[test]
+fn 툴바_복사_단추는_enter와_같다() {
+    let w = world();
+    let mut s = service(&w);
+    s.on_hotkey("region");
+    s.capture_input(mv(420, 320));
+    s.capture_input(CaptureInput::Command { name: "copy".into() });
+    assert_eq!(w.desk.0.lock().unwrap().images, vec![(300, 40)]);
+    // 모르는 단추는 아무 일도 없다
+    s.on_hotkey("region");
+    s.capture_input(mv(420, 320));
+    s.capture_input(CaptureInput::Command { name: "launch-missiles".into() });
+    assert!(matches!(s.mode(), Mode::Capture { .. }), "모드 그대로");
 }

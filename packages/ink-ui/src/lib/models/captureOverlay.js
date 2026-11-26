@@ -340,6 +340,7 @@ export function toCaptureKeyInput(event) {
     ctrl: Boolean(event.ctrlKey),
     shift: Boolean(event.shiftKey),
     alt: Boolean(event.altKey),
+    meta: Boolean(event.metaKey),
   };
 }
 

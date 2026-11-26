@@ -53,7 +53,7 @@ apps/screen-ink              단독 앱 셸
 |---|---|
 | 의존성 | `npm install` |
 | 시험 | `cargo test --workspace --exclude screen-ink --exclude tauri-plugin-screen-ink` · `npm test` · `npm run check` |
-| 화면 미리보기(가짜 클라이언트) | `npm run ui:dev` → http://localhost:5180/?screen=tray · settings · island · board · first · cheat |
+| 화면 미리보기(가짜 클라이언트) | `npm run ui:dev` → http://localhost:5180/?screen=tray · settings · island · board · first · cheat · overlay(`&evidence=1` 인식 근거 보기) |
 | 앱 실행 | `npm run app:dev` (트레이 상주, 첫 실행은 설정 창 + 안내 시트) |
 | 단축키 자료 다시 만들기 | `npm run shortcuts:data` (입력표 → `docs/shortcuts/catalog-v1.json`) |
 | 진입 시간(M1) 재기 | 앱을 띄운 채 `powershell -ExecutionPolicy Bypass -File bench\m1-overlay.ps1 -Count 100 -Save` |
@@ -67,7 +67,7 @@ apps/screen-ink              단독 앱 셸
 
 ## 후속(1차에서 뺀 것)
 
-캡처 핀 · 캡처 주석 편집 · 스크롤 캡처 · OCR·QR · 라이브 판서(클릭 통과) · 판서 보존·스크롤 따라가기 · 타이머·교실 위젯 · 명령 팔레트 · 시스템 소리 녹음 · GIF · MS Store·공증 배포.
+캡처 핀 · 스크롤 캡처 · OCR·QR · 라이브 판서(클릭 통과) · 판서 보존·스크롤 따라가기 · 타이머·교실 위젯 · 명령 팔레트 · 시스템 소리 녹음 · GIF · MS Store·공증 배포.
 
 ## 문서
 

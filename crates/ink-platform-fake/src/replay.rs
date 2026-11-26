@@ -143,7 +143,7 @@ fn hit(r: Option<PhysRect>, truth: PhysRect) -> Option<i32> {
 }
 
 fn key(code: &str) -> CaptureInput {
-    CaptureInput::Key { key: code.into(), code: code.into(), ctrl: false, shift: false, alt: false }
+    CaptureInput::Key { key: code.into(), code: code.into(), ctrl: false, shift: false, alt: false, meta: false }
 }
 
 /// 진입 → 점 옆 → 점: 첫 강조와 처리 시간. 이어서 휠 `dy`로 `MAX_STEPS`칸 돌린 강조들.

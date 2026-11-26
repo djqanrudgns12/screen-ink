@@ -10,4 +10,7 @@ const client = createFakeClient({
   frameUrl: sampleFrameUrl,
 });
 
+// ?evidence=1 — 숨은 "인식 근거 보기"(capture.evidence)를 켠 채로
+if (params.get('evidence') === '1') client.updateSetting('capture.evidence', true);
+
 mount(Preview, { target: document.getElementById('app'), props: { client } });

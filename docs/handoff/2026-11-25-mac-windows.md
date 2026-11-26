@@ -268,6 +268,21 @@ $env:CARGO_TARGET_DIR='D:\dev-cache\screen-ink\target'
 $env:CARGO_HTTP_CHECK_REVOKE='false'
 ```
 
+### 2.6 Windows에서 바뀐 공통 부분(2026-11-26 오후) — 맥에서 받은 뒤 확인
+
+- **선택 툴바(R-CAP-27, 04 S08)**: 범위를 확정하면(클릭·드래그 놓기) 오른쪽 아래 바깥에 [취소][저장][복사] 다크 알약.
+  - 코드: `packages/ink-ui/src/lib/components/CaptureToolbar.svelte`, 위치 규칙 `models/captureToolbar.js`(단위 시험 6).
+  - 단추 입력은 새 `CaptureInput {type:'command', name}`이고, Rust `Input::Command`가 키와 같은 결과를 낸다.
+  - 맥 확인: 혼합 배율에서 툴바가 오른쪽 아래 귀가 있는 모니터에 뜨는지, 메뉴 막대·Dock에 가리지 않는지(가장자리 8px 안으로 밀어 넣음).
+- **화면 안 키 설정 반영(R-KEY-6)**: 고르기 상태 기계가 고정 코드 대신 설정된 `c-*` 키로 판정한다(`ink-domain::modekeys`).
+  - `Key`에 `meta`(맥 Cmd)가 생겼고, UI `toCaptureKeyInput`이 `metaKey`를 넘긴다.
+  - 맥 확인: 맥 기본값 `c-save = Cmd+S`로 저장되는지, 이제 **Ctrl+S는 맥에서 저장이 아님**.
+  - Esc는 늘 취소, Ctrl+C·Cmd+C는 늘 복사로 고정했다.
+- **숨은 "인식 근거 보기"**: 설정 파일 `capture.evidence: true`면 사슬 마디마다 근거 색·점수. AX(M9)를 붙인 뒤 맥 요소가 초록(A)으로 보이는지 확인하는 데 쓴다.
+- **느린 앱 강등 문턱 150 → 500 ms**(R-CAP-15). AX 색인 시간이 500 ms를 넘는 앱만 창 단위로 떨어진다.
+- **근거 준비 시점**: UIA·AX 미리 깨우기와 V 전처리는 이제 정지 화면을 띄우기 **전**에 시작한다(`warm_evidence`). 맥 진입 시간(M7)이 그대로인지 `sh bench/m1-overlay-mac.sh 30`으로 확인한다.
+- **진입 계측 한 줄**: 모드가 끝날 때 `selection probe: V first … A first … moves …` 로그가 남는다(`SCREEN_INK_LOG=debug` 필요 없음, info).
+
 ### 3.0 오늘(2026-11-26) 학교에서 할 일 — 순서대로
 
 1. 받기: `git pull --rebase origin feat/foundation`

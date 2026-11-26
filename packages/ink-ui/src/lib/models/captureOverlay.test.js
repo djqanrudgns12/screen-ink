@@ -210,11 +210,11 @@ test('converts pointer, wheel, and keyboard events into CaptureInput contracts a
   // Keyboard: passes key + physical code + modifier flags (works under Korean IME too)
   assert.deepEqual(
     toCaptureKeyInput({ key: 'Process', code: 'KeyR', ctrlKey: false, shiftKey: false, altKey: false }),
-    { type: 'key', key: 'Process', code: 'KeyR', ctrl: false, shift: false, alt: false },
+    { type: 'key', key: 'Process', code: 'KeyR', ctrl: false, shift: false, alt: false, meta: false },
   );
   assert.deepEqual(
     toCaptureKeyInput({ key: 's', code: 'KeyS', ctrlKey: true, shiftKey: true, altKey: false }),
-    { type: 'key', key: 's', code: 'KeyS', ctrl: true, shift: true, alt: false },
+    { type: 'key', key: 's', code: 'KeyS', ctrl: true, shift: true, alt: false, meta: false },
   );
 
   // Default prevention covers all capture keys while leaving F12 / Ctrl+R alone

@@ -1,6 +1,9 @@
 <script>
+  import CaptureToolbar from '../components/CaptureToolbar.svelte';
   import Magnifier from '../components/Magnifier.svelte';
   import SelectionFrame from '../components/SelectionFrame.svelte';
+  import { TOOLBAR_ACTIONS, comboMap, placeToolbar, toolbarOwner, toolbarTooltip } from '../models/captureToolbar.js';
+  import { evidenceBoxes } from '../models/evidence.js';
   import {
     buildMagnifierPatch,
     clientToImagePixel,
@@ -57,6 +60,17 @@
   let monitor = $state(null);
   let frameUrl = $state('');
   let deferredLoad = $state(false);
+  /** 이 세션의 모든 모니터(선택 툴바를 어느 모니터에 띄울지) */
+  /** @type {import('@screen-ink/client').OverlayMonitor[]} */
+  let sessionMonitors = $state([]);
+  /** 칸 id → 지금 키(툴팁) */
+  /** @type {Record<string, string>} */
+  let combos = $state({});
+  /** @type {'windows' | 'macos'} */
+  let platform = $state('windows');
+  let toolbarW = $state(0);
+  let toolbarH = $state(0);
+  let overToolbar = $state(false);
 
   /** @type {'hex' | 'rgb'} */
   let colorFormat = $state('hex');
@@ -149,6 +163,8 @@
     sessionHighlight = null;
     captureView = null;
     monitor = null;
+    sessionMonitors = [];
+    overToolbar = false;
     frameUrl = '';
     deferredLoad = false;
     cursorCss = null;
@@ -353,6 +369,8 @@
         sessionHighlight = e.overlay.highlight ?? null;
         captureView = null;
         monitor = mon;
+        sessionMonitors = Array.isArray(e.overlay.monitors) ? e.overlay.monitors : [];
+        overToolbar = false;
         frameUrl = nextUrl;
         readyScheduledSession = null;
         readySentSession = null;
@@ -385,6 +403,7 @@
           captureView = e.view;
         }
       } else if (e.type === 'state') {
+        applyStateKeys(e.state);
         const mode = e.state?.mode;
         if (!mode || mode.mode !== 'capture') {
           clearOverlay();
@@ -442,6 +461,29 @@
     ) {
       handleDeferredImgLoad(session);
     }
+  });
+
+  /**
+   * 설정 상태에서 툴팁에 쓸 지금 키·플랫폼을 꺼낸다.
+   * @param {any} state
+   */
+  function applyStateKeys(state) {
+    if (!state) return;
+    if (Array.isArray(state.shortcuts)) combos = comboMap(state.shortcuts);
+    if (typeof state.platform === 'string') platform = state.platform === 'macos' || state.platform === 'mac' ? 'macos' : 'windows';
+  }
+
+  $effect(() => {
+    if (typeof client?.getState !== 'function') return;
+    let alive = true;
+    Promise.resolve(client.getState())
+      .then((s) => {
+        if (alive) applyStateKeys(s);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
   });
 
   /** @param {import('@screen-ink/client').CaptureInput | null} input */
@@ -602,6 +644,24 @@
   });
 
   let activeGuides = $derived(resolveMonitorGuides(captureView?.guides, monitor));
+  // 숨은 "인식 근거 보기"(capture.evidence)
+  let evidence = $derived(evidenceBoxes(captureView?.evidence, monitor));
+
+  // 선택 툴바(R-CAP-27): 확정한 범위의 오른쪽 아래 귀가 있는 모니터에만
+  let toolbarVisible = $derived(
+    Boolean(
+      captureView?.phase === 'confirmed' &&
+        monitor &&
+        activeFrame &&
+        toolbarOwner(captureView.rect, sessionMonitors.length ? sessionMonitors : [monitor]) === monitor.id,
+    ),
+  );
+  let toolbarTips = $derived(Object.fromEntries(TOOLBAR_ACTIONS.map((a) => [a.id, toolbarTooltip(a, combos, platform)])));
+  let toolbarPos = $derived(
+    activeFrame
+      ? placeToolbar(activeFrame, { w: viewportW, h: viewportH }, { w: toolbarW || TOOLBAR_ACTIONS.length * 34 + 8, h: toolbarH || 40 })
+      : { x: 0, y: 0, side: 'below' },
+  );
 
   let magBoxW = $derived(colorFormat === 'rgb' ? 214 : 186);
   let magPos = $derived(
@@ -688,7 +748,38 @@
       </svg>
     {/if}
 
-    {#if magnifierReady && cursorCss && cursorPhys}
+    {#if evidence.length > 0}
+      <svg class="ink-overlay-evidence" aria-hidden="true" data-evidence={evidence.length}>
+        {#each evidence as b, i (i)}
+          <rect
+            x={b.x + 0.5}
+            y={b.y + 0.5}
+            width={Math.max(0, b.width - 1)}
+            height={Math.max(0, b.height - 1)}
+            fill="none"
+            stroke={b.color}
+            stroke-width={b.current ? 2 : 1}
+            stroke-dasharray={b.hidden ? '4 3' : undefined}
+          />
+          <text class="ink-overlay-evidence-tag" x={b.x + 4} y={b.y + 13} fill={b.color}>{b.tag}</text>
+        {/each}
+      </svg>
+    {/if}
+
+    {#if toolbarVisible}
+      <CaptureToolbar
+        actions={TOOLBAR_ACTIONS}
+        tooltips={toolbarTips}
+        x={toolbarPos.x}
+        y={toolbarPos.y}
+        bind:width={toolbarW}
+        bind:height={toolbarH}
+        onHover={(v) => (overToolbar = v)}
+        onCommand={(name) => sendCaptureInput({ type: 'command', name })}
+      />
+    {/if}
+
+    {#if magnifierReady && cursorCss && cursorPhys && !(toolbarVisible && overToolbar)}
       <div
         class="ink-overlay-mag"
         style:transform={`translate3d(${magPos.x}px, ${magPos.y}px, 0)`}
@@ -754,6 +845,23 @@
     height: 100%;
     overflow: visible;
     pointer-events: none;
+  }
+
+  .ink-overlay-evidence {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .ink-overlay-evidence-tag {
+    font-family: var(--ink-font-mono);
+    font-size: 11px;
+    paint-order: stroke;
+    stroke: rgba(0, 0, 0, 0.75);
+    stroke-width: 3px;
   }
 
   .ink-overlay-mag {

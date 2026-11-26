@@ -81,6 +81,24 @@ test('고르기 흉내: 휠은 단계, 클릭은 확정, Enter는 결과 섬', a
   assert.equal((await c.getState()).mode.mode, 'idle');
 });
 
+test('선택 툴바 단추(command)는 키와 같은 결과', async () => {
+  const c = createFakeClient();
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+  await c.run('capture.region');
+  await c.captureInput({ type: 'move', x: 800, y: 500 });
+  await c.captureInput({ type: 'down', x: 800, y: 500, button: 0 });
+  await c.captureInput({ type: 'up', x: 800, y: 500, button: 0 });
+  await c.captureInput({ type: 'command', name: 'copy' });
+  assert.equal(seen.at(-1).island.text, '복사했어요');
+  await c.run('capture.region');
+  await c.captureInput({ type: 'command', name: 'save' });
+  assert.equal(seen.at(-1).island.text, '저장했어요');
+  await c.run('capture.region');
+  await c.captureInput({ type: 'command', name: 'cancel' });
+  assert.equal((await c.getState()).mode.mode, 'idle');
+});
+
 test('키캡은 Windows에서 Shift, 맥에서 기호', () => {
   assert.deepEqual(keycaps('Alt+Shift+D'), ['Alt', 'Shift', 'D']);
   assert.deepEqual(keycaps('Option+Shift+1', 'macos'), ['⌥', '⇧', '1']);

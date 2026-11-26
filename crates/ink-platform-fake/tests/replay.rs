@@ -121,7 +121,7 @@ fn 확정하면_사례가_써지고_재생하면_맞는다() {
     s.on_hotkey("region");
     s.capture_input(CaptureInput::Move { x: 220, y: 218 });
     s.capture_input(CaptureInput::Move { x: 210, y: 218 });
-    s.capture_input(CaptureInput::Key { key: "Enter".into(), code: "Enter".into(), ctrl: false, shift: false, alt: false });
+    s.capture_input(CaptureInput::Key { key: "Enter".into(), code: "Enter".into(), ctrl: false, shift: false, alt: false, meta: false });
     let files = replay::cases_in(&dir);
     assert_eq!(files.len(), 1, "확정 한 번 = 사례 하나");
     let back = replay::load(&files[0]).unwrap();

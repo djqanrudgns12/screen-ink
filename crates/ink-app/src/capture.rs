@@ -13,7 +13,8 @@ use ink_domain::magnet::Edges;
 use ink_domain::mode::Mode;
 use ink_domain::naming;
 use ink_domain::recog::{build_chain, Evidence, Node};
-use ink_domain::selection::{Button, Context, Effect, Input, Key, Selector};
+use ink_domain::modekeys::CaptureKeys;
+use ink_domain::selection::{Button, Command, Context, Effect, Input, Key, Selector};
 use ink_domain::settings::ExcludedApp;
 use ink_domain::snapshot::{RawWindow, Snapshot};
 use serde::Deserialize;
@@ -35,7 +36,9 @@ pub enum CaptureInput {
     Down { x: i32, y: i32, #[serde(default)] button: u8 },
     Up { x: i32, y: i32, #[serde(default)] button: u8 },
     Dblclick { x: i32, y: i32 },
-    Key { key: String, code: String, #[serde(default)] ctrl: bool, #[serde(default)] shift: bool, #[serde(default)] alt: bool },
+    Key { key: String, code: String, #[serde(default)] ctrl: bool, #[serde(default)] shift: bool, #[serde(default)] alt: bool, #[serde(default)] meta: bool },
+    /// 선택 툴바 단추(R-CAP-27): "copy" | "save" | "quickSave" | "cancel"
+    Command { name: String },
 }
 
 impl From<CaptureInput> for Input {
@@ -47,7 +50,15 @@ impl From<CaptureInput> for Input {
             CaptureInput::Down { x, y, button } => Input::Down(PhysPoint { x, y }, btn(button)),
             CaptureInput::Up { x, y, button } => Input::Up(PhysPoint { x, y }, btn(button)),
             CaptureInput::Dblclick { x, y } => Input::DoubleClick(PhysPoint { x, y }),
-            CaptureInput::Key { key, code, ctrl, shift, alt } => Input::Key(Key { key, code, ctrl, shift, alt }),
+            CaptureInput::Key { key, code, ctrl, shift, alt, meta } => Input::Key(Key { key, code, ctrl, shift, alt, meta }),
+            CaptureInput::Command { name } => match name.as_str() {
+                "copy" => Input::Command(Command::Copy),
+                "save" => Input::Command(Command::Save),
+                "quickSave" => Input::Command(Command::QuickSave),
+                // 모르는 단추는 취소로 바꾸지 않는다 — 아무 일도 없게(빈 키)
+                "cancel" => Input::Command(Command::Cancel),
+                _ => Input::Key(Key::default()),
+            },
         }
     }
 }
@@ -236,9 +247,12 @@ impl InkService {
     pub(crate) fn start_selection(&mut self, frames: Vec<Frame>, cursor: PhysPoint) {
         let Some(snap) = self.snapshot.take() else { return };
         self.cap.frames = frames;
+        // 화면 안 키는 지금 설정값(R-KEY-6) — 설정을 바꾸면 다음 진입부터
+        let keys = CaptureKeys::from_lookup(|id| self.settings.shortcut(id).to_string());
+        let evidence = self.settings.bool("capture.evidence");
         let sel = {
             let ctx = ctx!(self, &snap);
-            Selector::new(cursor, &ctx)
+            Selector::new(cursor, &ctx).with_keys(keys).with_evidence(evidence)
         };
         self.cap.selector = Some(sel);
         self.snapshot = Some(snap);

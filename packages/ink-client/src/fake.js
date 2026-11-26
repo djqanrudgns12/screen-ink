@@ -7,7 +7,7 @@ const SNIPASTE = new Set(['F1', 'F3', 'Shift+F1', 'Ctrl+F1']);
 const SUGGEST = ['Ctrl+Alt+1', 'Ctrl+Alt+2', 'Ctrl+Alt+3', 'Alt+Shift+2', 'Alt+Shift+3', 'Ctrl+Shift+F1', 'Alt+Shift+F1', 'Ctrl+Alt+Q'];
 
 const DEFAULT_SETTINGS = {
-  'capture.result': 'copy', 'capture.cursor': false, 'capture.sound': false, 'capture.element': true, 'capture.magnet': true,
+  'capture.result': 'copy', 'capture.evidence': false, 'capture.cursor': false, 'capture.sound': false, 'capture.element': true, 'capture.magnet': true,
   'capture.historyMax': 20, 'capture.excluded': [{ exe: 'licecap.exe', mode: 'exclude', auto: false }],
   'output.folder': 'C:\\Users\\…\\Pictures\\screen-ink', 'output.template': '수업_{yyyy}{MM}{dd}_{n}',
   'record.fps': 30, 'record.mic': false, 'record.micDevice': '',
@@ -164,12 +164,18 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       } else if (input.type === 'down' && input.button === 2) {
         if (s.phase === 'hover') return this.run('capture.cancel');
         s.phase = 'hover'; s.rect = null;
-      } else if (input.type === 'key' && input.key === 'Escape') {
+      } else if ((input.type === 'key' && input.key === 'Escape') || (input.type === 'command' && input.name === 'cancel')) {
         return this.run('capture.cancel');
       } else if (input.type === 'key' && input.key === '?') {
         s.help = !s.help;
       }
-      if ((input.type === 'key' && input.key === 'Enter') || input.type === 'dblclick') {
+      if (input.type === 'command' && (input.name === 'save' || input.name === 'quickSave')) {
+        const r = s.rect ?? chainAt(s.p)[s.level].r;
+        await this.run('capture.cancel');
+        island({ kind: 'result', variant: 'result', text: '저장했어요', value: `${r.w}×${r.h}`, detail: '수업_2026-03-04_090507.png', thumbUrl: frameUrl, button: { label: '폴더 열기', action: 'folder.open' } });
+        return;
+      }
+      if ((input.type === 'key' && input.key === 'Enter') || input.type === 'dblclick' || (input.type === 'command' && input.name === 'copy')) {
         const r = s.rect ?? chainAt(s.p)[s.level].r;
         await this.run('capture.cancel');
         island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${r.w}×${r.h}`, detail: '한글·PPT에 Ctrl+V', thumbUrl: frameUrl, button: { label: '저장', action: 'capture.saveLast' }, buttonKey: 'Ctrl+S', chip: { label: '#FFFFFF 복사', action: 'capture.copyHex' } });
@@ -179,7 +185,13 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       const rect = s.phase === 'hover' ? chain[s.level].r : s.rect;
       emit({
         type: 'capture',
-        view: { session: mode.session, phase: s.phase, rect, path: chain.map((c) => c.name), level: s.phase === 'hover' ? s.level : -1, guides: [], magnet: !input.alt, cursorIncluded: false, help: s.help },
+        view: {
+          session: mode.session, phase: s.phase, rect, path: chain.map((c) => c.name), level: s.phase === 'hover' ? s.level : -1, guides: [], magnet: !input.alt, cursorIncluded: false, help: s.help,
+          // 숨은 설정 capture.evidence: 작은 것 → 큰 것
+          ...(settings['capture.evidence'] && s.phase === 'hover'
+            ? { evidence: [...chain].reverse().map((c, i) => ({ rect: c.r, label: c.name, score: [0.86, 0.74, 0.61, 0.3][i], sources: ['W·A·V', 'W·V', 'W', 'W'][i], current: chain.length - 1 - i === s.level, hidden: false })) }
+            : {}),
+        },
       });
     },
     async overlayReady(session) {

@@ -105,11 +105,14 @@
  * @property {boolean} magnet                       false = Alt로 자석 끔(섬에 "자석 끔")
  * @property {boolean} cursorIncluded               ` 키 — 크기 배지에 "커서 포함"
  * @property {boolean} help                         ? 키 — 섬 키 안내 둘째 줄을 강제로 보임
+ * @property {{rect: PhysRect, label: string, score: number, sources: string, current: boolean, hidden: boolean}[]} [evidence]  숨은 설정 capture.evidence — 사슬 마디(작은 것 → 큰 것)의 근거·점수
  *
  * @typedef {{type:'move', x:number, y:number}
  *   | {type:'wheel', dy:-1|1}
  *   | {type:'down'|'up'|'dblclick', x:number, y:number, button:0|2}
- *   | {type:'key', key:string, code:string, ctrl:boolean, shift:boolean, alt:boolean}} CaptureInput
+ *   | {type:'key', key:string, code:string, ctrl:boolean, shift:boolean, alt:boolean, meta?:boolean}
+ *   | {type:'command', name:'copy'|'save'|'quickSave'|'cancel'}} CaptureInput
+ *   command = 선택 툴바 단추(R-CAP-27) — 키와 같은 결과(Rust가 판단). meta = 맥 Cmd.
  *   좌표는 물리 px(가상 화면) = monitor.bounds + client × scale. wheel dy = -1 위(넓히기·부모) / 1 아래(좁히기·자식).
  *   key는 e.key와 e.code를 같이(한글 입력 중에도 code로 판단). Esc·우클릭·Enter 등 판단은 모두 Rust가 한다.
  */
