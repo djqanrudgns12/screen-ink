@@ -12,6 +12,7 @@ mod adapters;
 mod overlay;
 mod pins;
 mod tray_art;
+mod zoom_hud;
 
 use ink_app::{
     HotkeyError, HotkeyOutcome, HotkeyRegistry, ImportPreview, InkService, InkState, IslandEvent, IslandKind, MonitorProbe, Notifier, Ports, PreviewResult, ScreenSource,
@@ -147,6 +148,10 @@ impl<R: Runtime> Notifier for TauriNotifier<R> {
 
     fn capture(&self, view: &ink_app::CaptureView) {
         let _ = self.app.emit(EVT_CAPTURE, view);
+    }
+
+    fn zoom(&self, state: Option<&ink_app::LiveZoomState>) {
+        zoom_hud::emit(&self.app, state);
     }
 }
 
@@ -650,6 +655,12 @@ fn capture_input<R: Runtime>(window: tauri::WebviewWindow<R>, ink: State<'_, Ink
     ink.lock().capture_input(input);
 }
 
+/// 실시간 확대 입력(휠·확대 안 키·끝) — HUD·미리보기용. 실제 앱의 휠은 돋보기 훅이 넘긴다.
+#[tauri::command]
+fn zoom_input(ink: State<'_, Ink>, input: ink_app::ZoomInput) {
+    ink.lock().zoom_input(input);
+}
+
 /// 핀 화면이 처음 묻는 것: 그림 크기·주소·배율(R-CAP-29).
 #[tauri::command]
 fn pin_info(store: State<'_, pins::PinStore>, id: u64) -> Option<pins::PinView> {
@@ -862,6 +873,11 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             let h = app.clone();
             app.run_on_main_thread(move || h.state::<Ink>().lock().end_capture()).map_err(|e| e.to_string())?;
         }
+        "zoom" => {
+            hide(POPOVER);
+            let h = app.clone();
+            app.run_on_main_thread(move || h.state::<Ink>().lock().start_zoom()).map_err(|e| e.to_string())?;
+        }
         other => {
             hide(POPOVER);
             let h = app.clone();
@@ -922,6 +938,8 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         pins: Box::new(pins::TauriPinHost::new(app.clone(), pin_store)),
     };
     let mut service = InkService::new(ports, Platform::current(), app.package_info().version.to_string());
+    // 실시간 확대(Alt+2): Windows = Magnification API + HUD, 그 밖 = 없음
+    service.set_magnifier(zoom_hud::magnifier(app));
     // 개발용 사람 정답 도구: 확정할 때마다 인식 시험 사례를 쓴다(시험 문서 화면에서만, 08 §5.2)
     if let Ok(dir) = std::env::var("SCREEN_INK_CASE_DIR") {
         log::warn!("recognition cases will be written on every confirm");
@@ -953,6 +971,9 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
 
 fn finish_setup<R: Runtime>(app: &AppHandle<R>, initial: InkState, first_run: bool, autostart: bool, started: Instant) -> tauri::Result<()> {
     build_static_windows(app)?;
+    if let Err(e) = zoom_hud::build(app) {
+        log::error!("zoom hud window: {e}");
+    }
     // 맥: 독 아이콘 없이 메뉴 막대에만(트레이 앱), 섬은 오버레이 위·모든 Space
     #[cfg(target_os = "macos")]
     {
@@ -1066,7 +1087,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             capture_input,
             pin_info,
             pin_action,
-            pin_zoom
+            pin_zoom,
+            zoom_input
         ])
         .register_uri_scheme_protocol(overlay::SCHEME, |ctx, req| overlay::serve(ctx, req))
         .setup(|app, _api| setup(app))

@@ -15,6 +15,7 @@ const COMMANDS: &[&str] = &[
     "pin_info",
     "pin_action",
     "pin_zoom",
+    "zoom_input",
 ];
 
 fn main() {
