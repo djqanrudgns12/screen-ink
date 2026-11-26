@@ -18,6 +18,11 @@ pub struct Delay {
 }
 
 impl InkService {
+    /// 트레이·명령에서 바로 캡처(단축키가 꺼져 있거나 비워 두어도): `full`·`active`·`last`·`delay`(트레이 타일 [전체]).
+    pub fn start_quick(&mut self, slot: &str) {
+        self.quick_hotkey(slot);
+    }
+
     pub(crate) fn quick_hotkey(&mut self, slot: &str) {
         match slot {
             "last" => self.capture_last_range(),

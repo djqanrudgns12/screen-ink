@@ -422,7 +422,8 @@ fn show_island<R: Runtime>(app: &AppHandle<R>) {
 fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let popover = WebviewWindowBuilder::new(app, POPOVER, WebviewUrl::App("index.html?view=popover".into()))
         .title(APP_NAME)
-        .inner_size(304.0, 460.0)
+        // 카드 252 × 약 418~448 + 둘레 투명 여백 8씩(App.svelte `.popover-shell`) — 창 = 카드 + 그림자만(R2-UI-TRAY-1)
+        .inner_size(268.0, 464.0)
         .resizable(false)
         .decorations(false)
         .transparent(true)
@@ -1108,6 +1109,12 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
                 h.state::<Ink>().lock().undo();
             })
             .map_err(|e| e.to_string())?;
+        }
+        // 트레이 타일 [전체](R2-UI-TRAY-2): 커서 모니터 바로 캡처 — 단축키를 비워 두어도 된다
+        "capture.full" => {
+            hide(POPOVER);
+            let h = app.clone();
+            app.run_on_main_thread(move || h.state::<Ink>().lock().start_quick("full")).map_err(|e| e.to_string())?;
         }
         "capture.region" | "capture.window" => {
             let kind = if action == "capture.region" { CaptureKind::Region } else { CaptureKind::Window };
