@@ -614,6 +614,21 @@ impl InkService {
         self.state()
     }
 
+    /// 지금 화면 언어(설정 `general.lang`, R2-I18N).
+    pub fn lang(&self) -> ink_domain::i18n::Lang {
+        ink_domain::i18n::Lang::from_setting(self.settings.str("general.lang"))
+    }
+
+    /// 지금 언어로 키의 글(Rust가 만드는 섬·오류·메뉴 글은 이것으로 — 문자열을 코드에 박지 않는다).
+    pub(crate) fn t(&self, key: &str) -> String {
+        ink_domain::i18n::tr(self.lang(), key)
+    }
+
+    /// [`Self::t`] + `{이름}` 끼우기.
+    pub(crate) fn tf(&self, key: &str, args: &[(&str, &dyn std::fmt::Display)]) -> String {
+        ink_domain::i18n::trf(self.lang(), key, args)
+    }
+
     /// 단축키 잠시 끄기(`` Alt+` ``만 남김) · 다시 켜기(실패 줄 보고).
     pub fn set_hotkeys_enabled(&mut self, enabled: bool) -> InkState {
         if enabled == self.hotkeys_enabled {
@@ -628,7 +643,7 @@ impl InkService {
         if enabled {
             self.start();
             let bad = self.failures.len();
-            let ev = if bad == 0 { IslandEvent::new(IslandKind::Info, "단축키를 다시 켰어요") } else { IslandEvent::new(IslandKind::Problem, format!("단축키를 켰어요 · {bad}개는 다른 앱이 쓰고 있어요")) };
+            let ev = if bad == 0 { IslandEvent::new(IslandKind::Info, self.t("island.hotkeys.on")) } else { IslandEvent::new(IslandKind::Problem, self.tf("island.hotkeys.onSome", &[("n", &bad)])) };
             self.island(ev);
         } else {
             let ids: Vec<String> = self.registered.keys().filter(|k| k.as_str() != PAUSE_SLOT).cloned().collect();
@@ -639,7 +654,7 @@ impl InkService {
             }
             self.failures.retain(|k, _| k == PAUSE_SLOT);
             let pause = self.settings.shortcut(PAUSE_SLOT);
-            let mut ev = IslandEvent::new(IslandKind::Off, "단축키를 잠시 껐어요");
+            let mut ev = IslandEvent::new(IslandKind::Off, self.t("island.hotkeys.off"));
             if !pause.is_empty() {
                 ev = ev.detail(spoken(pause, self.platform));
             }

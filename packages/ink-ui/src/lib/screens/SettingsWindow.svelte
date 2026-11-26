@@ -11,6 +11,7 @@
   import DrawZoomPage from './DrawZoomPage.svelte';
   import GeneralPage from './GeneralPage.svelte';
   import FirstRunSheet from './FirstRunSheet.svelte';
+  import { syncLang, t } from '../i18n/index.svelte.js';
 
   /**
    * 설정 창(S02~S05 통합 호스트, 900×600) + S06 첫 실행 시트.
@@ -33,11 +34,12 @@
     class: className = '',
   } = $props();
 
+  // 이름은 언어를 바꾸면 바로 바뀐다(R2-I18N — t()가 지금 언어를 읽는다)
   const NAV_ITEMS = [
-    { id: 'shortcuts', label: '단축키', icon: 'shortcuts' },
-    { id: 'capture', label: '캡처·녹화', icon: 'region' },
-    { id: 'draw', label: '판서·확대', icon: 'draw' },
-    { id: 'general', label: '일반', icon: 'settings' },
+    { id: 'shortcuts', key: 'settings.tab.shortcuts', icon: 'shortcuts' },
+    { id: 'capture', key: 'settings.tab.capture', icon: 'region' },
+    { id: 'draw', key: 'settings.tab.draw', icon: 'draw' },
+    { id: 'general', key: 'settings.tab.general', icon: 'settings' },
   ];
 
   let activeTab = $state('shortcuts');
@@ -66,10 +68,16 @@
   $effect(() => {
     let alive = true;
     client.getState().then((s) => {
-      if (alive) state = s;
+      if (alive) {
+        state = s;
+        syncLang(s);
+      }
     });
     const off = client.subscribe((e) => {
-      if (e.type === 'state') state = e.state;
+      if (e.type === 'state') {
+        state = e.state;
+        syncLang(e.state);
+      }
     });
     return () => {
       alive = false;
@@ -147,7 +155,7 @@
         }}
       >
         <Icon name={item.icon} size={16} accent={on} inverted={on} />
-        <span>{item.label}</span>
+        <span>{t(item.key)}</span>
       </button>
     {/each}
 

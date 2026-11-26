@@ -4,6 +4,7 @@
 pub mod bmp;
 pub mod geometry;
 pub mod history;
+pub mod i18n;
 pub mod image;
 pub mod magnet;
 pub mod modekeys;

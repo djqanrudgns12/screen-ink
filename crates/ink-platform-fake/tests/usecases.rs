@@ -196,6 +196,20 @@ fn 단축키_녹화_중_잠시_끄기를_바꿔도_끝날_때_그_상태로_등�
     assert!(w.is_registered("Alt+Backquote"), "꺼 둔 상태면 잠시 끄기 칸만");
 }
 
+/// R2-I18N: Rust가 만드는 섬 글도 설정 언어를 바로 따른다(다시 시작 없이).
+#[test]
+fn 언어를_영어로_바꾸면_다음_섬부터_영어() {
+    let w = FakeWorld::new();
+    let mut s = service(&w);
+    s.set_hotkeys_enabled(false);
+    assert_eq!(w.last_island().unwrap().text, "단축키를 잠시 껐어요");
+    assert!(s.update_setting("general.lang", &json!("en")).ok);
+    s.set_hotkeys_enabled(true);
+    assert_eq!(w.last_island().unwrap().text, "Shortcuts are back on");
+    s.set_hotkeys_enabled(false);
+    assert_eq!(w.last_island().unwrap().text, "Shortcuts paused");
+}
+
 #[test]
 fn 설정은_바로_반영되고_되돌릴_수_있다() {
     let w = FakeWorld::new();
