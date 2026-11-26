@@ -42,6 +42,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   let sessionSeq = 0;
   /** @type {any} 가짜 고르기 상태(세션마다 새로) */
   let capture = null;
+  /** @type {string | null} 마지막 단색 HEX 결과(칩 클릭 흉내) */
+  let lastHex = null;
   const readyLog = [];
 
   const judge = (slot, combo) => {
@@ -182,14 +184,19 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       }
       if (input.type === 'command' && (input.name === 'save' || input.name === 'quickSave')) {
         const r = s.rect ?? chainAt(s.p)[s.level].r;
+        const finishedSession = mode.session;
         await this.run('capture.cancel');
+        emit({ type: 'afterimage', afterimage: { session: finishedSession, rect: r, durationMs: 400 } });
         island({ kind: 'result', variant: 'result', text: '저장했어요', value: `${r.w}×${r.h}`, detail: '수업_2026-03-04_090507.png', thumbUrl: frameUrl, button: { label: '폴더 열기', action: 'folder.open' } });
         return;
       }
       if ((input.type === 'key' && input.key === 'Enter') || input.type === 'dblclick' || (input.type === 'command' && input.name === 'copy')) {
         const r = s.rect ?? chainAt(s.p)[s.level].r;
+        const finishedSession = mode.session;
+        lastHex = '#FFFFFF';
         await this.run('capture.cancel');
-        island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${r.w}×${r.h}`, detail: '한글·PPT에 Ctrl+V', thumbUrl: frameUrl, button: { label: '저장', action: 'capture.saveLast' }, buttonKey: 'Ctrl+S', chip: { label: '#FFFFFF 복사', action: 'capture.copyHex' } });
+        emit({ type: 'afterimage', afterimage: { session: finishedSession, rect: r, durationMs: 400 } });
+        island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${r.w}×${r.h}`, detail: '한글·PPT에 Ctrl+V', thumbUrl: frameUrl, button: { label: '저장', action: 'capture.saveLast' }, buttonKey: 'Ctrl+S', chip: { label: `${lastHex} 복사`, action: 'capture.copyHex' } });
         return;
       }
       const chain = chainAt(s.p);
@@ -264,6 +271,15 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       }
       if (action === 'settings.export') { island({ kind: 'result', text: '설정을 내보냈어요' }); return; }
       if (action === 'capture.history.clear') { island({ kind: 'info', text: '지울 기록이 없어요' }); return; }
+      if (action === 'capture.saveLast') {
+        island({ kind: 'result', variant: 'result', text: '저장했어요', detail: '수업_2026-03-04_090507.png', button: { label: '폴더 열기', action: 'folder.open' } });
+        return;
+      }
+      if (action === 'capture.copyHex') {
+        const hex = lastHex ?? '#FF9F0A';
+        island({ kind: 'result', variant: 'result', text: `${hex} 복사했어요` });
+        return;
+      }
       island({ kind: 'info', text: `미리보기: ${action}` });
     },
     subscribe(handler) { subs.add(handler); return () => subs.delete(handler); },

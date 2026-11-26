@@ -8,14 +8,72 @@
 use ink_app::{Frame, OverlayHost, OverlaySession};
 use ink_domain::geometry::{MonitorLayout, PhysRect};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tauri::http::{Request, Response};
 use tauri::window::Color;
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Runtime, UriSchemeContext, WebviewUrl, WebviewWindowBuilder};
 
 pub const SCHEME: &str = "ink";
 pub const EVT_OVERLAY: &str = "screen-ink://overlay";
+pub const EVT_AFTERIMAGE: &str = "screen-ink://afterimage";
+/// 확정 직후 고른 자리 주황 잔상 지속 시간(R-CAP-26 · 10 §6).
+pub const AFTERIMAGE_DURATION_MS: u64 = 400;
 const PREFIX: &str = "ink-overlay-";
+const CLEAR_AFTERIMAGE_SCRIPT: &str = "(()=>{const e=document.getElementById('ink-afterimage-flash');if(e)e.remove();const r=document.getElementById('app');if(r)r.style.visibility='';delete document.body.dataset.inkAfterimage;})();";
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AfterimagePayload {
+    pub session: u64,
+    pub rect: PhysRect,
+    pub duration_ms: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CssRect {
+    pub x: f64,
+    pub y: f64,
+    pub w: f64,
+    pub h: f64,
+}
+
+/// 확정 사각형(물리 px)이 겹치는 모니터마다 오버레이 창 안 CSS 좌표를 구한다.
+pub fn afterimage_targets(rect: PhysRect, layout: &MonitorLayout) -> Vec<(u32, CssRect)> {
+    if rect.w <= 0 || rect.h <= 0 {
+        return Vec::new();
+    }
+    layout
+        .monitors
+        .iter()
+        .filter_map(|m| {
+            rect.intersect(&m.bounds)?;
+            let scale = if m.scale.is_finite() && m.scale > 0.0 { m.scale } else { 1.0 };
+            Some((
+                m.id,
+                CssRect {
+                    x: f64::from(rect.x - m.bounds.x) / scale,
+                    y: f64::from(rect.y - m.bounds.y) / scale,
+                    w: f64::from(rect.w) / scale,
+                    h: f64::from(rect.h) / scale,
+                },
+            ))
+        })
+        .collect()
+}
+
+/// 오버레이 웹뷰에 0.4초 주황 잔상(10 §6)을 그리는 스크립트. `prefers-reduced-motion: reduce`이면 건너뛴다.
+pub fn afterimage_script(css: CssRect, duration_ms: u64, token: u64) -> String {
+    format!(
+        "(()=>{{const p=document.getElementById('ink-afterimage-flash');if(p)p.remove();const r=document.getElementById('app');if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){{if(r)r.style.visibility='';delete document.body.dataset.inkAfterimage;return;}}const t='{token}';document.body.dataset.inkAfterimage=t;if(r)r.style.visibility='hidden';const e=document.createElement('div');e.id='ink-afterimage-flash';e.setAttribute('aria-hidden','true');e.style.cssText='position:fixed;left:{x:.2}px;top:{y:.2}px;width:{w:.2}px;height:{h:.2}px;box-sizing:border-box;pointer-events:none;outline:2px solid var(--ink-afterimage,rgba(255,159,10,0.35));border-radius:2px;animation:ink-afterimage {duration_ms}ms linear forwards;z-index:9999;';document.body.appendChild(e);setTimeout(()=>{{if(document.body.dataset.inkAfterimage===t){{e.remove();if(r)r.style.visibility='';delete document.body.dataset.inkAfterimage;}}}},{cleanup_ms});}})();",
+        x = css.x,
+        y = css.y,
+        w = css.w,
+        h = css.h,
+        cleanup_ms = duration_ms + 40,
+    )
+}
 
 pub fn label(monitor: u32) -> String {
     format!("{PREFIX}{monitor}")
@@ -195,6 +253,8 @@ pub struct TauriOverlayHost<R: Runtime> {
     /// 지금 세션의 모니터 배치(강조를 모니터별로 나눌 때)
     layout: Option<MonitorLayout>,
     thumbs: crate::adapters::ThumbStore,
+    /// 잔상 400 ms 타이머 세대 — 새 세션 시작·숨기기가 오면 이전 타이머는 무시
+    afterimage_gen: Arc<AtomicU64>,
 }
 
 /// 썸네일 주소(`frame_url`과 같은 규칙).
@@ -215,7 +275,12 @@ impl<R: Runtime> TauriOverlayHost<R> {
             freeze: Default::default(),
             layout: None,
             thumbs,
+            afterimage_gen: Arc::new(AtomicU64::new(0)),
         }
+    }
+
+    fn bump_afterimage_gen(&self) -> u64 {
+        self.afterimage_gen.fetch_add(1, Ordering::SeqCst) + 1
     }
 
     /// 정지 화면을 네이티브 창에 바로 그린다(Windows GDI·맥 CALayer). 모든 모니터에 그렸으면 true.
@@ -301,11 +366,19 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
     }
 
     fn show(&mut self, session: &OverlaySession, frames: Vec<Frame>) -> Result<Option<std::time::Instant>, String> {
+        // 진행 중인 0.4초 잔상 타이머를 즉시 취소하고 클릭 통과를 푼다
+        self.bump_afterimage_gen();
         let windows: Vec<_> = session.monitors.iter().map(|m| (m, self.app.get_webview_window(&label(m.id)))).collect();
         if windows.iter().any(|(_, w)| w.is_none()) {
             // 아직 창을 만드는 중(시작 직후·모니터를 막 꽂음) — 다음 진입부터 된다
             self.prepare(&MonitorLayout::new(session.monitors.iter().map(|m| ink_domain::geometry::Monitor { id: m.id, bounds: m.bounds, work: m.work, scale: m.scale, primary: m.primary }).collect()));
             return Err("overlay windows not ready".into());
+        }
+        for (l, w) in self.app.webview_windows() {
+            if l.starts_with(PREFIX) {
+                let _ = w.set_ignore_cursor_events(false);
+                let _ = w.eval(CLEAR_AFTERIMAGE_SCRIPT);
+            }
         }
         self.frames.put(session.session, &frames);
         self.layout = Some(MonitorLayout::new(
@@ -336,13 +409,16 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
     }
 
     fn hide(&mut self, session: u64) {
+        self.bump_afterimage_gen();
         #[cfg(windows)]
         self.freeze.hide_all();
         #[cfg(target_os = "macos")]
         on_main(&self.app, ink_platform_macos::freeze::hide_all);
         for (l, w) in self.app.webview_windows() {
             if l.starts_with(PREFIX) {
+                let _ = w.eval(CLEAR_AFTERIMAGE_SCRIPT);
                 let _ = show_raw(&w, false);
+                let _ = w.set_ignore_cursor_events(false);
                 // R-SYS-6: 투명 배경 다시 지정은 숨긴 뒤에(다음 진입의 시간을 쓰지 않게)
                 let _ = w.set_background_color(Some(Color(0, 0, 0, 0)));
             }
@@ -353,6 +429,53 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
         if !self.app.get_webview_window(crate::SETTINGS).is_some_and(|w| w.is_visible().unwrap_or(false)) {
             ink_platform_macos::window::deactivate();
         }
+    }
+
+    fn flash_afterimage(&mut self, session: u64, rect: PhysRect, layout: &MonitorLayout) {
+        let targets = afterimage_targets(rect, layout);
+        if targets.is_empty() {
+            return;
+        }
+        let token = self.bump_afterimage_gen();
+        let payload = AfterimagePayload { session, rect, duration_ms: AFTERIMAGE_DURATION_MS };
+        let _ = self.app.emit(EVT_AFTERIMAGE, &payload);
+        let mut shown_labels = Vec::with_capacity(targets.len());
+        for (monitor_id, css) in targets {
+            let l = label(monitor_id);
+            let Some(w) = self.app.get_webview_window(&l) else { continue };
+            let _ = w.set_ignore_cursor_events(true);
+            let _ = w.eval(afterimage_script(css, AFTERIMAGE_DURATION_MS, token));
+            if show_raw(&w, true).is_ok() {
+                shown_labels.push(l);
+            } else {
+                let _ = w.set_ignore_cursor_events(false);
+            }
+        }
+        if shown_labels.is_empty() {
+            return;
+        }
+        let app = self.app.clone();
+        let gen = self.afterimage_gen.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(AFTERIMAGE_DURATION_MS));
+            if gen.load(Ordering::SeqCst) != token {
+                return;
+            }
+            let h = app.clone();
+            let _ = app.run_on_main_thread(move || {
+                if gen.load(Ordering::SeqCst) != token {
+                    return;
+                }
+                for l in &shown_labels {
+                    if let Some(w) = h.get_webview_window(l) {
+                        let _ = w.eval(CLEAR_AFTERIMAGE_SCRIPT);
+                        let _ = show_raw(&w, false);
+                        let _ = w.set_ignore_cursor_events(false);
+                        let _ = w.set_background_color(Some(Color(0, 0, 0, 0)));
+                    }
+                }
+            });
+        });
     }
 }
 
@@ -437,5 +560,30 @@ mod tests {
         assert_eq!(s.get(2, 0).unwrap().bgra.as_slice(), &[2]);
         s.drop_session(2);
         assert!(s.get(2, 0).is_none());
+    }
+
+    #[test]
+    fn 잔상_대상_모니터와_혼합_배율_좌표() {
+        use ink_domain::geometry::Monitor;
+        let layout = MonitorLayout::new(vec![
+            Monitor { id: 0, bounds: PhysRect::new(0, 0, 1920, 1080), work: PhysRect::new(0, 0, 1920, 1040), scale: 1.0, primary: true },
+            Monitor { id: 1, bounds: PhysRect::new(1920, 0, 2880, 1800), work: PhysRect::new(1920, 0, 2880, 1728), scale: 1.5, primary: false },
+        ]);
+        // 두 모니터에 걸친 사각형
+        let targets = afterimage_targets(PhysRect::new(1820, 300, 400, 150), &layout);
+        assert_eq!(targets.len(), 2);
+        assert_eq!(targets[0], (0, CssRect { x: 1820.0, y: 300.0, w: 400.0, h: 150.0 }));
+        assert_eq!(targets[1].0, 1);
+        assert!((targets[1].1.x - (-100.0 / 1.5)).abs() < 1e-6);
+        assert!((targets[1].1.y - 200.0).abs() < 1e-6);
+        assert!((targets[1].1.w - (400.0 / 1.5)).abs() < 1e-6);
+        assert!((targets[1].1.h - 100.0).abs() < 1e-6);
+        // 빈 사각형은 대상 없음
+        assert!(afterimage_targets(PhysRect::new(0, 0, 0, 10), &layout).is_empty());
+        // 스크립트는 prefers-reduced-motion 가드와 400ms 애니메이션을 포함한다
+        let js = afterimage_script(CssRect { x: 10.0, y: 20.0, w: 100.0, h: 50.0 }, AFTERIMAGE_DURATION_MS, 7);
+        assert!(js.contains("prefers-reduced-motion: reduce"));
+        assert!(js.contains("ink-afterimage 400ms linear forwards"));
+        assert!(js.contains("left:10.00px;top:20.00px;width:100.00px;height:50.00px"));
     }
 }

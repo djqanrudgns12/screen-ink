@@ -150,6 +150,8 @@
   function triggerIslandDemo(kind) {
     if (kind === 'result') {
       client.setShortcut('active', 'Shift+F2');
+    } else if (kind === 'chip') {
+      void client.run('capture.region').then(() => client.captureInput({ type: 'command', name: 'copy' }));
     } else if (kind === 'off') {
       client.setHotkeysEnabled(false);
     } else if (kind === 'on') {
@@ -377,6 +379,7 @@
         <h2>섬 — 화면 위 알림은 이 알약 하나</h2>
         <div class="pv-bar-group">
           <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('result')}>결과 띄우기(1.2초)</button>
+          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('chip')}>결과 + HEX 칩</button>
           <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('off')}>단축키 꺼짐</button>
           <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('on')}>단축키 켜기</button>
           <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('info')}>안내</button>
@@ -403,6 +406,25 @@
           >
             {#snippet thumbnail()}
               <span class="pv-thumb-sample"></span>
+            {/snippet}
+          </Island>
+        </div>
+        <div class="pv-isl-item">
+          <p>단색 결과 칩<small class="ink-mono">R-CAP-14 · HEX 칩</small></p>
+          <Island
+            variant="result"
+            text="복사했어요"
+            value="120×120"
+            detail="한글·PPT에 Ctrl+V"
+            valueMuted={true}
+            button={{ label: '저장', key: 'Ctrl+S', onClick: () => client.run('capture.saveLast') }}
+            secondaryButton={{ label: '판서로', key: 'Alt+1' }}
+            chip={{ label: '#FF9F0A 복사', hex: '#FF9F0A', onClick: () => client.run('capture.copyHex') }}
+            progressDurationMs={1200}
+            paused={true}
+          >
+            {#snippet thumbnail()}
+              <span class="pv-thumb-sample" style:background="#FF9F0A"></span>
             {/snippet}
           </Island>
         </div>
