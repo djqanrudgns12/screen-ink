@@ -17,6 +17,17 @@
 4. **자동 업데이트는 Windows가 한다(§7).** 스토어판은 스토어가, 직접 배포판은 `.appinstaller` 파일로 Windows 앱 설치 관리자가 새 버전을 받는다. 앱 프로세스는 계속 네트워크 0이다.
 5. **학교 PC 주의:** 교육청이 관리하는 PC는 Microsoft Store가 막혀 있을 수 있다. 막혀 있으면 스토어 경로가 통째로 안 된다. **[확인 필요]** 학교 PC에서 확인한다(진척도 `D6`).
 
+### 1.1 돈을 전혀 안 쓰는 조합 (2026-11-26, 사용자: "무료로")
+
+| 경우 | 방법 | 경고 | 자동 업데이트 | 조건 |
+|---|---|---|---|---|
+| 대부분 | **Microsoft Store**(MSIX, 스토어가 서명) | 없음 | 스토어 | 스토어가 열리는 PC |
+| 파일로 나눠야 할 때 | **SignPath Foundation 무료 서명** → 서명 MSIX + `.appinstaller`(§6·§7) | 앱 설치 관리자 경로라 대개 없음 **[확인 필요]** | Windows | 저장소 공개(OSI 라이선스)·GitHub Actions 빌드·릴리스마다 승인. 게시자 이름이 "SignPath Foundation". MSIX 서명 지원은 사례 기준 **[확인 필요]** |
+| 학교 전체에 깔 때 | 학교 정보 담당자가 우리 **자체 서명 인증서를 학교 PC에 정책으로 배포** → 자체 서명 MSIX가 그대로 설치됨 | 없음 | `.appinstaller` | 학교 담당자 협조. 개인이 인증서를 손으로 넣게 하지는 않는다(보안상 나쁜 습관) |
+| 위가 다 안 될 때 | 서명 없는 포터블 ZIP | **있음**, 스마트 앱 컨트롤 PC는 차단 | 없음(직접 받기) | — |
+
+Certum(€49/년)은 SignPath를 못 쓸 때만 고려한다(게시자 이름을 내 이름으로 하고 싶거나, 승인 절차가 맞지 않을 때).
+
 ## 2. 방안 비교 (Windows)
 
 | 방안 | 비용 | 설치 때 경고 | 스마트 앱 컨트롤 | 조건·한계 | 판정 |
@@ -150,7 +161,7 @@
 - EV도 즉시 평판 없음(2024): [ToDesktop PSA](https://www.todesktop.com/blog/posts/windows-apps-psa-ev-certs-do-not-grant-immediate-reputation-anymore), [Microsoft Q&A](https://learn.microsoft.com/en-us/answers/questions/417016/reputation-with-ov-certificates-and-are-ev-certifi)
 - Azure Artifact Signing 개인 자격(미국·캐나다): [Code signing options](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options), [Microsoft Q&A](https://learn.microsoft.com/en-us/answers/questions/6020935/artifact-signing)
 - Certum 오픈소스 서명 가격: [Certum Shop — Open Source Code Signing in the Cloud](https://shop.certum.eu/open-source-code-signing-on-simplysign.html)
-- SignPath Foundation 조건: [signpath.org/terms](https://signpath.org/terms.html)
+- SignPath Foundation 조건: [signpath.org/terms](https://signpath.org/terms.html), [signpath.org](https://signpath.org/). MSIX·GitHub Actions 사례: [daybook PR #54](https://github.com/joseamijares/daybook/pull/54), [pqp PR #677](https://github.com/rafaelcg/pqp/pull/677), 신청기: [zenn](https://zenn.dev/shm_7ec/articles/signpath-oss-code-signing?locale=en)
 - winget 무서명 설치 파일(공식 규정 아님, 사례): [astral-sh/uv #11456](https://github.com/astral-sh/uv/issues/11456)
 - Homebrew 공증 안 된 cask 차단(2026-09-01): [Homebrew 토론 #6482](https://github.com/orgs/Homebrew/discussions/6482), [Hacker News](https://news.ycombinator.com/item?id=45907259)
 - Mac App Store와 손쉬운 사용 API: [Apple Developer Forums](https://developer.apple.com/forums/thread/756130)
