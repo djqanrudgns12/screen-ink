@@ -9,11 +9,24 @@ import { drawItem } from '../ink/canvasRender.js';
 import { withBBox } from '../ink/hitTest.js';
 import { matchDrawKey } from '../ink/drawKeys.js';
 import { physicalToClient } from './captureOverlay.js';
+import { colorForKey } from './palette.js';
 
-/** 모자이크 칸(논리 px): 기본 10, Ctrl+휠로 6~24(사용자 결정 #1). */
+/** 모자이크 칸(논리 px): 기본 10, 범위 4~48(R2-ANN-2). */
 export const MOSAIC_BLOCK_DEFAULT = 10;
-export const MOSAIC_BLOCK_MIN = 6;
-export const MOSAIC_BLOCK_MAX = 24;
+export const MOSAIC_BLOCK_MIN = 4;
+export const MOSAIC_BLOCK_MAX = 48;
+
+/** 도구 한 글자 단축키(R·O·A·P·H·M·T·E). */
+export const TOOL_KEY_CODES = Object.freeze({
+  KeyR: 'rect',
+  KeyO: 'ellipse',
+  KeyA: 'arrow',
+  KeyP: 'pen',
+  KeyH: 'marker',
+  KeyM: 'mosaic',
+  KeyT: 'text',
+  KeyE: 'eraser',
+});
 /** 이보다 작게 끈 모자이크·도형은 만들지 않는다(CSS px). */
 export const MIN_DRAG_PX = 2;
 /** 휠 한 단계로 볼 누적 deltaY(px) — 엔진 WHEEL_STEP_DELTA와 같게(맥 휠 한 칸 = 40 px). */
@@ -278,4 +291,45 @@ export function annotKeyRoute(event, o) {
   if (id === 'd-redo') return 'redo';
   if (o.toolActive && event.code && ARROWS.has(event.code)) return 'swallow';
   return 'capture';
+}
+
+/**
+ * 캡처 확정 후 도구·색·굵기·스포이트 키보드 단축키 판정(R2-UI-TB-3 · R2-ANN-4).
+ * - 패널이 열려 있으면 기본 8색(R·Y·G·O·B·L·K·W)을 먼저 받는다.
+ * - 확정 상태에서는 R·O·A·P·H·M·T·E로 도구를 고르고, 도구가 켜진 중에는 `[` `]`(⇧ 큰 단계)·비충돌 색 키(Y·G·B·L·K·W)를 받는다.
+ * @param {import('../ink/drawKeys.js').KeyEventLike} event
+ * @param {{ editing?: boolean, eyedropper?: boolean, confirmed?: boolean, toolActive?: boolean, panelOpen?: boolean }} o
+ * @returns {{ type: 'text' | 'cancelEyedropper' } | { type: 'tool', id: string } | { type: 'color', code: string } | { type: 'size', dir: -1 | 1, large: boolean } | null}
+ */
+export function matchCaptureAnnotKey(event, o) {
+  if (!event || event.isComposing) return null;
+  if (o.editing) return { type: 'text' };
+  const hasPrimaryMod = Boolean(event.ctrlKey || event.metaKey || event.altKey);
+  if (hasPrimaryMod) return null;
+
+  const esc = event.code === 'Escape' || event.key === 'Escape';
+  if (o.eyedropper && esc && !event.shiftKey) return { type: 'cancelEyedropper' };
+
+  const code = event.code || '';
+  if (o.toolActive && (code === 'BracketLeft' || code === 'BracketRight')) {
+    return { type: 'size', dir: code === 'BracketLeft' ? -1 : 1, large: Boolean(event.shiftKey) };
+  }
+
+  if (event.shiftKey) return null;
+
+  if (o.panelOpen) {
+    const c = colorForKey(code);
+    if (c) return { type: 'color', code: c };
+  }
+
+  if (o.confirmed && code in TOOL_KEY_CODES) {
+    return { type: 'tool', id: /** @type {Record<string, string>} */ (TOOL_KEY_CODES)[code] };
+  }
+
+  if (o.toolActive) {
+    const c = colorForKey(code);
+    if (c) return { type: 'color', code: c };
+  }
+
+  return null;
 }

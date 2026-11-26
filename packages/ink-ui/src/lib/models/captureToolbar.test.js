@@ -10,9 +10,12 @@ import {
   TOOLBAR_GAP,
   TOOLBAR_HISTORY,
   TOOLBAR_OPTIONS_GAP,
+  TOOLBAR_STYLE_TRIGGER,
   annotOptionsKind,
   comboMap,
   estimateToolbarWidth,
+  formatSizeBadge,
+  placeSizeBadge,
   placeToolOptions,
   placeToolbar,
   toggleAnnotTool,
@@ -45,72 +48,98 @@ test('좁은 범위·왼쪽 끝 범위도 화면 안으로 밀어 넣는다', ()
   assert.equal(rightEdge.x, 1920 - TOOLBAR_EDGE - 120, '이 모니터 밖으로 나간 범위는 보이는 끝 기준');
 });
 
-test('여러 모니터에 걸치면 오른쪽 아래 귀가 있는 모니터', () => {
+test('여러 모니터·혼합 배율에 걸치면 오른쪽 아래 귀가 있는 모니터', () => {
   const mons = [
-    { id: 0, bounds: { x: 0, y: 0, w: 1920, h: 1080 } },
-    { id: 1, bounds: { x: 1920, y: 0, w: 1920, h: 1080 } },
+    { id: 0, bounds: { x: 0, y: 0, w: 1920, h: 1080 }, scale: 1 },
+    { id: 1, bounds: { x: 1920, y: 0, w: 2880, h: 1800 }, scale: 1.5 },
   ];
   assert.equal(toolbarOwner({ x: 1500, y: 300, w: 800, h: 200 }, mons), 1);
   assert.equal(toolbarOwner({ x: 100, y: 100, w: 300, h: 300 }, mons), 0);
-  // 귀가 두 모니터 사이 빈 곳(세로 어긋난 배치)이면 가운데 → 겹침 면적
   const offset = [
     { id: 0, bounds: { x: 0, y: 0, w: 1920, h: 1080 } },
     { id: 1, bounds: { x: 1920, y: 300, w: 1280, h: 720 } },
   ];
-  // 귀(2499,1399)·가운데(1750,1150) 모두 빈 곳 → 겹침: 0번 920×180 > 1번 580×120
   assert.equal(toolbarOwner({ x: 1000, y: 900, w: 1500, h: 500 }, offset), 0, '겹침이 큰 쪽');
   assert.equal(toolbarOwner(null, mons), null);
 });
 
-test('툴팁은 지금 설정된 키를 읽기 표기로', () => {
+test('툴팁은 지금 설정된 키와 도구 한 글자 키를 읽기 표기로 만든다', () => {
   const copy = TOOLBAR_ACTIONS.find((a) => a.id === 'copy');
   const save = TOOLBAR_ACTIONS.find((a) => a.id === 'save');
+  const rect = TOOLBAR_ANNOTATE_TOOLS.find((t) => t.id === 'rect');
   assert.equal(toolbarTooltip(copy, comboMap([{ id: 'c-copy', combo: 'Space' }])), '복사 · Space');
   assert.equal(toolbarTooltip(save, {}, 'windows'), '저장 · Ctrl S', '설정 전 = 확정본 기본값');
   assert.equal(toolbarTooltip(save, {}, 'macos'), '저장 · ⌘S');
   assert.equal(toolbarTooltip(copy, { 'c-copy': '' }), '복사', '키를 비웠으면 이름만');
+  assert.equal(toolbarTooltip(rect, {}, 'macos'), '사각형 · R');
+  assert.equal(toolbarTooltip(rect, {}, 'macos', 'Rectangle'), 'Rectangle · R');
 });
 
-test('툴바_주석도구_토글_및_보조팔레트_배치', () => {
-  // 순서(04 S08): 사각형 · 타원 · 화살표 · 펜 · 형광펜 · 모자이크 · 글자 · 지우개 │ 실행 취소 · 다시 실행
+test('크기 배지 형식과 자리 규칙(범위 왼쪽 위 바깥 → 안쪽)', () => {
+  assert.equal(formatSizeBadge({ w: 1280, h: 720 }), '1280 × 720');
+  assert.equal(formatSizeBadge({ w: 0, h: 100 }), '');
+  const badge = { w: 96, h: 24 };
+  const outside = placeSizeBadge({ x: 200, y: 120, width: 500, height: 300 }, VIEW, badge);
+  assert.deepEqual(outside, { x: 200, y: 120 - TOOLBAR_GAP - 24, inside: false });
+  const topEdge = placeSizeBadge({ x: 4, y: 4, width: 500, height: 300 }, VIEW, badge);
+  assert.equal(topEdge.inside, true);
+  assert.equal(topEdge.x, TOOLBAR_EDGE);
+  assert.equal(topEdge.y, 4 + TOOLBAR_GAP);
+});
+
+test('툴바 주석도구 토글 및 색·굵기 패널(R2-FIX-11) 단추 위 배치', () => {
   assert.deepEqual(TOOLBAR_ANNOTATE_TOOLS.map((t) => t.id), ['rect', 'ellipse', 'arrow', 'pen', 'marker', 'mosaic', 'text', 'eraser']);
+  assert.deepEqual(TOOLBAR_ANNOTATE_TOOLS.map((t) => t.key), ['R', 'O', 'A', 'P', 'H', 'M', 'T', 'E']);
   assert.deepEqual(TOOLBAR_HISTORY.map((t) => t.id), ['undo', 'redo']);
-  // 같은 도구를 다시 누르면 해제(범위 조정으로), 다른 도구는 바꿈, 모르는 id는 그대로
+  assert.equal(TOOLBAR_STYLE_TRIGGER.id, 'style');
+
   assert.equal(toggleAnnotTool(null, 'pen'), 'pen');
   assert.equal(toggleAnnotTool('pen', 'pen'), null);
   assert.equal(toggleAnnotTool('pen', 'mosaic'), 'mosaic');
   assert.equal(toggleAnnotTool('pen', 'zoom'), 'pen');
+
   assert.equal(annotOptionsKind('rect'), 'stroke');
+  assert.equal(annotOptionsKind('marker'), 'marker');
+  assert.equal(annotOptionsKind('text'), 'text');
   assert.equal(annotOptionsKind('mosaic'), 'mosaic');
-  assert.equal(annotOptionsKind('eraser'), 'none');
+  assert.equal(annotOptionsKind('eraser'), 'eraser');
   assert.equal(annotOptionsKind(null), 'none');
+
   assert.deepEqual(ANNOT_COLORS, ['R', 'Y', 'G', 'O', 'B', 'L']);
   assert.deepEqual(ANNOT_WIDTHS.map((w) => w.px), [2, 4, 8]);
   assert.deepEqual(MOSAIC_BLOCKS.map((b) => b.px), [6, 10, 16]);
-  // 너비 추정: 단추 14개 + 구분선 2개
-  const w = estimateToolbarWidth([TOOLBAR_ANNOTATE_TOOLS, TOOLBAR_HISTORY, TOOLBAR_ACTIONS]);
-  assert.equal(w, 14 * 34 + 2 * 9 + 8);
+
+  const w = estimateToolbarWidth([TOOLBAR_ANNOTATE_TOOLS, [TOOLBAR_STYLE_TRIGGER], TOOLBAR_HISTORY, TOOLBAR_ACTIONS]);
+  assert.equal(w, 15 * 34 + 3 * 9 + 8);
   assert.equal(estimateToolbarWidth([[], [], TOOLBAR_ACTIONS]), 4 * 34 + 8, '빈 묶음은 구분선 없음');
-  // 툴바가 범위 아래면 보조 알약은 그 아래, 자리가 없으면 위 — 화면 밖 넘침 0
-  const bar = { w: 500, h: 40 };
-  const opts = { w: 220, h: 28 };
-  const below = placeToolOptions({ x: 600, y: 508, side: 'below' }, bar, opts, VIEW);
-  assert.deepEqual(below, { x: 600 + 500 - 220, y: 508 + 40 + TOOLBAR_OPTIONS_GAP, side: 'below' });
-  const nearBottom = placeToolOptions({ x: 600, y: 1032, side: 'below' }, bar, opts, VIEW);
-  assert.equal(nearBottom.side, 'above');
-  assert.equal(nearBottom.y, 1032 - TOOLBAR_OPTIONS_GAP - 28);
-  const above = placeToolOptions({ x: 0, y: 300, side: 'above' }, bar, opts, VIEW);
+
+  // R2-FIX-11: 고른 도구 단추 위에 붙는 카드 (위 우선, 모자라면 아래)
+  const bar = { w: 540, h: 40 };
+  const panel = { w: 280, h: 210 };
+  const above = placeToolOptions({ x: 500, y: 508, side: 'below' }, bar, panel, VIEW, 120);
   assert.equal(above.side, 'above');
-  const leftEdge = placeToolOptions({ x: 8, y: 300, side: 'above' }, { w: 100, h: 40 }, opts, VIEW);
-  assert.equal(leftEdge.x, TOOLBAR_EDGE, '왼쪽 가장자리 안으로');
-  for (const p of [below, nearBottom, above, leftEdge]) {
-    assert.ok(p.x >= TOOLBAR_EDGE && p.x + opts.w <= VIEW.w - TOOLBAR_EDGE + 1e-9, '가로 넘침 0');
-    assert.ok(p.y >= 0 && p.y + opts.h <= VIEW.h, '세로 넘침 0');
+  assert.equal(above.x, 500 + 120 - 140);
+  assert.equal(above.y, 508 - TOOLBAR_OPTIONS_GAP - 210);
+  assert.equal(above.arrowX, 140);
+
+  // 위 공간이 모자라면 툴바 아래로 뒤집힌다
+  const nearTop = placeToolOptions({ x: 500, y: 60, side: 'above' }, bar, panel, VIEW, 40);
+  assert.equal(nearTop.side, 'below');
+  assert.equal(nearTop.y, 60 + 40 + TOOLBAR_OPTIONS_GAP);
+
+  // 화면 왼쪽 끝에서도 잘리지 않고 화살표만 이동
+  const leftEdge = placeToolOptions({ x: 8, y: 400, side: 'below' }, bar, panel, VIEW, 20);
+  assert.equal(leftEdge.x, TOOLBAR_EDGE);
+  assert.ok(leftEdge.arrowX >= 18 && leftEdge.arrowX < panel.w);
+
+  for (const p of [above, nearTop, leftEdge]) {
+    assert.ok(p.x >= TOOLBAR_EDGE && p.x + panel.w <= VIEW.w - TOOLBAR_EDGE + 1e-9, '가로 넘침 0');
+    assert.ok(p.y >= TOOLBAR_EDGE && p.y + panel.h <= VIEW.h - TOOLBAR_EDGE + 1e-9, '세로 넘침 0');
   }
-  // 실행 취소·다시 실행 툴팁 = 판서 키 칸(지금 설정)
-  assert.equal(toolbarTooltip(TOOLBAR_HISTORY[0], {}), '실행 취소 · Ctrl Z');
-  assert.equal(toolbarTooltip(TOOLBAR_HISTORY[1], { 'd-redo': 'Ctrl+Shift+Z' }), '다시 실행 · Ctrl Shift Z');
-  assert.equal(toolbarTooltip(TOOLBAR_HISTORY[0], {}, 'macos'), '실행 취소 · ⌘Z');
+
+  assert.equal(toolbarTooltip(TOOLBAR_HISTORY[0], {}), '되돌리기 · Ctrl Z');
+  assert.equal(toolbarTooltip(TOOLBAR_HISTORY[1], { 'd-redo': 'Ctrl+Shift+Z' }), '다시 하기 · Ctrl Shift Z');
+  assert.equal(toolbarTooltip(TOOLBAR_HISTORY[0], {}, 'macos'), '되돌리기 · ⌘Z');
 });
 
 test('단추 순서: 취소 · 고정 · 저장 · 복사(주황)', () => {

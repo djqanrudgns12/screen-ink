@@ -13,6 +13,7 @@ import {
   exportAnnotation,
   exportTransform,
   layerView,
+  matchCaptureAnnotKey,
   mosaicItem,
   mosaicSourcePlan,
   mosaicToPhys,
@@ -95,13 +96,13 @@ test('문서 좌표: 범위 왼쪽 위 = 원점, 논리 px, 확대 없음', () =
   assert.deepEqual(layerView(a, { x: 230, y: 230 }), { s: 1, tx: -30, ty: -30 });
 });
 
-test('모자이크 항목·칸 크기(6~24)·물리 px 바꾸기', () => {
+test('모자이크 항목·칸 크기(4~48)·물리 px 바꾸기', () => {
   assert.equal(mosaicItem({ x: 5, y: 5 }, { x: 6, y: 40 }, 10, 'm'), null, '너무 좁으면 없음');
   const m = /** @type {any} */ (mosaicItem({ x: 40, y: 30 }, { x: 10, y: 10 }, 10, 'm1'));
   assert.deepEqual([m.x, m.y, m.w, m.h, m.blockSize, m.kind], [10, 10, 30, 20, 10, 'mosaic']);
   assert.ok(m.bbox, '판정 상자(지우개)');
-  assert.equal(clampMosaicBlock(3), 6);
-  assert.equal(clampMosaicBlock(30), 24);
+  assert.equal(clampMosaicBlock(2), 4);
+  assert.equal(clampMosaicBlock(60), 48);
   assert.equal(clampMosaicBlock(NaN), MOSAIC_BLOCK_DEFAULT);
   // 150%: 논리 10 px 칸 = 물리 15 px, 결과 그림 기준(범위가 anchor보다 오른쪽 아래로 옮겨졌어도)
   const anchor = { x: 2220, y: 300 };
@@ -204,4 +205,31 @@ test('모자이크는 엔진 명령(add)으로 쌓여 실행 취소·지우개�
   e.pointerDown({ x: 30, y: 30, t: 0, button: 0 });
   e.pointerUp({ x: 30, y: 30, t: 10, button: 0 });
   assert.equal(itemCount(e.doc), 0, '지우개가 모자이크 상자를 지운다');
+});
+
+test('확정 뒤 도구 한 글자 키(R·O·A·P·H·M·T·E), 크기([·], ⇧+[·]), 색 키, 스포이트 Esc', () => {
+  const k = (/** @type {string} */ code, mods = {}) => ({ code, key: code.replace('Key', '').toLowerCase(), ctrlKey: false, altKey: false, shiftKey: false, metaKey: false, ...mods });
+  // 확정 상태에서 도구 키 8종
+  assert.deepEqual(matchCaptureAnnotKey(k('KeyR'), { confirmed: true }), { type: 'tool', id: 'rect' });
+  assert.deepEqual(matchCaptureAnnotKey(k('KeyO'), { confirmed: true }), { type: 'tool', id: 'ellipse' });
+  assert.deepEqual(matchCaptureAnnotKey(k('KeyA'), { confirmed: true }), { type: 'tool', id: 'arrow' });
+  assert.deepEqual(matchCaptureAnnotKey(k('KeyP'), { confirmed: true }), { type: 'tool', id: 'pen' });
+  assert.deepEqual(matchCaptureAnnotKey(k('KeyH'), { confirmed: true }), { type: 'tool', id: 'marker' });
+  assert.deepEqual(matchCaptureAnnotKey(k('KeyM'), { confirmed: true }), { type: 'tool', id: 'mosaic' });
+  assert.deepEqual(matchCaptureAnnotKey(k('KeyT'), { confirmed: true }), { type: 'tool', id: 'text' });
+  assert.deepEqual(matchCaptureAnnotKey(k('KeyE'), { confirmed: true }), { type: 'tool', id: 'eraser' });
+  // 고르기 중에는 도구 키를 가로채지 않는다
+  assert.equal(matchCaptureAnnotKey(k('KeyR'), { confirmed: false }), null);
+  // 패널이 열려 있으면 R/K/W 모두 색 키 우선
+  assert.deepEqual(matchCaptureAnnotKey(k('KeyR'), { confirmed: true, toolActive: true, panelOpen: true }), { type: 'color', code: 'R' });
+  assert.deepEqual(matchCaptureAnnotKey(k('KeyK'), { confirmed: true, toolActive: true, panelOpen: true }), { type: 'color', code: 'K' });
+  // 도구 활성 중 비충돌 색 키(B 등) 및 크기 조절
+  assert.deepEqual(matchCaptureAnnotKey(k('KeyB'), { confirmed: true, toolActive: true, panelOpen: false }), { type: 'color', code: 'B' });
+  assert.deepEqual(matchCaptureAnnotKey(k('BracketLeft'), { confirmed: true, toolActive: true }), { type: 'size', dir: -1, large: false });
+  assert.deepEqual(matchCaptureAnnotKey(k('BracketRight', { shiftKey: true }), { confirmed: true, toolActive: true }), { type: 'size', dir: 1, large: true });
+  // 스포이트 Esc 취소
+  assert.deepEqual(matchCaptureAnnotKey({ ...k('Escape'), key: 'Escape' }, { eyedropper: true }), { type: 'cancelEyedropper' });
+  // 조합 중·글자 입력 중·수정키는 무시
+  assert.equal(matchCaptureAnnotKey(k('KeyR', { ctrlKey: true }), { confirmed: true }), null);
+  assert.deepEqual(matchCaptureAnnotKey(k('KeyR'), { confirmed: true, editing: true }), { type: 'text' });
 });

@@ -1,20 +1,21 @@
 <script>
   import { untrack } from 'svelte';
   import AnnotateLayer from '../components/AnnotateLayer.svelte';
-  import AnnotateOptions from '../components/AnnotateOptions.svelte';
   import CaptureToolbar from '../components/CaptureToolbar.svelte';
+  import ColorWidthPanel from '../components/ColorWidthPanel.svelte';
   import Magnifier from '../components/Magnifier.svelte';
   import SelectionFrame from '../components/SelectionFrame.svelte';
+  import { setLang, syncLang, t } from '../i18n/index.svelte.js';
+  import { formatComboReadable } from '../models/shortcutDisplay.js';
   import {
-    ANNOT_COLORS,
-    ANNOT_WIDTHS,
-    MOSAIC_BLOCKS,
     TOOLBAR_ACTIONS,
     TOOLBAR_ANNOTATE_TOOLS,
     TOOLBAR_HISTORY,
-    annotOptionsKind,
+    TOOLBAR_STYLE_TRIGGER,
     comboMap,
     estimateToolbarWidth,
+    formatSizeBadge,
+    placeSizeBadge,
     placeToolOptions,
     placeToolbar,
     toggleAnnotTool,
@@ -30,10 +31,24 @@
     annotTarget,
     clampMosaicBlock,
     exportAnnotation,
+    matchCaptureAnnotKey,
     mosaicSourcePlan,
     wheelStep,
   } from '../models/captureAnnotate.js';
-  import { MAX_WIDTH_PX, MIN_WIDTH_PX, createInkEngine, itemCount } from '../ink/inkEngine.js';
+  import {
+    normalizeColorValue,
+    pushRecentColor,
+    rgbToHex,
+  } from '../models/palette.js';
+  import {
+    clampToolSize,
+    createDefaultAnnotateStyle,
+    getToolSizeSpec,
+    parseAnnotateStyle,
+    serializeAnnotateStyle,
+    stepSize,
+  } from '../models/inkSize.js';
+  import { TEXT_SIZE_MUL, createInkEngine, itemCount } from '../ink/inkEngine.js';
   import { evidenceBoxes } from '../models/evidence.js';
   import {
     buildMagnifierPatch,
@@ -163,6 +178,15 @@
   let annotColor = $state('R');
   let annotWidth = $state(4);
   let annotBlock = $state(MOSAIC_BLOCK_DEFAULT);
+  let annotStyle = $state(createDefaultAnnotateStyle());
+  let lastSyncedStyleRaw = '';
+  let panelOpen = $state(false);
+  let eyedropperActive = $state(false);
+  let hasOffscreenPixels = $state(false);
+  /** @type {number | null} */
+  let toolbarAnchorX = $state(null);
+  let badgeW = $state(92);
+  let badgeH = $state(24);
   /** 마지막으로 Rust에 알린 주석 개수(0 ↔ n이 바뀔 때만 알린다) */
   let annotReported = 0;
   let annotWheel = 0;
@@ -172,8 +196,8 @@
   let mosaicSourceKey = '';
   /** 오프스크린(확대경) 이미지가 준비될 때마다 올린다 */
   let frameRev = $state(0);
-  let optsW = $state(0);
-  let optsH = $state(0);
+  let optsW = $state(284);
+  let optsH = $state(216);
   let overOpts = $state(false);
   /** @type {Record<string, any>} 판서 설정(색·굵기·떨림 보정 — 주석도 같은 값) */
   let drawSettings = {};
@@ -222,6 +246,7 @@
     offscreenCtx = null;
     offscreenW = 0;
     offscreenH = 0;
+    hasOffscreenPixels = false;
   }
 
   function clearOverlay() {
@@ -308,7 +333,10 @@
         }
       }
     }
-    if (drawn) frameRev += 1; // 모자이크 미리보기 원본을 다시 만들 수 있다
+    if (drawn) {
+      hasOffscreenPixels = true;
+      frameRev += 1; // 모자이크 미리보기 원본을 다시 만들 수 있다
+    }
     if (requirePixels && !drawn) {
       magnifierReady = false;
       return;
@@ -451,6 +479,43 @@
     return a;
   }
 
+  /** @param {any} next */
+  function persistAnnotStyle(next) {
+    annotStyle = next;
+    const raw = serializeAnnotateStyle(next);
+    lastSyncedStyleRaw = raw;
+    if (typeof client?.updateSetting === 'function') {
+      Promise.resolve(client.updateSetting('annotate.style', raw)).catch(() => {});
+    }
+  }
+
+  /**
+   * 도구별 저장된 색·크기를 엔진과 모자이크 상태에 반영한다.
+   * @param {string} toolId
+   * @param {import('../ink/inkEngine.js').InkEngine} engine
+   * @param {import('../models/inkSize.js').AnnotateStyleState} style
+   */
+  function applyToolStyleToEngine(toolId, engine, style) {
+    const spec = getToolSizeSpec(toolId);
+    const entry = style.tools[toolId] ?? { color: style.lastColor, size: spec.defaultVal };
+    const size = clampToolSize(entry.size, spec);
+    if (toolId === 'mosaic') {
+      annotBlock = size;
+      return;
+    }
+    if (toolId === 'eraser') {
+      engine.widthPx = size / 3;
+    } else if (toolId === 'text') {
+      engine.widthPx = size / TEXT_SIZE_MUL;
+    } else {
+      engine.widthPx = size;
+    }
+    if (entry.color) {
+      const norm = normalizeColorValue(entry.color);
+      if (norm) engine.setColor(norm);
+    }
+  }
+
   /** @param {boolean} report  지금 세션이 이어지면 Rust에 "0개"를 알린다(범위를 버림) */
   function dropAnnot(report) {
     const a = annot;
@@ -467,6 +532,8 @@
     annotHasMosaic = false;
     annotReported = 0;
     annotWheel = 0;
+    panelOpen = false;
+    eyedropperActive = false;
     overOpts = false;
     releaseMosaicSource();
   }
@@ -481,45 +548,97 @@
   }
 
   /**
-   * 툴바 도구 단추: 같은 도구 = 해제(범위 조정으로).
+   * 툴바 도구 단추: 같은 도구 = 해제(범위 조정으로). 새 도구 = 저장된 스타일 반영 + 색·굵기 패널 열기.
    * @param {string} id
    */
   function selectTool(id) {
     const next = toggleAnnotTool(annotTool, id);
     if (next === annotTool) return;
+    eyedropperActive = false;
     if (next) {
       const a = ensureAnnot();
       if (!a) return;
       const target = annotTarget(next);
       if (target.engineTool) a.engine.setTool(target.engineTool);
       else if (a.engine.editing) a.engine.commitText();
+      applyToolStyleToEngine(next, a.engine, annotStyle);
       a.engine.notify();
+      panelOpen = true;
     } else {
       flushAnnotText();
+      panelOpen = false;
     }
     annotTool = next;
   }
 
-  /** @param {string} code */
-  function setAnnotColor(code) {
-    const a = ensureAnnot();
-    if (!a) return;
-    a.engine.setColor(/** @type {any} */ (code));
-    a.engine.notify();
+  function toggleStylePanel() {
+    if (!annotTool) {
+      selectTool('pen');
+      return;
+    }
+    panelOpen = !panelOpen;
+    if (!panelOpen) eyedropperActive = false;
   }
 
-  /** @param {number} px */
-  function setAnnotWidth(px) {
+  /**
+   * @param {string} codeOrHex
+   * @param {{ recordRecent?: boolean }} [opts]
+   */
+  function setAnnotColor(codeOrHex, { recordRecent = false } = {}) {
+    const norm = normalizeColorValue(codeOrHex);
+    if (!norm) return;
     const a = ensureAnnot();
-    if (!a) return;
-    a.engine.widthPx = Math.max(MIN_WIDTH_PX, Math.min(MAX_WIDTH_PX, Math.round(px)));
-    a.engine.revs.active++;
-    a.engine.notify();
+    if (a) {
+      a.engine.setColor(/** @type {any} */ (norm));
+      a.engine.notify();
+    }
+    const key = annotTool && annotTool !== 'mosaic' && annotTool !== 'eraser' ? annotTool : 'pen';
+    const spec = getToolSizeSpec(key);
+    const prev = annotStyle.tools[key] ?? { size: spec.defaultVal };
+    const recentColors =
+      recordRecent || norm.startsWith('#') ? pushRecentColor(annotStyle.recentColors, norm) : annotStyle.recentColors;
+    persistAnnotStyle({
+      ...annotStyle,
+      lastColor: norm,
+      recentColors,
+      tools: { ...annotStyle.tools, [key]: { ...prev, color: norm } },
+    });
   }
 
-  /** @param {number} px */
-  function setAnnotBlock(px) {
-    annotBlock = clampMosaicBlock(px);
+  /** @param {number} val */
+  function setAnnotSize(val) {
+    const key = annotTool ?? 'pen';
+    const spec = getToolSizeSpec(key);
+    const clamped = clampToolSize(val, spec);
+    if (key === 'mosaic') {
+      annotBlock = clamped;
+    } else {
+      const a = ensureAnnot();
+      if (a) {
+        if (key === 'text') {
+          a.engine.widthPx = clamped / TEXT_SIZE_MUL;
+          if (a.engine.editing) {
+            a.engine.editing = { ...a.engine.editing, fontSize: clamped / a.engine.view.s };
+          }
+        } else if (key === 'eraser') {
+          a.engine.widthPx = clamped / 3;
+        } else {
+          a.engine.widthPx = clamped;
+        }
+        a.engine.revs.active++;
+        a.engine.notify();
+      }
+    }
+    const prev = annotStyle.tools[key] ?? { size: spec.defaultVal };
+    persistAnnotStyle({
+      ...annotStyle,
+      tools: { ...annotStyle.tools, [key]: { ...prev, size: clamped } },
+    });
+  }
+
+  function toggleEyedropper() {
+    if (!hasOffscreenPixels) return;
+    eyedropperActive = !eyedropperActive;
   }
 
   /** @param {'undo' | 'redo'} dir */
@@ -540,7 +659,7 @@
   }
 
   /**
-   * Ctrl(맥 Cmd)+휠: 굵기 1~30 · 모자이크 칸 6~24.
+   * Ctrl(맥 Cmd)+휠: 현재 도구 크기 한 단계 증감.
    * @param {WheelEvent} e
    */
   function annotWheelStep(e) {
@@ -548,8 +667,10 @@
     const r = wheelStep(annotWheel, e.deltaY * k);
     annotWheel = r.acc;
     if (!r.dir) return;
-    if (annotTool === 'mosaic') setAnnotBlock(annotBlock + r.dir);
-    else if (annot && annot.engine.changeWidth(r.dir)) annot.engine.notify();
+    const key = annotTool ?? 'pen';
+    const spec = getToolSizeSpec(key);
+    const cur = key === 'mosaic' ? annotBlock : annotStyle.tools[key]?.size ?? spec.defaultVal;
+    setAnnotSize(stepSize(cur, r.dir, spec, { large: e.shiftKey }));
   }
 
   /**
@@ -820,10 +941,23 @@
    */
   function applyStateKeys(state) {
     if (!state) return;
+    syncLang(state);
+    if (typeof location !== 'undefined') {
+      const qLang = new URLSearchParams(location.search).get('lang');
+      if (qLang) setLang(qLang);
+    }
     if (Array.isArray(state.shortcuts)) combos = comboMap(state.shortcuts);
     if (typeof state.platform === 'string') platform = state.platform === 'macos' || state.platform === 'mac' ? 'macos' : 'windows';
-    // 캡처 주석: 판서 설정(색·굵기)·판서 키(실행 취소·다시 실행)를 그대로
-    if (state.settings && typeof state.settings === 'object') drawSettings = state.settings;
+    // 캡처 주석: 판서 설정(색·굵기)·판서 키(실행 취소·다시 실행) + annotate.style
+    if (state.settings && typeof state.settings === 'object') {
+      drawSettings = state.settings;
+      const rawStyle = state.settings['annotate.style'];
+      if (typeof rawStyle === 'string' && rawStyle !== lastSyncedStyleRaw) {
+        lastSyncedStyleRaw = rawStyle;
+        annotStyle = parseAnnotateStyle(rawStyle);
+        if (annotTool === 'mosaic') annotBlock = annotStyle.tools.mosaic?.size ?? annotBlock;
+      }
+    }
     if (Array.isArray(state.shortcuts)) {
       shortcutRows = state.shortcuts;
       annot?.engine.setShortcuts(state.shortcuts);
@@ -876,6 +1010,15 @@
   /** @param {PointerEvent} e */
   function handlePointerMove(e) {
     if (activeSession === null || !monitor) return;
+    if (eyedropperActive) {
+      const rect = rootEl?.getBoundingClientRect();
+      const localX = rect ? e.clientX - rect.left : e.clientX;
+      const localY = rect ? e.clientY - rect.top : e.clientY;
+      cursorCss = { x: localX, y: localY };
+      cursorPhys = clientToPhysical(localX, localY, monitor);
+      if (magnifierReady && offscreenCtx) sampleAtCss(localX, localY);
+      return;
+    }
     // 주석 도구를 고른 동안 범위 밖 움직임은 고르기에 보내지 않는다(범위 안은 주석 층이 받음)
     if (annotTool) return;
     pendingPointer = { clientX: e.clientX, clientY: e.clientY };
@@ -889,6 +1032,25 @@
   /** @param {PointerEvent} e */
   function handlePointerDown(e) {
     if (activeSession === null || !monitor) return;
+    if (eyedropperActive) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.button === 2) {
+        eyedropperActive = false;
+        return;
+      }
+      if (e.button === 0) {
+        const rect = rootEl?.getBoundingClientRect();
+        const localX = rect ? e.clientX - rect.left : e.clientX;
+        const localY = rect ? e.clientY - rect.top : e.clientY;
+        if (hasOffscreenPixels && offscreenCtx) sampleAtCss(localX, localY);
+        const hex = rgbToHex(rgb);
+        setAnnotColor(hex, { recordRecent: true });
+        eyedropperActive = false;
+        panelOpen = true;
+      }
+      return;
+    }
     if (annotTool) {
       // 도구를 고른 동안 범위 밖 클릭은 범위를 바꾸지 않는다. 우클릭 = 도구 해제(범위 조정으로)
       if (e.button === 2) {
@@ -991,6 +1153,30 @@
     if (activeSession === null) return;
     // 주석 글자 상자 안 키는 상자가 맡는다(Enter 복사·Esc 취소로 새지 않게)
     if (typeof HTMLTextAreaElement !== 'undefined' && e.target instanceof HTMLTextAreaElement) return;
+    const annotKey = matchCaptureAnnotKey(e, {
+      editing: annotEditing,
+      eyedropper: eyedropperActive,
+      confirmed: captureView?.phase === 'confirmed',
+      toolActive: Boolean(annotTool),
+      panelOpen: toolbarVisible && panelOpen,
+    });
+    if (annotKey) {
+      if (annotKey.type === 'text') return;
+      e.preventDefault();
+      if (annotKey.type === 'cancelEyedropper') {
+        eyedropperActive = false;
+      } else if (annotKey.type === 'tool') {
+        selectTool(annotKey.id);
+      } else if (annotKey.type === 'color') {
+        setAnnotColor(annotKey.code);
+      } else if (annotKey.type === 'size') {
+        const key = annotTool ?? 'pen';
+        const spec = getToolSizeSpec(key);
+        const cur = key === 'mosaic' ? annotBlock : annotStyle.tools[key]?.size ?? spec.defaultVal;
+        setAnnotSize(stepSize(cur, annotKey.dir, spec, { large: annotKey.large }));
+      }
+      return;
+    }
     if (annot) {
       const route = annotKeyRoute(e, { editing: annotEditing, toolActive: Boolean(annotTool), keymap: annot.engine.keymap, platform });
       if (route === 'text') return;
@@ -1052,17 +1238,57 @@
         toolbarOwner(captureView.rect, sessionMonitors.length ? sessionMonitors : [monitor]) === monitor.id,
     ),
   );
-  let toolbarTips = $derived(Object.fromEntries([...TOOLBAR_ACTIONS, ...TOOLBAR_HISTORY].map((a) => [a.id, toolbarTooltip(a, combos, platform)])));
+  let toolbarTips = $derived.by(() => {
+    /** @type {Record<string, string>} */
+    const tips = {};
+    for (const item of [...TOOLBAR_ACTIONS, ...TOOLBAR_HISTORY]) {
+      tips[item.id] = toolbarTooltip(item, combos, platform, item.labelKey ? t(item.labelKey) : item.label);
+    }
+    for (const tool of TOOLBAR_ANNOTATE_TOOLS) {
+      tips[tool.id] = toolbarTooltip(tool, combos, platform, tool.labelKey ? t(tool.labelKey) : tool.label);
+    }
+    tips[TOOLBAR_STYLE_TRIGGER.id] = t(TOOLBAR_STYLE_TRIGGER.labelKey);
+    return tips;
+  });
   /** @type {{ w: number, h: number }} */
-  let toolbarSize = $derived({ w: toolbarW || estimateToolbarWidth([TOOLBAR_ANNOTATE_TOOLS, TOOLBAR_HISTORY, TOOLBAR_ACTIONS]), h: toolbarH || 40 });
+  let toolbarSize = $derived({
+    w: toolbarW || estimateToolbarWidth([TOOLBAR_ANNOTATE_TOOLS, [TOOLBAR_STYLE_TRIGGER], TOOLBAR_HISTORY, TOOLBAR_ACTIONS]),
+    h: toolbarH || 40,
+  });
   let toolbarPos = $derived(
     activeFrame
       ? placeToolbar(activeFrame, { w: viewportW, h: viewportH }, toolbarSize)
       : /** @type {{ x: number, y: number, side: 'below' | 'above' | 'inside' }} */ ({ x: 0, y: 0, side: 'below' }),
   );
-  // 보조 옵션(색·굵기 / 모자이크 칸): 도구를 고른 동안만 툴바 바깥쪽 4px
-  let optionsKind = $derived(annotOptionsKind(annotTool));
-  let optsPos = $derived(placeToolOptions(toolbarPos, toolbarSize, { w: optsW || 240, h: optsH || 28 }, { w: viewportW, h: viewportH }));
+  // 색·굵기 패널(R2-FIX-11): 고른 도구 단추 위에 붙는 작은 카드
+  let activeToolSize = $derived.by(() => {
+    const key = annotTool ?? 'pen';
+    const spec = getToolSizeSpec(key);
+    if (key === 'mosaic') return clampToolSize(annotBlock, spec);
+    return clampToolSize(annotStyle.tools[key]?.size ?? spec.defaultVal, spec);
+  });
+  let activeToolColor = $derived.by(() => {
+    const key = annotTool ?? 'pen';
+    if (key === 'mosaic' || key === 'eraser') return annotStyle.lastColor;
+    return annotStyle.tools[key]?.color ?? annotColor ?? annotStyle.lastColor;
+  });
+  let optsPos = $derived(
+    placeToolOptions(toolbarPos, toolbarSize, { w: optsW || 284, h: optsH || 216 }, { w: viewportW, h: viewportH }, toolbarAnchorX),
+  );
+  let sizeBadgeText = $derived(activeFrame && captureView?.rect ? formatSizeBadge(captureView.rect) : '');
+  let sizeBadgePos = $derived(
+    activeFrame ? placeSizeBadge(activeFrame, { w: viewportW, h: viewportH }, { w: badgeW, h: badgeH }) : { x: 0, y: 0, inside: false },
+  );
+  let stageHintText = $derived.by(() => {
+    if (eyedropperActive) return t('capture.hint.eyedropper');
+    if (annotTool) return t('capture.hint.annotating');
+    if (captureView?.phase === 'confirmed') {
+      const copyKey = formatComboReadable(combos['c-copy'] || 'Enter', platform) || 'Enter';
+      return t('capture.hint.confirmed', { copyKey });
+    }
+    return t('capture.hint.picking');
+  });
+  let hintTopPos = $derived(toolbarVisible && toolbarPos.y > viewportH - 96);
   // 주석 층: 이 창 주석이 있고 범위가 정해진 동안(다시 끄는 중에도 같은 화면 자리에 남아 지금 범위로 잘린다)
   let annotVisible = $derived(
     Boolean(annot && annot.session === activeSession && monitor && activeFrame && (captureView?.phase === 'confirmed' || captureView?.phase === 'drag')),
@@ -1088,8 +1314,9 @@
     data-phase={captureView?.phase ?? 'hover'}
     data-native-frame={nativeFrame ? 'true' : undefined}
     data-annot-tool={annotTool ?? undefined}
+    data-eyedropper={eyedropperActive ? 'true' : undefined}
     role="application"
-    aria-label="캡처 화면"
+    aria-label={t('capture.overlay.label')}
     onpointerdown={handlePointerDown}
     onpointermove={handlePointerMove}
     onpointerup={handlePointerUp}
@@ -1142,7 +1369,7 @@
     {#if annotVisible && annot && monitor && activeFrame}
       <AnnotateLayer
         engine={annot.engine}
-        tool={annotTool}
+        tool={eyedropperActive ? null : annotTool}
         frame={activeFrame}
         anchorCss={annotAnchorCss}
         scale={monitor.scale > 0 ? monitor.scale : 1}
@@ -1187,12 +1414,29 @@
       </svg>
     {/if}
 
+    {#if sizeBadgeText}
+      <div
+        class="ink-size-badge ink-mono"
+        data-inside={sizeBadgePos.inside ? 'true' : undefined}
+        style:transform={`translate3d(${sizeBadgePos.x}px, ${sizeBadgePos.y}px, 0)`}
+        bind:offsetWidth={badgeW}
+        bind:offsetHeight={badgeH}
+        aria-hidden="true"
+      >
+        {sizeBadgeText}
+      </div>
+    {/if}
+
     {#if toolbarVisible}
       <CaptureToolbar
         actions={TOOLBAR_ACTIONS}
         tools={TOOLBAR_ANNOTATE_TOOLS}
         history={TOOLBAR_HISTORY}
         activeTool={annotTool}
+        {panelOpen}
+        activeColor={activeToolColor}
+        activeSize={activeToolSize}
+        isMarker={annotTool === 'marker'}
         canUndo={annotCanUndo}
         canRedo={annotCanRedo}
         tooltips={toolbarTips}
@@ -1201,31 +1445,42 @@
         bind:width={toolbarW}
         bind:height={toolbarH}
         onHover={(v) => (overToolbar = v)}
+        onAnchorChange={(cx) => (toolbarAnchorX = cx)}
+        onStyleToggle={toggleStylePanel}
         onTool={selectTool}
         onCommand={handleToolbarCommand}
       />
-      {#if optionsKind !== 'none'}
-        <AnnotateOptions
-          kind={optionsKind === 'mosaic' ? 'mosaic' : 'stroke'}
-          colors={ANNOT_COLORS}
-          widths={ANNOT_WIDTHS}
-          blocks={MOSAIC_BLOCKS}
-          color={annotColor}
-          width={annotWidth}
-          block={annotBlock}
+      {#if panelOpen && annotTool}
+        <ColorWidthPanel
+          toolId={annotTool}
+          color={activeToolColor}
+          size={activeToolSize}
+          recentColors={annotStyle.recentColors}
+          {eyedropperActive}
+          showEyedropper={hasOffscreenPixels}
+          displayScale={monitor.scale > 0 ? monitor.scale : 1}
+          zoomScale={1}
           x={optsPos.x}
           y={optsPos.y}
+          side={optsPos.side}
+          arrowX={optsPos.arrowX}
           bind:boxWidth={optsW}
           bind:boxHeight={optsH}
           onColor={setAnnotColor}
-          onWidth={setAnnotWidth}
-          onBlock={setAnnotBlock}
+          onSize={setAnnotSize}
+          onEyedropper={toggleEyedropper}
           onHover={(v) => (overOpts = v)}
         />
       {/if}
     {/if}
 
-    {#if magnifierReady && cursorCss && cursorPhys && !annotTool && !(toolbarVisible && (overToolbar || overOpts))}
+    {#if stageHintText}
+      <div class="ink-stage-hint" data-top={hintTopPos ? 'true' : undefined} aria-live="polite">
+        {stageHintText}
+      </div>
+    {/if}
+
+    {#if magnifierReady && cursorCss && cursorPhys && (!annotTool || eyedropperActive) && !(toolbarVisible && (overToolbar || overOpts))}
       <div
         class="ink-overlay-mag"
         style:transform={`translate3d(${magPos.x}px, ${magPos.y}px, 0)`}
@@ -1254,7 +1509,7 @@
       state="afterimage"
       scrim={false}
       instant
-      label="방금 고른 범위"
+      label={t('capture.afterimage.label')}
     />
   </div>
 {/if}
@@ -1276,6 +1531,69 @@
   /* 주석 도구를 고른 동안 범위 밖은 고르기 십자가 아니다 */
   .ink-overlay[data-annot-tool] {
     cursor: default;
+  }
+
+  .ink-overlay[data-eyedropper='true'] {
+    cursor: crosshair;
+  }
+
+  .ink-size-badge {
+    position: absolute;
+    left: 0;
+    top: 0;
+    padding: 3px 8px;
+    border-radius: 7px;
+    background: rgba(16, 17, 20, 0.84);
+    color: #f7f8fa;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 5;
+  }
+
+  :global([data-theme='light']) .ink-size-badge {
+    background: rgba(250, 250, 248, 0.9);
+    color: #141414;
+    border-color: rgba(0, 0, 0, 0.12);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+  }
+
+  .ink-stage-hint {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(16, 17, 20, 0.78);
+    color: #e6e8ee;
+    font-size: 12px;
+    line-height: 1.3;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 4;
+  }
+
+  .ink-stage-hint[data-top='true'] {
+    bottom: auto;
+    top: 16px;
+  }
+
+  :global([data-theme='light']) .ink-stage-hint {
+    background: rgba(250, 250, 248, 0.88);
+    color: #1c1d21;
+    border-color: rgba(0, 0, 0, 0.12);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
   }
 
   .ink-afterimage-layer {

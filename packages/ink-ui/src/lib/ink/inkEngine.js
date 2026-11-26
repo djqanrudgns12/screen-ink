@@ -40,8 +40,10 @@ import {
   normalizeCombo,
 } from './drawKeys.js';
 
+import { INK_COLORS, INK_COLOR_CODES } from '../models/palette.js';
+
 /**
- * @typedef {'R' | 'Y' | 'G' | 'O' | 'B' | 'L' | 'W' | 'K'} InkColor
+ * @typedef {'R' | 'Y' | 'G' | 'O' | 'B' | 'L' | 'W' | 'K' | 'NV' | 'PU' | 'PK' | 'TL' | 'BR' | 'GR' | 'LY' | 'SB' | (string & {})} InkColor
  * @typedef {'frame' | 'white' | 'black'} InkBackground
  * @typedef {'pen' | 'marker' | 'text' | 'select' | 'eraser' | 'pan'} InkTool
  * @typedef {'draw' | 'board' | 'capture'} InkMode
@@ -171,18 +173,8 @@ import {
 export const INK_SCHEMA_VERSION = 1;
 export const MAX_UNDO = 200;
 
-/** 판서 펜 색(10 §2) — UI 토큰과 따로 둔다. */
-export const INK_COLORS = Object.freeze({
-  R: '#E5484D',
-  Y: '#F2B705',
-  G: '#2BA36B',
-  O: '#F97316',
-  B: '#2F6FED',
-  L: '#84CC16',
-  W: '#FFFFFF',
-  K: '#1A1A1A',
-});
-export const INK_COLOR_CODES = Object.freeze(/** @type {InkColor[]} */ (Object.keys(INK_COLORS)));
+/** 판서 펜 색(10 §2 · R2-ANN-1) — palette.js에서 공용 색 표를 읽는다. */
+export { INK_COLORS, INK_COLOR_CODES };
 export const MARKER_OPACITY = 0.38;
 export const DEFAULT_FONT_FAMILY = 'IBM Plex Sans KR';
 /** 글자 크기 = 화면 굵기 × 6 (02 §3.7). */
