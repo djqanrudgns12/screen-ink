@@ -61,7 +61,30 @@
 | 전역 단축키·화면 캡처·UIA·캡처 제외 | Win32 | full trust 데스크톱 앱이면 같다. **[확인 필요]** 인증 통과로 확인 |
 | 스토어 등록 자료(`D4`) | — | 개인정보 처리방침 URL(앱은 네트워크를 쓰지 않음 → "수집 없음" 한 쪽, GitHub Pages 등), 실제 화면 스크린숏, 연령 등급 설문, 한국어·영어 설명 |
 
-## 6. 출처
+## 6. 서명한 MSIX 한 파일로 나누기 (2026-11-26 확인)
+
+**결론: 된다.** 공인 인증 기관(CA) 인증서로 서명하면 `.msix` 한 파일만 나누면 된다. x64와 arm64를 함께 낼 때도 `.msixbundle` 한 파일이다. 받는 사람은 **내려받기 → 더블클릭 → [설치]** 만 한다.
+- 예전에 번거로웠던 경우(`.bat`·PowerShell로 인증서를 먼저 넣고 다시 설치 실행)는 **자체 서명 인증서**일 때다. 그때는 받는 사람 PC의 "신뢰할 수 있는 사람" 인증서 저장소에 인증서를 먼저 넣어야 한다.
+- 서명이 아예 없는 MSIX는 설치 자체가 안 된다.
+
+| 조건 | 내용 | 확인 |
+|---|---|---|
+| 인증서 | 공인 CA 인증서(예: Certum 오픈소스 €49/년)로 서명 → "Windows가 이미 신뢰, 인증서 배포 필요 없음"(Microsoft 문서). 매니페스트의 `Publisher`가 인증서 주체와 **글자 그대로 같아야** 한다 | 문서 |
+| Windows 버전 | Windows 10 2004 이상과 Windows 11은 스토어 밖 서명 패키지 설치(사이드로드)가 기본으로 켜져 있다 | 문서 |
+| 설치 도구 | 앱 설치 관리자(App Installer)는 Windows 10/11에 기본으로 있다. 내 PC의 파일 설치는 기본 허용이고, 관리자 정책으로 막을 수 있다(`MsixAllowedZones` 등) | 문서 · 학교 PC **[확인 필요]** |
+| 관리자 권한 | 필요 없음(사용자별 설치), 제거 깔끔 | MSIX 특성 |
+| VC++ 런타임 | 필요 없음. Tauri 기본값 `staticVCRuntime = true`(tauri-utils 2.10.4)이고, 우리 exe는 `VCRUNTIME140.dll`을 쓰지 않는다(2026-11-26 확인). UCRT는 Windows 10 이상에 들어 있다 | 실측 |
+| WebView2 | 필요. Windows 11은 기본 내장, Windows 10은 대개 Edge와 함께 있다. MSIX는 WebView2 설치기를 대신 돌려 주지 못한다 → 없으면 앱이 알아채고 안내해야 한다 | 오래된 Windows 10 **[확인 필요]** |
+| 웹 한 번 클릭 설치 | `ms-appinstaller:` 링크는 2023-12부터 기본으로 꺼짐 → 파일을 받아 더블클릭하는 방식만 권한다 | 문서 |
+| 경고 | 앱 설치 관리자는 게시자 이름을 보여 준다. 내려받은 `.msix`에 SmartScreen 평판 검사가 붙는지는 Microsoft 문서에 없다 → 서명한 뒤 실제로 받아서 확인한다 | **[확인 필요]** |
+| 업데이트 | 한 파일 배포는 자동 업데이트가 없다(새 파일을 다시 나눔). 자동 업데이트는 `.appinstaller` 파일을 따로 호스팅해야 한다 | 문서 |
+
+주의:
+- 스토어판과 직접 배포판은 매니페스트 `Publisher`가 다르다(스토어는 Partner Center가 준 게시자 이름, 직접 배포판은 인증서 주체). 그래서 Windows는 **서로 다른 앱**으로 본다. 한 PC에 둘 다 깔지 않도록 안내한다.
+- 공인 인증서 없이(무료로) 한 파일 무경고 배포를 하는 방법은 여전히 없다. 무료로 가려면 스토어 링크다(§1).
+- 서명한 NSIS 설치 파일(`setup.exe`)도 한 파일이고 인증서 비용은 같다. MSIX는 관리자 권한이 필요 없고 제거가 깔끔하며, 스토어용 포장과 같은 파이프라인(`D2`)을 쓴다.
+
+## 7. 출처
 
 - 개인 개발자 무료 등록: [Windows Developer Blog 2025-09-10](https://blogs.windows.com/windowsdeveloper/2025/09/10/free-developer-registration-for-individual-developers-on-microsoft-store/), [storedeveloper.microsoft.com](https://storedeveloper.microsoft.com/)
 - MSIX는 스토어가 서명, EXE/MSI는 신뢰 루트 CA 서명 필요: [MSIX 패키지 요구사항](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements), [Code signing options](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options), [Win32 앱 스토어 배포](https://learn.microsoft.com/en-us/windows/apps/distribute-through-store/how-to-distribute-your-win32-app-through-microsoft-store)
@@ -76,5 +99,10 @@
 - Homebrew 공증 안 된 cask 차단(2026-09-01): [Homebrew 토론 #6482](https://github.com/orgs/Homebrew/discussions/6482), [Hacker News](https://news.ycombinator.com/item?id=45907259)
 - Mac App Store와 손쉬운 사용 API: [Apple Developer Forums](https://developer.apple.com/forums/thread/756130)
 - 네이버 소프트웨어: [네이버 보도자료](https://navercorp.com/media/pressReleasesDetail?seq=28904)
+- 서명 패키지 더블클릭 설치·사이드로드 기본 켬(2004 이상): [MSIX on Windows 10 and 11](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/msix-windows10-windows11), [Sideload apps](https://learn.microsoft.com/en-us/windows/application-management/sideload-apps-in-windows)
+- CA 인증서면 인증서 배포 불필요·자체 서명은 신뢰할 수 있는 사람 저장소에 배포: [웹에서 Windows 앱 설치](https://learn.microsoft.com/en-us/windows/msix/app-installer/installing-windows10-apps-web)
+- 앱 설치 관리자 보안(SmartScreen URL 검사·영역 정책): [App Installer 보안 기능](https://learn.microsoft.com/en-us/windows/msix/app-installer/app-installer-security-features)
+- `ms-appinstaller:` 기본 꺼짐(2023-12): [MSRC 블로그](https://www.microsoft.com/en-us/msrc/blog/2023/12/microsoft-addresses-app-installer-abuse)
+- Tauri 정적 VC 런타임: 로컬 `tauri-build 2.7.6`·`tauri-utils 2.10.4` 소스(`build.windows.staticVCRuntime` 기본 `true`)
 
 가격·자격은 2026-11-26 기준이다. 사기 전에 각 판매처 공식 페이지에서 다시 확인한다.
