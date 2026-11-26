@@ -3,13 +3,16 @@
 //! 판단은 `ink_domain::zoom`(순수), 창은 `Magnifier` 포트. 틱은 어댑터가 메인 스레드에서 부른다(`tick_zoom`).
 //! 배율은 휠로만 바꾼다(어댑터 훅 — Shift+휠은 아래 앱으로). 확대 중 잠시 잡는 전역 키는 끝내기(`z-exit`, Esc) 하나뿐이고
 //! 끝나면 바로 푼다(R-KEY-6). 방향키는 잡지 않는다 — 아래 앱(PPT 넘기기 등)이 받아야 한다(2026-11-26 사용자 결정).
-//! 5.3(Alt+1 → 정지 판서 이어받기)은 판서 흐름 뒤 — 넘길 값은 `zoom_handoff`.
+//! 5.3(Alt+1 → 정지 판서 이어받기, R-ZOOM-3 ≤ 150 ms): 이어받을 값 읽기 → 확대 끝(돋보기 숨김) → 화면 갱신 한 번
+//! 기다리기(`Magnifier::wait_hidden` — 돋보기가 캡처에 찍히지 않게) → 그 모니터 정지 캡처 → 판서(initial_view = 확대 그대로).
 
+use crate::draw::{DrawSource, DrawStart};
 use crate::ports::{Magnifier, NoMagnifier, SystemEvent, ZOOM_UNSUPPORTED};
 use crate::service::{HotkeyOutcome, InkService};
+use crate::state::DrawViewTransform;
 use crate::state::{IslandEvent, IslandKind, LiveZoomState};
 use ink_domain::geometry::{PhysPoint, PhysRect};
-use ink_domain::mode::Mode;
+use ink_domain::mode::{DrawKind, Mode};
 use ink_domain::shortcuts::{spoken, to_accelerator};
 use ink_domain::zoom::{self, FollowMode, LiveZoomView, ZoomCommand, LIVE_ZOOM_START, LIVE_ZOOM_STEPS, ZOOM_KEYS};
 use serde::Deserialize;
@@ -126,11 +129,42 @@ impl InkService {
             }
             ZoomCommand::End => self.end_zoom(),
             ZoomCommand::EndThenPass => {
-                self.end_zoom();
+                // 다음 모드가 곧 화면을 찍는다(F1·F2·F3·직전 판서 열기) — 돋보기가 사라진 뒤에 넘긴다
+                self.end_zoom_settled();
                 return None;
+            }
+            ZoomCommand::ToDraw => {
+                self.zoom_to_draw(pressed);
+                return Some(HotkeyOutcome::Draw);
             }
         }
         Some(HotkeyOutcome::Zoom)
+    }
+
+    /// 5.3 확대 중 Alt+1(·트레이 판서): 그 순간 확대 화면·배율 그대로 정지 판서로. 순서가 중요하다 —
+    /// ① 이어받을 값을 먼저 읽고(확대를 끝내면 사라진다) ② 돋보기를 내리고 ③ 화면 갱신 한 번을 기다린 뒤
+    /// ④ **확대하던 그 모니터**(커서가 옆 모니터로 갔어도)를 찍어 ⑤ `initial_view = (s, tx, ty)`로 판서를 연다.
+    pub(crate) fn zoom_to_draw(&mut self, pressed: Instant) {
+        let Some(h) = self.zoom_handoff() else { return };
+        let hide_ms = self.end_zoom_settled();
+        let start = DrawStart {
+            monitor_id: Some(h.monitor_id),
+            frame: None,
+            view: DrawViewTransform { s: h.s, tx: h.tx, ty: h.ty },
+            source: DrawSource::Zoom { hide_ms },
+        };
+        self.begin_draw_with(DrawKind::Draw, pressed, start);
+    }
+
+    /// 확대를 끝내고 돋보기가 화면에서 사라질 때까지 기다린다(곧 정지 캡처를 할 때). 걸린 ms(확대 중이 아니었으면 0).
+    pub(crate) fn end_zoom_settled(&mut self) -> f64 {
+        if !self.zooming() {
+            return 0.0;
+        }
+        let t = Instant::now();
+        self.end_zoom();
+        self.zoom.magnifier.wait_hidden();
+        ms(t.elapsed())
     }
 
     /// 커서 모니터에 돋보기를 띄운다. 실패하면 모드는 그대로(쉬는 중).
@@ -162,6 +196,8 @@ impl InkService {
         }
         let start_ms = ms(t.elapsed());
 
+        // 확대 섬이 결과 섬을 덮는다 — [판서로]로 쥐어 둔 프레임을 놓는다
+        self.cap.handoff = None;
         self.session_seq += 1;
         let session = self.session_seq;
         self.mode = Mode::LiveZoom { session, monitor_id: monitor.id, started_ms: self.epoch.elapsed().as_millis() as u64 };

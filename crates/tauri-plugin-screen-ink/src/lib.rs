@@ -151,6 +151,9 @@ impl<R: Runtime> Notifier for TauriNotifier<R> {
         if event.kind != IslandKind::End {
             show_island(&self.app);
         }
+        if event.secondary_button.as_ref().is_some_and(|b| b.action == ACTION_TO_DRAW) {
+            release_capture_frame_later(&self.app);
+        }
         let _ = self.app.emit(EVT_ISLAND, event);
     }
 
@@ -558,6 +561,26 @@ fn open_folder(path: &std::path::Path) {
     }
 }
 
+/// 결과 섬 [판서로](3e-handoff) 동작 이름 — `InkClient.run('capture.toDraw')`.
+const ACTION_TO_DRAW: &str = "capture.toDraw";
+
+/// [판서로]가 쥔 정지 프레임(모니터 한 장, 4K ≈ 33 MB)을 30초 뒤에 놓는다(B §5, M3 대기 메모리).
+/// 서비스 잠금을 쥔 채 불린다 — 여기서는 스레드만 띄우고, 놓기는 그 뒤 메인 스레드에서(새 결과면 서비스가 나이로 거른다).
+fn release_capture_frame_later<R: Runtime>(app: &AppHandle<R>) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(ink_app::capture::CAPTURE_FRAME_TTL + Duration::from_millis(200));
+        let h = app.clone();
+        let _ = app.run_on_main_thread(move || {
+            if let Some(ink) = h.try_state::<Ink>() {
+                if ink.lock().expire_capture_frame() {
+                    log::debug!("capture frame released (to-draw idle)");
+                }
+            }
+        });
+    });
+}
+
 /// 아직 만들지 않은 모드(단계 2 이후) — 눌린 것은 알려 준다.
 fn not_ready<R: Runtime>(app: &AppHandle<R>, slot_or_action: &str) {
     let label = catalog().slot(slot_or_action).map(|s| s.label.clone()).unwrap_or_else(|| slot_or_action.to_string());
@@ -909,6 +932,13 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
         "capture.copyHex" => {
             let h = app.clone();
             app.run_on_main_thread(move || h.state::<Ink>().lock().copy_last_hex()).map_err(|e| e.to_string())?;
+        }
+        // 결과 섬 [판서로]: 방금 고른 범위를 확대한 채 그 모니터 판서로(정지 프레임 재사용, ≤ 150 ms)
+        ACTION_TO_DRAW => {
+            hide(POPOVER);
+            let pressed = Instant::now();
+            let h = app.clone();
+            app.run_on_main_thread(move || h.state::<Ink>().lock().capture_to_draw_at(pressed)).map_err(|e| e.to_string())?;
         }
         "app.quit" => {
             let _ = app.global_shortcut().unregister_all();

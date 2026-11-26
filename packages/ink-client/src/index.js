@@ -53,9 +53,10 @@
  *
  * @typedef {'capture.region'|'capture.window'|'record.toggle'|'draw'|'zoom'|'board'|'pin.toggle'|'pin.releaseAll'|'draw.restore'|'folder.open'|'settings.open'|'firstRun.open'|'app.quit'|'snipaste.howto'
  *   |'folder.pick'|'logs.open'|'settings.export'|'capture.history.clear'|'capture.saveLast'|'capture.copyHex'|'pins.closeAll'
- *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'|'draw.acceptSuggestion'|'draw.undo'} InkAction
+ *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'|'draw.acceptSuggestion'|'draw.undo'|'capture.toDraw'} InkAction
  *   draw.acceptSuggestion·draw.undo = 판서 섬 단추([바꾸기]·[되돌리기]) → Rust가 'drawCommand' 이벤트로 오버레이 엔진에
  *   capture.cancel = 오버레이에서 Esc·우클릭(모드 끝, 정지 이미지 버림)
+ *   capture.toDraw = 결과 섬 [판서로](3e-handoff): 방금 고른 범위가 꽉 차게 확대한 채 그 모니터 판서로(정지 프레임 재사용, ≤ 150 ms)
  *   folder.pick = 저장 폴더 [바꾸기](폴더 고르기 → output.folder) · logs.open = 로그 폴더 · settings.export = 내보내기(저장 대화)
  *   settings.close·popover.close·island.hidden = 창 닫기(앱 셸이 씀)
  *
@@ -86,6 +87,8 @@
  * @property {'R'|'Y'|'G'|'O'|'B'|'L'|'W'|'K'} [penColor]  판서 섬(variant 'draw')의 지금 색 점
  * @property {string} [penWidth]    판서 섬의 굵기('4px')
  * @property {{label: string, action: InkAction}} [chip]  추천 칩 하나(예: '#RRGGBB 복사' → 'capture.copyHex')
+ * @property {{label: string, action: InkAction}} [secondaryButton]  주 단추 옆 보조 단추(결과 섬 [판서로] → 'capture.toDraw') — 누르면 run(action)
+ * @property {string} [secondaryButtonKey]  보조 단추 옆 키캡(예: 'Alt+1') — 단추가 넘치면 생략
  *
  * @typedef {{x: number, y: number, w: number, h: number}} PhysRect  물리 px, 가상 화면 좌표
  *
@@ -162,7 +165,8 @@
  * @property {boolean} board                 false = Alt+1 판서(정지 화면 위), true = Alt+3 칠판(frameUrl 없음)
  * @property {OverlayMonitor} monitor        대상 모니터(bounds·scale·frameUrl). frameUrl = 그 순간 BMP(물리 px) — <img crossorigin="anonymous">
  * @property {string} layoutFingerprint      진입 순간 모니터 구성 지문
- * @property {DrawViewTransform} initialView 시작 확대·이동(기본 {s:1,tx:0,ty:0})
+ * @property {DrawViewTransform} initialView 시작 확대·이동(기본 {s:1,tx:0,ty:0}) — 실시간 확대 중 Alt+1이면 그 확대 그대로(5.3),
+ *   결과 섬 [판서로]면 고른 범위가 화면 88%에 꽉 차게(3e-handoff)
  * @property {boolean} restoreOnOpen         true면 열자마자 drawRestore(Alt+Shift+1). 판서 중 다시 누르면 같은 세션이 true로 한 번 더 온다
  * @property {boolean} hasKept               보관 판서가 있음
  * @property {KeptCompat} keptCompatible

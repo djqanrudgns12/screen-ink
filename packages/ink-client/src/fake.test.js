@@ -296,3 +296,39 @@ test('결과 섬 HEX 칩과 주황 잔상 0.4초 이벤트를 흉내 낸다', as
   await c.captureInput({ type: 'command', name: 'cancel' });
   assert.equal(seen.some((e) => e.type === 'afterimage'), false);
 });
+
+test('이어받기 흉내: 결과 섬 [판서로]는 고른 범위를 꽉 차게, 확대 중 판서는 그 배율 그대로', async () => {
+  const c = createFakeClient();
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+
+  // 결과 섬 [판서로] — 2행(720×40)을 화면 88%에: min(0.88·1920/720, 0.88·1080/40) = 2.346… → 2.34
+  await c.run('capture.region');
+  await c.captureInput({ type: 'move', x: 800, y: 500 });
+  await c.captureInput({ type: 'command', name: 'copy' });
+  const result = seen.at(-1).island;
+  assert.deepEqual(result.secondaryButton, { label: '판서로', action: 'capture.toDraw' });
+  assert.equal(result.secondaryButtonKey, 'Alt+1');
+  await c.run(result.secondaryButton.action);
+  const draw = seen.filter((e) => e.type === 'draw').at(-1).draw;
+  assert.equal(draw.initialView.s, 2.34);
+  assert.equal((await c.getState()).mode.mode, 'draw');
+  assert.equal(seen.filter((e) => e.type === 'island').at(-1).island.value, '×2.34');
+  // 한 번 쓰면 없다
+  await c.drawFinish({ session: draw.session, keep: false });
+  await c.run('capture.toDraw');
+  assert.equal(seen.at(-1).island.text, '판서로 넘길 캡처가 없어요');
+
+  // 확대 중 판서 = 가운데 확대 그대로
+  await c.run('zoom');
+  await c.zoomInput({ type: 'wheel', dy: -1 });
+  await c.run('draw');
+  const fromZoom = seen.filter((e) => e.type === 'draw').at(-1).draw;
+  assert.deepEqual(fromZoom.initialView, { s: 2.5, tx: -1440, ty: -810 });
+  assert.equal(seen.filter((e) => e.type === 'zoom').at(-1).zoom, null, '확대는 끝난다');
+  await c.drawFinish({ session: fromZoom.session, keep: false });
+
+  // 키로 연 판서는 1×
+  await c.run('draw');
+  assert.deepEqual(seen.filter((e) => e.type === 'draw').at(-1).draw.initialView, { s: 1, tx: 0, ty: 0 });
+});

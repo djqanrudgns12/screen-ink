@@ -385,6 +385,97 @@ impl ink_app::Clock for FixedClock {
     }
 }
 
+/// 여러 가짜에 걸친 호출 순서(5.3: 돋보기 숨김 → 화면 갱신 기다림 → 캡처 → 판서 창).
+/// `FakeWorld::ports()`·`magnifier_port()`가 화면·돋보기·오버레이를 감싸 이름을 남긴다:
+/// `magnifier.start` · `magnifier.stop` · `magnifier.wait_hidden` · `screen.capture` · `overlay.show` · `overlay.show_draw` · `overlay.hide`.
+#[derive(Clone, Default)]
+pub struct Timeline(pub Arc<Mutex<Vec<&'static str>>>);
+
+impl Timeline {
+    pub fn push(&self, what: &'static str) {
+        self.0.lock().unwrap().push(what);
+    }
+
+    pub fn events(&self) -> Vec<&'static str> {
+        self.0.lock().unwrap().clone()
+    }
+
+    pub fn clear(&self) {
+        self.0.lock().unwrap().clear();
+    }
+}
+
+struct TracedScreen(FakeScreen, Timeline);
+
+impl ScreenSource for TracedScreen {
+    fn capture(&mut self, layout: &MonitorLayout) -> Result<Vec<Frame>, String> {
+        self.1.push("screen.capture");
+        self.0.capture(layout)
+    }
+
+    fn cursor_sprite(&mut self) -> Option<ink_domain::image::CursorSprite> {
+        self.0.cursor_sprite()
+    }
+}
+
+struct TracedOverlay(FakeOverlay, Timeline);
+
+impl OverlayHost for TracedOverlay {
+    fn prepare(&mut self, layout: &MonitorLayout) {
+        self.0.prepare(layout);
+    }
+
+    fn show(&mut self, session: &OverlaySession, frames: Vec<Frame>) -> Result<Option<std::time::Instant>, String> {
+        self.1.push("overlay.show");
+        self.0.show(session, frames)
+    }
+
+    fn highlight(&mut self, session: u64, rect: Option<PhysRect>) {
+        self.0.highlight(session, rect);
+    }
+
+    fn hide(&mut self, session: u64) {
+        self.1.push("overlay.hide");
+        self.0.hide(session);
+    }
+
+    fn thumbnail(&mut self, w: u32, h: u32, bgra: Vec<u8>) -> Option<String> {
+        self.0.thumbnail(w, h, bgra)
+    }
+
+    fn show_draw(&mut self, session: &DrawSession, frame: Option<Frame>) -> Result<Option<String>, String> {
+        self.1.push("overlay.show_draw");
+        self.0.show_draw(session, frame)
+    }
+
+    fn flash_afterimage(&mut self, session: u64, rect: PhysRect, layout: &MonitorLayout) {
+        self.0.flash_afterimage(session, rect, layout);
+    }
+}
+
+struct TracedMagnifier(FakeMagnifier, Timeline);
+
+impl ink_app::Magnifier for TracedMagnifier {
+    fn start(&mut self, monitor: PhysRect, source: PhysRect, scale: f64) -> Result<(), String> {
+        self.1.push("magnifier.start");
+        self.0.start(monitor, source, scale)
+    }
+
+    fn update(&mut self, source: PhysRect, scale: f64) -> Result<(), String> {
+        self.0.update(source, scale)
+    }
+
+    fn stop(&mut self) {
+        self.1.push("magnifier.stop");
+        self.0.stop();
+    }
+
+    fn wait_hidden(&mut self) {
+        self.1.push("magnifier.wait_hidden");
+        self.0.wait_hidden();
+    }
+}
+
 /// 한 장면에 필요한 가짜 넷을 함께 만들고, 손잡이를 돌려준다.
 #[derive(Clone, Default)]
 pub struct FakeWorld {
@@ -401,6 +492,8 @@ pub struct FakeWorld {
     pub magnifier: FakeMagnifier,
     /// 진짜 V 엔진(그 자리에서 전처리)을 쓸지
     pub vision: bool,
+    /// 화면·돋보기·오버레이 호출 순서
+    pub timeline: Timeline,
 }
 
 impl FakeWorld {
@@ -414,10 +507,10 @@ impl FakeWorld {
             probe: Box::new(self.probe.clone()),
             store: Box::new(self.store.clone()),
             notifier: Box::new(self.notifier.clone()),
-            screen: Box::new(self.screen.clone()),
+            screen: Box::new(TracedScreen(self.screen.clone(), self.timeline.clone())),
             windows: Box::new(self.screen.clone()),
             monitors: Box::new(self.screen.clone()),
-            overlay: Box::new(self.overlay.clone()),
+            overlay: Box::new(TracedOverlay(self.overlay.clone(), self.timeline.clone())),
             elements: Box::new(self.elements.clone()),
             vision: if self.vision { Box::new(ink_app::VisionEngine::blocking()) } else { Box::new(ink_app::NoVision) },
             clipboard: Box::new(self.desk.clone()),
@@ -467,6 +560,9 @@ pub struct MagnifierLog {
     pub fail_start: Option<String>,
     /// 다음 update부터 실패(돋보기가 스스로 멈춘 흉내)
     pub fail_update: bool,
+    /// 숨겼지만 화면 합성에는 아직 남아 있음(`stop` 뒤 `wait_hidden` 전) — 이때 찍으면 확대 화면이 찍힌다
+    pub on_screen: bool,
+    pub waits: usize,
 }
 
 #[derive(Clone, Default)]
@@ -483,6 +579,7 @@ impl ink_app::Magnifier for FakeMagnifier {
         }
         m.starts += 1;
         m.running = Some((monitor, source, scale));
+        m.on_screen = true;
         Ok(())
     }
 
@@ -506,12 +603,20 @@ impl ink_app::Magnifier for FakeMagnifier {
             m.stops += 1;
         }
     }
+
+    fn wait_hidden(&mut self) {
+        let mut m = self.0.lock().unwrap();
+        m.waits += 1;
+        if m.running.is_none() {
+            m.on_screen = false;
+        }
+    }
 }
 
 impl FakeWorld {
-    /// `InkService::set_magnifier`에 넘길 돋보기(같은 기록을 본다).
+    /// `InkService::set_magnifier`에 넘길 돋보기(같은 기록·같은 호출 순서를 본다).
     pub fn magnifier_port(&self) -> Box<dyn ink_app::Magnifier> {
-        Box::new(self.magnifier.clone())
+        Box::new(TracedMagnifier(self.magnifier.clone(), self.timeline.clone()))
     }
 
     pub fn last_zoom(&self) -> Option<Option<ink_app::LiveZoomState>> {

@@ -290,6 +290,10 @@ pub trait Magnifier: Send {
     /// 틱마다 원본·배율(같은 값이어도 부른다 — 어댑터의 멈춤 감시 신호). 돋보기가 스스로 멈췄으면 `Err`.
     fn update(&mut self, source: ink_domain::geometry::PhysRect, scale: f64) -> Result<(), String>;
     fn stop(&mut self);
+    /// `stop` 뒤 곧바로 정지 캡처를 할 때(5.3 판서 이어받기·확대 중 캡처 키) 숨긴 돋보기가 화면에서 실제로
+    /// 사라질 때까지(화면 갱신 한 번) 기다린다 — 확대 화면이 캡처에 찍히지 않게.
+    /// 기본 = 기다리지 않음(가짜·미지원, 또는 `stop`이 이미 기다리는 어댑터 — Windows `WinMagnifier`는 숨긴 뒤 `DwmFlush`).
+    fn wait_hidden(&mut self) {}
 }
 
 /// 실시간 확대가 없는 곳(맥 1차·시험 기본값). 서비스는 "아직 쓸 수 없어요" 섬을 띄운다.

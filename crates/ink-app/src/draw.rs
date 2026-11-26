@@ -7,8 +7,8 @@
 //! 판서 문서는 웹뷰에만 있다. 그래서 Rust가 먼저 끝낸 경우(같은 키·다른 모드 키·잠금·화면 구성 변경)에는
 //! 끝난 세션을 하나 기억해 두고, 웹뷰가 뒤이어 보내는 `drawFinish`(늦은 끝) 한 번을 받아 보관한다.
 
-use crate::capture::LastCapture;
-use crate::ports::{SystemEvent, NO_SCREEN_PERMISSION};
+use crate::capture::{LastCapture, CAPTURE_FRAME_TTL};
+use crate::ports::{Frame, SystemEvent, NO_SCREEN_PERMISSION};
 use crate::service::{HotkeyOutcome, InkService};
 use crate::state::{DrawSession, DrawViewTransform, IslandEvent, IslandKind, KeptCompat, OverlayMonitor};
 use ink_domain::geometry::MonitorLayout;
@@ -267,9 +267,33 @@ fn zoom_label(z: f64) -> String {
 
 /// `mode enter draw [N ms] (capture a, show b, ui paint c)` — 진입 계측(M4) 한 줄. 칠판은 `mode enter board`.
 pub fn entry_line(board: bool, total_ms: f64, capture_ms: f64, show_ms: f64, paint_ms: Option<f64>) -> String {
+    entry_line_from(DrawSource::Key, 1.0, board, total_ms, capture_ms, show_ms, paint_ms)
+}
+
+/// 판서 진입이 어디서 왔나 — 계측 줄 `from …`(05 §9 숫자만).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum DrawSource {
+    /// 판서 키·트레이(커서 모니터를 새로 찍는다) — 줄 모양은 예전 그대로
+    Key,
+    /// 실시간 확대 중 Alt+1(5.3) — `hide_ms` = 돋보기 숨김 + 화면 갱신 한 번 기다림
+    Zoom { hide_ms: f64 },
+    /// 결과 섬 [판서로](3e-handoff) — `reused` = 방금 고른 범위의 정지 프레임을 다시 씀(새로 찍지 않음)
+    Capture { reused: bool },
+}
+
+/// 진입 계측 한 줄(출처 포함): `mode enter draw [61 ms] (from zoom, scale 2.5, hide 18, capture 35, show 3, ui paint 5)`,
+/// `mode enter draw [12 ms] (from capture, scale 4.22, frame reused, capture 0, show 3, ui paint 6)`. 키 = [`entry_line`]과 같음.
+pub fn entry_line_from(source: DrawSource, scale: f64, board: bool, total_ms: f64, capture_ms: f64, show_ms: f64, paint_ms: Option<f64>) -> String {
     let what = if board { "board" } else { "draw" };
     let paint = paint_ms.filter(|v| v.is_finite() && *v >= 0.0).map_or(String::new(), |p| format!(", ui paint {p:.0}"));
-    format!("mode enter {what} [{total_ms:.0} ms] (capture {capture_ms:.0}, show {show_ms:.0}{paint})")
+    let s = (scale * 100.0).round() / 100.0;
+    let from = match source {
+        DrawSource::Key => String::new(),
+        DrawSource::Zoom { hide_ms } => format!("from zoom, scale {s}, hide {hide_ms:.0}, "),
+        DrawSource::Capture { reused: true } => format!("from capture, scale {s}, frame reused, "),
+        DrawSource::Capture { reused: false } => format!("from capture, scale {s}, "),
+    };
+    format!("mode enter {what} [{total_ms:.0} ms] ({from}capture {capture_ms:.0}, show {show_ms:.0}{paint})")
 }
 
 /// 판서 섬 한 줄의 지금 값(색·도구·굵기·배율·쪽·바탕·도형 제안).
@@ -380,6 +404,26 @@ pub(crate) struct DrawEntry {
     pressed: Instant,
     capture_ms: f64,
     show_ms: f64,
+    source: DrawSource,
+    scale: f64,
+}
+
+/// 판서를 어떻게 여나 — 기본(`Default`) = 판서 키: 커서 모니터를 새로 찍고 1×.
+/// 5.3(확대 → 판서)은 그 모니터·확대 변환, 3e-handoff([판서로])는 그 모니터·고른 범위 맞춤 변환·이미 찍은 프레임.
+#[derive(Clone, Debug)]
+pub(crate) struct DrawStart {
+    /// 대상 모니터(없으면 커서 모니터). 배치에서 사라졌으면 커서 모니터 + 1×(변환·프레임은 버림)
+    pub monitor_id: Option<u32>,
+    /// 다시 쓸 정지 이미지(그 모니터 것일 때만 쓴다) — 있으면 화면을 다시 찍지 않는다
+    pub frame: Option<Frame>,
+    pub view: DrawViewTransform,
+    pub source: DrawSource,
+}
+
+impl Default for DrawStart {
+    fn default() -> Self {
+        DrawStart { monitor_id: None, frame: None, view: DrawViewTransform::default(), source: DrawSource::Key }
+    }
 }
 
 #[derive(Default)]
@@ -474,30 +518,76 @@ impl InkService {
         }
     }
 
-    /// 트레이·명령에서 시작(단축키가 꺼져 있어도). 지금 모드는 끝내고 새로 — 판서 중 "직전 판서 열기"는 그 자리 복원.
+    /// 트레이·명령에서 시작(단축키가 꺼져 있어도). 지금 모드는 끝내고 새로 — 판서 중 "직전 판서 열기"는 그 자리 복원,
+    /// 실시간 확대 중 판서는 Alt+1과 같이 그 순간 확대 화면 그대로 이어받는다(5.3).
     pub fn start_draw(&mut self, kind: DrawKind) {
         if kind == DrawKind::Restore && matches!(self.mode, Mode::Draw { board: false, .. }) {
             self.restore_in_place();
+            return;
+        }
+        if kind == DrawKind::Draw && matches!(self.mode, Mode::LiveZoom { .. }) {
+            self.zoom_to_draw(Instant::now());
             return;
         }
         self.end_for_switch();
         self.begin_draw(kind, Instant::now());
     }
 
-    /// 다른 모드로 넘어가기 전 지금 모드 끝.
+    /// 다른 모드로 넘어가기 전 지금 모드 끝. 확대는 돋보기가 화면에서 사라질 때까지 기다린다(곧 찍을 수 있다).
     fn end_for_switch(&mut self) {
         match self.mode {
             Mode::Capture { .. } => self.end_capture(),
             Mode::Draw { .. } => self.end_draw(EndWhy::Switch),
-            Mode::LiveZoom { .. } => self.end_zoom(),
+            Mode::LiveZoom { .. } => {
+                self.end_zoom_settled();
+            }
             Mode::Idle => {}
         }
     }
 
+    /// 결과 섬 [판서로](3e-handoff, `capture.toDraw`): 방금 고른 범위가 꽉 차게 확대한 채 그 모니터 판서로(≤ 150 ms).
+    /// 확정 순간 쥐어 둔 그 모니터 정지 프레임을 다시 쓴다(화면을 다시 찍지 않음 — 섬이 떠 있던 장면 그대로).
+    /// 프레임이 30초를 넘었거나 모니터 구성이 바뀌었으면 지금 화면을 새로 찍어 같은 배율 공식으로 연다.
+    pub fn capture_to_draw(&mut self) {
+        self.capture_to_draw_at(Instant::now());
+    }
+
+    /// `pressed` = 단추를 받은 순간(진입 계측의 시작점이자 30초 판정의 지금 — 시험은 나중 시각을 준다).
+    pub fn capture_to_draw_at(&mut self, pressed: Instant) {
+        let Some(h) = self.cap.handoff.take() else {
+            self.island(IslandEvent::new(IslandKind::Info, "판서로 넘길 캡처가 없어요"));
+            return;
+        };
+        let layout = self.ports.monitors.layout();
+        let same_layout = layout.fingerprint() == h.layout_fingerprint;
+        let young = pressed.saturating_duration_since(h.at) < CAPTURE_FRAME_TTL;
+        let fresh = h.frame.filter(|_| same_layout && young);
+        let center = ink_domain::geometry::PhysPoint { x: h.rect.x + h.rect.w / 2, y: h.rect.y + h.rect.h / 2 };
+        // 같은 구성이면 그 모니터, 바뀌었으면 지금 구성에서 범위 가운데의 모니터(없으면 커서 모니터)
+        let mon = if same_layout { layout.monitors.iter().find(|m| m.id == h.monitor_id) } else { layout.monitor_at(center) }.cloned();
+        let Some(mon) = mon else {
+            self.end_for_switch();
+            self.begin_draw(DrawKind::Draw, pressed);
+            return;
+        };
+        let (s, tx, ty) = ink_domain::zoom::fit_rect_view(mon.bounds, mon.scale, h.rect);
+        let reused = fresh.is_some();
+        self.end_for_switch();
+        self.begin_draw_with(
+            DrawKind::Draw,
+            pressed,
+            DrawStart { monitor_id: Some(mon.id), frame: fresh, view: DrawViewTransform { s, tx, ty }, source: DrawSource::Capture { reused } },
+        );
+    }
+
     // ───────────── 진입 ─────────────
 
-    /// 커서 모니터 한 장 캡처(칠판은 건너뜀) → 그 모니터 오버레이 창 → 세션 알림 → 모드 → 섬.
     fn begin_draw(&mut self, kind: DrawKind, pressed: Instant) {
+        self.begin_draw_with(kind, pressed, DrawStart::default());
+    }
+
+    /// 모니터 한 장 캡처(칠판은 건너뜀, 넘겨받은 프레임이 있으면 그대로) → 그 모니터 오버레이 창 → 세션 알림 → 모드 → 섬.
+    pub(crate) fn begin_draw_with(&mut self, kind: DrawKind, pressed: Instant, start: DrawStart) {
         if self.ports.probe.secure_desktop() {
             if !self.secure_notified {
                 self.secure_notified = true;
@@ -505,10 +595,19 @@ impl InkService {
             }
             return;
         }
+        // 새 모드에 들어가면 결과 섬 [판서로]는 더 누를 수 없다 — 쥐어 둔 프레임을 놓는다
+        self.cap.handoff = None;
         self.prepare_overlays();
         let layout = self.prepared.clone().unwrap_or_default();
         let cursor = self.ports.monitors.cursor();
-        let Some(mon) = layout.nearest(cursor).cloned() else {
+        let DrawStart { monitor_id, mut frame, mut view, source } = start;
+        let wanted = monitor_id.and_then(|id| layout.monitors.iter().find(|m| m.id == id)).cloned();
+        if let (Some(id), None) = (monitor_id, wanted.as_ref()) {
+            log::warn!("draw: monitor {id} is gone — cursor monitor at 1x");
+            frame = None;
+            view = DrawViewTransform::default();
+        }
+        let Some(mon) = wanted.or_else(|| layout.nearest(cursor).cloned()) else {
             log::warn!("draw: no monitor in layout");
             self.island(IslandEvent::new(IslandKind::Problem, "화면을 가져오지 못했어요"));
             return;
@@ -524,8 +623,12 @@ impl InkService {
         };
 
         let t = Instant::now();
+        // 넘겨받은 프레임은 그 모니터 것일 때만(다른 모니터 것이면 새로 찍는다)
+        let reuse = frame.take().filter(|f| f.monitor_id == mon.id);
         let frame = if board {
             None
+        } else if let Some(f) = reuse {
+            Some(f)
         } else {
             match self.ports.screen.capture(&MonitorLayout::new(vec![mon.clone()])) {
                 Ok(frames) => match frames.into_iter().find(|f| f.monitor_id == mon.id) {
@@ -554,12 +657,14 @@ impl InkService {
         let session = self.session_seq;
         let monitor = OverlayMonitor { id: mon.id, bounds: mon.bounds, work: mon.work, scale: mon.scale, primary: mon.primary, frame_url: None };
         let kept_compatible = kept_compat(self.draw.kept.as_ref(), &monitor);
+        // 칠판은 늘 1×(이어받기는 정지 화면 판서만)
+        let initial_view = if board { DrawViewTransform::default() } else { view };
         let mut ds = DrawSession {
             session,
             board,
             monitor,
             layout_fingerprint: layout.fingerprint(),
-            initial_view: DrawViewTransform::default(),
+            initial_view,
             restore_on_open: kind == DrawKind::Restore,
             has_kept: self.draw.kept.is_some(),
             kept_compatible,
@@ -578,9 +683,11 @@ impl InkService {
         }
         let show_ms = ms(t.elapsed());
 
-        self.draw.entry = Some(DrawEntry { pressed, capture_ms, show_ms });
+        self.draw.entry = Some(DrawEntry { pressed, capture_ms, show_ms, source, scale: initial_view.s });
         self.draw.restored = false;
         self.draw.look = Look::from_settings(&self.settings, board);
+        // 섬의 배율도 처음부터 이어받은 값(UI는 첫 모양을 다시 보내지 않는다)
+        self.draw.look.zoom = initial_view.s.clamp(ink_domain::zoom::DRAW_MIN_ZOOM, ink_domain::zoom::DRAW_MAX_ZOOM);
         self.mode = Mode::Draw { session, board, monitor_id: ds.monitor.id, started_ms: self.epoch.elapsed().as_millis() as u64 };
         // 세션 먼저, 상태 나중 — 오버레이가 세션을 쥔 채 판서 화면으로 바뀐다
         self.ports.notifier.draw(&ds);
@@ -591,11 +698,23 @@ impl InkService {
 
     /// UI가 배경을 그렸다 → 진입 계측(M4) 한 줄. 진입 시간(ms)을 돌려준다.
     pub fn draw_ready(&mut self, session: u64, paint_ms: Option<f64>) -> Option<f64> {
-        let board = self.active_draw(session)?.board;
-        let e = self.draw.entry.take()?;
-        let total = ms(e.pressed.elapsed());
-        log::info!("{}", entry_line(board, total, e.capture_ms, e.show_ms, paint_ms));
+        self.active_draw(session)?;
+        let (total, line) = self.entry_measure(paint_ms)?;
+        self.draw.entry = None;
+        log::info!("{line}");
         Some(total)
+    }
+
+    /// 지금 판서가 아직 그려지기 전이면 진입 계측 줄(`draw_ready`가 남기는 것과 같은 모양, 출처 포함).
+    pub fn draw_entry_line(&self, paint_ms: Option<f64>) -> Option<String> {
+        self.entry_measure(paint_ms).map(|(_, line)| line)
+    }
+
+    fn entry_measure(&self, paint_ms: Option<f64>) -> Option<(f64, String)> {
+        let board = self.draw.session.as_ref()?.board;
+        let e = self.draw.entry.as_ref()?;
+        let total = ms(e.pressed.elapsed());
+        Some((total, entry_line_from(e.source, e.scale, board, total, e.capture_ms, e.show_ms, paint_ms)))
     }
 
     // ───────────── 끝 · 보관 ─────────────
@@ -902,6 +1021,17 @@ mod tests {
     fn 진입_계측_한_줄() {
         assert_eq!(entry_line(false, 92.4, 41.2, 3.4, Some(12.6)), "mode enter draw [92 ms] (capture 41, show 3, ui paint 13)");
         assert_eq!(entry_line(true, 30.0, 0.0, 2.0, None), "mode enter board [30 ms] (capture 0, show 2)");
+        // 출처: 확대 이어받기(5.3)·결과 섬 [판서로](3e-handoff) — 키 진입 줄은 예전 그대로
+        assert_eq!(entry_line_from(DrawSource::Key, 2.0, false, 92.4, 41.2, 3.4, None), "mode enter draw [92 ms] (capture 41, show 3)");
+        assert_eq!(
+            entry_line_from(DrawSource::Zoom { hide_ms: 17.6 }, 2.5, false, 61.0, 35.2, 3.0, Some(5.0)),
+            "mode enter draw [61 ms] (from zoom, scale 2.5, hide 18, capture 35, show 3, ui paint 5)"
+        );
+        assert_eq!(
+            entry_line_from(DrawSource::Capture { reused: true }, 4.22, false, 12.0, 0.01, 3.0, Some(6.0)),
+            "mode enter draw [12 ms] (from capture, scale 4.22, frame reused, capture 0, show 3, ui paint 6)"
+        );
+        assert_eq!(entry_line_from(DrawSource::Capture { reused: false }, 1.0, false, 80.0, 40.0, 3.0, None), "mode enter draw [80 ms] (from capture, scale 1, capture 40, show 3)");
     }
 
     #[test]

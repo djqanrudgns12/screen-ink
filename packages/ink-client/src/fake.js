@@ -68,6 +68,10 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   let saveSeq = 0;
   /** 실시간 확대 흉내(Alt+2): 배율만 쥐고 1920×1080 가운데를 비춘다 */
   let zoomScale = 0;
+  /** 이어받기 흉내(3e-handoff): 결과 섬 [판서로]가 쓸 방금 고른 범위(다음 모드 진입이면 버림) */
+  let lastRange = null;
+  /** 다음 판서 진입의 시작 보기(확대 → 판서 · [판서로]) */
+  let nextView = null;
 
   const judge = (slot, combo) => {
     if (!combo) return { status: 'off' };
@@ -180,6 +184,20 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     zoomIsland();
     emit({ type: 'zoom', zoom: zoomView() });
   };
+  // ── 이어받기 흉내(진짜 계산은 Rust ink-domain::zoom::to_draw_transform · fit_rect_view) ──
+  /** 확대 중 판서(5.3): 가운데를 비추던 확대 그대로 */
+  const zoomHandoffView = () => ({ s: zoomScale, tx: -960 * (zoomScale - 1), ty: -540 * (zoomScale - 1) });
+  /** [판서로]: 고른 범위가 1920×1080 화면 88%에 꽉 차게(0.01 내림, 1~8), 가운데로 옮긴 뒤 문서 안에 가둠 */
+  const fitRectView = (r, vw = 1920, vh = 1080) => {
+    const fit = Math.min((0.88 * vw) / r.w, (0.88 * vh) / r.h);
+    const s = Math.min(8, Math.max(1, Math.floor(fit * 100 + 1e-9) / 100));
+    const clampAxis = (t, view, content) => {
+      const free = view - content;
+      return free <= 0 ? Math.min(0, Math.max(free, t)) : Math.min(free, Math.max(0, t));
+    };
+    return { s, tx: clampAxis(vw / 2 - (r.x + r.w / 2) * s, vw, vw * s), ty: clampAxis(vh / 2 - (r.y + r.h / 2) * s, vh, vh * s) };
+  };
+  const toDrawButton = () => ({ secondaryButton: { label: '판서로', action: 'capture.toDraw' }, ...(combos.draw ? { secondaryButtonKey: combos.draw } : {}) });
 
   return {
     async getState() { return state(); },
@@ -290,7 +308,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         const finishedSession = mode.session;
         await this.run('capture.cancel');
         emit({ type: 'afterimage', afterimage: { session: finishedSession, rect: r, durationMs: 400 } });
-        island({ kind: 'result', variant: 'result', text: '저장했어요', value: `${r.w}×${r.h}`, detail: '수업_2026-03-04_090507.png', thumbUrl: frameUrl, button: { label: '폴더 열기', action: 'folder.open' } });
+        lastRange = r;
+        island({ kind: 'result', variant: 'result', text: '저장했어요', value: `${r.w}×${r.h}`, detail: '수업_2026-03-04_090507.png', thumbUrl: frameUrl, button: { label: '폴더 열기', action: 'folder.open' }, ...toDrawButton() });
         return;
       }
       if ((input.type === 'key' && input.key === 'Enter') || input.type === 'dblclick' || (input.type === 'command' && input.name === 'copy')) {
@@ -299,7 +318,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         lastHex = '#FFFFFF';
         await this.run('capture.cancel');
         emit({ type: 'afterimage', afterimage: { session: finishedSession, rect: r, durationMs: 400 } });
-        island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${r.w}×${r.h}`, detail: '한글·PPT에 Ctrl+V', thumbUrl: frameUrl, button: { label: '저장', action: 'capture.saveLast' }, buttonKey: 'Ctrl+S', chip: { label: `${lastHex} 복사`, action: 'capture.copyHex' } });
+        lastRange = r;
+        island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${r.w}×${r.h}`, detail: '한글·PPT에 Ctrl+V', thumbUrl: frameUrl, button: { label: '저장', action: 'capture.saveLast' }, buttonKey: 'Ctrl+S', chip: { label: `${lastHex} 복사`, action: 'capture.copyHex' }, ...toDrawButton() });
         return;
       }
       const chain = chainAt(s.p);
@@ -413,8 +433,14 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       }
       if (action === 'zoom') {
         if (mode.mode === 'draw') endDraw(true);
+        lastRange = null;
         startZoom();
         return;
+      }
+      if (action === 'capture.toDraw') {
+        if (!lastRange) { island({ kind: 'info', text: '판서로 넘길 캡처가 없어요' }); return; }
+        nextView = fitRectView(lastRange);
+        return this.run('draw');
       }
       if (DRAW_ACTION[action]) {
         const kind = DRAW_ACTION[action];
@@ -424,6 +450,10 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
           emit({ type: 'draw', draw: drawSession });
           return;
         }
+        // 이어받기: [판서로]가 정한 보기, 확대 중 판서는 그 확대 그대로(칠판·직전 판서는 1×)
+        const view = kind === 'draw' ? nextView ?? (mode.mode === 'liveZoom' ? zoomHandoffView() : null) : null;
+        nextView = null;
+        lastRange = null;
         if (mode.mode === 'capture') await this.run('capture.cancel');
         if (mode.mode === 'draw') endDraw(true);
         endZoom();
@@ -434,10 +464,10 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         drawSession = {
           session: sessionSeq, board,
           monitor: { id: 0, bounds, work: { ...bounds, h: 1040 }, scale: 1, primary: true, ...(board || !frameUrl ? {} : { frameUrl }) },
-          layoutFingerprint: '0,0,1920,1080@100', initialView: { s: 1, tx: 0, ty: 0 },
+          layoutFingerprint: '0,0,1920,1080@100', initialView: view ?? { s: 1, tx: 0, ty: 0 },
           restoreOnOpen: kind === 'restore', hasKept: Boolean(kept), keptCompatible: kept ? 'same' : 'none', cursor: { x: 760, y: 420 },
         };
-        look = { color: settings['draw.color'], tool: 'pen', widthPx: settings['draw.width'], zoom: 1, pageIndex: 0, pageCount: 1, background: board ? 'white' : 'frame' };
+        look = { color: settings['draw.color'], tool: 'pen', widthPx: settings['draw.width'], zoom: view?.s ?? 1, pageIndex: 0, pageCount: 1, background: board ? 'white' : 'frame' };
         mode = { mode: 'draw', session: sessionSeq, board, monitorId: 0, startedMs: Date.now() };
         // 세션 먼저, 상태 나중(Rust와 같은 순서)
         emit({ type: 'draw', draw: drawSession });
@@ -448,6 +478,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       if (CAPTURE_ACTION[action]) {
         if (mode.mode === 'draw') endDraw(true);
         endZoom();
+        lastRange = null;
         const kind = CAPTURE_ACTION[action];
         sessionSeq += 1;
         mode = { mode: 'capture', session: sessionSeq, kind, startedMs: Date.now() };

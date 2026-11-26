@@ -171,6 +171,12 @@ pub struct IslandEvent {
     /// 판서 섬의 굵기(`4px`)
     #[serde(rename = "penWidth", skip_serializing_if = "Option::is_none")]
     pub pen_width: Option<String>,
+    /// 주 단추 옆 보조 단추(결과 섬 [판서로] → `capture.toDraw`, B §2.3) — 누르면 `InkClient.run(action)`
+    #[serde(rename = "secondaryButton", skip_serializing_if = "Option::is_none")]
+    pub secondary_button: Option<IslandButton>,
+    /// 보조 단추 옆 키캡(예: "Alt+1") — 단추가 넘치면 UI가 생략(사용자 결정 #4)
+    #[serde(rename = "secondaryButtonKey", skip_serializing_if = "Option::is_none")]
+    pub secondary_button_key: Option<String>,
 }
 
 impl IslandEvent {
@@ -189,12 +195,21 @@ impl IslandEvent {
             chip: None,
             pen_color: None,
             pen_width: None,
+            secondary_button: None,
+            secondary_button_key: None,
         }
     }
 
     pub fn button(mut self, label: &str, action: &str, key: Option<&str>) -> Self {
         self.button = Some(IslandButton { label: label.into(), action: action.into() });
         self.button_key = key.map(String::from);
+        self
+    }
+
+    /// 주 단추 옆 보조 단추(결과 섬 [판서로]).
+    pub fn secondary(mut self, label: &str, action: &str, key: Option<&str>) -> Self {
+        self.secondary_button = Some(IslandButton { label: label.into(), action: action.into() });
+        self.secondary_button_key = key.filter(|k| !k.is_empty()).map(String::from);
         self
     }
 
