@@ -79,6 +79,9 @@ fn fields() -> &'static [Field] {
             f("topmost.border", IntSet(&[0, 2, 4, 6]), json!(4)),
             f("topmost.sound", Bool, json!(false)),
             f("onboarding.done", Bool, json!(false)),
+            // 맥 권한이 전에 있었는지(M10 — 업데이트 뒤 권한 풀림 감지, 숨은 값)
+            f("mac.hadScreenPerm", Bool, json!(false)),
+            f("mac.hadAxPerm", Bool, json!(false)),
         ]
     })
 }

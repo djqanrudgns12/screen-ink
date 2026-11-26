@@ -41,6 +41,10 @@ pub trait SystemProbe: Send {
     fn foreground_window(&self) -> Option<u64> {
         None
     }
+    /// 맥 권한 `(화면 기록, 손쉬운 사용)`(M10, 묻지 않고 확인만). 권한 개념이 없는 플랫폼은 None.
+    fn permissions(&self) -> Option<(bool, bool)> {
+        None
+    }
 }
 
 /// 모니터별 정지 이미지 한 장. `bgra` = 헤더 없는 BGRA(위→아래, 물리 px). 여러 곳(정지 화면 창·

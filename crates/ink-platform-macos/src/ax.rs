@@ -33,7 +33,6 @@ type CFTypeRef = *const c_void;
 
 #[link(name = "ApplicationServices", kind = "framework")]
 extern "C" {
-    fn AXIsProcessTrusted() -> bool;
     fn AXUIElementCreateApplication(pid: i32) -> CFTypeRef;
     fn AXUIElementSetMessagingTimeout(element: CFTypeRef, seconds: f32) -> i32;
     fn AXUIElementCopyAttributeValue(element: CFTypeRef, attribute: CFTypeRef, value: *mut CFTypeRef) -> i32;
@@ -286,8 +285,7 @@ impl AxIndex {
                     continue;
                 }
                 let t = Instant::now();
-                // SAFETY: 인자 없는 공개 함수.
-                let trusted = unsafe { AXIsProcessTrusted() };
+                let trusted = crate::permissions::accessibility();
                 if !trusted && !warned.swap(true, Ordering::SeqCst) {
                     log::info!("ax index skipped: accessibility not granted");
                 }
@@ -370,8 +368,7 @@ mod tests {
     #[test]
     #[ignore]
     fn 실제_맨앞_창_색인() {
-        // SAFETY: 인자 없는 공개 함수.
-        assert!(unsafe { AXIsProcessTrusted() }, "손쉬운 사용 권한이 필요하다");
+        assert!(crate::permissions::accessibility(), "손쉬운 사용 권한이 필요하다");
         let space = crate::space();
         let windows = crate::windows::top_windows(&space);
         let w = windows.iter().find(|w| !w.topmost && w.rect.w > 200 && w.rect.h > 200).expect("앱 창");

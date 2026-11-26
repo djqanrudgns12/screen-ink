@@ -18,6 +18,8 @@ pub mod events;
 #[cfg(target_os = "macos")]
 pub mod freeze;
 #[cfg(target_os = "macos")]
+pub mod permissions;
+#[cfg(target_os = "macos")]
 mod pixels;
 #[cfg(target_os = "macos")]
 pub mod window;
@@ -122,6 +124,10 @@ mod mac {
 
         fn secure_desktop(&self) -> bool {
             crate::events::screen_locked()
+        }
+
+        fn permissions(&self) -> Option<(bool, bool)> {
+            Some((crate::permissions::screen(), crate::permissions::accessibility()))
         }
     }
 

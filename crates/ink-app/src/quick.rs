@@ -78,7 +78,7 @@ impl InkService {
             Ok(f) if !f.is_empty() => f,
             Err(e) if e.starts_with(NO_SCREEN_PERMISSION) => {
                 log::warn!("capture failed: {e}");
-                self.island(IslandEvent::new(IslandKind::Problem, "화면 기록 권한이 필요해요").detail("시스템 설정 › 개인정보 보호 및 보안 › 화면 기록에서 켜 주세요"));
+                self.island(self.no_screen_permission_island());
                 return;
             }
             other => {

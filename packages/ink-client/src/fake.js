@@ -38,7 +38,7 @@ const inkItems = (doc) => {
  * @param {{platform?: 'windows'|'macos', snipasteRunning?: boolean, frameUrl?: string, channel?: 'unpackaged'|'msix-store'|'msix-direct', autostartNotice?: string}} [opts]
  *   frameUrl = 미리보기에서 오버레이 바탕으로 쓸 정지 이미지(없으면 오버레이가 빈 바탕)
  */
-export function createFakeClient({ platform = 'windows', snipasteRunning = true, frameUrl = undefined, channel = 'unpackaged', autostartNotice = undefined } = {}) {
+export function createFakeClient({ platform = 'windows', snipasteRunning = true, frameUrl = undefined, channel = 'unpackaged', autostartNotice = undefined, permissions = undefined } = {}) {
   const combos = Object.fromEntries(Object.entries(defaults.slots).map(([id, v]) => [id, (platform === 'macos' ? v.mac : v.win) || '']));
   const settings = { ...DEFAULT_SETTINGS };
   /** 캡처 핀 흉내: id → {w, h, zoom} */
@@ -113,6 +113,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       ...(autostartNotice ? { autostartNotice } : {}),
       notices: [],
       mode,
+      // 맥 권한(M10) — 미리보기 ?perm=screen-off 등으로 넘긴다
+      ...(permissions ? { permissions } : {}),
     };
   };
   // 가져오기 장면: 다른 PC에서 내보낸 파일(3개가 다름)

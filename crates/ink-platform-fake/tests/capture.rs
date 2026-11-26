@@ -139,7 +139,7 @@ fn 캡처나_표시가_실패하면_모드에_들어가지_않고_알린다() {
 }
 
 #[test]
-fn 화면_기록_권한이_없으면_어디서_켜는지_알린다() {
+fn 화면_기록_권한이_없으면_단추_하나로_켜는_칸을_연다() {
     let w = FakeWorld::new();
     let mut s = service(&w);
     {
@@ -151,7 +151,9 @@ fn 화면_기록_권한이_없으면_어디서_켜는지_알린다() {
     assert_eq!(s.mode(), Mode::Idle);
     let island = w.last_island().unwrap();
     assert_eq!((island.kind, island.text.as_str()), (IslandKind::Problem, "화면 기록 권한이 필요해요"));
-    assert!(island.detail.as_deref().is_some_and(|d| d.contains("화면 기록")));
+    // M10: 길을 글로 알리는 대신 단추 하나(요청 + 설정 칸 열기), 설정을 다녀올 동안 남는다
+    assert_eq!(island.button.as_ref().map(|b| b.action.as_str()), Some(ink_app::ACTION_PERM_SCREEN));
+    assert!(island.duration_ms.is_some_and(|ms| ms >= 10_000));
 }
 
 #[test]

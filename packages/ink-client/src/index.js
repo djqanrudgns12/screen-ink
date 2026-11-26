@@ -41,6 +41,13 @@
  * @property {string} [autostartNotice]  MSIX StartupTask 차단(DisabledByUser·정책) 시 설정 화면 한 줄 안내
  * @property {string[]} notices      시작할 때 한 번 알려 줄 문구(손상 복구 등)
  * @property {Mode} [mode]          지금 모드(오버레이 창이 캡처·판서 화면을 고른다)
+ * @property {Permissions} [permissions]  맥 화면 기록·손쉬운 사용 권한(M10). Windows는 없음
+ *
+ * @typedef {Object} Permissions
+ * @property {boolean} screen          화면 기록(켠 뒤에는 다시 시작해야 true)
+ * @property {boolean} accessibility   손쉬운 사용(켜면 바로 true)
+ * @property {boolean} screenRevoked   전에는 있었는데 지금 없음(업데이트·재서명 뒤 풀림)
+ * @property {boolean} accessibilityRevoked
  *
  * @typedef {{mode: 'idle'}
  *   | {mode: 'capture', session: number, kind: 'region'|'window'|'record', startedMs: number}
@@ -68,7 +75,8 @@
  * @typedef {'capture.region'|'capture.window'|'record.toggle'|'draw'|'zoom'|'board'|'pin.toggle'|'pin.releaseAll'|'draw.restore'|'folder.open'|'settings.open'|'firstRun.open'|'app.quit'|'snipaste.howto'
  *   |'folder.pick'|'logs.open'|'settings.export'|'capture.history.clear'|'capture.saveLast'|'capture.copyHex'|'pins.closeAll'
  *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'|'draw.acceptSuggestion'|'draw.undo'|'capture.toDraw'
- *   |'record.stop'|'record.discard'|'record.recoverSave'|'record.recoverDelete'} InkAction
+ *   |'record.stop'|'record.discard'|'record.recoverSave'|'record.recoverDelete'|'perm.screen'|'perm.accessibility'|'app.relaunch'} InkAction
+ *   perm.screen·perm.accessibility = 맥 권한 요청 + 정확한 설정 칸 열기(M10) · app.relaunch = 다시 시작(화면 기록 반영)
  *   draw.acceptSuggestion·draw.undo = 판서 섬 단추([바꾸기]·[되돌리기]) → Rust가 'drawCommand' 이벤트로 오버레이 엔진에
  *   capture.cancel = 오버레이에서 Esc·우클릭(모드 끝, 정지 이미지 버림)
  *   capture.toDraw = 결과 섬 [판서로](3e-handoff): 방금 고른 범위가 꽉 차게 확대한 채 그 모니터 판서로(정지 프레임 재사용, ≤ 150 ms)
@@ -110,6 +118,7 @@
  * @property {string} [secondaryButtonKey]  보조 단추 옆 키캡(예: 'Alt+1') — 단추가 넘치면 생략
  * @property {number} [countdown]   지연 캡처 섬(variant 'delay')의 남은 초
  * @property {boolean} [micOff]     녹화 섬(variant 'record')의 마이크 꺼짐 아이콘
+ * @property {number} [durationMs]  보이는 시간(ms) — 없으면 종류별 기본(권한 안내처럼 설정 앱을 다녀올 동안 남길 때)
  *
  * @typedef {{x: number, y: number, w: number, h: number}} PhysRect  물리 px, 가상 화면 좌표
  *

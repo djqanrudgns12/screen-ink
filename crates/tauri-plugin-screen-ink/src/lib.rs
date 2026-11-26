@@ -52,6 +52,11 @@ const EVT_STATE: &str = "screen-ink://state";
 const EVT_ISLAND: &str = "screen-ink://island";
 const EVT_CAPTURE: &str = "screen-ink://capture";
 const EVT_DRAW: &str = "screen-ink://draw";
+/// 다시 시작(화면 기록 권한 반영, M10)
+const ACTION_RELAUNCH: &str = "app.relaunch";
+/// 권한을 켜러 간 사용자를 기다리는 시간(손쉬운 사용 1초 확인·안내 섬)
+#[cfg(target_os = "macos")]
+const PERMISSION_WAIT: Duration = Duration::from_secs(120);
 const EVT_DRAW_COMMAND: &str = "screen-ink://draw-command";
 /// 설정 창에 첫 실행 시트(S06)를 다시 띄우라는 신호(앱 셸이 듣는다)
 const EVT_FIRST_RUN: &str = "screen-ink://first-run";
@@ -1064,6 +1069,63 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             let h = app.clone();
             app.run_on_main_thread(move || h.state::<Ink>().lock().start_zoom()).map_err(|e| e.to_string())?;
         }
+        // 맥 권한(M10): 단추 하나로 요청 + 정확한 설정 칸 열기. 켜는 것은 사용자가 한다
+        #[cfg(target_os = "macos")]
+        ink_app::ACTION_PERM_SCREEN => {
+            hide(POPOVER);
+            let h = app.clone();
+            app.run_on_main_thread(move || {
+                let ink = h.state::<Ink>();
+                let mut s = ink.lock();
+                s.end_capture();
+                ink_platform_macos::permissions::request_screen();
+                // 켠 뒤에는 다시 시작해야 반영된다(그 순간 macOS도 "종료 후 다시 열기"를 묻는다)
+                s.island(
+                    IslandEvent::new(IslandKind::Info, format!("화면 기록에서 {APP_NAME}을 켜 주세요"))
+                        .detail("켰으면 다시 시작해요")
+                        .button("다시 시작", ACTION_RELAUNCH, None)
+                        .duration_ms(PERMISSION_WAIT.as_millis() as u32),
+                );
+            })
+            .map_err(|e| e.to_string())?;
+        }
+        #[cfg(target_os = "macos")]
+        ink_app::ACTION_PERM_AX => {
+            hide(POPOVER);
+            let h = app.clone();
+            app.run_on_main_thread(move || {
+                let ink = h.state::<Ink>();
+                let mut s = ink.lock();
+                s.end_capture();
+                ink_platform_macos::permissions::request_accessibility();
+                s.island(
+                    IslandEvent::new(IslandKind::Info, format!("손쉬운 사용에서 {APP_NAME}을 켜 주세요"))
+                        .detail("켜는 순간 알아서 이어져요")
+                        .duration_ms(PERMISSION_WAIT.as_millis() as u32),
+                );
+            })
+            .map_err(|e| e.to_string())?;
+            // 손쉬운 사용은 켜자마자 반영된다 → 1초마다 보고 켜지면 알린다(다시 시작 필요 없음)
+            let h = app.clone();
+            std::thread::spawn(move || {
+                let until = Instant::now() + PERMISSION_WAIT;
+                while Instant::now() < until {
+                    std::thread::sleep(Duration::from_secs(1));
+                    if ink_platform_macos::permissions::accessibility() {
+                        let app = h.clone();
+                        let _ = h.run_on_main_thread(move || {
+                            let ink = app.state::<Ink>();
+                            let mut s = ink.lock();
+                            s.refresh_permissions();
+                            s.island(IslandEvent::new(IslandKind::Result, "손쉬운 사용을 켰어요 · 이제 요소까지 잡아요"));
+                            let _ = app.emit(EVT_STATE, &s.state());
+                        });
+                        return;
+                    }
+                }
+            });
+        }
+        ACTION_RELAUNCH => app.restart(),
         other => {
             hide(POPOVER);
             let h = app.clone();
@@ -1188,6 +1250,13 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
 
 fn finish_setup<R: Runtime>(app: &AppHandle<R>, initial: InkState, first_run: bool, autostart: bool, started: Instant) -> tauri::Result<()> {
     build_static_windows(app)?;
+    // 업데이트·재서명 뒤 화면 기록 권한이 풀렸는지(M10) — 섬 화면이 준비된 뒤에 알린다
+    let h = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(2));
+        let app = h.clone();
+        let _ = h.run_on_main_thread(move || app.state::<Ink>().lock().startup_permission_check());
+    });
     if let Err(e) = zoom_hud::build(app) {
         log::error!("zoom hud window: {e}");
     }

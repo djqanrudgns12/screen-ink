@@ -100,6 +100,17 @@
 - 실측(이 셸 = 손쉬운 사용 있음, `cargo test -p ink-platform-macos ax::tests::실제_맨앞_창_색인 -- --ignored --nocapture`): 맨 앞 앱 창 요소 48개 42 ms(Group 30·Button 14·Tab·ToolBar·Text).
 - 개발 앱(`npm run app:dev`)은 손쉬운 사용 권한이 **터미널 앱** 몫이라 지금은 `ax index skipped: accessibility not granted` → A 근거 없이 W·V로 캡처(정상 대체). **[확인 남음]** 권한을 준 실행(서명한 `.app` 또는 터미널에 손쉬운 사용)에서 `capture.evidence: true`로 초록 `A` 마디, `ax index N elements in M ms`, 느린 앱 강등(500 ms×2).
 
+**M10 결과(2026-11-26 밤)** — 권한 스마트 흐름(사용자 결정: 설정 앱을 찾아다니지 않게)
+- 공통: `SystemProbe::permissions()`(기본 None = Windows), `InkState.permissions {screen, accessibility, screenRevoked, accessibilityRevoked}`, 숨은 설정 `mac.hadScreenPerm`·`mac.hadAxPerm`(있으면 기록 → 전에 있었는데 없으면 풀림), 섬 사건 `durationMs`(권한 섬 15초·안내 120초).
+- 화면 기록 없음(캡처·판서·바로 캡처): 문제 섬 "화면 기록 권한이 필요해요" + **[화면 기록 켜기]**(`perm.screen`) → 맥 `CGRequestScreenCaptureAccess` + 설정 칸(`x-apple.systempreferences:…?Privacy_ScreenCapture`) 열기 + 안내 섬 "화면 기록에서 슉쇽을 켜 주세요 · 켰으면 다시 시작"(**[다시 시작]** = `app.relaunch`). 화면 기록은 이 프로세스에서는 다시 시작해야 반영된다(macOS도 "종료 후 다시 열기"를 묻는다).
+- 손쉬운 사용 없음: 이번 실행 첫 캡처의 모드 섬에 칩 **"요소까지 잡기 · 손쉬운 사용 켜기"**(`perm.accessibility`) 한 번 → 캡처를 끝내고 `AXIsProcessTrustedWithOptions(prompt)` + 설정 칸 열기 → 1초마다 확인, 켜지면 "손쉬운 사용을 켰어요 · 이제 요소까지 잡아요"(다시 시작 없음, 2분까지).
+- 시작 2초 뒤: 화면 기록이 풀렸으면 "업데이트 뒤 화면 기록 권한을 다시 켜야 해요" + [화면 기록 켜기].
+- 첫 실행 시트(맥, 화면 기록 없음): 경고 줄 + [화면 기록 켜기] → 누른 뒤 [켰으면 다시 시작]. 미리보기 `?screen=first&platform=macos&perm=screen-off|screen-revoked`.
+- 시험: `crates/ink-platform-fake/tests/permissions.rs` 5개(권한 개념 없음 · 풀림 감지 · 처음부터 없음은 풀림 아님 · 칩 한 번 · 켜면 칩 없음), 캡처 시험의 권한 없음 단추.
+- **[확인 남음]** 실제 단추 흐름(사용자 화면에 시스템 설정·권한 창이 떠서 자동 시험하지 않음): 서명한 `.app`에서 `tccutil reset ScreenCapture com.ssamuniverse.shookshok` 뒤 첫 실행 → 단추 → 켜기 → 다시 시작 / 손쉬운 사용 칩 → 켜는 순간 안내.
+
+**M-sign 준비(2026-11-26 밤)** — `scripts/mac-build-dmg.sh`(신원 확인 → `tauri build --bundles app,dmg` → `codesign --verify` · DR을 `target/mac-dr.txt`에 남기고 지난번과 비교), 안내 `docs/handoff/mac-self-sign.md`(만드는 사람: 키체인에서 자체 서명 코드 서명 인증서 한 번 / 받는 사람: "그래도 열기"). **막힘: 이 맥 키체인에 코드 서명 신원이 없다**(`security find-identity -v -p codesigning` = 0) — 인증서 만들기는 사람이 한다(§4).
+
 ### 2.2 맥 트랙 원래 순서 — M9·M10·M17·M-sign
 - **M9 AX 요소 색인**(P0, 1.5일): 시안 [I-mac.md](../plans/2026-11-26/I-mac.md) §2.1. Windows UIA 일꾼(`ink-platform-windows/src/uia.rs`)과 MSAA 대체(`msaa.rs`)의 구조·시간 예산을 본보기로.
 - **M10 권한 스마트 흐름**(1일): I-mac.md §2.2. 권한 허용은 사용자에게 부탁(직접 바꾸지 않음).
@@ -148,6 +159,8 @@ Windows 구현을 본보기로 같은 포트에 맥 구현을 꽂는다. 공통 
 - **D11** SignPath Foundation 신청(GitHub 2FA 필요, README 끝 `## Code Signing Policy` 절은 넣어 둠) → `SIGNPATH_*` 변수·`SIGNPATH_API_TOKEN` 비밀값.
 - 화면 확인 시간(§3.1, 약 3시간)과 DPI 실측 방법(125%/150% PC 또는 배율 변경 허락).
 - 캡처 주석 아이콘 8종(지금 임시 글리프) — 브랜드에서 확정.
+- **맥 자체 서명 인증서 한 번 만들기**(M-sign) — `docs/handoff/mac-self-sign.md` 1절(키체인 접근 › 인증서 지원 › 인증서 생성, 자체 서명 루트·코드 서명). 만든 뒤 `APPLE_SIGNING_IDENTITY="…" sh scripts/mac-build-dmg.sh`.
+- 맥 권한 흐름 눈 확인(M10 §2.1 결과) — 서명한 `.app`에서 단추 흐름. 개발 실행(`npm run app:dev`)은 권한이 터미널 앱 몫이라 손쉬운 사용(A 근거)이 없다.
 
 ---
 

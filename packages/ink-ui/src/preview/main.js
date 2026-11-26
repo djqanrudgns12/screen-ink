@@ -6,9 +6,12 @@ import Preview from './Preview.svelte';
 import DrawPreview from './DrawPreview.svelte';
 
 const params = new URLSearchParams(location.search);
+// ?perm=screen-off | screen-revoked | ax-off — 맥 권한 장면(M10)
+const perm = params.get('perm');
 const client = createFakeClient({
   platform: params.get('platform') ?? 'windows',
   frameUrl: sampleFrameUrl,
+  permissions: perm ? { screen: !perm.startsWith('screen'), accessibility: perm !== 'ax-off', screenRevoked: perm === 'screen-revoked', accessibilityRevoked: false } : undefined,
 });
 
 // ?evidence=1 — 숨은 "인식 근거 보기"(capture.evidence)를 켠 채로

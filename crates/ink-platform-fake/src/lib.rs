@@ -50,6 +50,8 @@ pub struct ProbeScene {
     pub secure_desktop: bool,
     /// 지금 활성 창(Shift+F2·F2 두 번)
     pub foreground: Option<u64>,
+    /// 맥 권한 `(화면 기록, 손쉬운 사용)` — None = 권한 개념 없음(Windows)
+    pub permissions: Option<(bool, bool)>,
 }
 
 #[derive(Clone, Default)]
@@ -70,6 +72,10 @@ impl SystemProbe for FakeProbe {
 
     fn foreground_window(&self) -> Option<u64> {
         self.0.lock().unwrap().foreground
+    }
+
+    fn permissions(&self) -> Option<(bool, bool)> {
+        self.0.lock().unwrap().permissions
     }
 }
 

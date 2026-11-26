@@ -116,7 +116,17 @@ pub struct InkService {
     pub(crate) pkg: crate::package::PackageState,
     // ── 창 캡처·바로 캡처·녹화(단계 6) ──
     pub(crate) rec: crate::record::RecordState,
+    // ── 맥 권한(M10) ──
+    pub(crate) permissions: Option<crate::state::Permissions>,
+    /// 손쉬운 사용 칩을 이번 실행에 보였음(캡처 모드 섬에 한 번만)
+    pub(crate) ax_chip_shown: bool,
 }
+
+/// 권한 단추 동작(M10) — 플러그인이 받아 요청 + 설정 칸 열기를 한다.
+pub const ACTION_PERM_SCREEN: &str = "perm.screen";
+pub const ACTION_PERM_AX: &str = "perm.accessibility";
+/// 권한 안내 섬은 설정 앱을 다녀올 동안 남겨 둔다.
+pub const PERMISSION_ISLAND_MS: u32 = 15_000;
 
 /// 모드 섬 둘째 줄(처음 3번과 `?`일 때만 보임 — 섬 호스트가 정함).
 fn capture_island(kind: CaptureKind) -> IslandEvent {
@@ -204,6 +214,8 @@ impl InkService {
             zoom: Default::default(),
             pkg: Default::default(),
             rec: Default::default(),
+            permissions: None,
+            ax_chip_shown: false,
         };
         svc.refresh_environment();
         svc.prepare_overlays();
@@ -260,6 +272,7 @@ impl InkService {
             autostart_notice: self.pkg.autostart_notice.as_ref().and_then(|n| n.guidance_ko.clone()),
             notices: self.notices.clone(),
             mode: self.mode,
+            permissions: self.permissions,
         }
     }
 
@@ -323,7 +336,38 @@ impl InkService {
 
     /// 실행 중인 대체 앱과 설정 파일의 키를 다시 읽고, 실패했던 줄을 다시 등록해 본다
     /// (Snipaste를 끄고 설정 창을 열면 F1이 저절로 살아난다).
+    /// 맥 권한을 다시 확인한다(M10). 있으면 "전에 있었음"을 기록하고, 전에 있었는데 지금 없으면 풀림으로 표시.
+    pub fn refresh_permissions(&mut self) -> Option<Permissions> {
+        let (screen, accessibility) = self.ports.probe.permissions()?;
+        let had_screen = self.settings.bool("mac.hadScreenPerm");
+        let had_ax = self.settings.bool("mac.hadAxPerm");
+        for (key, now, had) in [("mac.hadScreenPerm", screen, had_screen), ("mac.hadAxPerm", accessibility, had_ax)] {
+            if now && !had && self.settings.set(key, &Value::Bool(true)).is_ok() && !self.readonly {
+                if let Err(e) = self.save() {
+                    log::warn!("permission flag save failed: {e:?}");
+                }
+            }
+        }
+        let p = Permissions { screen, accessibility, screen_revoked: had_screen && !screen, accessibility_revoked: had_ax && !accessibility };
+        self.permissions = Some(p);
+        Some(p)
+    }
+
+    /// 시작할 때 한 번: 업데이트·재서명 뒤 화면 기록 권한이 풀렸으면 바로 알린다(M10).
+    pub fn startup_permission_check(&mut self) {
+        if self.refresh_permissions().is_some_and(|p| p.screen_revoked) {
+            let ev = IslandEvent::new(IslandKind::Problem, "업데이트 뒤 화면 기록 권한을 다시 켜야 해요").button("화면 기록 켜기", ACTION_PERM_SCREEN, None).duration_ms(PERMISSION_ISLAND_MS);
+            self.island(ev);
+        }
+    }
+
+    /// 화면 기록 권한 없음 섬(M10): 단추 하나로 요청 + 설정 칸 열기(맥만 생긴다 — Windows는 권한 개념 없음).
+    pub(crate) fn no_screen_permission_island(&self) -> IslandEvent {
+        IslandEvent::new(IslandKind::Problem, "화면 기록 권한이 필요해요").detail("누르면 켜는 칸을 바로 열어 드려요").button("화면 기록 켜기", ACTION_PERM_SCREEN, None).duration_ms(PERMISSION_ISLAND_MS)
+    }
+
     pub fn refresh_environment(&mut self) {
+        self.refresh_permissions();
         let running: BTreeSet<String> = self.ports.probe.running_apps().into_iter().map(|s| s.to_lowercase()).collect();
         let mut env = catalog().default_environment();
         for v in env.keep.values_mut() {
@@ -724,8 +768,8 @@ impl InkService {
             Ok(f) if !f.is_empty() => f,
             Err(e) if e.starts_with(crate::NO_SCREEN_PERMISSION) => {
                 log::warn!("capture failed: {e}");
-                // 조용히 실패하지 않는다(M10): 어디서 켜는지까지
-                self.island(IslandEvent::new(IslandKind::Problem, "화면 기록 권한이 필요해요").detail("시스템 설정 › 개인정보 보호 및 보안 › 화면 기록에서 켜 주세요"));
+                // 조용히 실패하지 않는다(M10): 단추 하나로 요청 + 설정 칸 열기
+                self.island(self.no_screen_permission_island());
                 return;
             }
             other => {
@@ -791,7 +835,13 @@ impl InkService {
         self.pending = Some((pressed, timing));
         self.snapshot = Some(snapshot);
         self.mode = Mode::Capture { session, kind, started_ms: self.now_ms() };
-        self.island(capture_island(kind));
+        let mut ev = capture_island(kind);
+        // 맥: 손쉬운 사용이 없으면 요소(A)를 못 잡는다 — 이번 실행 첫 캡처의 모드 섬에 칩 하나(M10, 거절해도 W·V로 캡처)
+        if self.permissions.is_some_and(|p| !p.accessibility) && !self.ax_chip_shown {
+            self.ax_chip_shown = true;
+            ev.chip = Some(IslandButton { label: "요소까지 잡기 · 손쉬운 사용 켜기".into(), action: ACTION_PERM_AX.into() });
+        }
+        self.island(ev);
         self.emit_state();
         // 고르기 시작: 상태 기계(근거는 위에서 이미 준비 중)
         self.start_selection(kept, cursor);

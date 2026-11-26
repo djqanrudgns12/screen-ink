@@ -42,6 +42,18 @@
   let platform = $derived(state?.platform ?? 'windows');
   let shortcuts = $derived(state?.shortcuts ?? []);
   let conflictInfo = $derived(formatFirstRunConflict(state?.conflicts, platform));
+  let needsScreen = $derived(platform === 'macos' && state?.permissions != null && !state.permissions.screen);
+  let screenRevoked = $derived(Boolean(state?.permissions?.screenRevoked));
+  // 한 번 누르면 설정 칸이 열린다 → 켜고 오면 같은 자리에서 다시 시작(화면 기록은 다시 시작해야 반영)
+  let screenAsked = $state(false);
+  function askScreen() {
+    if (screenAsked) {
+      client.run('app.relaunch');
+      return;
+    }
+    screenAsked = true;
+    client.run('perm.screen');
+  }
 
   const CORE_ITEMS = [
     { id: 'region', icon: 'region', label: '범위 캡처', hint: '알아서 찾아요', fallbackWin: 'F1', fallbackMac: 'F1' },
@@ -113,6 +125,21 @@
           {/each}
         </div>
       </section>
+
+      <!-- 맥 화면 기록 권한(M10): 단추 하나로 요청 + 설정 칸 열기, 켠 뒤에는 다시 시작 -->
+      {#if needsScreen}
+        <div role="status" class="ink-first-notice" data-kind="conflict">
+          <span class="ink-first-notice-icon" data-kind="conflict">
+            <Icon name="warning" size={16} />
+          </span>
+          <p class="ink-first-notice-text">
+            {screenRevoked ? '업데이트 뒤 화면 기록 권한을 다시 켜야 해요' : '캡처하려면 화면 기록 권한이 필요해요'}
+          </p>
+          <button type="button" class="ink-first-howto ink-focus" onclick={askScreen}>
+            {screenAsked ? '켰으면 다시 시작' : '화면 기록 켜기'}
+          </button>
+        </div>
+      {/if}
 
       {#if conflictInfo}
         <div role="status" class="ink-first-notice" data-kind="conflict">

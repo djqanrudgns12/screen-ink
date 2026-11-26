@@ -25,7 +25,7 @@ pub use capture::CaptureInput;
 pub use draw::{DrawExportMeta, DrawExported, DrawFinish, DrawIslandPatch, DrawRestoreResult, ExportAction, KeptInk, KeptPayload, PenSample};
 pub use ink_domain::mode::DrawKind;
 pub use vision::VisionEngine;
-pub use service::{HotkeyOutcome, ImportPreview, InkService, PAUSE_SLOT};
+pub use service::{HotkeyOutcome, ImportPreview, InkService, ACTION_PERM_AX, ACTION_PERM_SCREEN, PAUSE_SLOT};
 pub use state::{
     CaptureView, ConflictSummary, DrawSession, DrawViewTransform, InkState, IslandButton, IslandEvent, IslandHint, IslandKind, KeptCompat, OverlayMonitor, OverlaySession,
     PreviewResult, RowStatus, SetShortcutResult, ShortcutRow, UpdateResult,

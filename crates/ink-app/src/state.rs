@@ -89,6 +89,19 @@ pub struct InkState {
     pub notices: Vec<String>,
     /// 지금 모드(`{mode:'idle'}` · `{mode:'capture', session, kind, startedMs}`)
     pub mode: ink_domain::mode::Mode,
+    /// 맥 화면 기록·손쉬운 사용 권한(M10). Windows는 없음
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permissions: Option<Permissions>,
+}
+
+/// 맥 권한 상태(M10). `*_revoked` = 전에는 있었는데 지금 없음(업데이트·재서명 뒤 풀림 감지).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Permissions {
+    pub screen: bool,
+    pub accessibility: bool,
+    pub screen_revoked: bool,
+    pub accessibility_revoked: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -207,6 +220,9 @@ pub struct IslandEvent {
     /// 녹화 섬의 마이크 꺼짐 아이콘
     #[serde(rename = "micOff", skip_serializing_if = "std::ops::Not::not")]
     pub mic_off: bool,
+    /// 보이는 시간(ms) — 없으면 종류별 기본값(UI `islandQueue`). 권한 안내처럼 설정 앱을 다녀올 동안 남겨 둘 때
+    #[serde(rename = "durationMs", skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u32>,
 }
 
 impl IslandEvent {
@@ -231,7 +247,14 @@ impl IslandEvent {
             avoid: None,
             countdown: None,
             mic_off: false,
+            duration_ms: None,
         }
+    }
+
+    /// 보이는 시간(ms)을 정한다.
+    pub fn duration_ms(mut self, ms: u32) -> Self {
+        self.duration_ms = Some(ms);
+        self
     }
 
     pub fn button(mut self, label: &str, action: &str, key: Option<&str>) -> Self {
