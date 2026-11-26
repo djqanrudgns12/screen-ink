@@ -238,7 +238,8 @@ fn screen_ports() -> (Box<dyn ScreenSource>, Box<dyn WindowCatalog>, Box<dyn Mon
     #[cfg(windows)]
     {
         use ink_platform_windows::screen::WindowsScreen;
-        (Box::new(WindowsScreen), Box::new(WindowsScreen), Box::new(WindowsScreen))
+        // 정지 캡처는 GDI 그대로 + F2 창 캡처는 WGC(단계 6.1)
+        (Box::new(ink_platform_windows::wgc_window::WgcScreen::new()), Box::new(WindowsScreen), Box::new(WindowsScreen))
     }
     #[cfg(target_os = "macos")]
     {
@@ -848,14 +849,28 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             })
             .map_err(|e| e.to_string())?;
         }
-        "capture.region" | "capture.window" | "record.toggle" => {
-            let kind = match action.as_str() {
-                "capture.region" => CaptureKind::Region,
-                "capture.window" => CaptureKind::Window,
-                _ => CaptureKind::Record,
-            };
+        "capture.region" | "capture.window" => {
+            let kind = if action == "capture.region" { CaptureKind::Region } else { CaptureKind::Window };
             let h = app.clone();
             app.run_on_main_thread(move || start_capture(&h, kind)).map_err(|e| e.to_string())?;
+        }
+        // 녹화(단계 6.3·6.5): 트레이 시작·중지 · 녹화 섬 [중지]·[버리기] · 복구 섬 [저장 시도]·[지우기]
+        "record.toggle" | "record.stop" | "record.discard" | "record.recoverSave" | "record.recoverDelete" => {
+            hide(POPOVER);
+            let h = app.clone();
+            let action = action.clone();
+            app.run_on_main_thread(move || {
+                let ink = h.state::<Ink>();
+                let mut s = ink.lock();
+                match action.as_str() {
+                    "record.toggle" => s.toggle_record(),
+                    "record.stop" => s.stop_recording(),
+                    "record.discard" => s.discard_recording(),
+                    "record.recoverSave" => s.recover_leftovers(true),
+                    _ => s.recover_leftovers(false),
+                }
+            })
+            .map_err(|e| e.to_string())?;
         }
         "pins.closeAll" => {
             let h = app.clone();
@@ -935,6 +950,12 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         pins: Box::new(pins::TauriPinHost::new(app.clone(), pin_store)),
     };
     let mut service = InkService::new(ports, Platform::current(), app.package_info().version.to_string());
+    // 녹화(단계 6.3): 임시 파일은 %TEMP%의 shookshok 폴더, 저장 폴더가 비면 사진 폴더의 shookshok
+    #[cfg(windows)]
+    {
+        let pictures = app.path().picture_dir().unwrap_or_else(|_| std::env::temp_dir()).join(APP_DIR);
+        service.set_recorder(Box::new(ink_platform_windows::recorder::WinRecorder::new(std::env::temp_dir().join(APP_DIR), pictures)));
+    }
     // 개발용 사람 정답 도구: 확정할 때마다 인식 시험 사례를 쓴다(시험 문서 화면에서만, 08 §5.2)
     if let Ok(dir) = std::env::var("SCREEN_INK_CASE_DIR") {
         log::warn!("recognition cases will be written on every confirm");
@@ -980,6 +1001,7 @@ fn finish_setup<R: Runtime>(app: &AppHandle<R>, initial: InkState, first_run: bo
     exclude_from_capture(app, ISLAND);
     exclude_from_capture(app, POPOVER);
     listen_system_events(app);
+    start_ticker(app);
     let mode = if initial.hotkeys_enabled { TrayMode::Ready } else { TrayMode::Off };
     TrayIconBuilder::with_id(TRAY_ID)
         .icon(tray_image(mode))
@@ -1001,6 +1023,24 @@ fn finish_setup<R: Runtime>(app: &AppHandle<R>, initial: InkState, first_run: bo
         open_settings_with(app, true);
     }
     Ok(())
+}
+
+/// 서비스 틱(250 ms): 지연 캡처 카운트다운 · 녹화 섬 경과 · 녹화기 스스로 멈춤 · 남은 녹화 복구 제안(단계 6).
+/// 창이 다 만들어진 뒤에 시작해 첫 틱의 복구 섬이 섬 창에 닿게 한다.
+fn start_ticker<R: Runtime>(app: &AppHandle<R>) {
+    let handle = app.clone();
+    let _ = std::thread::Builder::new().name("shookshok-tick".into()).spawn(move || loop {
+        std::thread::sleep(Duration::from_millis(250));
+        let h = handle.clone();
+        let sent = handle.run_on_main_thread(move || {
+            if let Some(ink) = h.try_state::<Ink>() {
+                ink.lock().tick();
+            }
+        });
+        if sent.is_err() {
+            break;
+        }
+    });
 }
 
 /// 잠금·절전·디스플레이 변경·테마(R-SYS-3). 사건 스레드 → 메인 스레드로 넘겨 서비스에.

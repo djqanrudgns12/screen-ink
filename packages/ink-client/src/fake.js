@@ -10,7 +10,7 @@ const DEFAULT_SETTINGS = {
   'capture.result': 'copy', 'capture.evidence': false, 'capture.cursor': false, 'capture.sound': false, 'capture.element': true, 'capture.magnet': true,
   'capture.historyMax': 20, 'capture.excluded': [{ exe: 'licecap.exe', mode: 'exclude', auto: false }],
   'output.folder': 'C:\\Users\\…\\Pictures\\shookshok', 'output.template': '수업_{yyyy}{MM}{dd}_{n}',
-  'record.fps': 30, 'record.mic': false, 'record.micDevice': '',
+  'record.fps': 30, 'record.mic': false, 'record.micDevice': '', 'record.cursor': true, 'record.firstHintDone': false, 'capture.delay': 3,
   'draw.color': 'R', 'draw.width': 4, 'draw.smoothing': 'light', 'draw.straighten': true, 'draw.shapeOnHold': true,
   'draw.startZoom': 1.75, 'draw.keep': true, 'draw.esc': 'step', 'draw.rightClickPan': true,
   'zoom.follow': 'smooth', 'zoom.minimap': true,

@@ -10,7 +10,7 @@ use crate::gpu::{self, Gpu};
 use crate::screen::WindowsScreen;
 use ink_app::{Frame, ScreenSource, WindowShot, WINDOW_PROTECTED};
 use ink_domain::geometry::{MonitorLayout, PhysRect};
-use ink_domain::image::{blankness, Blankness};
+use ink_domain::image::blankness;
 use ink_domain::windowshot::{self, ShotNext, FIRST_FRAME_MS};
 use std::ffi::c_void;
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -307,6 +307,7 @@ fn corner_radius(h: HWND) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ink_domain::image::Blankness;
 
     #[test]
     #[ignore = "실제 화면 필요 — 메인이 실행"]

@@ -30,7 +30,7 @@
  * @property {boolean} hotkeysEnabled
  * @property {number} pinnedCount   창 항상 위 고정(R-TOP) 개수
  * @property {number} [pins]        캡처 핀(R-CAP-29) 개수
- * @property {{active: boolean, elapsedMs: number}} recording
+ * @property {RecordingState} recording   녹화(05 §8) — active면 트레이 빨간 점·녹화 섬·빨간 꺾쇠 창
  * @property {Record<string, any>} settings   설정 값(05 §1 표의 키)
  * @property {ShortcutRow[]} shortcuts
  * @property {ConflictSummary} conflicts
@@ -38,6 +38,18 @@
  * @property {boolean} readonly      더 새 버전 설정·쓸 수 없는 폴더 → 바꿔도 저장 안 함(안내 띠)
  * @property {{path: string, portable: boolean, readOnly: boolean}} location  설정 파일 위치(S05 데이터 > 설정 위치)
  * @property {string[]} notices      시작할 때 한 번 알려 줄 문구(손상 복구 등)
+ *
+ * @typedef {Object} RecordingState
+ * @property {boolean} active
+ * @property {number} elapsedMs
+ * @property {'idle'|'picking'|'starting'|'recording'|'finalizing'} [phase]
+ * @property {number} [bytes]
+ * @property {number} [width]       영상 크기(짝수, 물리 px)
+ * @property {number} [height]
+ * @property {number} [fps]         30 | 60
+ * @property {boolean} [micOn]
+ * @property {PhysRect} [rect]      녹화 범위(시작 순간) — 빨간 꺾쇠 자리
+ * @property {'monitor'|'region'|'window'} [target]  window = 창 추적(창이 움직여도 따라감)
  *
  * @typedef {Object} SetShortcutResult
  * @property {boolean} ok
@@ -47,10 +59,13 @@
  *
  * @typedef {'capture.region'|'capture.window'|'record.toggle'|'draw'|'zoom'|'board'|'pin.toggle'|'pin.releaseAll'|'draw.restore'|'folder.open'|'settings.open'|'firstRun.open'|'app.quit'|'snipaste.howto'
  *   |'folder.pick'|'logs.open'|'settings.export'|'capture.history.clear'|'capture.saveLast'|'capture.copyHex'|'pins.closeAll'
- *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'} InkAction
+ *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'
+ *   |'record.stop'|'record.discard'|'record.recoverSave'|'record.recoverDelete'} InkAction
  *   capture.cancel = 오버레이에서 Esc·우클릭(모드 끝, 정지 이미지 버림)
  *   folder.pick = 저장 폴더 [바꾸기](폴더 고르기 → output.folder) · logs.open = 로그 폴더 · settings.export = 내보내기(저장 대화)
  *   settings.close·popover.close·island.hidden = 창 닫기(앱 셸이 씀)
+ *   record.toggle = 녹화 중이면 중지, 아니면 F3 범위 고르기 · record.stop·record.discard = 녹화 섬 [중지]·[버리기]
+ *   record.recoverSave·record.recoverDelete = 시작 때 "끝나지 않은 녹화가 있어요" 섬의 [저장 시도]·[지우기]
  *
  * @typedef {Object} SettingChange
  * @property {string} path     'draw.width' 또는 'shortcuts.<칸 id>'
@@ -77,6 +92,8 @@
  * @property {string} [thumbUrl]    결과 섬 썸네일(ink://thumb/…, 작은 BMP)
  * @property {string} [buttonKey]   단추 옆 키캡(예: 'Ctrl+S')
  * @property {{label: string, action: InkAction}} [chip]  추천 칩 하나(예: '#RRGGBB 복사' → 'capture.copyHex')
+ * @property {number} [countdown]   지연 캡처 섬(variant 'delay')의 남은 초
+ * @property {boolean} [micOff]     녹화 섬(variant 'record')의 마이크 꺼짐 아이콘
  *
  * @typedef {{x: number, y: number, w: number, h: number}} PhysRect  물리 px, 가상 화면 좌표
  *
