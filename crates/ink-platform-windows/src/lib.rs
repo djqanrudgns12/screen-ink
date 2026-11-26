@@ -13,6 +13,8 @@ pub mod uia;
 pub mod freeze;
 #[cfg(windows)]
 pub mod screen;
+#[cfg(windows)]
+pub mod magnifier;
 
 use ink_app::SystemProbe;
 use ink_domain::shortcuts::LiveBinding;

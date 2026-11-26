@@ -59,7 +59,7 @@ mod tests {
     }
 
     #[test]
-    fn 확대_중_캡처_키는_전환이고_모양은_liveZoom() {
+    fn 확대_중_캡처_키는_전환이고_모양은_live_zoom() {
         let m = Mode::LiveZoom { session: 3, monitor_id: 1, started_ms: 0 };
         assert_eq!(on_hotkey(&m, "region", 100), ModeCommand::Switch(CaptureKind::Region));
         let v = serde_json::to_value(m).unwrap();

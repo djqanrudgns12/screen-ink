@@ -115,8 +115,9 @@ impl LiveZoomView {
         let (wf, hf) = self.source_size();
         self.center_x = clamp_f(self.center_x, m.x as f64 + wf / 2.0, m.right() as f64 - wf / 2.0);
         self.center_y = clamp_f(self.center_y, m.y as f64 + hf / 2.0, m.bottom() as f64 - hf / 2.0);
-        let w = (wf.round() as i32).clamp(1, m.w.max(1));
-        let h = (hf.round() as i32).clamp(1, m.h.max(1));
+        // 올림 — 원본 × 배율이 모니터보다 작으면 확대 화면 오른쪽·아래에 빈 줄이 생긴다(1366 / 2.5 등)
+        let w = ((wf - 1e-6).ceil() as i32).clamp(1, m.w.max(1));
+        let h = ((hf - 1e-6).ceil() as i32).clamp(1, m.h.max(1));
         let x = ((self.center_x - w as f64 / 2.0).round() as i32).clamp(m.x, (m.right() - w).max(m.x));
         let y = ((self.center_y - h as f64 / 2.0).round() as i32).clamp(m.y, (m.bottom() - h).max(m.y));
         self.source = PhysRect::new(x, y, w, h);
@@ -311,6 +312,13 @@ mod tests {
         // 이상한 배율은 단계 범위로
         assert_eq!(LiveZoomView::new(0, FHD, 50.0, p(0, 0)).scale, 8.0);
         assert_eq!(LiveZoomView::new(0, FHD, f64::NAN, p(0, 0)).scale, LIVE_ZOOM_START);
+        // 나누어떨어지지 않는 모니터: 원본 × 배율 ≥ 모니터(빈 줄 없음)
+        let odd = PhysRect::new(0, 0, 1366, 768);
+        for s in LIVE_ZOOM_STEPS {
+            let v = LiveZoomView::new(0, odd, *s, p(683, 384));
+            assert!(v.source.w as f64 * s >= 1366.0 && v.source.h as f64 * s >= 768.0, "{s}: {:?}", v.source);
+            assert!(v.source.right() <= 1366 && v.source.bottom() <= 768);
+        }
     }
 
     #[test]
