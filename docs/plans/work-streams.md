@@ -46,6 +46,8 @@
 | `window-record` | Claude(2차) | E 6.1 F2 WGC·6.2 바로 캡처 키·6.3 F3 녹화(MF 직접, windows-capture 안 씀)·6.5 자동 중지·복구·마이크·여유 있으면 6.4 | `target-ink-engine` |
 
 | `cap-annotate` | Claude(2차) | B 4.9 캡처 주석(판서 엔진 재사용·Rust 합성·모자이크) + 잔상 eval → CaptureOverlay 이벤트로 | `target`(공용) |
+| `draw-ui` | 네온(3차, MSIX 후속 다음) | A 4.8 판서 섬 6색·물러남·커서 비킴, 펜 색 고리, 판서 MiniMap, 칠판 미리 보기, 도형 보정 보조 문구 | `target-draw-ui` |
+| `handoff` | Claude(3차) | D 5.3 확대 → 판서 이어받기 + B 3e-handoff [판서로] 프레임 재사용 | `target-handoff` |
 
 병합 기록: `cap-chip` 병합(3e-chip) · `ink-engine` 병합(4.1 엔진·4.2 렌더러·미리보기 `?draw=1`) + 메인 수정 c8aec99(DrawCanvas가 tick 효과를 버리던 것 — 제안 4초 만료가 섬에서 안 걷힘). 잔상은 지금 `overlay.rs`가 오버레이 웹뷰에 `eval`로 그린다 — 2차 캡처 주석 흐름(4.9)이 `CaptureOverlay.svelte`를 맡을 때 `screen-ink://afterimage` 이벤트 + `SelectionFrame state="afterimage"`로 옮기고 `eval`을 지운다. `msix`는 브랜드 커밋(8796250) 전 기준으로 출발했다 — 병합 때 Identity `com.ssamuniverse.shookshok`, 표시 이름 슉쇽(영문 리소스 ShookShok), 파일 이름 `Shookshok_…msix`·`Shookshok.appinstaller`·exe `Shookshok.exe`로 맞춘다(848d271 규칙).
 
