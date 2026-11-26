@@ -405,3 +405,22 @@
 - 시안: [아이콘](candidates/icons/index.md) · [PDF](candidates/pdf/index.md) · [글꼴](candidates/fonts/index.md)
 - 조사: [영어 문자열](research/i18n-inventory.md) · [CSV](research/i18n-strings.csv) · [용어 감사](research/terms-audit.md) · [바꿀 목록](research/terms-replacements.csv) · [화면 감사](research/ux-audit.md) · [Tidy 글꼴 고르기](research/tidy-font-picker.md) · [글꼴 치수](research/font-metrics.md)
 - 1차: [PRD v3.0](../../PRD.md) · [배포 H](../2026-11-26/H-distribution.md) · [맥 I](../2026-11-26/I-mac.md) · [인수인계](../../handoff/2026-11-26-mac-handoff.md)
+
+## 11. 진행 현황 (2026-11-27 07:30 KST)
+
+| 갈래 | 내용 | 상태 | 커밋 |
+|---|---|---|---|
+| 총괄 | 단축키 녹화 버그 · 다국어 틀(영역 파일·OS 변형) · 권한 카드 상태 · 트레이 전체 화면 대응 · 가림 인지 · 설정 위치 [열기] · [전체] 동작·팝오버 크기 · 색·굵기 기억 설정 | 커밋됨 | 72b3ac6 · 4c482ba · 4265624 · 3dbed55 · 2dcb018 · 94c2543 · 9d60625 · 452d1d6 · bf981e8 · eb145e6 |
+| 총괄 | PDF 저장 명령 `save_pdf` · 이 컴퓨터 글꼴 `system_fonts` · 맥 자동 업데이트(`updater.rs`·`update.rs`, OS 도구 + 같은 인증서 서명 확인) · 창 제목 정리 | **작업 트리(미커밋) — Rust 검사 대기** | — |
+| G1 | 맞춤 아이콘·캡처 툴바·색 16·굵기 슬라이더·스포이트 | 완료 | b7a97de |
+| G2 | 글꼴 부분 집합·크기 보정·트레이(Paperlogy) | 완료 | 320ba1e |
+| G3 | 첫 실행 카드 5장·설정 점검·사용 설명서·설정 찾기 | 완료 | 756bdb4 |
+| G4 | Rust 글 201키(쉬운 말·영어·OS) · 예외 앱 OS별 검증 | area 파일 커밋(fe507ad), **Rust 23개 파일 미커밋 — 검사 대기** | fe507ad |
+| G5 | 단축키 PDF(pdf-lib, 시안 4) · 단축키 한 장 고침 | **진행 중 — `pdf.test.js`가 끝나지 않아 멈춤** | — |
+| G6 | 남은 화면 글 287키·OS 표기·감사 고칠 것 | 완료 | 8ca70b2 · 420ad54 · b4acdca |
+| G7 | 글꼴 고르기(Tidy식)·업데이트 설정 묶음 | 완료 | 9261699 |
+| G8 | 그리기·칠판 도구 막대·판서 색·굵기 패널 | 완료 | ea683f3 |
+| G9 | 글꼴 연결·아이콘 구분·설정 찾기 키·fake OS 분기·정보 고지 | 완료 | b76a22e |
+
+- **막힘**: G5가 돌린 `node --test src/lib/**/*.test.js`(PID 13828)가 `pdf.test.js`에서 4시간째 끝나지 않아 자원 보호 도구가 모든 cargo 시험·빌드를 막는다(G5 실행 PID 77775도 상한 180분을 넘겨 남음). 총괄의 종료 시도는 자동 승인 분류기가 막았다 → 사람이 끈 뒤 이어서: Rust 시험·clippy → G4·총괄 Rust 커밋 → G5 마무리 → 서명 빌드·설치 → 실기 확인(트레이 전체 화면·첫 실행·툴바·색·글꼴·PDF·영어·업데이트 받기 확인) → 맥 글 상자 한글 입력(R2-TXT-0).
+- 검사(지금 커밋된 것): 화면 시험 237개(pdf 제외)·i18n 1243키·svelte-check 0 오류(G9 보고), Rust는 커밋된 범위만 앞서 통과.
