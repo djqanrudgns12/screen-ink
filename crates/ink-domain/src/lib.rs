@@ -18,5 +18,6 @@ pub mod shortcuts;
 pub mod snapshot;
 pub mod text;
 pub mod timing;
+pub mod zoom;
 
 pub use shortcuts::{Level, Platform};

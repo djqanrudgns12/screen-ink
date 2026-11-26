@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-draw-ready"
+description = "Enables the draw_ready command without any pre-configured scope."
+commands.allow = ["draw_ready"]
+
+[[permission]]
+identifier = "deny-draw-ready"
+description = "Denies the draw_ready command without any pre-configured scope."
+commands.deny = ["draw_ready"]

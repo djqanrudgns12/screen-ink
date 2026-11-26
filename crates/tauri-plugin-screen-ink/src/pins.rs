@@ -96,7 +96,7 @@ impl<R: Runtime> ink_app::PinHost for TauriPinHost<R> {
         let app = self.app.clone();
         std::thread::spawn(move || {
             let built = WebviewWindowBuilder::new(&app, label(id), WebviewUrl::App(format!("index.html?view=pin&pin={id}").into()))
-                .title("screen-ink pin")
+                .title("ShookShok pin")
                 .decorations(false)
                 .transparent(true)
                 .shadow(false)

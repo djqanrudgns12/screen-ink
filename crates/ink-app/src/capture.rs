@@ -282,7 +282,7 @@ impl InkService {
     fn session(&self) -> Option<u64> {
         match self.mode {
             Mode::Capture { session, .. } => Some(session),
-            Mode::Idle => None,
+            _ => None,
         }
     }
 
@@ -460,11 +460,15 @@ impl InkService {
         self.remember_range(rect);
         let hex = image::uniform_color(w, h, &px).map(|c| format!("#{:02X}{:02X}{:02X}", c[0], c[1], c[2]));
 
+        let afterimage = self.session().zip(self.snapshot.as_ref().map(|s| s.layout.clone()));
         let (tw, th, tpx) = image::thumbnail(w, h, &px, 160, 96);
         let thumb = self.ports.overlay.thumbnail(tw, th, tpx);
         self.cap.last = Some(LastCapture { w, h, bgra: Arc::new(px), app, hex: hex.clone() });
         // 화면을 먼저 돌려준다(클립보드·파일은 그 뒤)
         self.end_capture();
+        if let Some((session, layout)) = afterimage {
+            self.ports.overlay.flash_afterimage(session, rect, &layout);
+        }
 
         let result = self.settings.str("capture.result").to_string();
         let do_copy = !save && result != "save";
@@ -621,7 +625,7 @@ impl InkService {
     }
 
     /// 그림 하나를 저장 폴더에(이름 규칙·오늘 순번) → 결과 섬.
-    fn save_image(&mut self, last: &LastCapture) -> IslandEvent {
+    pub(crate) fn save_image(&mut self, last: &LastCapture) -> IslandEvent {
         let mut t = self.ports.clock.local();
         let day = (t.year, t.month, t.day);
         if self.cap.save_day != day {
@@ -632,7 +636,7 @@ impl InkService {
         t.n = self.cap.save_seq;
         t.app = last.app.clone();
         let template = self.settings.str("output.template").to_string();
-        let stem = naming::render(&template, &t).unwrap_or_else(|_| "screen-ink".into());
+        let stem = naming::render(&template, &t).unwrap_or_else(|_| "Shookshok".into());
         let folder = self.settings.str("output.folder").to_string();
         match self.ports.files.save_png(&folder, &stem, last.w, last.h, &last.bgra) {
             Ok(f) => {
@@ -683,5 +687,110 @@ mod tests {
         assert!(line.contains("moves 3 p50 1.00 p95 2.00 max 2.00 ms"), "{line}");
         let none = EntryProbe { pressed: Some(Instant::now()), ..Default::default() }.line().unwrap();
         assert!(none.contains("V first - ms, A first - ms, moves 0"), "{none}");
+    }
+
+    #[test]
+    fn 확정시_잔상_호출되고_취소시_호출안됨() {
+        use crate::ports::*;
+        use crate::state::{InkState, OverlaySession};
+        use ink_domain::geometry::{Monitor, MonitorLayout};
+        use ink_domain::naming::NameContext;
+        use ink_domain::shortcuts::Platform;
+        use ink_domain::snapshot::CaptureKind;
+        use std::sync::Mutex;
+
+        #[derive(Clone, Default)]
+        struct Log(Arc<Mutex<Vec<String>>>);
+        impl OverlayHost for Log {
+            fn prepare(&mut self, _layout: &MonitorLayout) {}
+            fn show(&mut self, _session: &OverlaySession, _frames: Vec<Frame>) -> Result<Option<Instant>, String> {
+                Ok(None)
+            }
+            fn highlight(&mut self, _session: u64, _rect: Option<PhysRect>) {}
+            fn hide(&mut self, session: u64) {
+                self.0.lock().unwrap().push(format!("hide:{session}"));
+            }
+            fn flash_afterimage(&mut self, session: u64, rect: PhysRect, layout: &MonitorLayout) {
+                self.0.lock().unwrap().push(format!("flash:{session}:{}x{}:{}", rect.w, rect.h, layout.monitors.len()));
+            }
+        }
+
+        struct Stub;
+        impl HotkeyRegistry for Stub {
+            fn register(&mut self, _s: &str, _a: &str) -> Result<(), HotkeyError> { Ok(()) }
+            fn unregister(&mut self, _a: &str) {}
+        }
+        impl SystemProbe for Stub {
+            fn running_apps(&self) -> Vec<String> { vec![] }
+            fn live_bindings(&self) -> Option<Vec<ink_domain::shortcuts::LiveBinding>> { Some(vec![]) }
+        }
+        impl SettingsStore for Stub {
+            fn load(&mut self) -> Loaded { Loaded::default() }
+            fn save_section(&mut self, _n: &str, _d: &serde_json::Value) -> Result<(), StoreError> { Ok(()) }
+            fn location(&self) -> StoreLocation { StoreLocation::default() }
+        }
+        impl Notifier for Stub {
+            fn state(&self, _s: &InkState) {}
+            fn island(&self, _e: &IslandEvent) {}
+        }
+        impl ScreenSource for Stub {
+            fn capture(&mut self, layout: &MonitorLayout) -> Result<Vec<Frame>, String> {
+                Ok(layout.monitors.iter().map(|m| Frame { monitor_id: m.id, width: m.bounds.w as u32, height: m.bounds.h as u32, bgra: Arc::new(vec![0; (m.bounds.w * m.bounds.h * 4) as usize]) }).collect())
+            }
+        }
+        impl WindowCatalog for Stub {
+            fn windows(&self) -> Vec<RawWindow> { vec![] }
+        }
+        impl MonitorProbe for Stub {
+            fn layout(&self) -> MonitorLayout {
+                MonitorLayout::new(vec![Monitor { id: 0, bounds: PhysRect::new(0, 0, 64, 48), work: PhysRect::new(0, 0, 64, 48), scale: 1.0, primary: true }])
+            }
+            fn cursor(&self) -> PhysPoint { PhysPoint { x: 10, y: 10 } }
+        }
+        impl ElementSource for Stub {
+            fn request(&self, _w: u64, _e: &str) {}
+            fn elements_at(&self, _w: u64, _p: PhysPoint) -> Vec<ink_domain::recog::ElementCand> { vec![] }
+            fn clear(&self) {}
+        }
+        impl Clipboard for Stub {
+            fn set_image(&mut self, _w: u32, _h: u32, _bgra: &[u8]) -> Result<(), String> { Ok(()) }
+            fn set_text(&mut self, _t: &str) -> Result<(), String> { Ok(()) }
+        }
+        impl FileSink for Stub {
+            fn save_png(&mut self, _f: &str, stem: &str, _w: u32, _h: u32, _bgra: &[u8]) -> Result<SavedFile, String> {
+                Ok(SavedFile { name: format!("{stem}.png"), path: format!("{stem}.png"), fell_back: false })
+            }
+        }
+        impl Clock for Stub {
+            fn local(&self) -> NameContext { NameContext { year: 2026, month: 11, day: 26, hour: 10, minute: 0, second: 0, app: None, n: 0 } }
+            fn unix(&self) -> u64 { 0 }
+        }
+
+        let log = Log::default();
+        let ports = Ports {
+            hotkeys: Box::new(Stub),
+            probe: Box::new(Stub),
+            store: Box::new(Stub),
+            notifier: Box::new(Stub),
+            screen: Box::new(Stub),
+            windows: Box::new(Stub),
+            monitors: Box::new(Stub),
+            overlay: Box::new(log.clone()),
+            elements: Box::new(Stub),
+            vision: Box::new(NoVision),
+            clipboard: Box::new(Stub),
+            files: Box::new(Stub),
+            pins: Box::new(NoPins),
+            clock: Box::new(Stub),
+        };
+        let mut svc = InkService::new(ports, Platform::Win, "test");
+        svc.start_capture(CaptureKind::Region);
+        svc.capture_input(CaptureInput::Command { name: "copy".into() });
+        assert_eq!(log.0.lock().unwrap().as_slice(), ["hide:1", "flash:1:64x48:1"]);
+
+        log.0.lock().unwrap().clear();
+        svc.start_capture(CaptureKind::Region);
+        svc.capture_input(CaptureInput::Command { name: "cancel".into() });
+        assert_eq!(log.0.lock().unwrap().as_slice(), ["hide:2"]);
     }
 }

@@ -38,6 +38,12 @@
  * @property {boolean} readonly      더 새 버전 설정·쓸 수 없는 폴더 → 바꿔도 저장 안 함(안내 띠)
  * @property {{path: string, portable: boolean, readOnly: boolean}} location  설정 파일 위치(S05 데이터 > 설정 위치)
  * @property {string[]} notices      시작할 때 한 번 알려 줄 문구(손상 복구 등)
+ * @property {Mode} [mode]          지금 모드(오버레이 창이 캡처·판서 화면을 고른다)
+ *
+ * @typedef {{mode: 'idle'}
+ *   | {mode: 'capture', session: number, kind: 'region'|'window'|'record', startedMs: number}
+ *   | {mode: 'draw', session: number, board: boolean, monitorId: number, startedMs: number}} Mode
+ *   draw = Alt+1 판서(board=false) · Alt+3 칠판(board=true). 그 모니터(monitorId) 오버레이 창만 DrawOverlay를 띄운다.
  *
  * @typedef {Object} SetShortcutResult
  * @property {boolean} ok
@@ -46,8 +52,9 @@
  * @property {string[]} [suggestions]  줄마다 다른 추천 3개
  *
  * @typedef {'capture.region'|'capture.window'|'record.toggle'|'draw'|'zoom'|'board'|'pin.toggle'|'pin.releaseAll'|'draw.restore'|'folder.open'|'settings.open'|'firstRun.open'|'app.quit'|'snipaste.howto'
- *   |'folder.pick'|'logs.open'|'settings.export'|'capture.history.clear'
- *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'} InkAction
+ *   |'folder.pick'|'logs.open'|'settings.export'|'capture.history.clear'|'capture.saveLast'|'capture.copyHex'|'pins.closeAll'
+ *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'|'draw.acceptSuggestion'|'draw.undo'} InkAction
+ *   draw.acceptSuggestion·draw.undo = 판서 섬 단추([바꾸기]·[되돌리기]) → Rust가 'drawCommand' 이벤트로 오버레이 엔진에
  *   capture.cancel = 오버레이에서 Esc·우클릭(모드 끝, 정지 이미지 버림)
  *   folder.pick = 저장 폴더 [바꾸기](폴더 고르기 → output.folder) · logs.open = 로그 폴더 · settings.export = 내보내기(저장 대화)
  *   settings.close·popover.close·island.hidden = 창 닫기(앱 셸이 씀)
@@ -61,7 +68,7 @@
  * @property {boolean} cancelled
  * @property {string} [path]
  * @property {boolean} [ok]
- * @property {string} [error]   "이 파일은 screen-ink 설정이 아니에요"
+ * @property {string} [error]   "이 파일은 슉쇽 설정이 아니에요"
  * @property {SettingChange[]} [changes]
  * @property {string[]} [warnings]
  *
@@ -76,8 +83,16 @@
  * @property {{key: string, label: string}[]} [hints]  둘째 줄 키 안내
  * @property {string} [thumbUrl]    결과 섬 썸네일(ink://thumb/…, 작은 BMP)
  * @property {string} [buttonKey]   단추 옆 키캡(예: 'Ctrl+S')
+ * @property {'R'|'Y'|'G'|'O'|'B'|'L'|'W'|'K'} [penColor]  판서 섬(variant 'draw')의 지금 색 점
+ * @property {string} [penWidth]    판서 섬의 굵기('4px')
+ * @property {{label: string, action: InkAction}} [chip]  추천 칩 하나(예: '#RRGGBB 복사' → 'capture.copyHex')
  *
  * @typedef {{x: number, y: number, w: number, h: number}} PhysRect  물리 px, 가상 화면 좌표
+ *
+ * @typedef {Object} AfterimageEvent  확정 직후 고른 자리 주황 잔상 0.4초(R-CAP-26)
+ * @property {number} session
+ * @property {PhysRect} rect
+ * @property {number} durationMs
  *
  * @typedef {Object} OverlayMonitor
  * @property {number} id
@@ -116,6 +131,82 @@
  *   command = 선택 툴바 단추(R-CAP-27) — 키와 같은 결과(Rust가 판단). meta = 맥 Cmd.
  *   좌표는 물리 px(가상 화면) = monitor.bounds + client × scale. wheel dy = -1 위(넓히기·부모) / 1 아래(좁히기·자식).
  *   key는 e.key와 e.code를 같이(한글 입력 중에도 code로 판단). Esc·우클릭·Enter 등 판단은 모두 Rust가 한다.
+ *
+ * @typedef {Object} LiveZoomState  실시간 확대 HUD(Alt+2, 04 S13 · R-ZOOM-6) — 'zoom' 이벤트, 끝나면 null.
+ *   InkState.mode = {mode:'liveZoom', session, monitorId, startedMs}. 좌표는 모두 Rust가 정한다.
+ * @property {number} session
+ * @property {number} monitorId
+ * @property {string} monitorLabel   위치 지도 이름('모니터 1', 배치 순서 — 창 제목 없음)
+ * @property {number} scale          1.25 · 1.5 · 2 · 2.5 · 3 · 4 · 6 · 8
+ * @property {string} scaleLabel     섬·배지 글자('×2.0', '×1.25')
+ * @property {{x: number, y: number, w: number, h: number}} viewport  위치 지도 0..1(원본 사각형 / 모니터)
+ * @property {{x: number, y: number}} [cursorCss]  확대 화면 위 커서(HUD 창 안 CSS px) — 44px 주황 후광 중심. 확대 화면 밖이면 없음
+ * @property {boolean} showMinimap   설정 zoom.minimap
+ *
+ * @typedef {{type:'wheel', dy:-1|1} | {type:'key', slot:'z-exit'} | {type:'exit'}} ZoomInput
+ *   실시간 확대 입력(미리보기·HUD). wheel dy = -1 위(더 확대) / 1 아래(덜 확대). 배율은 휠로만, 키는 끝내기(z-exit) 하나.
+ *   실제 앱의 휠은 Rust 돋보기 훅이 받는다(확대 모니터 안 세로 휠, Shift+휠은 아래 앱으로).
+ */
+
+// ───────────── 판서·칠판(A §2.5) ─────────────
+// 경계: 포인터·획 보정·렌더·실행 취소는 웹뷰(inkEngine.js + DrawCanvas)가, 진입 캡처·보관·복원 판정·
+// 클립보드/파일·섬·시스템 사건 종료는 Rust가 맡는다. 판서 문서는 웹뷰에만 있으므로 Rust가 먼저 끝낸 경우
+// (같은 키·다른 모드 키·잠금·화면 구성 변경) 화면은 그 세션으로 drawFinish를 한 번 더 보내 보관한다(늦은 끝).
+
+/**
+ * @typedef {{s: number, tx: number, ty: number}} DrawViewTransform  확대 s(1~8)·이동(CSS px, ≤ 0) — A §2.1
+ * @typedef {'none'|'same'|'rescaled'|'differentMonitor'} KeptCompat  보관 판서를 이 모니터에 불러올 수 있는지(02 §3.6)
+ *
+ * @typedef {Object} DrawSession  판서 한 번(`draw` 이벤트) — 상태(mode: draw)보다 먼저 온다
+ * @property {number} session
+ * @property {boolean} board                 false = Alt+1 판서(정지 화면 위), true = Alt+3 칠판(frameUrl 없음)
+ * @property {OverlayMonitor} monitor        대상 모니터(bounds·scale·frameUrl). frameUrl = 그 순간 BMP(물리 px) — <img crossorigin="anonymous">
+ * @property {string} layoutFingerprint      진입 순간 모니터 구성 지문
+ * @property {DrawViewTransform} initialView 시작 확대·이동(기본 {s:1,tx:0,ty:0})
+ * @property {boolean} restoreOnOpen         true면 열자마자 drawRestore(Alt+Shift+1). 판서 중 다시 누르면 같은 세션이 true로 한 번 더 온다
+ * @property {boolean} hasKept               보관 판서가 있음
+ * @property {KeptCompat} keptCompatible
+ * @property {{x: number, y: number}} cursor 단축키 순간 커서(물리 px)
+ *
+ * @typedef {Object} KeptInk  보관 판서(메모리 한 장, 디스크에 쓰지 않음) — 모니터·지문·크기·배율은 Rust가 세션에서 채움
+ * @property {number} monitorId
+ * @property {string} layoutFingerprint
+ * @property {number} physW
+ * @property {number} physH
+ * @property {number} scale          보관할 때 배율. Rescaled면 문서 비율 = (bounds.w / scale) / (physW / kept.scale)
+ * @property {boolean} [board]       칠판에서 보관함
+ * @property {any} document          InkDocument JSON v1(A §2.2)
+ *
+ * @typedef {Object} DrawFinishPayload
+ * @property {number} session
+ * @property {boolean} keep          보관할지(설정 draw.keep이 꺼져 있으면 Rust가 무시)
+ * @property {{document: any}} [kept]  항목이 1개 이상일 때만 보관됨(다른 필드는 Rust가 채움)
+ *
+ * @typedef {{status: KeptCompat, kept?: KeptInk}} DrawRestoreResult  kept는 same·rescaled일 때만. 섬 문구는 Rust가 띄움
+ *
+ * @typedef {Object} DrawExportMeta  확대 중이어도 늘 모니터 전체(물리 해상도 그대로) — w·h가 대상 모니터 물리 크기와 다르면 거절
+ * @property {number} w              물리 px = session.monitor.bounds.w
+ * @property {number} h              = session.monitor.bounds.h
+ * @property {number} [session]      있으면 지금 세션일 때만 받음
+ * @property {'rgba'|'bgra'} [format] 기본 rgba(캔버스 getImageData 그대로)
+ *
+ * @typedef {Object} DrawIslandPatch  판서 섬 한 줄(보낸 것만 바뀜)
+ * @property {number} [session]
+ * @property {'R'|'Y'|'G'|'O'|'B'|'L'|'W'|'K'} [color]
+ * @property {'pen'|'marker'|'text'|'select'|'eraser'|'pan'} [tool]
+ * @property {number} [widthPx]      화면 기준 굵기 1~30
+ * @property {number} [zoom]         1~8
+ * @property {number} [pageIndex]
+ * @property {number} [pageCount]
+ * @property {'frame'|'white'|'black'} [background]
+ * @property {boolean} [idleDim]     4초 무동작 물러남(섬 표현은 아직 없음)
+ * @property {string} [notice]       보정·안내 한 줄('수평으로 맞췄어요' 등)
+ * @property {'undo'} [noticeAction]  안내에 [되돌리기] 단추(모두 지우기 뒤) → drawCommand 'undo'
+ * @property {string | null} [suggestion]  멈춤 도형 제안 글 — 조각마다 보낸다(없으면 걷힘). 섬 [바꾸기] → drawCommand 'acceptSuggestion'
+ *
+ * @typedef {{n: number, p50: number, p95: number, max: number}} PenSample  소프트웨어 펜 지연(ms) — M5
+ *
+ * @typedef {{session: number, command: 'acceptSuggestion'|'undo'}} DrawCommand  섬 단추 → 그 세션 오버레이의 엔진
  */
 
 /**
@@ -136,7 +227,15 @@
  * @property {(id: number, action: 'close'|'closeAll'|'copy'|'save'|'drag'|'menu') => Promise<void>} pinAction  핀 동작(drag = 끌어 옮기기 시작, menu = 오른쪽 클릭 메뉴)
  * @property {(id: number, dy: -1|1, fx: number, fy: number) => Promise<number | null>} pinZoom  휠 한 칸 확대(-1)·축소(1), 커서 자리 = 창 안 비율 → 새 배율(%)
  * @property {(input: CaptureInput) => Promise<void>} captureInput  오버레이 입력 전달(포인터 이동은 rAF로 묶어 프레임당 한 번). 결과는 'capture' 이벤트로
- * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView}) => void) => () => void} subscribe
+ * @property {(session: number, paintMs?: number) => Promise<void>} drawReady  판서 배경을 그린 뒤 — 진입 계측 `mode enter draw [N ms]`(M4)
+ * @property {(payload: DrawFinishPayload) => Promise<void>} drawFinish  판서 끝(Esc·우클릭 1×) · Rust가 먼저 끝낸 세션의 늦은 끝
+ * @property {(session: number) => Promise<DrawRestoreResult>} drawRestore  Ctrl+Shift+R · restoreOnOpen
+ * @property {(action: 'copy'|'save', bytes: ArrayBuffer|ArrayBufferView, meta: DrawExportMeta) => Promise<{ok: boolean, name?: string, error?: string}>} drawExport
+ *   합성 결과(배경 + 판서) 원본 바이트를 base64 없이(원본 바이트 IPC). bytes 길이 = w × h × 4
+ * @property {(patch: DrawIslandPatch) => Promise<void>} drawIsland
+ * @property {(sample: PenSample) => Promise<void>} drawPenMetrics  로그 한 줄 `pen latency n=.. p50=.. p95=.. max=.. ms`
+ * @property {(input: ZoomInput) => Promise<void>} zoomInput  실시간 확대 입력(휠·확대 안 키·끝). 결과는 'zoom'·'island' 이벤트로
+ * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView} | {type: 'afterimage', afterimage: AfterimageEvent} | {type: 'zoom', zoom: LiveZoomState | null} | {type: 'draw', draw: DrawSession} | ({type: 'drawCommand'} & DrawCommand)) => void) => () => void} subscribe
  */
 
 export const SHORTCUT_GROUPS = [

@@ -20,14 +20,14 @@
 | 칸 | 값 |
 |---|---|
 | 게시자 표시 이름 | **`찰떡쌤`**(계정 등록 때 넣음) |
-| 앱 이름(예약) | **미정** — 아이콘과 함께 다른 세션에서 정한다. 정해지면 이 문서의 `screen-ink`를 모두 바꾼다 |
+| 앱 이름(예약) | 한국어 **`슉쇽`** · 영어 **`ShookShok`**(2026-11-26 결정, `docs/brand/README.md`). 예약은 Partner Center 계정이 승인되면 |
 | 가격 | 무료 |
 | 시장 | 모든 시장(대한민국 포함) |
 | 범주 | 생산성(Productivity). 보조 범주 교육(Education). 하위 범주는 제출 화면 목록에서 고른다 |
 | 개인정보 처리방침 | `https://ink.ssamuniverse.com/privacy/` |
 | 웹사이트 | `https://ink.ssamuniverse.com/` |
 | 지원 연락처 | `https://ink.ssamuniverse.com/support/` |
-| 저작권·상표 | `© 2026 screen-ink contributors. MIT License.` |
+| 저작권·상표 | `© 2026 찰떡쌤. MIT License.` |
 | 추가 사용 조건 | 비움(MIT 라이선스는 저장소의 LICENSE) |
 | 시스템 요구 사항 | 최소: Windows 10 버전 2004(빌드 19041) 이상, x64, 키보드·마우스 / 권장: Windows 11, 모니터 2대까지 시험함 |
 | 제품 선언 | "접근성 지침 시험 통과"는 **체크하지 않음**(아직 시험 안 함) · "대체 드라이브에 설치 허용"은 체크 |
@@ -48,7 +48,7 @@
 ### 2.1 설명
 
 ```text
-screen-ink는 교실에서 화면을 보여 주며 수업하는 선생님을 위해 만든 도구입니다. 단축키 하나로 화면을 캡처하고, 필요한 곳을 크게 보여 주고, 그 위에 바로 판서합니다.
+슉쇽은 교실에서 화면을 보여 주며 수업하는 선생님을 위해 만든 도구입니다. 단축키 하나로 화면을 캡처하고, 필요한 곳을 크게 보여 주고, 그 위에 바로 판서합니다.
 
 ■ 알아서 잡아 주는 캡처 (F1)
 F1을 누르고 커서를 올리면 그 아래의 표·그림·단추·문단을 알아서 강조합니다. 마우스 휠로 더 크게, 더 작게 고르고, 클릭하면 끝. 결과는 클립보드에 바로 들어가서 한글·PowerPoint·채팅 창에 Ctrl+V로 붙여 넣으면 됩니다. 직접 드래그할 때도 창과 칸의 경계에 자석처럼 붙습니다.
@@ -118,15 +118,15 @@ Full version:
 
 First submission (capture only):
 
-> Press F1 and screen-ink highlights the table, image or button under your cursor. Paste straight into documents and slides. Works offline and collects no data.
+> Press F1 and ShookShok highlights the table, image or button under your cursor. Paste straight into documents and slides. Works offline and collects no data.
 
 ### 3.1 Description
 
 ```text
-screen-ink is a screen tool for teachers who present from their computer. One shortcut captures the screen, zooms where you need it, and lets you draw right on top.
+ShookShok is a screen tool for teachers who present from their computer. One shortcut captures the screen, zooms where you need it, and lets you draw right on top.
 
 ■ Capture that finds what you mean (F1)
-Press F1 and hover: screen-ink highlights the table, image, button or paragraph under the cursor. Scroll to pick a bigger or smaller area, click, done. The result goes straight to the clipboard, ready to paste with Ctrl+V. Dragging snaps to window and cell edges.
+Press F1 and hover: ShookShok highlights the table, image, button or paragraph under the cursor. Scroll to pick a bigger or smaller area, click, done. The result goes straight to the clipboard, ready to paste with Ctrl+V. Dragging snaps to window and cell edges.
 
 ■ Small things that matter in class
 · Inside F1, press R for the last area, comma/period to step through recent areas
@@ -193,14 +193,14 @@ For the first submission, delete the "Draw, zoom and whiteboard" paragraph.
 ## 6. 인증 담당자에게 남기는 말 (Notes for certification, 영어)
 
 ```text
-screen-ink is a full-trust Win32 desktop app (Tauri 2 + WebView2) packaged as MSIX. It needs runFullTrust because it:
+ShookShok is a full-trust Win32 desktop app (Tauri 2 + WebView2) packaged as MSIX. It needs runFullTrust because it:
 - registers global hotkeys (RegisterHotKey) — F1/F2/F3 and Alt+1/2/3 by default;
 - captures all monitors and shows topmost overlay windows over other apps;
 - reads window bounds and UI Automation element bounds to find the area under the cursor (bounds and control types only; no text or titles are read or stored).
 The app has no network code, no account and no telemetry.
 
 How to test:
-1. Launch screen-ink. It lives in the notification area (tray); the settings window opens on first run.
+1. Launch ShookShok. It lives in the notification area (tray); the settings window opens on first run.
 2. Press F1, move the mouse over any window — the element under the cursor is highlighted. Scroll to change the area, click (or press Enter) to copy. Paste into Paint to check.
 3. Press Esc to cancel a capture.
 4. If F1 is already taken by another app, the app shows a notice and the key can be changed in Settings > Shortcuts.

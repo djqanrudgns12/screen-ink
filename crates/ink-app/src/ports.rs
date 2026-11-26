@@ -194,6 +194,15 @@ pub trait OverlayHost: Send {
     fn thumbnail(&mut self, _w: u32, _h: u32, _bgra: Vec<u8>) -> Option<String> {
         None
     }
+    /// 판서·칠판(A §2.5): `session.monitor`의 오버레이 창 하나를 보이고 키를 받게 한다. 판서는 확대·이동과 같은
+    /// 변환으로 배경을 움직여야 해서 네이티브 정지 창을 쓰지 않고, 웹뷰가 돌려준 주소의 이미지를 직접 그린다.
+    /// `frame`이 없으면(칠판) 주소도 없음. 끝은 `hide(session)`. 못 하는 곳은 실패로 알린다(조용히 빈 모드가 되지 않게).
+    fn show_draw(&mut self, _session: &crate::state::DrawSession, _frame: Option<Frame>) -> Result<Option<String>, String> {
+        Err("draw overlay not supported".into())
+    }
+    /// 확정 직후 고른 자리에 주황 잔상 0.4초(R-CAP-26). 클릭 통과·비포커스로 띄우고 400 ms 뒤 숨긴다.
+    /// 기본 구현은 no-op(가짜·미지원 어댑터 호환).
+    fn flash_afterimage(&mut self, _session: u64, _rect: ink_domain::geometry::PhysRect, _layout: &MonitorLayout) {}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
@@ -232,6 +241,12 @@ pub trait Notifier: Send + Sync {
     fn island(&self, event: &IslandEvent);
     /// 고르기 상태(`screen-ink://capture`) — 모든 오버레이·섬이 같은 것을 그린다.
     fn capture(&self, _view: &crate::state::CaptureView) {}
+    /// 판서 세션(`screen-ink://draw`) — 상태(`mode: draw`)보다 먼저 보내 오버레이가 세션을 쥔 채 화면을 바꾼다.
+    fn draw(&self, _session: &crate::state::DrawSession) {}
+    /// 섬 단추 → 판서 엔진(`screen-ink://draw-command`): `acceptSuggestion` · `undo`. 섬 창과 오버레이 창이 달라 서비스가 이어 준다.
+    fn draw_command(&self, _session: u64, _command: &str) {}
+    /// 실시간 확대 상태(`screen-ink://zoom`) — 확대 HUD(후광·위치 지도)가 그린다. 확대가 끝나면 `None`.
+    fn zoom(&self, _state: Option<&crate::state::LiveZoomState>) {}
 }
 
 pub struct Ports {
@@ -262,6 +277,34 @@ pub enum SystemEvent {
     DisplayChange,
     /// 작업 표시줄 밝기 등 테마
     ThemeChange,
+}
+
+/// `Magnifier::start` 오류가 이 말로 시작하면 이 운영체제·빌드에는 실시간 확대가 없다는 뜻(맥 1차·가짜 기본).
+pub const ZOOM_UNSUPPORTED: &str = "unsupported:live-zoom";
+
+/// 실시간 확대(03 §3 `Magnifier`, R-ZOOM-1·4): 모니터를 덮는 돋보기 창을 띄우고 원본 사각형·배율만 바꾼다.
+/// 판단(따라가기·단계·끝내기)은 서비스가 한다. 자기 창(섬·HUD·팝오버)을 돋보기 원본에서 빼는 일은 어댑터가 안다.
+pub trait Magnifier: Send {
+    /// `monitor`(가상 화면 물리 px) 전체를 덮어 `source`를 `scale`배로 비춘다. 첫 그림이 나올 때까지 기다린다.
+    fn start(&mut self, monitor: ink_domain::geometry::PhysRect, source: ink_domain::geometry::PhysRect, scale: f64) -> Result<(), String>;
+    /// 틱마다 원본·배율(같은 값이어도 부른다 — 어댑터의 멈춤 감시 신호). 돋보기가 스스로 멈췄으면 `Err`.
+    fn update(&mut self, source: ink_domain::geometry::PhysRect, scale: f64) -> Result<(), String>;
+    fn stop(&mut self);
+}
+
+/// 실시간 확대가 없는 곳(맥 1차·시험 기본값). 서비스는 "아직 쓸 수 없어요" 섬을 띄운다.
+pub struct NoMagnifier;
+
+impl Magnifier for NoMagnifier {
+    fn start(&mut self, _monitor: ink_domain::geometry::PhysRect, _source: ink_domain::geometry::PhysRect, _scale: f64) -> Result<(), String> {
+        Err(ZOOM_UNSUPPORTED.into())
+    }
+
+    fn update(&mut self, _source: ink_domain::geometry::PhysRect, _scale: f64) -> Result<(), String> {
+        Err(ZOOM_UNSUPPORTED.into())
+    }
+
+    fn stop(&mut self) {}
 }
 
 /// 패키지 모드(MSIX) 런타임 사실 읽기(D3 · 11-distribution §5).

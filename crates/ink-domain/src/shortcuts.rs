@@ -56,7 +56,7 @@ impl Platform {
 #[serde(rename_all = "lowercase")]
 pub enum Level {
     Ok,
-    /// screen-ink가 대신할 앱과 겹침 — 그 앱을 계속 쓰지 않으면 괜찮다.
+    /// 슉쇽이 대신할 앱과 겹침 — 그 앱을 계속 쓰지 않으면 괜찮다.
     Repl,
     Warn,
     Block,
@@ -710,13 +710,13 @@ mod tests {
     }
 
     #[test]
-    fn 카탈로그와_기본값이_59칸으로_맞는다() {
+    fn 카탈로그와_기본값이_57칸으로_맞는다() {
         let c = catalog();
-        assert_eq!(c.slots().len(), 59);
+        assert_eq!(c.slots().len(), 57);
         let scopes = |s: &str| c.slots().iter().filter(|x| x.scope == s).count();
-        assert_eq!((scopes("global"), scopes("capture"), scopes("draw"), scopes("zoom")), (16, 11, 29, 3));
-        assert_eq!(c.defaults(Platform::Win).len(), 59);
-        assert_eq!(c.defaults(Platform::Mac).len(), 58, "맥은 창 항상 위 칸이 없다");
+        assert_eq!((scopes("global"), scopes("capture"), scopes("draw"), scopes("zoom")), (16, 11, 29, 1));
+        assert_eq!(c.defaults(Platform::Win).len(), 57);
+        assert_eq!(c.defaults(Platform::Mac).len(), 56, "맥은 창 항상 위 칸이 없다");
         assert_eq!(c.default_combo("region", Platform::Win), "F1");
         assert_eq!(c.default_combo("pause", Platform::Win), "Alt+`");
     }

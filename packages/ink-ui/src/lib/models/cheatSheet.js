@@ -133,9 +133,8 @@ export function buildCheatSheetColumns(shortcuts = [], { platform = 'windows', m
     ];
   } else if (mode === 'zoom') {
     modeTitle = '실시간 확대 — 지금';
+    // 배율은 휠로만, 확대 중 잡는 키는 끝내기(Esc) 하나 — 방향키·클릭은 아래 앱으로(2026-11-26 결정)
     modeRows = [
-      buildGroupedRow(byId, [{ id: 'z-in', shortLabel: '더 확대' }], platform),
-      buildGroupedRow(byId, [{ id: 'z-out', shortLabel: '덜 확대' }], platform),
       { label: '배율 조절', keys: ['휠'] },
       buildGroupedRow(byId, [{ id: 'draw', shortLabel: '멈추고 판서' }], platform),
       buildGroupedRow(byId, [{ id: 'z-exit', shortLabel: '끝내기' }], platform),
@@ -143,9 +142,9 @@ export function buildCheatSheetColumns(shortcuts = [], { platform = 'windows', m
 
     extraTitle = '확대 조작';
     extraRows = [
-      { label: '배율 올리기·내리기', keys: ['휠'] },
+      { label: '아래 앱 스크롤', keys: [modShift, '휠'] },
       { label: '화면 따라가기', note: '커서 이동' },
-      { label: '끝내기', note: '오른쪽 클릭' },
+      { label: '방향키·클릭', note: '아래 앱으로' },
     ];
   } else {
     // 기본: 판서 화면(F17)

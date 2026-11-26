@@ -1,0 +1,28 @@
+[package]
+name = "rb20-frozen"
+description = "RB-20 멈춘 시험 앱 — 메시지 루프 막기·끝없는 MSAA 자식·돌아오지 않는 accHitTest/accLocation(08 §5.1, D17·D19)"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+license = "MIT"
+publish = false
+
+# 저장소 작업 공간에 넣지 않는 시험 도구(릴리스 패키지에 포함하지 않음, C §5)
+[workspace]
+
+[target.'cfg(windows)'.dependencies]
+# #[implement]가 windows_core를 직접 찾는다
+windows-core = "0.62"
+windows = { version = "0.62", features = [
+  "Win32_Foundation",
+  "Win32_System_Com",
+  "Win32_System_Ole",
+  "Win32_System_Variant",
+  "Win32_UI_Accessibility",
+] }
+windows-sys = { version = "0.59", features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Gdi",
+  "Win32_System_LibraryLoader",
+  "Win32_UI_WindowsAndMessaging",
+] }

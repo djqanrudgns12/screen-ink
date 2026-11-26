@@ -12,6 +12,9 @@ import {
   formatCapturePath,
   buildCaptureIslandPatch,
   applyCaptureView,
+  extractHexColor,
+  resolveIslandChip,
+  shouldOmitButtonKeys,
 } from './islandQueue.js';
 
 test('shows only one island at a time and replaces previous transient island', () => {
@@ -234,4 +237,37 @@ test('updates active mode island in-place from CaptureView without incrementing 
   s = dismissIsland(s);
   assert.equal(s.current.value, '300×150');
   assert.equal(shouldShowHintLine(s), false);
+});
+
+test('결과섬 HEX 칩 색 추출 및 액션 정리', () => {
+  assert.equal(extractHexColor('#FF9F0A 복사'), '#FF9F0A');
+  assert.equal(extractHexColor('#a1b2c3 복사'), '#A1B2C3');
+  assert.equal(extractHexColor('#000000'), '#000000');
+  assert.equal(extractHexColor('#12345 복사'), null);
+  assert.equal(extractHexColor('#1234567 복사'), null);
+  assert.equal(extractHexColor('복사하기'), null);
+  assert.equal(extractHexColor(null), null);
+
+  assert.deepEqual(
+    resolveIslandChip({ label: '#ff9f0a 복사', action: 'capture.copyHex' }),
+    { label: '#ff9f0a 복사', hex: '#FF9F0A', action: 'capture.copyHex' },
+  );
+  assert.deepEqual(
+    resolveIslandChip({ label: '색 복사', hex: '#112233', action: 'capture.copyHex' }),
+    { label: '색 복사', hex: '#112233', action: 'capture.copyHex' },
+  );
+  assert.equal(resolveIslandChip({ label: '   ', action: 'capture.copyHex' }), null);
+  assert.equal(resolveIslandChip(null), null);
+});
+
+test('결과섬 3개 액션 동시 존재 또는 520px 넘침 시 단추 키캡을 생략한다', () => {
+  const btn = { label: '저장', key: 'Ctrl+S' };
+  const sec = { label: '판서로', key: 'Alt+1' };
+  const chip = { label: '#FF9F0A 복사', hex: '#FF9F0A' };
+
+  assert.equal(shouldOmitButtonKeys({ button: btn }), false);
+  assert.equal(shouldOmitButtonKeys({ button: btn, secondaryButton: sec }), false);
+  assert.equal(shouldOmitButtonKeys({ button: btn, chip }), false);
+  assert.equal(shouldOmitButtonKeys({ button: btn, secondaryButton: sec, chip }), true);
+  assert.equal(shouldOmitButtonKeys({ button: btn, chip, overflow: true }), true);
 });

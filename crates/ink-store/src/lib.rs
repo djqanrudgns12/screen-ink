@@ -3,7 +3,7 @@
 //! - 쓰기: 임시 파일 → fsync → 이름 바꾸기(원자적). 반쯤 쓴 파일이 남지 않는다(05 §11-3).
 //! - 백업: 열 때와 5분마다 `settings.json.bak` 교대. 새 파일이 이전 백업의 절반 이하로 줄면 백업을 덮지 않는다.
 //! - 손상: 원본을 `settings.json.broken-<시각>`으로 보관 → 백업으로 복구 → 그것도 안 되면 첫 실행처럼.
-//! - 위치: 실행 파일 옆 `screen-ink.portable`이 있으면 그 옆 `data\`, 아니면 사용자 설정 폴더(R-SET-1).
+//! - 위치: 실행 파일 옆 `Shookshok.portable`(또는 옛 `screen-ink.portable`)이 있으면 그 옆 `data\`, 아니면 사용자 설정 폴더(R-SET-1).
 
 use ink_app::{Loaded, SettingsStore, StoreError, StoreLocation};
 use serde_json::{json, Value};
@@ -13,12 +13,14 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub const FILE_NAME: &str = "settings.json";
-pub const PORTABLE_MARKER: &str = "screen-ink.portable";
+pub const PORTABLE_MARKER: &str = "Shookshok.portable";
+/// 이름을 바꾸기 전 표시 파일 — 이것도 포터블로 본다.
+pub const LEGACY_PORTABLE_MARKER: &str = "screen-ink.portable";
 const BACKUP_EVERY: Duration = Duration::from_secs(5 * 60);
 
-/// 설정 폴더 정하기. `exe_dir` = 실행 파일 폴더, `user_config` = `%APPDATA%\screen-ink` 같은 사용자 폴더.
+/// 설정 폴더 정하기. `exe_dir` = 실행 파일 폴더, `user_config` = `%APPDATA%\Shookshok` 같은 사용자 폴더.
 pub fn resolve_dir(exe_dir: &Path, user_config: &Path) -> (PathBuf, bool) {
-    if exe_dir.join(PORTABLE_MARKER).is_file() {
+    if exe_dir.join(PORTABLE_MARKER).is_file() || exe_dir.join(LEGACY_PORTABLE_MARKER).is_file() {
         (exe_dir.join("data"), true)
     } else {
         (user_config.to_path_buf(), false)
@@ -227,6 +229,10 @@ mod tests {
         let user = d.join("user");
         assert_eq!(resolve_dir(&d, &user), (user.clone(), false));
         fs::write(d.join(PORTABLE_MARKER), b"").unwrap();
+        assert_eq!(resolve_dir(&d, &user), (d.join("data"), true));
+        // 옛 이름의 표시 파일도 포터블
+        fs::remove_file(d.join(PORTABLE_MARKER)).unwrap();
+        fs::write(d.join(LEGACY_PORTABLE_MARKER), b"").unwrap();
         assert_eq!(resolve_dir(&d, &user), (d.join("data"), true));
         let _ = fs::remove_dir_all(&d);
     }

@@ -1,8 +1,8 @@
 //! 가짜 어댑터 — 상태를 `Arc<Mutex<_>>`로 바깥에 내놓아 시험이 "이 PC 장면"을 꾸미고 결과를 들여다본다.
 
 use ink_app::{
-    Frame, HotkeyError, HotkeyRegistry, InkState, IslandEvent, Loaded, MonitorProbe, Notifier, OverlayHost, OverlaySession, Ports, ScreenSource, SettingsStore, StoreError,
-    StoreLocation, SystemProbe, WindowCatalog,
+    DrawSession, Frame, HotkeyError, HotkeyRegistry, InkState, IslandEvent, Loaded, MonitorProbe, Notifier, OverlayHost, OverlaySession, Ports, ScreenSource, SettingsStore,
+    StoreError, StoreLocation, SystemProbe, WindowCatalog,
 };
 use ink_domain::geometry::{Monitor, MonitorLayout, PhysPoint, PhysRect};
 use ink_domain::shortcuts::LiveBinding;
@@ -156,6 +156,8 @@ pub struct OverlayLog {
     /// 네이티브 정지 화면 창이 있는 척(진입 시간 끝점 시험)
     pub native: bool,
     pub highlights: Vec<Option<PhysRect>>,
+    /// 판서로 띄운 세션과 받은 배경 이미지 크기(칠판은 None)
+    pub draws: Vec<(DrawSession, Option<(u32, u32)>)>,
 }
 
 #[derive(Clone, Default)]
@@ -185,6 +187,16 @@ impl OverlayHost for FakeOverlay {
         if o.showing.map(|(s, _)| s) == Some(session) {
             o.showing = None;
         }
+    }
+
+    fn show_draw(&mut self, session: &DrawSession, frame: Option<Frame>) -> Result<Option<String>, String> {
+        let mut o = self.0.lock().unwrap();
+        if o.fail_show {
+            return Err("webview gone".into());
+        }
+        o.showing = Some((session.session, usize::from(frame.is_some())));
+        o.draws.push((session.clone(), frame.as_ref().map(|f| (f.width, f.height))));
+        Ok(frame.map(|f| format!("fake://frame/{}/{}", session.session, f.monitor_id)))
     }
 }
 
@@ -226,6 +238,12 @@ impl SettingsStore for MemoryStore {
 pub struct Inbox {
     pub islands: Vec<IslandEvent>,
     pub states: usize,
+    /// `screen-ink://draw`로 보낸 판서 세션
+    pub draws: Vec<DrawSession>,
+    /// 섬 단추 → 판서 엔진 명령(세션, 명령)
+    pub draw_commands: Vec<(u64, String)>,
+    /// 실시간 확대 HUD 상태(`None` = 끝)
+    pub zooms: Vec<Option<ink_app::LiveZoomState>>,
 }
 
 #[derive(Clone, Default)]
@@ -238,6 +256,18 @@ impl Notifier for RecordingNotifier {
 
     fn island(&self, event: &IslandEvent) {
         self.0.lock().unwrap().islands.push(event.clone());
+    }
+
+    fn draw(&self, session: &DrawSession) {
+        self.0.lock().unwrap().draws.push(session.clone());
+    }
+
+    fn draw_command(&self, session: u64, command: &str) {
+        self.0.lock().unwrap().draw_commands.push((session, command.to_string()));
+    }
+
+    fn zoom(&self, state: Option<&ink_app::LiveZoomState>) {
+        self.0.lock().unwrap().zooms.push(state.cloned());
     }
 }
 
@@ -367,6 +397,8 @@ pub struct FakeWorld {
     pub elements: FakeElements,
     pub desk: FakeDesk,
     pub pins: FakePins,
+    /// 실시간 확대 돋보기(`InkService::set_magnifier(w.magnifier_port())`로 꽂는다)
+    pub magnifier: FakeMagnifier,
     /// 진짜 V 엔진(그 자리에서 전처리)을 쓸지
     pub vision: bool,
 }
@@ -419,5 +451,70 @@ impl FakeWorld {
 
     pub fn saved(&self) -> Option<Value> {
         self.store.0.lock().unwrap().file.clone()
+    }
+}
+
+/// 실시간 확대 돋보기 흉내: 띄운 모니터·원본·배율과 갱신 기록. 실패도 꾸밀 수 있다.
+#[derive(Debug, Default)]
+pub struct MagnifierLog {
+    /// 지금 띄운 돋보기(모니터, 원본, 배율)
+    pub running: Option<(PhysRect, PhysRect, f64)>,
+    pub starts: usize,
+    pub stops: usize,
+    /// 원본·배율 갱신(틱·휠)
+    pub updates: Vec<(PhysRect, f64)>,
+    /// `Some(오류)`면 start가 실패
+    pub fail_start: Option<String>,
+    /// 다음 update부터 실패(돋보기가 스스로 멈춘 흉내)
+    pub fail_update: bool,
+}
+
+#[derive(Clone, Default)]
+pub struct FakeMagnifier(pub Arc<Mutex<MagnifierLog>>);
+
+impl ink_app::Magnifier for FakeMagnifier {
+    fn start(&mut self, monitor: PhysRect, source: PhysRect, scale: f64) -> Result<(), String> {
+        let mut m = self.0.lock().unwrap();
+        if let Some(e) = m.fail_start.clone() {
+            return Err(e);
+        }
+        if m.running.is_some() {
+            return Err("already running".into());
+        }
+        m.starts += 1;
+        m.running = Some((monitor, source, scale));
+        Ok(())
+    }
+
+    fn update(&mut self, source: PhysRect, scale: f64) -> Result<(), String> {
+        let mut m = self.0.lock().unwrap();
+        if m.fail_update || m.running.is_none() {
+            m.running = None;
+            return Err("magnifier stopped".into());
+        }
+        m.updates.push((source, scale));
+        if let Some(r) = m.running.as_mut() {
+            r.1 = source;
+            r.2 = scale;
+        }
+        Ok(())
+    }
+
+    fn stop(&mut self) {
+        let mut m = self.0.lock().unwrap();
+        if m.running.take().is_some() {
+            m.stops += 1;
+        }
+    }
+}
+
+impl FakeWorld {
+    /// `InkService::set_magnifier`에 넘길 돋보기(같은 기록을 본다).
+    pub fn magnifier_port(&self) -> Box<dyn ink_app::Magnifier> {
+        Box::new(self.magnifier.clone())
+    }
+
+    pub fn last_zoom(&self) -> Option<Option<ink_app::LiveZoomState>> {
+        self.notifier.0.lock().unwrap().zooms.last().cloned()
     }
 }

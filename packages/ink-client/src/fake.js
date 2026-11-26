@@ -9,9 +9,9 @@ const SUGGEST = ['Ctrl+Alt+1', 'Ctrl+Alt+2', 'Ctrl+Alt+3', 'Alt+Shift+2', 'Alt+S
 const DEFAULT_SETTINGS = {
   'capture.result': 'copy', 'capture.evidence': false, 'capture.cursor': false, 'capture.sound': false, 'capture.element': true, 'capture.magnet': true,
   'capture.historyMax': 20, 'capture.excluded': [{ exe: 'licecap.exe', mode: 'exclude', auto: false }],
-  'output.folder': 'C:\\Users\\…\\Pictures\\screen-ink', 'output.template': '수업_{yyyy}{MM}{dd}_{n}',
+  'output.folder': 'C:\\Users\\…\\Pictures\\Shookshok', 'output.template': '수업_{yyyy}{MM}{dd}_{n}',
   'record.fps': 30, 'record.mic': false, 'record.micDevice': '',
-  'draw.color': 'R', 'draw.width': 4, 'draw.smoothing': 'light', 'draw.straighten': true, 'draw.shapeOnHold': true,
+  'draw.color': 'R', 'draw.width': 4, 'draw.smoothing': 'light', 'draw.straighten': true, 'draw.shapeOnHold': true, 'draw.shapeApply': 'suggest',
   'draw.startZoom': 1.75, 'draw.keep': true, 'draw.esc': 'step', 'draw.rightClickPan': true,
   'zoom.follow': 'smooth', 'zoom.minimap': true,
   'general.theme': 'system', 'general.lang': 'ko', 'general.autostart': true,
@@ -24,6 +24,15 @@ const CAPTURE_ISLAND = {
   record: { text: '녹화 범위', variant: 'region', hints: [{ key: '드래그', label: '범위' }, { key: '클릭', label: '모니터' }, { key: 'Esc', label: '취소' }] },
 };
 const CAPTURE_ACTION = { 'capture.region': 'region', 'capture.window': 'window', 'record.toggle': 'record' };
+const DRAW_ACTION = { draw: 'draw', board: 'board', 'draw.restore': 'restore' };
+const DRAW_TOOLS = { pen: '펜', marker: '형광펜', text: '글자', select: '고르기', eraser: '지우개', pan: '손' };
+const RESTORE_TEXT = { same: '이전 판서를 불러왔어요', rescaled: '배율이 바뀌어 크기를 맞췄어요', differentMonitor: '다른 모니터라 불러올 수 없어요', none: '불러올 판서가 없어요' };
+
+/** InkDocument 항목 수(쪽마다 items) — Rust ink_items와 같은 규칙. */
+const inkItems = (doc) => {
+  const count = (v) => (Array.isArray(v?.items) ? v.items.length : 0);
+  return Array.isArray(doc?.pages) ? doc.pages.reduce((n, p) => n + count(p), 0) : count(doc);
+};
 
 /**
  * @param {{platform?: 'windows'|'macos', snipasteRunning?: boolean, frameUrl?: string}} [opts]
@@ -42,12 +51,28 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   let sessionSeq = 0;
   /** @type {any} 가짜 고르기 상태(세션마다 새로) */
   let capture = null;
+  /** @type {string | null} 마지막 단색 HEX 결과(칩 클릭 흉내) */
+  let lastHex = null;
   const readyLog = [];
+  // 판서 흉내: 지금 세션·보관 한 장·먼저 끝낸 세션(늦은 끝 대기)·섬 값·명령 기록
+  /** @type {any} */
+  let drawSession = null;
+  /** @type {any} */
+  let kept = null;
+  /** @type {{session: number, board: boolean, quiet: boolean} | null} */
+  let ended = null;
+  /** @type {{color: string, tool: string, widthPx: number, zoom: number, pageIndex: number, pageCount: number, background: string, suggestion?: string | null}} */
+  let look = { color: 'R', tool: 'pen', widthPx: 4, zoom: 1, pageIndex: 0, pageCount: 1, background: 'frame', suggestion: null };
+  /** @type {any[]} */
+  const drawLog = [];
+  let saveSeq = 0;
+  /** 실시간 확대 흉내(Alt+2): 배율만 쥐고 1920×1080 가운데를 비춘다 */
+  let zoomScale = 0;
 
   const judge = (slot, combo) => {
     if (!combo) return { status: 'off' };
     const dup = catalog.slots.find((o) => o.id !== slot.id && combos[o.id] === combo && (o.scope === slot.scope || o.scope === 'global' || slot.scope === 'global'));
-    if (dup) return { status: 'conflict', reason: `‘${dup.label}’과 겹쳐요`, owner: 'screen-ink' };
+    if (dup) return { status: 'conflict', reason: `‘${dup.label}’과 겹쳐요`, owner: '슉쇽' };
     if (slot.scope === 'global' && snipasteRunning && SNIPASTE.has(combo)) return { status: 'conflict', reason: 'Snipaste가 먼저 쓰고 있어요', owner: 'Snipaste' };
     if (slot.scope === 'global' && /^[A-Z0-9]$/.test(combo)) return { status: 'conflict', reason: '글자 하나는 전역 키로 쓸 수 없어요' };
     return { status: 'ok' };
@@ -62,9 +87,9 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     return {
       platform, theme: settings['general.theme'], hotkeysEnabled, pinnedCount: 2, pins: pins.size, recording: { active: false, elapsedMs: 0 },
       settings: { ...settings }, shortcuts: r, version: '0.1.0',
-      conflicts: { count: bad.length, app: owners.length === 1 && owners[0] !== 'screen-ink' ? owners[0] : undefined, combos: bad.map((x) => x.combo) },
+      conflicts: { count: bad.length, app: owners.length === 1 && owners[0] !== '슉쇽' ? owners[0] : undefined, combos: bad.map((x) => x.combo) },
       readonly: false,
-      location: { path: 'C:\\Users\\…\\AppData\\Roaming\\screen-ink\\settings.json', portable: false, readOnly: false },
+      location: { path: 'C:\\Users\\…\\AppData\\Roaming\\Shookshok\\settings.json', portable: false, readOnly: false },
       notices: [],
       mode,
     };
@@ -75,6 +100,86 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   const emit = (e) => subs.forEach((h) => h(e));
   const island = (island) => emit({ type: 'island', island });
   const changed = () => emit({ type: 'state', state: state() });
+
+  const zoomText = (z) => (Math.round(z * 100) % 10 === 0 ? z.toFixed(1) : z.toFixed(2));
+  const drawIslandEvent = () => {
+    const base = { kind: 'mode', mode: drawSession?.board ? 'board' : 'draw' };
+    if (drawSession?.board || look.background !== 'frame') {
+      return {
+        ...base, variant: 'board', text: `칠판 · ${look.background === 'black' ? '검은색' : '흰색'}`, value: `${look.pageIndex + 1} / ${look.pageCount}`,
+        hints: [{ key: 'W·K', label: '바탕' }, { key: 'Esc', label: '보관' }, { key: '?', label: '단축키' }],
+      };
+    }
+    if (look.suggestion) {
+      return { ...base, variant: 'draw', text: look.suggestion, penColor: look.color, penWidth: `${Math.round(look.widthPx)}px`, button: { label: '바꾸기', action: 'draw.acceptSuggestion' } };
+    }
+    const restoreKey = combos['d-restore'];
+    const hint = drawSession?.hasKept && !drawSession.restoreOnOpen && restoreKey ? `${restoreKey} 이전 판서` : undefined;
+    return {
+      ...base, variant: 'draw', text: `판서 · ${DRAW_TOOLS[look.tool] ?? '펜'}`, penColor: look.color, penWidth: `${Math.round(look.widthPx)}px`,
+      ...(look.zoom > 1 ? { value: `×${zoomText(look.zoom)}` } : {}),
+      ...(hint ? { detail: hint } : {}),
+      hints: [{ key: 'Esc', label: '보관' }, { key: '?', label: '단축키' }],
+    };
+  };
+  const keptIsland = () => ({ kind: 'result', text: combos.restore ? `판서를 보관했어요 · ${combos.restore}` : '판서를 보관했어요' });
+  /** 보관 규칙: keep && 설정 draw.keep && 항목 ≥ 1. 설정이 꺼져 있으면 있던 것도 지운다. */
+  const keepInk = (session, keep, payload) => {
+    if (!settings['draw.keep']) { kept = null; return false; }
+    if (!keep || inkItems(payload?.document) < 1) return false;
+    kept = { monitorId: 0, layoutFingerprint: '0,0,1920,1080@100', physW: 1920, physH: 1080, scale: 1, board: Boolean(session?.board), document: payload.document };
+    return true;
+  };
+  /** Rust가 먼저 끝냄(같은 키·다른 모드·잠금) — 늦은 drawFinish 한 번을 받는다. */
+  const endDraw = (quiet) => {
+    if (mode.mode !== 'draw') return;
+    ended = { session: mode.session, board: mode.board, quiet };
+    mode = { mode: 'idle' };
+    drawSession = null;
+    changed();
+    island({ kind: 'end', text: '' });
+  };
+  // ── 실시간 확대 흉내(진짜 계산은 Rust ink-domain::zoom) ──
+  const ZOOM_STEPS = [1.25, 1.5, 2, 2.5, 3, 4, 6, 8];
+  const scaleLabel = (s) => {
+    const r = Math.round(s * 100);
+    return r % 10 === 0 ? `×${(r / 100).toFixed(1)}` : `×${(r / 100).toFixed(2)}`;
+  };
+  const zoomView = () => ({
+    session: mode.session, monitorId: 0, monitorLabel: '모니터 1', scale: zoomScale, scaleLabel: scaleLabel(zoomScale),
+    viewport: { x: (1 - 1 / zoomScale) / 2, y: (1 - 1 / zoomScale) / 2, w: 1 / zoomScale, h: 1 / zoomScale },
+    cursorCss: { x: 960, y: 540 }, showMinimap: Boolean(settings['zoom.minimap']),
+  });
+  const zoomIsland = () => island({
+    kind: 'mode', mode: 'zoom', variant: 'zoom', text: '실시간 확대', detail: '움직이는 화면 그대로', value: scaleLabel(zoomScale),
+    hints: [{ key: '휠', label: '배율' }, { key: 'Alt 1', label: '멈추고 쓰기' }, { key: 'Esc', label: '끝' }],
+  });
+  const endZoom = () => {
+    if (mode.mode !== 'liveZoom') return;
+    mode = { mode: 'idle' };
+    zoomScale = 0;
+    emit({ type: 'zoom', zoom: null });
+    island({ kind: 'end', text: '' });
+    changed();
+  };
+  const startZoom = () => {
+    endZoom();
+    if (mode.mode === 'capture') { mode = { mode: 'idle' }; capture = null; island({ kind: 'end', text: '' }); }
+    sessionSeq += 1;
+    mode = { mode: 'liveZoom', session: sessionSeq, monitorId: 0, startedMs: Date.now() };
+    zoomScale = 2;
+    changed();
+    zoomIsland();
+    emit({ type: 'zoom', zoom: zoomView() });
+  };
+  const stepZoom = (dy) => {
+    const i = ZOOM_STEPS.indexOf(zoomScale);
+    const next = ZOOM_STEPS[Math.max(0, Math.min(ZOOM_STEPS.length - 1, i - Math.sign(dy)))];
+    if (next === zoomScale) return;
+    zoomScale = next;
+    zoomIsland();
+    emit({ type: 'zoom', zoom: zoomView() });
+  };
 
   return {
     async getState() { return state(); },
@@ -116,7 +221,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       const changes = Object.entries(IMPORT_FILE)
         .filter(([path, after]) => valueOf(path) !== after)
         .map(([path, after]) => ({ path, before: valueOf(path), after }));
-      return { cancelled: false, path: 'C:\\Users\\…\\Desktop\\screen-ink-settings-2026-11-25.json', ok: true, changes, warnings: [] };
+      return { cancelled: false, path: 'C:\\Users\\…\\Desktop\\Shookshok-settings-2026-11-25.json', ok: true, changes, warnings: [] };
     },
     async applyImport() {
       history.push({ kind: 'whole', settings: { ...settings }, combos: { ...combos } });
@@ -182,14 +287,19 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       }
       if (input.type === 'command' && (input.name === 'save' || input.name === 'quickSave')) {
         const r = s.rect ?? chainAt(s.p)[s.level].r;
+        const finishedSession = mode.session;
         await this.run('capture.cancel');
+        emit({ type: 'afterimage', afterimage: { session: finishedSession, rect: r, durationMs: 400 } });
         island({ kind: 'result', variant: 'result', text: '저장했어요', value: `${r.w}×${r.h}`, detail: '수업_2026-03-04_090507.png', thumbUrl: frameUrl, button: { label: '폴더 열기', action: 'folder.open' } });
         return;
       }
       if ((input.type === 'key' && input.key === 'Enter') || input.type === 'dblclick' || (input.type === 'command' && input.name === 'copy')) {
         const r = s.rect ?? chainAt(s.p)[s.level].r;
+        const finishedSession = mode.session;
+        lastHex = '#FFFFFF';
         await this.run('capture.cancel');
-        island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${r.w}×${r.h}`, detail: '한글·PPT에 Ctrl+V', thumbUrl: frameUrl, button: { label: '저장', action: 'capture.saveLast' }, buttonKey: 'Ctrl+S', chip: { label: '#FFFFFF 복사', action: 'capture.copyHex' } });
+        emit({ type: 'afterimage', afterimage: { session: finishedSession, rect: r, durationMs: 400 } });
+        island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${r.w}×${r.h}`, detail: '한글·PPT에 Ctrl+V', thumbUrl: frameUrl, button: { label: '저장', action: 'capture.saveLast' }, buttonKey: 'Ctrl+S', chip: { label: `${lastHex} 복사`, action: 'capture.copyHex' } });
         return;
       }
       const chain = chainAt(s.p);
@@ -223,14 +333,121 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       p.zoom = levels[Math.max(0, Math.min(levels.length - 1, i - Math.sign(dy)))];
       return p.zoom;
     },
+    async zoomInput(input) {
+      if (mode.mode !== 'liveZoom' || !input) return;
+      if (input.type === 'wheel') stepZoom(input.dy);
+      else if ((input.type === 'key' && input.slot === 'z-exit') || input.type === 'exit') endZoom();
+    },
     async overlayReady(session) {
       if (mode.mode === 'capture' && mode.session === session) readyLog.push(session);
     },
     /** 시험용: overlayReady가 받아들인 세션들 */
     get readyLog() { return [...readyLog]; },
+    async drawReady(session, paintMs) {
+      if (mode.mode === 'draw' && mode.session === session) drawLog.push({ type: 'ready', session, paintMs });
+    },
+    async drawFinish(payload) {
+      const { session, keep = false, kept: data } = payload ?? {};
+      if (mode.mode === 'draw' && mode.session === session) {
+        const stored = keepInk(drawSession, keep, data);
+        mode = { mode: 'idle' };
+        drawSession = null;
+        changed();
+        island({ kind: 'end', text: '' });
+        if (stored) island(keptIsland());
+        return;
+      }
+      if (ended && ended.session === session) {
+        const e = ended;
+        ended = null;
+        if (keepInk(e, keep, data) && !e.quiet) island(keptIsland());
+      }
+    },
+    async drawRestore(session) {
+      if (mode.mode !== 'draw' || mode.session !== session) return { status: 'none' };
+      if (!settings['draw.keep']) kept = null;
+      const status = kept ? 'same' : 'none';
+      drawSession = { ...drawSession, restoreOnOpen: false };
+      // 불러옴·배율·다른 모니터 문구는 엔진(restoreKept)이 drawIsland 안내로 낸다 — Rust처럼 "없음"만
+      if (status === 'none') island({ kind: 'info', text: RESTORE_TEXT.none });
+      return status === 'same' ? { status, kept: { ...kept } } : { status };
+    },
+    async drawExport(action, bytes, meta) {
+      if (mode.mode !== 'draw' || (meta?.session != null && meta.session !== mode.session)) return { ok: false, error: 'not drawing' };
+      if (!meta || bytes?.byteLength !== meta.w * meta.h * 4) return { ok: false, error: 'size mismatch' };
+      // 확대 중이어도 늘 모니터 전체(물리 해상도 그대로) — 사용자 결정 2026-11-26
+      const b = drawSession?.monitor?.bounds;
+      if (!b || meta.w !== b.w || meta.h !== b.h) return { ok: false, error: 'not monitor size' };
+      drawLog.push({ type: 'export', action, w: meta.w, h: meta.h, bytes: bytes.byteLength });
+      if (action === 'copy') {
+        island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${meta.w}×${meta.h}`, detail: '한글·PPT에 Ctrl+V' });
+        return { ok: true };
+      }
+      saveSeq += 1;
+      const name = `수업_20260304_${saveSeq}.png`;
+      island({ kind: 'result', variant: 'result', text: '저장했어요', detail: name, button: { label: '폴더 열기', action: 'folder.open' } });
+      return { ok: true, name };
+    },
+    async drawIsland(patch) {
+      const p = patch ?? {};
+      if (mode.mode !== 'draw' || (p.session != null && p.session !== mode.session)) return;
+      for (const k of ['color', 'tool', 'widthPx', 'zoom', 'pageIndex', 'pageCount', 'background']) if (p[k] != null) look[k] = p[k];
+      look.suggestion = p.suggestion || null;
+      island(drawIslandEvent());
+      if (p.notice) island({ kind: 'info', text: p.notice, ...(p.noticeAction === 'undo' ? { button: { label: '되돌리기', action: 'draw.undo' } } : {}) });
+    },
+    async drawPenMetrics(sample) {
+      if (sample?.n > 0) drawLog.push({ type: 'pen', line: `pen latency n=${sample.n} p50=${sample.p50.toFixed(1)} p95=${sample.p95.toFixed(1)} max=${sample.max.toFixed(1)} ms` });
+    },
+    /** 시험용: 판서 명령 기록(ready·export·pen) */
+    get drawLog() { return [...drawLog]; },
+    /** 시험용: 지금 보관 판서 */
+    get keptInk() { return kept; },
+    /** 시험용: 잠금 같은 시스템 사건 흉내 — Rust처럼 판서를 먼저 끝낸다(늦은 끝으로 보관) */
+    simulateLock() { endDraw(true); },
     async run(action) {
       if (action === 'pins.closeAll') { pins.clear(); changed(); return; }
+      if (action === 'draw.acceptSuggestion' || action === 'draw.undo') {
+        if (mode.mode === 'draw') emit({ type: 'drawCommand', session: mode.session, command: action.slice('draw.'.length) });
+        return;
+      }
+      if (action === 'zoom') {
+        if (mode.mode === 'draw') endDraw(true);
+        startZoom();
+        return;
+      }
+      if (DRAW_ACTION[action]) {
+        const kind = DRAW_ACTION[action];
+        // 판서 중 직전 판서 열기 = 같은 세션을 복원 표시로 한 번 더
+        if (kind === 'restore' && mode.mode === 'draw' && !mode.board) {
+          drawSession = { ...drawSession, restoreOnOpen: true };
+          emit({ type: 'draw', draw: drawSession });
+          return;
+        }
+        if (mode.mode === 'capture') await this.run('capture.cancel');
+        if (mode.mode === 'draw') endDraw(true);
+        endZoom();
+        if (!settings['draw.keep']) kept = null;
+        const board = kind === 'board' || (kind === 'restore' && Boolean(kept?.board));
+        sessionSeq += 1;
+        const bounds = { x: 0, y: 0, w: 1920, h: 1080 };
+        drawSession = {
+          session: sessionSeq, board,
+          monitor: { id: 0, bounds, work: { ...bounds, h: 1040 }, scale: 1, primary: true, ...(board || !frameUrl ? {} : { frameUrl }) },
+          layoutFingerprint: '0,0,1920,1080@100', initialView: { s: 1, tx: 0, ty: 0 },
+          restoreOnOpen: kind === 'restore', hasKept: Boolean(kept), keptCompatible: kept ? 'same' : 'none', cursor: { x: 760, y: 420 },
+        };
+        look = { color: settings['draw.color'], tool: 'pen', widthPx: settings['draw.width'], zoom: 1, pageIndex: 0, pageCount: 1, background: board ? 'white' : 'frame' };
+        mode = { mode: 'draw', session: sessionSeq, board, monitorId: 0, startedMs: Date.now() };
+        // 세션 먼저, 상태 나중(Rust와 같은 순서)
+        emit({ type: 'draw', draw: drawSession });
+        changed();
+        island(drawIslandEvent());
+        return;
+      }
       if (CAPTURE_ACTION[action]) {
+        if (mode.mode === 'draw') endDraw(true);
+        endZoom();
         const kind = CAPTURE_ACTION[action];
         sessionSeq += 1;
         mode = { mode: 'capture', session: sessionSeq, kind, startedMs: Date.now() };
@@ -264,6 +481,15 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       }
       if (action === 'settings.export') { island({ kind: 'result', text: '설정을 내보냈어요' }); return; }
       if (action === 'capture.history.clear') { island({ kind: 'info', text: '지울 기록이 없어요' }); return; }
+      if (action === 'capture.saveLast') {
+        island({ kind: 'result', variant: 'result', text: '저장했어요', detail: '수업_2026-03-04_090507.png', button: { label: '폴더 열기', action: 'folder.open' } });
+        return;
+      }
+      if (action === 'capture.copyHex') {
+        const hex = lastHex ?? '#FF9F0A';
+        island({ kind: 'result', variant: 'result', text: `${hex} 복사했어요` });
+        return;
+      }
       island({ kind: 'info', text: `미리보기: ${action}` });
     },
     subscribe(handler) { subs.add(handler); return () => subs.delete(handler); },
