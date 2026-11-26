@@ -15,6 +15,7 @@ pub mod freeze;
 pub mod screen;
 // 3b-dpi·3b-msaa(D12·R-CAP-4): 순수 판정은 어느 OS에서나 시험하고, Win32 부분은 모듈 안에서 cfg(windows)
 pub mod dpi;
+pub mod msaa;
 
 use ink_app::SystemProbe;
 use ink_domain::shortcuts::LiveBinding;

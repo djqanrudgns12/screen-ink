@@ -15,7 +15,7 @@ log.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 uiautomation = "0.25"
-windows = { version = "0.62", features = ["Win32_UI_Accessibility", "Win32_System_Com"] }
+windows = { version = "0.62", features = ["Win32_UI_Accessibility", "Win32_System_Com", "Win32_Foundation", "Win32_System_Ole", "Win32_System_Variant"] }
 windows-sys = { version = "0.59", features = [
   "Win32_System_DataExchange",
   "Win32_System_Memory",
