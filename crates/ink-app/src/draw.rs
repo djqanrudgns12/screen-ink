@@ -175,8 +175,10 @@ pub struct DrawIslandPatch {
     pub page_count: Option<u32>,
     /// frame · white · black — 판서 중 W·K로 바탕을 바꿨을 때
     pub background: Option<String>,
-    /// 4초 무동작 물러남 — 섬 쪽 표현이 생기면 넘긴다(지금은 받기만)
+    /// 4초 무동작 물러남 — 섬 창에 그대로 넘긴다
     pub idle_dim: Option<bool>,
+    /// 커서가 섬 가까이 — 섬이 비켜 감
+    pub avoid: Option<bool>,
     /// 보정·안내 한 줄("수평으로 맞췄어요" 등) — 모드 섬 위에 잠깐
     pub notice: Option<String>,
     /// 안내에 붙일 단추: `undo` = [되돌리기](모두 지우기 뒤)
@@ -307,11 +309,13 @@ pub(crate) struct Look {
     pages: u32,
     background: String,
     suggestion: Option<String>,
+    idle_dim: Option<bool>,
+    avoid: Option<bool>,
 }
 
 impl Default for Look {
     fn default() -> Self {
-        Look { color: "R".into(), tool: "pen".into(), width: 4.0, zoom: 1.0, page: 0, pages: 1, background: "frame".into(), suggestion: None }
+        Look { color: "R".into(), tool: "pen".into(), width: 4.0, zoom: 1.0, page: 0, pages: 1, background: "frame".into(), suggestion: None, idle_dim: None, avoid: None }
     }
 }
 
@@ -354,6 +358,12 @@ impl Look {
         if let Some(b) = p.background.as_deref().filter(|b| BACKGROUNDS.contains(b)) {
             self.background = b.into();
         }
+        if p.idle_dim.is_some() {
+            self.idle_dim = p.idle_dim;
+        }
+        if p.avoid.is_some() {
+            self.avoid = p.avoid;
+        }
         self.suggestion = p.suggestion.as_deref().map(str::trim).filter(|s| !s.is_empty()).map(|s| s.chars().take(NOTICE_MAX_CHARS).collect());
     }
 }
@@ -365,6 +375,8 @@ pub(crate) fn draw_island_event(board: bool, look: &Look, kept_hint: Option<&str
         let bg = if look.background == "black" { "검은색" } else { "흰색" };
         let mut ev = IslandEvent::new(IslandKind::Mode, format!("칠판 · {bg}")).variant("board").hints(&[("W·K", "바탕"), ("Esc", "보관"), ("?", "단축키")]);
         ev.value = Some(format!("{} / {}", look.page + 1, look.pages));
+        // 칠판에서도 지금 펜 색 점(검은 칠판의 K는 화면이 흰색으로 바꿔 그림)
+        ev.pen_color = Some(look.color.clone());
         ev
     } else {
         let mut ev = IslandEvent::new(IslandKind::Mode, format!("판서 · {}", tool_label(&look.tool))).variant("draw").hints(&[("Esc", "보관"), ("?", "단축키")]);
@@ -376,6 +388,8 @@ pub(crate) fn draw_island_event(board: bool, look: &Look, kept_hint: Option<&str
         ev
     };
     ev.mode = Some(if board { "board" } else { "draw" }.into());
+    ev.idle_dim = look.idle_dim;
+    ev.avoid = look.avoid;
     if let Some(h) = kept_hint {
         ev.detail = Some(h.into());
     }

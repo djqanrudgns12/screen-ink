@@ -281,6 +281,26 @@
       : null,
   );
 
+  // 결과 섬 보조 단추([판서로] → capture.toDraw 등) — 누르면 InkClient.run(action)
+  let secondaryActionButton = $derived(
+    current?.secondaryButton
+      ? {
+          label: current.secondaryButton.label,
+          key: current.secondaryButtonKey || undefined,
+          onClick: async () => {
+            const seq = queue.seq;
+            const act = current.secondaryButton?.action;
+            if (act) {
+              await client.run(/** @type {import('@screen-ink/client').InkAction} */ (act));
+            }
+            if (queue.seq === seq && current?.kind !== 'mode') {
+              queue = dismissIsland(queue);
+            }
+          },
+        }
+      : null,
+  );
+
   let chipButton = $derived.by(() => {
     const parsed = resolveIslandChip(current?.chip);
     if (!parsed) return null;
@@ -298,7 +318,7 @@
       },
     };
   });
-  let hasAction = $derived(Boolean(actionButton || chipButton));
+  let hasAction = $derived(Boolean(actionButton || secondaryActionButton || chipButton));
   let isIdleDim = $derived(
     isDrawMode &&
       resolveDrawIdleDim({
@@ -373,6 +393,7 @@
                   avoid={isAvoid}
                   micOff={Boolean(current.micOff)}
                   button={actionButton}
+                  secondaryButton={secondaryActionButton}
                   chip={chipButton}
                   hints={current.hints || []}
                   {showHints}

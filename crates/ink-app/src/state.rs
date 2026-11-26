@@ -182,6 +182,12 @@ pub struct IslandEvent {
     /// 보조 단추 옆 키캡(예: "Alt+1") — 단추가 넘치면 UI가 생략(사용자 결정 #4)
     #[serde(rename = "secondaryButtonKey", skip_serializing_if = "Option::is_none")]
     pub secondary_button_key: Option<String>,
+    /// 판서 섬 4초 무동작 40% 물러남(R-UI-5) — 판서 화면이 알려 준 값
+    #[serde(rename = "idleDim", skip_serializing_if = "Option::is_none")]
+    pub idle_dim: Option<bool>,
+    /// 커서가 섬 가까이 오면 비켜 감(04 S12)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avoid: Option<bool>,
 }
 
 impl IslandEvent {
@@ -202,6 +208,8 @@ impl IslandEvent {
             pen_width: None,
             secondary_button: None,
             secondary_button_key: None,
+            idle_dim: None,
+            avoid: None,
         }
     }
 
