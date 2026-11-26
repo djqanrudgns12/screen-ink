@@ -12,7 +12,14 @@ pub mod uia;
 #[cfg(windows)]
 pub mod freeze;
 #[cfg(windows)]
+pub mod package;
+#[cfg(windows)]
 pub mod screen;
+#[cfg(windows)]
+pub mod magnifier;
+// 3b-dpi·3b-msaa(D12·R-CAP-4): 순수 판정은 어느 OS에서나 시험하고, Win32 부분은 모듈 안에서 cfg(windows)
+pub mod dpi;
+pub mod msaa;
 // 단계 6: 공용 D3D11 장치 · F2 창 캡처(WGC) · F3 녹화(WGC + Media Foundation)
 #[cfg(windows)]
 pub mod gpu;

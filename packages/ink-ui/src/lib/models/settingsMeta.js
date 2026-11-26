@@ -21,6 +21,7 @@ export const SETTING_LABELS = {
   'draw.smoothing': '떨림 보정',
   'draw.straighten': '거의 곧은 선은 곧게',
   'draw.shapeOnHold': '멈추면 도형으로',
+  'draw.shapeApply': '도형 보정',
   'draw.startZoom': '첫 휠 배율',
   'draw.keep': '나갈 때 보관',
   'draw.esc': 'Esc 키',
@@ -38,6 +39,7 @@ const VALUE_MAPS = {
   'capture.result': { copy: '복사', save: '저장', both: '둘 다' },
   'draw.color': { R: '빨강', Y: '노랑', G: '초록', O: '주황', B: '파랑', L: '연두' },
   'draw.smoothing': { off: '끔', light: '약', strong: '강' },
+  'draw.shapeApply': { suggest: '물어보고 바꾸기', auto: '바로 바꾸기' },
   'draw.esc': { step: '한 단계씩', exit: '바로 나가기' },
   'zoom.follow': { smooth: '부드럽게', instant: '바로' },
   'general.theme': { system: '시스템 따라', light: '라이트', dark: '다크' },
@@ -96,13 +98,27 @@ export function describeSettingChange(change, shortcuts = []) {
 }
 
 /**
- * 설정 위치(`state.location`) 표시 문자열을 만든다.
- * @param {{ path: string, portable: boolean, readOnly?: boolean } | null | undefined} location
- * @param {number} [maxPathLen=32]
+ * "멈추면 도형으로" 줄의 보조 문구 — 고른 도형 보정 방식(draw.shapeApply)에 맞춘다.
+ * @param {'suggest' | 'auto' | string | null | undefined} shapeApply
+ * @returns {string}
  */
-export function formatLocationSub(location, maxPathLen = 32) {
+export function formatShapeOnHoldSub(shapeApply) {
+  return shapeApply === 'auto' ? '0.5초 · Ctrl+Z = 원래 획' : '0.5초 멈추면 바꿀지 물어봐요';
+}
+
+/**
+ * 설정 위치(`state.location`) 표시 문자열을 만든다.
+ * @param {{ path: string, portable: boolean, readOnly?: boolean, packaged?: boolean } | null | undefined} location
+ * @param {number} [maxPathLen=32]
+ * @param {'unpackaged' | 'msix-store' | 'msix-direct' | string} [channel]
+ */
+export function formatLocationSub(location, maxPathLen = 32, channel = undefined) {
   if (!location) return '';
-  const kind = location.portable ? '포터블' : '설치';
+  const isMsix =
+    Boolean(location.packaged) ||
+    channel === 'msix-store' ||
+    channel === 'msix-direct';
+  const kind = isMsix ? 'MSIX 패키지' : location.portable ? '포터블' : '설치';
   const short = shortenPath(location.path ?? '', maxPathLen);
   return short ? `${kind} · ${short}` : kind;
 }

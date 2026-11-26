@@ -1,6 +1,7 @@
 //! screen-ink V 근거(08 §4.3): 접근성 정보가 없는 앱(WebView2·게임·원격 데스크톱·PDF·한글·웹 조각)을 위해
 //! 정지 화면(BGRA 물리 픽셀)에서 사각형 후보·경계 지지율·경계 맞춤·드래그 자석 경계를 순수 Rust로 계산한다.
 
+pub mod diff_rect;
 mod flat;
 mod ladder;
 mod prep;

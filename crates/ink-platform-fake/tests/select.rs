@@ -14,8 +14,8 @@ fn world() -> FakeWorld {
     w.elements.0.lock().unwrap().by_window.insert(
         1,
         vec![
-            ElementCand { rect: PhysRect::new(300, 300, 300, 40), control: Control::DataItem },
-            ElementCand { rect: PhysRect::new(300, 260, 600, 400), control: Control::Table },
+            ElementCand { rect: PhysRect::new(300, 300, 300, 40), control: Control::DataItem, from_msaa: false },
+            ElementCand { rect: PhysRect::new(300, 260, 600, 400), control: Control::Table, from_msaa: false },
         ],
     );
     w
@@ -133,7 +133,7 @@ fn 색인이_늦게_오면_강조를_다시_만든다() {
     s.on_hotkey("region");
     s.capture_input(mv(420, 320));
     assert_eq!(w.overlay.0.lock().unwrap().highlights.last().copied().flatten(), Some(PhysRect::new(100, 100, 1200, 800)), "아직 요소 없음 → 창");
-    w.elements.0.lock().unwrap().by_window.insert(1, vec![ElementCand { rect: PhysRect::new(300, 300, 300, 40), control: Control::Button }]);
+    w.elements.0.lock().unwrap().by_window.insert(1, vec![ElementCand { rect: PhysRect::new(300, 300, 300, 40), control: Control::Button, from_msaa: false }]);
     s.on_elements_ready(1, "chrome.exe", 40.0);
     assert_eq!(w.overlay.0.lock().unwrap().highlights.last().copied().flatten(), Some(PhysRect::new(300, 300, 300, 40)));
 }

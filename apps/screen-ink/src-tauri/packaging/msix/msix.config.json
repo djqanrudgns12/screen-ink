@@ -1,0 +1,25 @@
+{
+  "$comment": "MSIX 포장 메타데이터 단일 원본(D2). 앱 이름·패키지 ID·StartupTask·산출물·.appinstaller 주소를 한 곳에서 관리한다.",
+  "displayName": "슉쇽 (ShookShok)",
+  "description": "발표자를 위한 화면 캡처·판서·확대 도구",
+  "publisherDisplayName": "찰떡쌤",
+  "startupTaskId": "ShookshokStartup",
+  "artifactPrefix": "shookshok",
+  "executableCandidates": [
+    "shookshok.exe",
+    "screen-ink.exe"
+  ],
+  "appInstallerFileName": "shookshok.appinstaller",
+  "appInstallerUri": "https://ink.ssamuniverse.com/shookshok.appinstaller",
+  "releaseBaseUrl": "https://github.com/djqanrudgns12/screen-ink/releases/download",
+  "channels": {
+    "store": {
+      "packageName": "com.ssamuniverse.shookshok",
+      "publisher": "CN=REPLACE_WITH_PARTNER_CENTER_PUBLISHER"
+    },
+    "direct": {
+      "packageName": "com.ssamuniverse.shookshok",
+      "publisher": "CN=REPLACE_WITH_SIGNPATH_SUBJECT"
+    }
+  }
+}

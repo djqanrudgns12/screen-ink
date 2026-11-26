@@ -49,9 +49,9 @@ fn fields() -> &'static [Field] {
             f("capture.excluded", ExcludedApps, json!([])),
             // 숨은 설정(설정 화면에 없음): 고르기 중 사슬 마디마다 근거 색·점수(08 §4.5, 시험대 정답 만들기)
             f("capture.evidence", Bool, json!(false)),
-            // 빈 값 = 사진 폴더 아래 shookshok(어댑터가 정함)
+            // 빈 값 = 사진 폴더 아래 Shookshok(어댑터가 정함)
             f("output.folder", Folder, json!("")),
-            f("output.template", Template, json!("shookshok_{yyyy}{MM}{dd}_{HH}{mm}{ss}")),
+            f("output.template", Template, json!("Shookshok_{yyyy}{MM}{dd}_{HH}{mm}{ss}")),
             f("record.fps", IntSet(&[30, 60]), json!(30)),
             f("record.mic", Bool, json!(false)),
             // 빈 값 = 기본 장치. 장치가 사라지면 마이크를 끄고 알린다(05 §1)
@@ -65,6 +65,8 @@ fn fields() -> &'static [Field] {
             f("draw.smoothing", Choice(&["off", "light", "strong"]), json!("light")),
             f("draw.straighten", Bool, json!(true)),
             f("draw.shapeOnHold", Bool, json!(true)),
+            // 0.5초 멈춤 도형 보정: suggest = 물어보고 바꾸기(04 S12), auto = 바로 바꾸기(02 §3.3) — 사용자 결정 2026-11-26
+            f("draw.shapeApply", Choice(&["suggest", "auto"]), json!("suggest")),
             f("draw.startZoom", NumSet(&[1.25, 1.5, 1.75, 2.0, 3.0, 4.0]), json!(1.75)),
             f("draw.keep", Bool, json!(true)),
             f("draw.esc", Choice(&["step", "exit"]), json!("step")),
@@ -360,8 +362,17 @@ mod tests {
             assert_eq!(validate(f.path, &f.default).as_ref(), Ok(&f.default), "{}", f.path);
         }
         let s = Settings::defaults(Platform::Win);
-        assert_eq!(s.shortcuts.len(), 59);
-        assert_eq!(Settings::defaults(Platform::Mac).shortcuts.len(), 58);
+        assert_eq!(s.shortcuts.len(), 57);
+        assert_eq!(Settings::defaults(Platform::Mac).shortcuts.len(), 56);
+    }
+
+    #[test]
+    fn 도형_보정은_기본_물어보기_바로_바꾸기만_더() {
+        let mut s = Settings::defaults(Platform::Win);
+        assert_eq!(s.str("draw.shapeApply"), "suggest");
+        assert!(s.set("draw.shapeApply", &json!("maybe")).is_err());
+        assert_eq!(s.set("draw.shapeApply", &json!("auto")), Ok(json!("suggest")));
+        assert_eq!(s.str("draw.shapeApply"), "auto");
     }
 
     #[test]

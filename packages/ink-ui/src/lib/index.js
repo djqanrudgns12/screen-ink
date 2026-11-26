@@ -35,7 +35,9 @@ export { default as FirstRunSheet } from './screens/FirstRunSheet.svelte';
 export { default as CheatSheet } from './screens/CheatSheet.svelte';
 export { default as IslandHost } from './screens/IslandHost.svelte';
 export { default as CaptureOverlay } from './screens/CaptureOverlay.svelte';
+export { default as DrawOverlay } from './screens/DrawOverlay.svelte';
 export { default as PinView } from './screens/PinView.svelte';
+export { default as ZoomHud } from './screens/ZoomHud.svelte';
 
 // 순수 모델
 export { eventToCombo, isEscapeOnly, isClearOnly } from './models/keyCombo.js';
@@ -92,6 +94,7 @@ export {
   SETTING_LABELS,
   formatSettingValue,
   describeSettingChange,
+  formatShapeOnHoldSub,
   formatLocationSub,
   formatFirstRunConflict,
 } from './models/settingsMeta.js';
@@ -102,3 +105,83 @@ export {
   getShortcutRowDisplay,
 } from './models/shortcutDisplay.js';
 export { buildCheatSheetColumns } from './models/cheatSheet.js';
+
+// 판서 엔진(순수 JS — A §2, 4.1)
+export {
+  INK_SCHEMA_VERSION,
+  MAX_UNDO,
+  INK_COLORS,
+  INK_COLOR_CODES,
+  INK_NOTICES,
+  MARKER_OPACITY,
+  InkEngine,
+  createInkEngine,
+  createInkDocument,
+  documentOptionsFromSession,
+  applyCommand,
+  invertCommand,
+  rescaleDocument,
+  itemCount,
+} from './ink/inkEngine.js';
+export {
+  ZOOM_STEPS,
+  START_ZOOM_CHOICES,
+  IDENTITY_VIEW,
+  docToView,
+  viewToDoc,
+  docToCanvasPx,
+  docRectToView,
+  docSizeOf,
+  physToDoc,
+  docToPhys,
+  docRectToPhys,
+  clampView,
+  zoomAt,
+  nextZoomStep,
+  panBy,
+  centerOn,
+  edgePushDelta,
+  screenWidthToDoc,
+  visibleDocFraction,
+} from './ink/coords.js';
+export { DRAW_KEY_IDS, LATER_DRAW_KEYS, buildDrawKeymap, matchDrawKey, normalizeCombo } from './ink/drawKeys.js';
+
+// 판서 렌더러(4.2) — DrawCanvas + 2D 그리기 순수 함수 + M5 펜 지연 계측
+export { default as DrawCanvas } from './components/DrawCanvas.svelte';
+export { SUGGEST_TIMEOUT_MS, DEFAULT_MOSAIC_BLOCK } from './ink/inkEngine.js';
+export {
+  BOARD_COLORS,
+  resolveInkColor,
+  drawBackground,
+  drawItem,
+  renderItems,
+  bakeItem,
+  renderActive,
+  renderDocument,
+  createCanvasTextMeasurer,
+} from './ink/canvasRender.js';
+export { createPenLatencyMeter, summarizeLatency } from './ink/penMetrics.js';
+export { HALO_SIZE, MINIMAP_MARGIN, isLiveZoomMode, applyZoomEvent, haloBox, showMinimap } from './models/zoomHud.js';
+export {
+  DRAW_PALETTE_EXPAND_MS,
+  DRAW_IDLE_DIM_MS,
+  DRAW_IDLE_OPACITY,
+  ISLAND_AVOID_MARGIN_PX,
+  DRAW_MINIMAP_MARGIN_PX,
+  DRAW_PEN_SWATCHES,
+  BOARD_EXTRA_SWATCHES,
+  BOARD_PEN_SWATCHES,
+  isDrawIslandVariant,
+  getDrawPaletteSwatches,
+  shouldExpandDrawPalette,
+  resolveDrawIdleDim,
+  shouldAvoidIsland,
+  estimateTopIslandRect,
+  formatBoardIslandMeta,
+  formatBoardIslandText,
+  computeCursorRing,
+  sessionCursorToCss,
+  normalizeMinimapViewport,
+  drawMinimapState,
+  buildBoardPreviewSamples,
+} from './models/drawUi.js';

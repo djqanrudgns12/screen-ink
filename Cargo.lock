@@ -1933,6 +1933,7 @@ name = "ink-store"
 version = "0.1.0"
 dependencies = [
  "ink-app",
+ "ink-domain",
  "log",
  "serde_json",
 ]

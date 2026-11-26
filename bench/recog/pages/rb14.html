@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>RB-14 인식 시험 문서</title>
+<!--
+  RB-14 시험 문서(08 §5.1, D7·D13): 캔버스(2D)·WebGL·영상 틀(16:9, 움직임)만으로 그린 화면 — 접근성 트리에 요소가 없어 V가 유일한 근거다.
+  내용은 모두 지어낸 것(개인정보 없음). 배치는 아래 <script id="layout">(CSS px)가 유일한 원본이다 — 그림도 정답(recog-truth)도 이것에서 나온다.
+  왼쪽 위 표지(자홍·청록 / 노랑·검정 2×2)는 DOM으로 그린다(rb01과 같은 규칙).
+  쓰는 법: 브라우저 확대 100%, 창 최대화 → bench/recog/README.md "자동 정답".
+  콘솔: window.__rb14Truth() = 정답 사각형(CSS px) JSON. 영상 틀은 계속 움직인다(정지 이미지에는 한 장면만 찍힘).
+-->
+<style>
+  html, body { margin: 0; padding: 0; background: #ffffff; }
+  #page { position: relative; width: 1280px; height: 800px; overflow: hidden; }
+  .el { position: absolute; box-sizing: border-box; }
+  .marker { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+  .marker > i { display: block; }
+  canvas.el { display: block; }
+</style>
+</head>
+<body>
+<div id="page"></div>
+<script type="application/json" id="layout">
+{
+  "page": "rb14",
+  "size": [1280, 800],
+  "marker": { "x": 8, "y": 8, "size": 16 },
+  "elements": [
+    { "label": "2D 캔버스", "draw": "canvas", "id": "c2d", "bg": "#f9fafb", "rect": [0, 40, 800, 760], "at": [600, 700] },
+    { "label": "도구 막대", "draw": "fill", "on": "c2d", "color": "#1f2937", "rect": [0, 40, 800, 56], "at": [700, 68] },
+    { "label": "도구 단추 1", "draw": "round", "on": "c2d", "color": "#4b5563", "rect": [16, 52, 96, 32] },
+    { "label": "도구 단추 2", "draw": "round", "on": "c2d", "color": "#4b5563", "rect": [128, 52, 96, 32] },
+    { "label": "도구 단추 3", "draw": "round", "on": "c2d", "color": "#4b5563", "rect": [240, 52, 96, 32] },
+    { "label": "도구 단추 4", "draw": "round", "on": "c2d", "color": "#d97706", "rect": [352, 52, 96, 32] },
+    { "label": "도구 단추 5", "draw": "round", "on": "c2d", "color": "#4b5563", "rect": [464, 52, 96, 32] },
+    { "label": "차트 카드", "draw": "card", "on": "c2d", "rect": [24, 120, 360, 300], "at": [40, 136] },
+    { "label": "범례", "draw": "card", "on": "c2d", "rect": [264, 132, 100, 32] },
+    { "label": "막대 1", "draw": "fill", "on": "c2d", "color": "#2563eb", "rect": [56, 260, 36, 120] },
+    { "label": "막대 2", "draw": "fill", "on": "c2d", "color": "#2563eb", "rect": [116, 200, 36, 180] },
+    { "label": "막대 3", "draw": "fill", "on": "c2d", "color": "#2563eb", "rect": [176, 290, 36, 90] },
+    { "label": "막대 4", "draw": "fill", "on": "c2d", "color": "#2563eb", "rect": [236, 170, 36, 210] },
+    { "label": "막대 5", "draw": "fill", "on": "c2d", "color": "#2563eb", "rect": [296, 230, 36, 150] },
+    { "label": "영상 틀", "draw": "video", "on": "c2d", "rect": [408, 120, 368, 207] },
+    { "label": "영상 조작 막대", "draw": "fill", "on": "c2d", "color": "#111827", "rect": [408, 327, 368, 40], "at": [740, 347] },
+    { "label": "재생 단추", "draw": "round", "on": "c2d", "color": "#f9fafb", "rect": [416, 333, 28, 28] },
+    { "label": "진행 막대", "draw": "fill", "on": "c2d", "color": "#6b7280", "rect": [456, 341, 240, 12] },
+    { "label": "그림 판", "draw": "photo", "on": "c2d", "rect": [24, 444, 360, 220] },
+    { "label": "썸네일 1", "draw": "fill", "on": "c2d", "color": "#0ea5e9", "rect": [408, 444, 112, 63] },
+    { "label": "썸네일 2", "draw": "fill", "on": "c2d", "color": "#22c55e", "rect": [532, 444, 112, 63] },
+    { "label": "썸네일 3", "draw": "fill", "on": "c2d", "color": "#a855f7", "rect": [656, 444, 112, 63] },
+    { "label": "캔버스 바닥", "draw": "fill", "on": "c2d", "color": "#e5e7eb", "rect": [0, 744, 800, 56], "at": [400, 772] },
+
+    { "label": "WebGL 판", "draw": "webgl", "id": "gl", "bg": [0.898, 0.906, 0.922], "rect": [816, 40, 448, 448], "at": [1240, 64] },
+    { "label": "GL 사각 1", "draw": "gl", "on": "gl", "color": [0.937, 0.267, 0.267], "rect": [840, 72, 180, 120] },
+    { "label": "GL 사각 2", "draw": "gl", "on": "gl", "color": [0.231, 0.510, 0.965], "rect": [1048, 72, 180, 120] },
+    { "label": "GL 사각 3", "draw": "gl", "on": "gl", "color": [0.133, 0.773, 0.369], "rect": [840, 216, 388, 96] },
+    { "label": "GL 사각 4", "draw": "gl", "on": "gl", "color": [0.976, 0.451, 0.086], "rect": [840, 336, 120, 120] },
+    { "label": "GL 사각 5", "draw": "gl", "on": "gl", "color": [0.396, 0.396, 0.396], "rect": [984, 336, 244, 120] },
+
+    { "label": "도표 캔버스", "draw": "canvas", "id": "c2", "bg": "#f3f4f6", "rect": [816, 504, 448, 280], "at": [1240, 770] },
+    { "label": "선 그래프 판", "draw": "line", "on": "c2", "rect": [832, 520, 416, 180] },
+    { "label": "작은 단추 1", "draw": "round", "on": "c2", "color": "#2f6fed", "rect": [832, 716, 96, 36] },
+    { "label": "작은 단추 2", "draw": "round", "on": "c2", "color": "#2e9e6a", "rect": [944, 716, 96, 36] }
+  ]
+}
+</script>
+<script>
+  const L = JSON.parse(document.getElementById('layout').textContent);
+  const page = document.getElementById('page');
+  const dpr = window.devicePixelRatio || 1;
+
+  // 표지(DOM, rb01과 같게)
+  const m = L.marker, half = m.size / 2;
+  const mk = document.createElement('div');
+  mk.className = 'el marker';
+  Object.assign(mk.style, { left: m.x + 'px', top: m.y + 'px', width: m.size + 'px', height: m.size + 'px' });
+  for (const c of ['#ff00ff', '#00ffff', '#ffff00', '#000000']) {
+    const q = document.createElement('i');
+    q.style.background = c; q.style.width = half + 'px'; q.style.height = half + 'px';
+    mk.appendChild(q);
+  }
+  page.appendChild(mk);
+
+  // 캔버스 만들기: 화면 화소 수 = CSS 크기 × devicePixelRatio, 그리기는 문서 좌표(CSS px) 그대로
+  const surfaces = {};
+  function makeCanvas(e, kind) {
+    const [x, y, w, h] = e.rect;
+    const c = document.createElement('canvas');
+    c.className = 'el';
+    Object.assign(c.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+    c.width = Math.round(w * dpr);
+    c.height = Math.round(h * dpr);
+    page.appendChild(c);
+    if (kind === 'webgl') {
+      const gl = c.getContext('webgl', { preserveDrawingBuffer: true, antialias: false });
+      surfaces[e.id] = { kind: gl ? 'webgl' : '2d', gl, ctx: gl ? null : c.getContext('2d'), x, y, w, h, c };
+    } else {
+      surfaces[e.id] = { kind: '2d', ctx: c.getContext('2d'), x, y, w, h, c };
+    }
+    const s = surfaces[e.id];
+    if (s.kind === '2d') {
+      s.ctx.setTransform(dpr, 0, 0, dpr, -x * dpr, -y * dpr);
+      s.ctx.fillStyle = typeof e.bg === 'string' ? e.bg : rgb(e.bg);
+      s.ctx.fillRect(x, y, w, h);
+    } else {
+      const gl = s.gl;
+      gl.disable(gl.SCISSOR_TEST);
+      gl.clearColor(e.bg[0], e.bg[1], e.bg[2], 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+  }
+  function rgb(a) { return 'rgb(' + a.map(v => Math.round(v * 255)).join(',') + ')'; }
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // GL 사각형 = 가위 상자 + 지우기(셰이더 없이 화소 정확)
+  function glQuad(s, e) {
+    const [x, y, w, h] = e.rect;
+    if (s.kind !== 'webgl') { s.ctx.setTransform(dpr, 0, 0, dpr, -s.x * dpr, -s.y * dpr); s.ctx.fillStyle = rgb(e.color); s.ctx.fillRect(x, y, w, h); return; }
+    const gl = s.gl;
+    const px = Math.round((x - s.x) * dpr), pw = Math.round((x - s.x + w) * dpr) - px;
+    const top = Math.round((y - s.y) * dpr), bottom = Math.round((y - s.y + h) * dpr);
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(px, s.c.height - bottom, pw, bottom - top);
+    gl.clearColor(e.color[0], e.color[1], e.color[2], 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.disable(gl.SCISSOR_TEST);
+  }
+
+  const videos = [];
+  for (const e of L.elements) {
+    if (e.draw === 'canvas' || e.draw === 'webgl') { makeCanvas(e, e.draw); continue; }
+    const s = surfaces[e.on];
+    if (!s) continue;
+    if (e.draw === 'gl') { glQuad(s, e); continue; }
+    const ctx = s.ctx;
+    const [x, y, w, h] = e.rect;
+    if (e.draw === 'fill') { ctx.fillStyle = e.color; ctx.fillRect(x, y, w, h); }
+    else if (e.draw === 'round') { ctx.fillStyle = e.color; roundRect(ctx, x, y, w, h, Math.min(6, h / 4)); }
+    else if (e.draw === 'card') {
+      ctx.fillStyle = '#d1d5db'; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
+    }
+    else if (e.draw === 'photo') {
+      // 액자 4 px + 하늘·언덕 그림(사진처럼 경사가 많은 안쪽)
+      ctx.fillStyle = '#374151'; ctx.fillRect(x, y, w, h);
+      const g = ctx.createLinearGradient(x, y, x + w, y + h);
+      g.addColorStop(0, '#93c5fd'); g.addColorStop(0.55, '#fde68a'); g.addColorStop(1, '#86efac');
+      ctx.fillStyle = g; ctx.fillRect(x + 4, y + 4, w - 8, h - 8);
+      ctx.fillStyle = '#4d7c0f';
+      ctx.beginPath(); ctx.moveTo(x + 4, y + h - 4); ctx.quadraticCurveTo(x + w * 0.35, y + h * 0.45, x + w * 0.7, y + h - 4); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#facc15'; ctx.beginPath(); ctx.arc(x + w * 0.78, y + h * 0.3, 22, 0, Math.PI * 2); ctx.fill();
+    }
+    else if (e.draw === 'line') {
+      ctx.fillStyle = '#d1d5db'; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
+      ctx.strokeStyle = '#2f6fed'; ctx.lineWidth = 3; ctx.beginPath();
+      const pts = [0.1, 0.55, 0.35, 0.7, 0.45, 0.25, 0.6, 0.3, 0.85, 0.5];
+      pts.forEach((v, i) => { const px = x + 16 + i * (w - 32) / (pts.length - 1), py = y + 16 + v * (h - 32); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+      ctx.stroke();
+    }
+    else if (e.draw === 'video') { videos.push({ ctx, rect: e.rect }); }
+  }
+
+  // 영상 틀: 틀 경계는 그대로, 안쪽만 움직인다(정지 이미지에는 어느 한 장면)
+  function frame(t) {
+    for (const v of videos) {
+      const [x, y, w, h] = v.rect, ctx = v.ctx;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+      ctx.fillStyle = '#101418'; ctx.fillRect(x, y, w, h);
+      const cx = x + w / 2 + Math.cos(t / 900) * w * 0.3, cy = y + h / 2 + Math.sin(t / 700) * h * 0.25;
+      const g = ctx.createRadialGradient(cx, cy, 4, cx, cy, h * 0.6);
+      g.addColorStop(0, '#f97316'); g.addColorStop(0.5, '#7c3aed'); g.addColorStop(1, '#101418');
+      ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+      ctx.restore();
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // 정답 사각형(CSS px) — 콘솔 확인용. 화면 좌표 정답은 recog-truth가 표지로 옮긴다.
+  window.__rb14Truth = () => JSON.stringify({ page: L.page, dpr, elements: L.elements.filter(e => e.truth !== false).map(e => ({ label: e.label, rect: e.rect, at: e.at || null })) });
+  console.log('rb14 truth', window.__rb14Truth());
+</script>
+</body>
+</html>

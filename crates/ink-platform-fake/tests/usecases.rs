@@ -24,7 +24,7 @@ fn 첫_실행은_전역_16개를_등록하고_기본값을_저장한다() {
     let file = w.saved().expect("기본값 저장");
     assert_eq!(file["schemaVersion"], 3);
     let st = s.state();
-    assert_eq!(st.shortcuts.len(), 59);
+    assert_eq!(st.shortcuts.len(), 57);
     assert_eq!(st.conflicts.count, 0);
     assert!(s.is_first_run());
 }
@@ -146,7 +146,7 @@ fn 잠시_끄면_alt_백틱만_남고_다시_누르면_켜진다() {
     assert_eq!(s.on_hotkey("pause"), HotkeyOutcome::Toggled(true));
     assert_eq!(w.registered_count(), 16);
     assert_eq!(s.on_hotkey("region"), HotkeyOutcome::Captured);
-    assert_eq!(s.on_hotkey("draw"), HotkeyOutcome::Start("draw".into()), "판서는 아직 어댑터 몫");
+    assert_eq!(s.on_hotkey("draw"), HotkeyOutcome::Draw, "캡처 중 Alt+1 = 캡처를 끝내고 판서로");
 }
 
 #[test]
@@ -267,7 +267,7 @@ fn 맥은_58칸이고_창_항상_위가_없다() {
     s.start();
     let st = s.state();
     assert_eq!(st.platform, "macos");
-    assert_eq!(st.shortcuts.len(), 58);
+    assert_eq!(st.shortcuts.len(), 56);
     assert!(st.shortcuts.iter().all(|r| r.id != "topmost"));
     assert_eq!(w.registered_count(), 15);
 }

@@ -173,6 +173,13 @@ pub struct Node {
 pub struct ElementCand {
     pub rect: PhysRect,
     pub control: Control,
+    /// true = MSAA 대체 경로(M 근거), false = UIA(A 근거). 옛 사례 파일에는 없다 → 기본 false, false면 쓰지 않음(사례 스키마 1 그대로)
+    #[serde(default, rename = "fromMsaa", skip_serializing_if = "is_false")]
+    pub from_msaa: bool,
+}
+
+fn is_false(b: &bool) -> bool {
+    !*b
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -258,7 +265,7 @@ pub fn build_chain(ev: &Evidence) -> Vec<Node> {
         raw.push(Node { rect: r, kind, score: 0.0, sources, hidden_container: false });
     };
     for e in ev.elements {
-        push(snap(e.rect), NodeKind::Element(e.control), src::A);
+        push(snap(e.rect), NodeKind::Element(e.control), if e.from_msaa { src::M } else { src::A });
     }
     for c in ev.children {
         push(snap(*c), NodeKind::Child, src::H);
@@ -384,6 +391,29 @@ pub fn first_level(chain: &[Node], intent: Option<&LevelIntent>) -> usize {
 mod tests {
     use super::*;
 
+    #[test]
+    fn msaa_요소는_근거_m으로_uia와_합치면_둘_다() {
+        let p = PhysPoint { x: 400, y: 330 };
+        let m = ElementCand { rect: PhysRect::new(300, 300, 300, 40), control: Control::Button, from_msaa: true };
+        let c = build_chain(&ev(p, &[m], &[]));
+        assert_eq!(c[0].kind, NodeKind::Element(Control::Button));
+        assert!(c[0].sources & src::M != 0 && c[0].sources & src::A == 0, "MSAA만 = M: {:b}", c[0].sources);
+        // 같은 자리 UIA 요소와 합치면 근거 A·M 둘 다
+        let a = ElementCand { from_msaa: false, ..m };
+        let c = build_chain(&ev(p, &[m, a], &[]));
+        assert_eq!(c[0].sources & (src::A | src::M), src::A | src::M);
+    }
+
+    #[test]
+    fn 옛_사례의_요소는_msaa_표시가_없어도_읽히고_uia면_쓰지_않는다() {
+        let old: ElementCand = serde_json::from_str(r#"{"rect":{"x":1,"y":2,"w":30,"h":40},"control":"button"}"#).unwrap();
+        assert!(!old.from_msaa);
+        assert!(!serde_json::to_string(&old).unwrap().contains("fromMsaa"), "UIA 요소는 사례 파일 모양 그대로");
+        let m = ElementCand { from_msaa: true, ..old };
+        let back: ElementCand = serde_json::from_str(&serde_json::to_string(&m).unwrap()).unwrap();
+        assert!(back.from_msaa);
+    }
+
     const MON: PhysRect = PhysRect::new(0, 0, 1920, 1080);
     const WIN: PhysRect = PhysRect::new(100, 100, 1200, 800);
 
@@ -395,9 +425,9 @@ mod tests {
     fn 표_사슬은_작은_것부터_창_화면까지() {
         let p = PhysPoint { x: 400, y: 330 };
         let els = [
-            ElementCand { rect: PhysRect::new(300, 300, 300, 40), control: Control::DataItem },
-            ElementCand { rect: PhysRect::new(300, 260, 600, 400), control: Control::Table },
-            ElementCand { rect: PhysRect::new(100, 100, 1200, 800), control: Control::Pane }, // 창과 같은 그릇 → 창으로 합침
+            ElementCand { rect: PhysRect::new(300, 300, 300, 40), control: Control::DataItem, from_msaa: false },
+            ElementCand { rect: PhysRect::new(300, 260, 600, 400), control: Control::Table, from_msaa: false },
+            ElementCand { rect: PhysRect::new(100, 100, 1200, 800), control: Control::Pane, from_msaa: false }, // 창과 같은 그릇 → 창으로 합침
         ];
         let c = build_chain(&ev(p, &els, &[]));
         let kinds: Vec<&str> = c.iter().map(|n| n.kind.label()).collect();
@@ -410,10 +440,10 @@ mod tests {
     fn 같은_사각형_단계는_빼고_커서_밖_작은_것은_버린다() {
         let p = PhysPoint { x: 400, y: 330 };
         let els = [
-            ElementCand { rect: PhysRect::new(300, 300, 300, 40), control: Control::Text },
-            ElementCand { rect: PhysRect::new(300, 300, 301, 41), control: Control::Button }, // ±1 px 같음 → 합침, 단추 이름
-            ElementCand { rect: PhysRect::new(700, 700, 50, 50), control: Control::Button },  // 커서 밖
-            ElementCand { rect: PhysRect::new(399, 329, 3, 3), control: Control::Image },     // 너무 작음
+            ElementCand { rect: PhysRect::new(300, 300, 300, 40), control: Control::Text, from_msaa: false },
+            ElementCand { rect: PhysRect::new(300, 300, 301, 41), control: Control::Button, from_msaa: false }, // ±1 px 같음 → 합침, 단추 이름
+            ElementCand { rect: PhysRect::new(700, 700, 50, 50), control: Control::Button, from_msaa: false },  // 커서 밖
+            ElementCand { rect: PhysRect::new(399, 329, 3, 3), control: Control::Image, from_msaa: false },     // 너무 작음
         ];
         let c = build_chain(&ev(p, &els, &[]));
         assert_eq!(c.len(), 3);
@@ -439,7 +469,7 @@ mod tests {
     #[test]
     fn 경계가_안_보이는_큰_그릇은_첫_강조에서_뺀다() {
         let p = PhysPoint { x: 500, y: 500 };
-        let els = [ElementCand { rect: PhysRect::new(200, 200, 800, 600), control: Control::Pane }];
+        let els = [ElementCand { rect: PhysRect::new(200, 200, 800, 600), control: Control::Pane, from_msaa: false }];
         let sup = |_r: PhysRect| 0.05;
         let mut e = ev(p, &els, &[]);
         e.support = Some(&sup);
@@ -451,7 +481,7 @@ mod tests {
     #[test]
     fn 경계_맞춤은_a_사각형을_v_경계로_붙인다() {
         let p = PhysPoint { x: 400, y: 330 };
-        let els = [ElementCand { rect: PhysRect::new(301, 299, 298, 42), control: Control::Button }];
+        let els = [ElementCand { rect: PhysRect::new(301, 299, 298, 42), control: Control::Button, from_msaa: false }];
         let snap = |r: PhysRect| if (r.x - 300).abs() <= 3 { PhysRect::new(300, 300, 300, 40) } else { r };
         let mut e = ev(p, &els, &[]);
         e.snap = Some(&snap);
@@ -461,8 +491,8 @@ mod tests {
     #[test]
     fn 깊이_기억은_같은_종류를_다시_고른다() {
         let row = |y| [
-            ElementCand { rect: PhysRect::new(300, y, 300, 40), control: Control::DataItem },
-            ElementCand { rect: PhysRect::new(300, 260, 600, 400), control: Control::Table },
+            ElementCand { rect: PhysRect::new(300, y, 300, 40), control: Control::DataItem, from_msaa: false },
+            ElementCand { rect: PhysRect::new(300, 260, 600, 400), control: Control::Table, from_msaa: false },
         ];
         let a = build_chain(&ev(PhysPoint { x: 400, y: 330 }, &row(300), &[]));
         // 휠로 표(1)를 골랐다
@@ -478,8 +508,8 @@ mod tests {
     fn 제목_표시줄_위에서는_창이_첫_강조() {
         let p = PhysPoint { x: 400, y: 115 };
         let els = [
-            ElementCand { rect: PhysRect::new(380, 105, 120, 20), control: Control::Text },
-            ElementCand { rect: PhysRect::new(100, 100, 1200, 32), control: Control::TitleBar },
+            ElementCand { rect: PhysRect::new(380, 105, 120, 20), control: Control::Text, from_msaa: false },
+            ElementCand { rect: PhysRect::new(100, 100, 1200, 32), control: Control::TitleBar, from_msaa: false },
         ];
         let c = build_chain(&ev(p, &els, &[]));
         assert_eq!(c[first_level(&c, None)].kind, NodeKind::Window);

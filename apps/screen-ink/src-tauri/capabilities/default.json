@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "screen-ink 창: 트레이 팝오버 · 설정 · 섬 · 오버레이 · 캡처 핀 · 녹화 범위 꺾쇠",
-  "windows": ["ink-popover", "ink-settings", "ink-island", "ink-overlay-*", "ink-pin-*", "ink-rec-frame"],
+  "description": "screen-ink 창: 트레이 팝오버 · 설정 · 섬 · 오버레이 · 캡처 핀 · 실시간 확대 HUD · 녹화 범위 꺾쇠",
+  "windows": ["ink-popover", "ink-settings", "ink-island", "ink-overlay-*", "ink-pin-*", "ink-zoom-hud", "ink-rec-frame"],
   "permissions": [
     "core:default",
     "core:window:allow-hide",

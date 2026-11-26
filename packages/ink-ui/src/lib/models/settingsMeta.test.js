@@ -5,12 +5,15 @@ import {
   formatFirstRunConflict,
   formatLocationSub,
   formatSettingValue,
+  formatShapeOnHoldSub,
 } from './settingsMeta.js';
 
 test('formats setting values into short Korean labels', () => {
   assert.equal(formatSettingValue('general.theme', 'dark'), '다크');
   assert.equal(formatSettingValue('general.theme', 'system'), '시스템 따라');
   assert.equal(formatSettingValue('draw.width', 8), '8px');
+  assert.equal(formatSettingValue('draw.shapeApply', 'suggest'), '물어보고 바꾸기');
+  assert.equal(formatSettingValue('draw.shapeApply', 'auto'), '바로 바꾸기');
   assert.equal(formatSettingValue('record.fps', 60), '60fps');
   assert.equal(formatSettingValue('draw.startZoom', 1.75), '×1.75');
   assert.equal(formatSettingValue('record.micDevice', ''), '기본 장치');
@@ -41,7 +44,7 @@ test('describes setting and shortcut import changes', () => {
   assert.equal(vChange.afterText, '8px');
 });
 
-test('formats settings location with portable/installed prefix and shortened path', () => {
+test('formats settings location with MSIX/portable/installed prefix and shortened path', () => {
   assert.equal(
     formatLocationSub({ path: 'C:\\Users\\Teacher\\AppData\\Roaming\\screen-ink\\settings.json', portable: false }, 26),
     '설치 · …\\screen-ink\\settings.json',
@@ -49,6 +52,22 @@ test('formats settings location with portable/installed prefix and shortened pat
   assert.equal(
     formatLocationSub({ path: 'D:\\screen-ink\\data\\settings.json', portable: true }, 40),
     '포터블 · D:\\screen-ink\\data\\settings.json',
+  );
+  assert.equal(
+    formatLocationSub(
+      { path: 'C:\\Users\\Teacher\\AppData\\Roaming\\Shookshok\\settings.json', portable: false },
+      26,
+      'msix-store',
+    ),
+    'MSIX 패키지 · …\\Shookshok\\settings.json',
+  );
+  assert.equal(
+    formatLocationSub(
+      { path: 'C:\\Users\\Teacher\\AppData\\Roaming\\Shookshok\\settings.json', portable: true },
+      26,
+      'msix-direct',
+    ),
+    'MSIX 패키지 · …\\Shookshok\\settings.json',
   );
 });
 
@@ -70,4 +89,10 @@ test('formats first-run conflict notice for Snipaste, PowerToys, and generic con
     formatFirstRunConflict({ count: 1, app: '카카오톡', combos: ['Alt+1'] }, 'windows'),
     { prefix: 'Alt 1 키는 ', app: '카카오톡', suffix: '이 쓰고 있어요', canHowto: true },
   );
+});
+
+test('formats shapeOnHold subtitle according to draw.shapeApply mode', () => {
+  assert.equal(formatShapeOnHoldSub('suggest'), '0.5초 멈추면 바꿀지 물어봐요');
+  assert.equal(formatShapeOnHoldSub(undefined), '0.5초 멈추면 바꿀지 물어봐요');
+  assert.equal(formatShapeOnHoldSub('auto'), '0.5초 · Ctrl+Z = 원래 획');
 });

@@ -65,9 +65,13 @@ pub enum HotkeyOutcome {
     Start(String),
     /// 캡처 모드를 시작·전환·끝냄
     Captured,
+    /// 실시간 확대를 시작·끝냄·배율 바꿈(live_zoom.rs)
+    Zoom,
     /// 단축키 잠시 끄기·켜기를 처리함
     Toggled(bool),
     Ignored,
+    /// 판서·칠판을 시작·전환·끝냄(판서 중 직전 판서 키 = 그 자리 복원)
+    Draw,
 }
 
 fn ms(d: std::time::Duration) -> f64 {
@@ -104,6 +108,12 @@ pub struct InkService {
     pub(crate) secure_notified: bool,
     // ── 고르기·결과(단계 3) ──
     pub(crate) cap: crate::capture::CaptureState,
+    // ── 판서·칠판(단계 4) ──
+    pub(crate) draw: crate::draw::DrawState,
+    // ── 실시간 확대(단계 5) ──
+    pub(crate) zoom: crate::live_zoom::ZoomState,
+    // ── 패키지 모드·자동 실행·업데이터(D3) ──
+    pub(crate) pkg: crate::package::PackageState,
     // ── 창 캡처·바로 캡처·녹화(단계 6) ──
     pub(crate) rec: crate::record::RecordState,
 }
@@ -190,6 +200,9 @@ impl InkService {
             ready_samples: VecDeque::new(),
             secure_notified: false,
             cap: crate::capture::CaptureState::with_ranges(ranges),
+            draw: Default::default(),
+            zoom: Default::default(),
+            pkg: Default::default(),
             rec: Default::default(),
         };
         svc.refresh_environment();
@@ -224,6 +237,9 @@ impl InkService {
             [Some(o)] => Some((*o).clone()),
             _ => None,
         };
+        let channel = self.pkg.runtime.channel();
+        let mut location = self.ports.store.location();
+        location.portable = ink_domain::package::resolve_storage_policy(channel, location.portable).use_portable_dir;
         InkState {
             platform: match self.platform {
                 Platform::Win => "windows",
@@ -239,7 +255,9 @@ impl InkService {
             shortcuts,
             version: self.version.clone(),
             readonly: self.readonly,
-            location: self.ports.store.location(),
+            location,
+            channel,
+            autostart_notice: self.pkg.autostart_notice.as_ref().and_then(|n| n.guidance_ko.clone()),
             notices: self.notices.clone(),
             mode: self.mode,
         }
@@ -585,8 +603,15 @@ impl InkService {
             self.set_hotkeys_enabled(next);
             return HotkeyOutcome::Toggled(next);
         }
+        // 실시간 확대(Alt+2)·확대 안 키·확대 중 다른 모드 키(live_zoom.rs)
+        if let Some(out) = self.zoom_hotkey(slot, pressed) {
+            return out;
+        }
         if !self.hotkeys_enabled || !self.registered.contains_key(slot) {
             return HotkeyOutcome::Ignored;
+        }
+        if let Some(outcome) = self.on_draw_hotkey(slot, pressed) {
+            return outcome;
         }
         // 단계 6: 녹화 중 F3 = 중지, 바로 캡처 키 4종(R-CAP-13)
         if let Some(outcome) = self.stage6_hotkey(slot) {
@@ -613,6 +638,8 @@ impl InkService {
                 HotkeyOutcome::Captured
             }
             ModeCommand::Ignore => HotkeyOutcome::Start(slot.to_string()),
+            // 판서 명령은 위 on_draw_hotkey가 이미 처리했다
+            ModeCommand::StartDraw(_) | ModeCommand::SwitchDraw(_) | ModeCommand::DrawRestore => HotkeyOutcome::Draw,
         }
     }
 
@@ -638,7 +665,7 @@ impl InkService {
     }
 
     /// 배치가 바뀌었으면 오버레이 창을 모니터에 다시 맞춘다. 바뀌었으면 true.
-    fn prepare_overlays(&mut self) -> bool {
+    pub(crate) fn prepare_overlays(&mut self) -> bool {
         let layout = self.ports.monitors.layout();
         if self.prepared.as_ref().map(|l| l.fingerprint()) == Some(layout.fingerprint()) {
             return false;
@@ -654,6 +681,8 @@ impl InkService {
 
     /// 트레이 메뉴·명령에서 시작(단축키가 꺼져 있어도). 이미 캡처 중이면 새로 시작.
     pub fn start_capture(&mut self, kind: CaptureKind) {
+        // 확대 중이면 돋보기가 화면에서 사라진 뒤에 찍는다(확대 화면이 찍히지 않게)
+        self.end_zoom_settled();
         self.end_capture();
         self.begin_capture(kind, Instant::now());
     }
@@ -667,6 +696,8 @@ impl InkService {
             }
             return;
         }
+        // 새 캡처가 지난 결과 섬([판서로])을 덮는다 — 쥐어 둔 프레임을 놓는다
+        self.cap.handoff = None;
         let t = Instant::now();
         self.prepare_overlays();
         let layout = self.prepared.clone().unwrap_or_default();
@@ -820,6 +851,12 @@ impl InkService {
 
     /// 잠금·절전이면 모드를 끝내고, 배치가 바뀌었거나 깨어나면 오버레이를 다시 맞춘다(R-SYS-3, 02 §7).
     pub fn on_system_event(&mut self, ev: SystemEvent) {
+        self.draw_on_system_event(ev);
+        self.zoom_system_event(ev);
+        // 잠금·절전·화면 구성 변경 뒤의 [판서로]는 쓸 수 없다 — 쥐어 둔 범위·프레임을 놓는다
+        if matches!(ev, SystemEvent::Lock | SystemEvent::Suspend | SystemEvent::DisplayChange) {
+            self.cap.handoff = None;
+        }
         // 단계 6: 잠금·절전·모니터 해제 → 녹화 자동 중지·저장(05 §8). 배치를 다시 맞추기 전에 본다
         self.record_on_system_event(ev);
         match ev {
@@ -974,6 +1011,7 @@ impl InkService {
             return self.state();
         }
         self.history.clear();
+        self.clear_kept_ink();
         self.reregister_all();
         self.island(IslandEvent::new(IslandKind::Result, "처음 상태로 되돌렸어요"));
         self.emit_state();

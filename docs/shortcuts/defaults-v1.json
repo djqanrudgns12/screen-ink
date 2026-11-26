@@ -284,16 +284,6 @@
       "win": "F7",
       "mac": "F7"
     },
-    "z-in": {
-      "scope": "zoom",
-      "win": "Up",
-      "mac": "Up"
-    },
-    "z-out": {
-      "scope": "zoom",
-      "win": "Down",
-      "mac": "Down"
-    },
     "z-exit": {
       "scope": "zoom",
       "win": "Esc",

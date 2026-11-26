@@ -53,3 +53,16 @@ test('formats macOS symbols and omits cleared global shortcuts', () => {
   assert.deepEqual(cols[2].rows[1], { label: '사각형', keys: ['⌘'] });
   assert.equal(cols[2].rows.some((r) => r.label === '커서 가운데로'), false);
 });
+
+test('실시간 확대 한 장: 배율은 휠, 키는 판서·끝내기만 — 방향키는 아래 앱으로', () => {
+  const shortcuts = [...SAMPLE_WIN, { id: 'z-exit', scope: 'zoom', group: 'zoom-mode', label: '실시간 확대 끝내기', combo: 'Esc' }];
+  const cols = buildCheatSheetColumns(shortcuts, { platform: 'windows', mode: 'zoom' });
+  assert.equal(cols[1].active, true);
+  assert.deepEqual(cols[1].rows, [
+    { label: '배율 조절', keys: ['휠'] },
+    { label: '멈추고 판서', keys: ['Alt', '1'] },
+    { label: '끝내기', keys: ['Esc'] },
+  ]);
+  assert.equal(cols[2].rows.some((r) => (r.keys || []).includes('방향키') && r.label !== '방향키·클릭'), false);
+  assert.deepEqual(cols[2].rows[0], { label: '아래 앱 스크롤', keys: ['Shift', '휠'] });
+});

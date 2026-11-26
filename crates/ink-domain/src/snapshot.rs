@@ -121,6 +121,12 @@ impl Snapshot {
 /// 덮개 의심: 모니터 넓이의 이 비율 이상을 덮는 맨 위 계층·도구 창.
 const OVERLAY_COVER: f64 = 0.9;
 
+/// 셸 바탕 창(바탕 화면 아이콘·배경). 가상 화면 전체를 덮는 창 하나라 그대로 두면 여러 모니터에서
+/// 바탕 화면 강조가 가상 화면 전체가 된다 → 모니터마다 작업 영역 후보로 나눈다(08 §4.2 W "바탕 화면 = 모니터 작업 영역").
+pub fn is_shell_desktop(class: &str) -> bool {
+    class == "Progman" || class == "WorkerW"
+}
+
 /// 창 목록 거르기(02 §1.1 `WindowCatalog::filter` + 08 D1·D4).
 pub fn filter_windows(raw: &[RawWindow], layout: &MonitorLayout, own_pid: u32, excluded: &[ExcludedApp]) -> Vec<WindowInfo> {
     let mut out = Vec::new();
@@ -133,6 +139,23 @@ pub fn filter_windows(raw: &[RawWindow], layout: &MonitorLayout, own_pid: u32, e
         }
         let rule = excluded.iter().find(|e| e.exe.eq_ignore_ascii_case(&w.exe));
         if rule.is_some_and(|e| e.mode == "exclude") {
+            continue;
+        }
+        if is_shell_desktop(&w.class) {
+            // 바탕 화면: 이 창이 걸친 모니터마다 그 모니터의 작업 영역 하나씩(같은 핸들)
+            for m in layout.monitors.iter().filter(|m| w.rect.intersect(&m.bounds).is_some() && !m.work.is_empty()) {
+                out.push(WindowInfo {
+                    handle: w.handle,
+                    pid: w.pid,
+                    exe: w.exe.clone(),
+                    class: w.class.clone(),
+                    rect: m.work,
+                    z: out.len() as u32,
+                    topmost: w.topmost,
+                    window_only: rule.is_some_and(|e| e.mode == "windowOnly"),
+                    suspect_overlay: false,
+                });
+            }
             continue;
         }
         let mut rect = match layout.clip(&w.rect) {
@@ -241,6 +264,23 @@ mod tests {
         s.kind = CaptureKind::Region;
         s.cursor = PhysPoint { x: 2500, y: 900 };
         assert_eq!(s.default_highlight(), Some(PhysRect::new(1920, 0, 2880, 1800)));
+    }
+
+    #[test]
+    fn 바탕_화면_창은_모니터마다_그_작업_영역() {
+        let l = layout();
+        let desk = RawWindow { exe: "explorer.exe".into(), ..win(9, PhysRect::new(0, 0, 4800, 1800)) };
+        let desk = RawWindow { class: "Progman".into(), ..desk };
+        let w = filter_windows(&[desk], &l, 0, &[]);
+        assert_eq!(w.iter().map(|x| x.rect).collect::<Vec<_>>(), vec![l.monitors[0].work, l.monitors[1].work]);
+        assert!(w.iter().all(|x| x.handle == 9 && !x.suspect_overlay));
+        let s = Snapshot { id: 1, kind: CaptureKind::Region, layout: l.clone(), windows: w, cursor: PhysPoint { x: 2500, y: 900 } };
+        assert_eq!(s.window_at(PhysPoint { x: 2500, y: 900 }, true).map(|x| x.rect), Some(l.monitors[1].work));
+        assert_eq!(s.window_at(PhysPoint { x: 500, y: 1060 }, true), None, "작업 표시줄 띠는 바탕 화면 후보 밖(작업 표시줄 창이 받음)");
+        // 한 모니터에만 걸친 WorkerW는 그 모니터만
+        let worker = RawWindow { class: "WorkerW".into(), ..win(10, PhysRect::new(0, 0, 1920, 1080)) };
+        assert_eq!(filter_windows(&[worker], &l, 0, &[]).iter().map(|x| x.rect).collect::<Vec<_>>(), vec![l.monitors[0].work]);
+        assert!(is_shell_desktop("Progman") && is_shell_desktop("WorkerW") && !is_shell_desktop("CabinetWClass"));
     }
 
     #[test]

@@ -272,7 +272,7 @@ fn 녹화_섬은_1초마다_경과를_보이고_중지하면_이름_규칙으로
     assert_eq!(ev.button.as_ref().map(|b| b.action.as_str()), Some("folder.open"));
     let b = w.recorder.0.lock().unwrap();
     assert_eq!(b.kept.len(), 1);
-    assert_eq!(b.kept[0].2, "shookshok_20260304_090507", "캡처와 같은 이름 규칙");
+    assert_eq!(b.kept[0].2, "Shookshok_20260304_090507", "캡처와 같은 이름 규칙");
     assert!(b.temp_files.is_empty(), "임시 파일은 옮겨짐");
 }
 
@@ -406,4 +406,25 @@ fn 녹화기가_없는_곳은_안내만() {
     click(&mut s, 400, 300);
     assert_eq!(w.last_island().unwrap().text, "이 컴퓨터에서는 아직 녹화할 수 없어요");
     assert!(!s.recording_active());
+}
+
+#[test]
+fn 녹화중_alt1_판서_겹침_허용_끝나면_녹화로() {
+    let w = FakeWorld::new();
+    let mut s = service(&w);
+    s.on_hotkey("record");
+    click(&mut s, 400, 300);
+    assert!(matches!(s.mode(), Mode::Recording { .. }));
+    // Alt+1 = 녹화를 끊지 않고 그 위에서 판서
+    s.on_hotkey("draw");
+    assert!(matches!(s.mode(), Mode::Draw { .. }), "{:?}", s.mode());
+    assert!(s.recording_active());
+    // 판서를 끝내면 녹화 상태로 돌아온다
+    s.on_hotkey("draw");
+    assert!(matches!(s.mode(), Mode::Recording { .. }), "{:?}", s.mode());
+    assert!(s.recording_active());
+    assert_eq!(w.recorder.0.lock().unwrap().stopped, 0);
+    s.on_hotkey("record");
+    assert_eq!(s.mode(), Mode::Idle);
+    assert_eq!(w.recorder.0.lock().unwrap().stopped, 1);
 }

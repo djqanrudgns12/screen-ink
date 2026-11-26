@@ -9,6 +9,7 @@ pub mod magnet;
 pub mod modekeys;
 pub mod mode;
 pub mod naming;
+pub mod package;
 pub mod pin;
 pub mod recog;
 pub mod recording;
@@ -18,6 +19,7 @@ pub mod shortcuts;
 pub mod snapshot;
 pub mod text;
 pub mod timing;
+pub mod zoom;
 pub mod windowshot;
 
 pub use shortcuts::{Level, Platform};
