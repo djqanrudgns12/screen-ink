@@ -12,7 +12,8 @@
 //! - `--life`초가 지나면 스스로 끝난다(멈춘 채 남지 않게, 기본 120초).
 //!
 //! 이 앱은 일부러 DPI를 모른다(매니페스트·DPI 호출 없음): 배율이 100%가 아닌 모니터에서 `accLocation`이 논리 좌표를
-//! 주므로 D12 보정 경로(`dpi::classify_space` → Logical)도 함께 탄다. 창 제목 외 글자는 없다.
+//! 주므로 D12 보정 경로(`dpi::classify_space` → Logical)도 함께 탄다. 자식 사각형 자리(20 px 격자의 16 px 칸)를 회색으로
+//! 그려 두어, 근거 보기(`capture.evidence`)에서 보정이 맞는지 눈으로도 보인다. 창 제목 외 글자는 없다.
 
 #[cfg(not(windows))]
 fn main() {
@@ -36,11 +37,11 @@ mod win {
     use windows::Win32::System::Variant::VARIANT;
     use windows::Win32::UI::Accessibility::{IAccessible, IAccessible_Impl, LresultFromObject};
     use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT};
-    use windows_sys::Win32::Graphics::Gdi::ClientToScreen;
+    use windows_sys::Win32::Graphics::Gdi::{BeginPaint, ClientToScreen, EndPaint, FillRect, GetStockObject, GRAY_BRUSH, PAINTSTRUCT};
     use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         CreateWindowExW, DefWindowProcW, DispatchMessageW, GetClientRect, GetMessageW, PostQuitMessage, RegisterClassW, SetTimer, ShowWindow, TranslateMessage, CW_USEDEFAULT, MSG, SW_SHOW,
-        WM_DESTROY, WM_GETOBJECT, WM_TIMER, WNDCLASSW, WS_OVERLAPPEDWINDOW,
+        WM_DESTROY, WM_GETOBJECT, WM_PAINT, WM_TIMER, WNDCLASSW, WS_OVERLAPPEDWINDOW,
     };
 
     const MODE_HUNG: u8 = 0;
@@ -219,6 +220,22 @@ mod win {
             WM_GETOBJECT if mode() != MODE_HUNG && l as i32 == OBJID_CLIENT => {
                 let acc: IAccessible = Acc { depth: 0, index: 0 }.into();
                 LresultFromObject(&IAccessible::IID, WPARAM(w), &acc).0
+            }
+            WM_PAINT => {
+                // accLocation이 내놓는 자식 자리(20 px 격자의 16 px 칸) — 이 앱의 논리 좌표
+                let mut ps: PAINTSTRUCT = std::mem::zeroed();
+                let dc = BeginPaint(h, &mut ps);
+                let mut r = RECT { left: 0, top: 0, right: 0, bottom: 0 };
+                GetClientRect(h, &mut r);
+                let brush = GetStockObject(GRAY_BRUSH);
+                for gy in 0..(r.bottom / 20).max(1) {
+                    for gx in 0..(r.right / 20).max(1) {
+                        let cell = RECT { left: gx * 20 + 2, top: gy * 20 + 2, right: gx * 20 + 18, bottom: gy * 20 + 18 };
+                        FillRect(dc, &cell, brush as _);
+                    }
+                }
+                EndPaint(h, &ps);
+                0
             }
             WM_TIMER if mode() == MODE_HUNG => {
                 // 메시지 루프를 10초 막는다

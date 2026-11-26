@@ -27,6 +27,8 @@ pub const MAX_DEPTH: usize = 4;
 pub const MAX_ELEMENTS: usize = 300;
 /// 마디 하나에서 받을 자식 상한(`accChildCount`가 수백만을 말해도).
 pub const MAX_CHILDREN: usize = 300;
+/// 자식을 한 번에 받는 묶음 — 묶음 사이마다 시간 예산을 본다(자식 하나가 다른 프로세스 호출 하나라서).
+pub const CHILD_CHUNK: usize = 32;
 /// 버린(마감을 넘긴) 일꾼 상한 — 넘으면 MSAA를 끈다(C §5).
 pub const MAX_ABANDONED: usize = 4;
 
@@ -93,8 +95,8 @@ pub enum AccChild<N> {
 pub trait AccNode: Sized {
     /// `child` = None이면 자기 자신(CHILDID_SELF), Some(n)이면 단순 자식 n.
     fn info(&self, child: Option<i32>) -> Option<AccInfo>;
-    /// 자식들(많아야 `max`개).
-    fn children(&self, max: usize) -> Vec<AccChild<Self>>;
+    /// `start`번째(0부터)부터 많아야 `max`개의 자식. 더 없으면 빈 목록.
+    fn children(&self, start: usize, max: usize) -> Vec<AccChild<Self>>;
 }
 
 /// 걸음 상한.
@@ -121,22 +123,33 @@ pub fn walk<N: AccNode>(root: N, limits: &Limits, mut out_of_time: impl FnMut() 
         if depth >= limits.depth {
             continue;
         }
-        for child in node.children(limits.per_node) {
+        let mut start = 0;
+        while start < limits.per_node {
             if out.len() >= limits.max || out_of_time() {
                 return out;
             }
-            match child {
-                AccChild::Simple(id) => {
-                    if let Some(i) = node.info(Some(id)) {
-                        out.push(i);
-                    }
+            let chunk = node.children(start, CHILD_CHUNK.min(limits.per_node - start));
+            if chunk.is_empty() {
+                break;
+            }
+            start += chunk.len();
+            for child in chunk {
+                if out.len() >= limits.max || out_of_time() {
+                    return out;
                 }
-                AccChild::Object(n) => {
-                    if let Some(i) = n.info(None) {
-                        out.push(i);
-                        // 보이지 않는 그릇 아래는 걷지 않는다(숨은 메뉴·창 틀 조각)
-                        if i.state & STATE_INVISIBLE == 0 {
-                            queue.push_back((n, depth + 1));
+                match child {
+                    AccChild::Simple(id) => {
+                        if let Some(i) = node.info(Some(id)) {
+                            out.push(i);
+                        }
+                    }
+                    AccChild::Object(n) => {
+                        if let Some(i) = n.info(None) {
+                            out.push(i);
+                            // 보이지 않는 그릇 아래는 걷지 않는다(숨은 메뉴·창 틀 조각)
+                            if i.state & STATE_INVISIBLE == 0 {
+                                queue.push_back((n, depth + 1));
+                            }
                         }
                     }
                 }
@@ -223,16 +236,17 @@ mod win {
             Some(AccInfo { rect: PhysRect::new(l, t, w, h), role, state })
         }
 
-        fn children(&self, max: usize) -> Vec<AccChild<Self>> {
+        fn children(&self, start: usize, max: usize) -> Vec<AccChild<Self>> {
             // SAFETY: COM 메서드 호출.
-            let n = unsafe { self.0.accChildCount() }.unwrap_or(0).clamp(0, max as i32) as usize;
+            let total = unsafe { self.0.accChildCount() }.unwrap_or(0).max(0) as usize;
+            let n = total.saturating_sub(start).min(max);
             if n == 0 {
                 return Vec::new();
             }
             let mut buf = vec![VARIANT::default(); n];
             let mut got = 0i32;
             // SAFETY: 버퍼 길이만큼만 채워진다(받은 수 = got).
-            if unsafe { AccessibleChildren(&self.0, 0, &mut buf, &mut got) }.is_err() {
+            if unsafe { AccessibleChildren(&self.0, start as i32, &mut buf, &mut got) }.is_err() {
                 return Vec::new();
             }
             buf.iter()
@@ -461,8 +475,8 @@ mod tests {
             Some(AccInfo { rect: PhysRect::new(10 + i, 10 + self.depth as i32, 40, 20), role: if self.simple { 34 } else { 16 }, state: 0 })
         }
 
-        fn children(&self, max: usize) -> Vec<AccChild<Self>> {
-            (0..self.fan.min(max))
+        fn children(&self, start: usize, max: usize) -> Vec<AccChild<Self>> {
+            (start..self.fan.min(start + max))
                 .map(|i| if self.simple { AccChild::Simple(i as i32 + 1) } else { AccChild::Object(Endless { depth: self.depth + 1, ..self.clone() }) })
                 .collect()
         }
@@ -503,7 +517,38 @@ mod tests {
             ticks.set(ticks.get() + 1);
             ticks.get() > 7
         });
-        assert_eq!(found.len(), 7);
+        // 예산은 묶음을 받기 전 1번 + 자식마다 1번 본다 → 7번 허락이면 자식 6개에서 멈춤
+        assert_eq!(found.len(), 6);
+    }
+
+    #[test]
+    fn msaa_자식은_묶음으로_받고_묶음_사이마다_시간을_본다() {
+        // 한 마디의 자식 300개를 한 번에 받지 않는다 — 예산이 첫 묶음 뒤에 다하면 그 묶음까지만
+        let fetched = Rc::new(Cell::new(0));
+        struct Counting(Rc<Cell<usize>>);
+        impl AccNode for Counting {
+            fn info(&self, c: Option<i32>) -> Option<AccInfo> {
+                Some(AccInfo { rect: PhysRect::new(c.unwrap_or(0), 0, 10, 10), role: 34, state: 0 })
+            }
+            fn children(&self, start: usize, max: usize) -> Vec<AccChild<Self>> {
+                let v: Vec<_> = (start..(start + max).min(1000)).map(|i| AccChild::Simple(i as i32 + 1)).collect();
+                self.0.set(self.0.get() + v.len());
+                v
+            }
+        }
+        let out = Cell::new(false);
+        let found = walk(Counting(fetched.clone()), &Limits::default(), || {
+            let o = out.get();
+            out.set(fetched.get() >= CHILD_CHUNK);
+            o
+        });
+        assert_eq!(fetched.get(), CHILD_CHUNK, "첫 묶음만 받음");
+        assert!(found.len() <= CHILD_CHUNK);
+        // 예산이 넉넉하면 마디당 상한(300)까지 이어 받는다
+        let fetched = Rc::new(Cell::new(0));
+        let all = walk(Counting(fetched.clone()), &Limits::default(), || false);
+        assert_eq!(all.len(), MAX_CHILDREN);
+        assert_eq!(all[MAX_CHILDREN - 1].rect.x, MAX_CHILDREN as i32, "자식 번호가 이어진다");
     }
 
     #[test]
@@ -513,8 +558,12 @@ mod tests {
             fn info(&self, _c: Option<i32>) -> Option<AccInfo> {
                 Some(AccInfo { rect: PhysRect::new(0, 0, 50, 50), role: 11, state: STATE_INVISIBLE })
             }
-            fn children(&self, _m: usize) -> Vec<AccChild<Self>> {
-                vec![AccChild::Object(Hidden), AccChild::Object(Hidden)]
+            fn children(&self, start: usize, _m: usize) -> Vec<AccChild<Self>> {
+                if start == 0 {
+                    vec![AccChild::Object(Hidden), AccChild::Object(Hidden)]
+                } else {
+                    Vec::new()
+                }
             }
         }
         let found = walk(Hidden, &Limits::default(), || false);
