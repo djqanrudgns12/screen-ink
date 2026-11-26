@@ -15,6 +15,8 @@ const COMMANDS: &[&str] = &[
     "pin_info",
     "pin_action",
     "pin_zoom",
+    "capture_annotations",
+    "capture_commit_annotated",
 ];
 
 fn main() {

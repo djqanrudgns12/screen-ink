@@ -18,20 +18,29 @@ use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Runtime
 pub const SCHEME: &str = "ink";
 pub const EVT_OVERLAY: &str = "screen-ink://overlay";
 pub const EVT_AFTERIMAGE: &str = "screen-ink://afterimage";
+/// 캡처 주석(4.9): 주석 층을 보내 달라는 부탁(오버레이 → `capture_commit_annotated`로 답).
+pub const EVT_CAPTURE_COMMIT: &str = "screen-ink://capture-commit";
 /// 확정 직후 고른 자리 주황 잔상 지속 시간(R-CAP-26 · 10 §6).
 pub const AFTERIMAGE_DURATION_MS: u64 = 400;
 const PREFIX: &str = "ink-overlay-";
-const CLEAR_AFTERIMAGE_SCRIPT: &str = "(()=>{const e=document.getElementById('ink-afterimage-flash');if(e)e.remove();const r=document.getElementById('app');if(r)r.style.visibility='';delete document.body.dataset.inkAfterimage;})();";
 
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+/// 잔상 알림 — 창마다 그 창 CSS 사각형을 담아 `emit_to`로 보낸다. 오버레이 화면(`CaptureOverlay.svelte`)이
+/// `SelectionFrame state="afterimage"`로 그리고, `prefers-reduced-motion: reduce`면 화면 쪽에서 건너뛴다.
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AfterimagePayload {
     pub session: u64,
     pub rect: PhysRect,
     pub duration_ms: u64,
+    /// 이 알림을 받는 오버레이 창의 모니터
+    pub monitor_id: u32,
+    /// 그 창 기준 CSS 사각형
+    pub css: CssRect,
+    /// 세대(늦게 끝난 타이머가 새 잔상을 지우지 않게)
+    pub token: u64,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize)]
 pub struct CssRect {
     pub x: f64,
     pub y: f64,
@@ -63,16 +72,12 @@ pub fn afterimage_targets(rect: PhysRect, layout: &MonitorLayout) -> Vec<(u32, C
         .collect()
 }
 
-/// 오버레이 웹뷰에 0.4초 주황 잔상(10 §6)을 그리는 스크립트. `prefers-reduced-motion: reduce`이면 건너뛴다.
-pub fn afterimage_script(css: CssRect, duration_ms: u64, token: u64) -> String {
-    format!(
-        "(()=>{{const p=document.getElementById('ink-afterimage-flash');if(p)p.remove();const r=document.getElementById('app');if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches){{if(r)r.style.visibility='';delete document.body.dataset.inkAfterimage;return;}}const t='{token}';document.body.dataset.inkAfterimage=t;if(r)r.style.visibility='hidden';const e=document.createElement('div');e.id='ink-afterimage-flash';e.setAttribute('aria-hidden','true');e.style.cssText='position:fixed;left:{x:.2}px;top:{y:.2}px;width:{w:.2}px;height:{h:.2}px;box-sizing:border-box;pointer-events:none;outline:2px solid var(--ink-afterimage,rgba(255,159,10,0.35));border-radius:2px;animation:ink-afterimage {duration_ms}ms linear forwards;z-index:9999;';document.body.appendChild(e);setTimeout(()=>{{if(document.body.dataset.inkAfterimage===t){{e.remove();if(r)r.style.visibility='';delete document.body.dataset.inkAfterimage;}}}},{cleanup_ms});}})();",
-        x = css.x,
-        y = css.y,
-        w = css.w,
-        h = css.h,
-        cleanup_ms = duration_ms + 40,
-    )
+/// 잔상 대상 창마다 보낼 알림(창 이름, 알림). 순수 함수 — 시험은 모든 OS에서 돈다.
+pub fn afterimage_payloads(session: u64, rect: PhysRect, layout: &MonitorLayout, token: u64) -> Vec<(String, AfterimagePayload)> {
+    afterimage_targets(rect, layout)
+        .into_iter()
+        .map(|(monitor_id, css)| (label(monitor_id), AfterimagePayload { session, rect, duration_ms: AFTERIMAGE_DURATION_MS, monitor_id, css, token }))
+        .collect()
 }
 
 pub fn label(monitor: u32) -> String {
@@ -374,10 +379,10 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
             self.prepare(&MonitorLayout::new(session.monitors.iter().map(|m| ink_domain::geometry::Monitor { id: m.id, bounds: m.bounds, work: m.work, scale: m.scale, primary: m.primary }).collect()));
             return Err("overlay windows not ready".into());
         }
+        // 화면 쪽 잔상은 새 `overlay` 알림을 받으면 스스로 걷는다
         for (l, w) in self.app.webview_windows() {
             if l.starts_with(PREFIX) {
                 let _ = w.set_ignore_cursor_events(false);
-                let _ = w.eval(CLEAR_AFTERIMAGE_SCRIPT);
             }
         }
         self.frames.put(session.session, &frames);
@@ -416,7 +421,6 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
         on_main(&self.app, ink_platform_macos::freeze::hide_all);
         for (l, w) in self.app.webview_windows() {
             if l.starts_with(PREFIX) {
-                let _ = w.eval(CLEAR_AFTERIMAGE_SCRIPT);
                 let _ = show_raw(&w, false);
                 let _ = w.set_ignore_cursor_events(false);
                 // R-SYS-6: 투명 배경 다시 지정은 숨긴 뒤에(다음 진입의 시간을 쓰지 않게)
@@ -432,19 +436,17 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
     }
 
     fn flash_afterimage(&mut self, session: u64, rect: PhysRect, layout: &MonitorLayout) {
-        let targets = afterimage_targets(rect, layout);
-        if targets.is_empty() {
+        if afterimage_targets(rect, layout).is_empty() {
             return;
         }
         let token = self.bump_afterimage_gen();
-        let payload = AfterimagePayload { session, rect, duration_ms: AFTERIMAGE_DURATION_MS };
-        let _ = self.app.emit(EVT_AFTERIMAGE, &payload);
+        let targets = afterimage_payloads(session, rect, layout, token);
         let mut shown_labels = Vec::with_capacity(targets.len());
-        for (monitor_id, css) in targets {
-            let l = label(monitor_id);
+        for (l, payload) in targets {
             let Some(w) = self.app.get_webview_window(&l) else { continue };
             let _ = w.set_ignore_cursor_events(true);
-            let _ = w.eval(afterimage_script(css, AFTERIMAGE_DURATION_MS, token));
+            // 그 창 기준 CSS 사각형을 그 창에만 — 화면(CaptureOverlay)이 SelectionFrame state="afterimage"로 그린다
+            let _ = self.app.emit_to(l.as_str(), EVT_AFTERIMAGE, &payload);
             if show_raw(&w, true).is_ok() {
                 shown_labels.push(l);
             } else {
@@ -468,7 +470,6 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
                 }
                 for l in &shown_labels {
                     if let Some(w) = h.get_webview_window(l) {
-                        let _ = w.eval(CLEAR_AFTERIMAGE_SCRIPT);
                         let _ = show_raw(&w, false);
                         let _ = w.set_ignore_cursor_events(false);
                         let _ = w.set_background_color(Some(Color(0, 0, 0, 0)));
@@ -476,6 +477,21 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
                 }
             });
         });
+    }
+
+    fn request_commit(&mut self, request: &ink_app::capture::CommitRequest) -> bool {
+        // 이 세션의 오버레이 창마다(주석을 쥔 창만 답한다)
+        let labels: Vec<String> = match &self.layout {
+            Some(layout) => layout.monitors.iter().map(|m| label(m.id)).collect(),
+            None => return false,
+        };
+        let mut sent = false;
+        for l in labels {
+            if self.app.get_webview_window(&l).is_some() {
+                sent |= self.app.emit_to(l.as_str(), EVT_CAPTURE_COMMIT, request).is_ok();
+            }
+        }
+        sent
     }
 }
 
@@ -580,10 +596,16 @@ mod tests {
         assert!((targets[1].1.h - 100.0).abs() < 1e-6);
         // 빈 사각형은 대상 없음
         assert!(afterimage_targets(PhysRect::new(0, 0, 0, 10), &layout).is_empty());
-        // 스크립트는 prefers-reduced-motion 가드와 400ms 애니메이션을 포함한다
-        let js = afterimage_script(CssRect { x: 10.0, y: 20.0, w: 100.0, h: 50.0 }, AFTERIMAGE_DURATION_MS, 7);
-        assert!(js.contains("prefers-reduced-motion: reduce"));
-        assert!(js.contains("ink-afterimage 400ms linear forwards"));
-        assert!(js.contains("left:10.00px;top:20.00px;width:100.00px;height:50.00px"));
+        // 창마다 그 창 CSS 사각형을 담은 알림(eval 스크립트 없음 — 화면이 SelectionFrame으로 그림)
+        let sent = afterimage_payloads(4, PhysRect::new(1820, 300, 400, 150), &layout, 9);
+        assert_eq!(sent.iter().map(|(l, _)| l.as_str()).collect::<Vec<_>>(), ["ink-overlay-0", "ink-overlay-1"]);
+        assert_eq!(sent[1].1.monitor_id, 1);
+        assert_eq!(sent[1].1.css, targets[1].1);
+        let json = serde_json::to_value(&sent[0].1).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({ "session": 4, "rect": { "x": 1820, "y": 300, "w": 400, "h": 150 }, "durationMs": 400, "monitorId": 0, "css": { "x": 1820.0, "y": 300.0, "w": 400.0, "h": 150.0 }, "token": 9 })
+        );
+        assert!(afterimage_payloads(4, PhysRect::new(0, 0, 0, 10), &layout, 9).is_empty());
     }
 }

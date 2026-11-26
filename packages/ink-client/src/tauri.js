@@ -1,6 +1,7 @@
 // TauriInkClient — 실제 앱. 명령 이름은 tauri-plugin-screen-ink의 `plugin:screen-ink|…`와 1:1.
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { encodeAnnotatedCommit } from './index.js';
 
 const cmd = (name, args) => invoke(`plugin:screen-ink|${name}`, args);
 
@@ -23,6 +24,9 @@ export function createTauriClient() {
     pinInfo: (id) => cmd('pin_info', { id }),
     pinAction: (id, action) => cmd('pin_action', { id, action }),
     pinZoom: (id, dy, fx, fy) => cmd('pin_zoom', { id, dy, fx, fy }),
+    captureAnnotations: (session, monitorId, items) => cmd('capture_annotations', { session, monitorId, items }),
+    // 원본 바이트 IPC(tauri::ipc::Request body) — base64 없음
+    captureCommitAnnotated: (meta, rgba) => invoke('plugin:screen-ink|capture_commit_annotated', encodeAnnotatedCommit(meta, rgba)),
     subscribe(handler) {
       const offs = [
         listen('screen-ink://state', (e) => handler({ type: 'state', state: e.payload })),
@@ -30,6 +34,7 @@ export function createTauriClient() {
         listen('screen-ink://overlay', (e) => handler({ type: 'overlay', overlay: e.payload })),
         listen('screen-ink://capture', (e) => handler({ type: 'capture', view: e.payload })),
         listen('screen-ink://afterimage', (e) => handler({ type: 'afterimage', afterimage: e.payload })),
+        listen('screen-ink://capture-commit', (e) => handler({ type: 'captureCommit', request: e.payload })),
       ];
       return () => offs.forEach((p) => p.then((off) => off()));
     },

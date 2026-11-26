@@ -656,6 +656,24 @@ fn capture_input<R: Runtime>(window: tauri::WebviewWindow<R>, ink: State<'_, Ink
     ink.lock().capture_input(input);
 }
 
+/// 캡처 주석(4.9): 오버레이 창(모니터)이 자기 주석 개수를 알린다(0 ↔ n이 바뀔 때).
+#[tauri::command]
+fn capture_annotations(ink: State<'_, Ink>, session: u64, monitor_id: u32, items: u32) {
+    ink.lock().capture_annotations(session, monitor_id, items);
+}
+
+/// 캡처 주석(4.9): `screen-ink://capture-commit` 부탁에 대한 답 — 원본 바이트 본문
+/// `[머리 길이 u32 LE][머리 JSON][주석 층 RGBA]`(base64 없음, B §2.1). 합성·복사·저장·핀은 서비스가.
+#[tauri::command]
+fn capture_commit_annotated(ink: State<'_, Ink>, request: tauri::ipc::Request<'_>) -> Result<(), String> {
+    let tauri::ipc::InvokeBody::Raw(body) = request.body() else {
+        return Err("annotation layer must be sent as raw bytes".into());
+    };
+    let commit = ink_app::capture::AnnotatedCommit::decode(body)?;
+    ink.lock().capture_commit_annotated(commit);
+    Ok(())
+}
+
 /// 핀 화면이 처음 묻는 것: 그림 크기·주소·배율(R-CAP-29).
 #[tauri::command]
 fn pin_info(store: State<'_, pins::PinStore>, id: u64) -> Option<pins::PinView> {
@@ -1079,7 +1097,9 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             capture_input,
             pin_info,
             pin_action,
-            pin_zoom
+            pin_zoom,
+            capture_annotations,
+            capture_commit_annotated
         ])
         .register_uri_scheme_protocol(overlay::SCHEME, |ctx, req| overlay::serve(ctx, req))
         .setup(|app, _api| setup(app))
