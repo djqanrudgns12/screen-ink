@@ -1,9 +1,15 @@
-# 순수 크레이트·UI 시험 + 인식 스냅숏 재생(08 §5.2). OS 어댑터·Tauri 껍데기는 Windows 개발 PC에서 따로 잰다.
-# 지금은 PR과 손으로 돌리기만(푸시마다 돌리려면 on.push를 더한다).
+# 푸시마다: 순수 크레이트·인식 재생(ubuntu) + Windows·맥 어댑터 빌드·clippy + UI 시험·진척도 보고서 검사.
+# 공개 저장소라 러너 시간은 무료. OS 화면이 필요한 시험(실제 앱·M1 진입 시간)은 각 개발 PC에서 따로 잰다.
 name: ci
 on:
+  push:
+    branches: [feat/foundation, main]
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   rust:
@@ -19,6 +25,32 @@ jobs:
       - name: clippy
         run: cargo clippy -p ink-domain -p ink-app -p ink-vision -p ink-store -p ink-platform-fake --all-targets -- -D warnings
 
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      # 실제 화면(UIA·모니터)이 필요한 ink-platform-windows 시험은 돌리지 않고 빌드·clippy만
+      - name: 시험(플러그인 포함)
+        run: cargo test --workspace --exclude screen-ink --exclude ink-platform-windows
+      - name: clippy(Windows 어댑터·플러그인 포함)
+        run: cargo clippy --workspace --exclude screen-ink --all-targets -- -D warnings
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      # Windows에서 고친 공통 코드가 맥 빌드를 깨지 않는지
+      - name: clippy(맥 어댑터·플러그인 포함)
+        run: cargo clippy --workspace --exclude screen-ink --exclude ink-platform-windows --all-targets -- -D warnings
+
   ui:
     runs-on: ubuntu-latest
     steps:
@@ -29,3 +61,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm run check
+      - name: 진척도 보고서가 원본과 같은지
+        run: node scripts/progress.mjs --check
