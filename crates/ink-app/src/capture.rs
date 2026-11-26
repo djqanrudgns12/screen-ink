@@ -282,7 +282,7 @@ impl InkService {
     fn session(&self) -> Option<u64> {
         match self.mode {
             Mode::Capture { session, .. } => Some(session),
-            Mode::Idle => None,
+            _ => None,
         }
     }
 
@@ -621,7 +621,7 @@ impl InkService {
     }
 
     /// 그림 하나를 저장 폴더에(이름 규칙·오늘 순번) → 결과 섬.
-    fn save_image(&mut self, last: &LastCapture) -> IslandEvent {
+    pub(crate) fn save_image(&mut self, last: &LastCapture) -> IslandEvent {
         let mut t = self.ports.clock.local();
         let day = (t.year, t.month, t.day);
         if self.cap.save_day != day {

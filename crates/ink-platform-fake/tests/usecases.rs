@@ -146,7 +146,7 @@ fn 잠시_끄면_alt_백틱만_남고_다시_누르면_켜진다() {
     assert_eq!(s.on_hotkey("pause"), HotkeyOutcome::Toggled(true));
     assert_eq!(w.registered_count(), 16);
     assert_eq!(s.on_hotkey("region"), HotkeyOutcome::Captured);
-    assert_eq!(s.on_hotkey("draw"), HotkeyOutcome::Start("draw".into()), "판서는 아직 어댑터 몫");
+    assert_eq!(s.on_hotkey("draw"), HotkeyOutcome::Draw, "캡처 중 Alt+1 = 캡처를 끝내고 판서로");
 }
 
 #[test]

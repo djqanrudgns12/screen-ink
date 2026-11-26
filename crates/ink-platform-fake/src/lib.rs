@@ -1,8 +1,8 @@
 //! 가짜 어댑터 — 상태를 `Arc<Mutex<_>>`로 바깥에 내놓아 시험이 "이 PC 장면"을 꾸미고 결과를 들여다본다.
 
 use ink_app::{
-    Frame, HotkeyError, HotkeyRegistry, InkState, IslandEvent, Loaded, MonitorProbe, Notifier, OverlayHost, OverlaySession, Ports, ScreenSource, SettingsStore, StoreError,
-    StoreLocation, SystemProbe, WindowCatalog,
+    DrawSession, Frame, HotkeyError, HotkeyRegistry, InkState, IslandEvent, Loaded, MonitorProbe, Notifier, OverlayHost, OverlaySession, Ports, ScreenSource, SettingsStore,
+    StoreError, StoreLocation, SystemProbe, WindowCatalog,
 };
 use ink_domain::geometry::{Monitor, MonitorLayout, PhysPoint, PhysRect};
 use ink_domain::shortcuts::LiveBinding;
@@ -156,6 +156,8 @@ pub struct OverlayLog {
     /// 네이티브 정지 화면 창이 있는 척(진입 시간 끝점 시험)
     pub native: bool,
     pub highlights: Vec<Option<PhysRect>>,
+    /// 판서로 띄운 세션과 받은 배경 이미지 크기(칠판은 None)
+    pub draws: Vec<(DrawSession, Option<(u32, u32)>)>,
 }
 
 #[derive(Clone, Default)]
@@ -185,6 +187,16 @@ impl OverlayHost for FakeOverlay {
         if o.showing.map(|(s, _)| s) == Some(session) {
             o.showing = None;
         }
+    }
+
+    fn show_draw(&mut self, session: &DrawSession, frame: Option<Frame>) -> Result<Option<String>, String> {
+        let mut o = self.0.lock().unwrap();
+        if o.fail_show {
+            return Err("webview gone".into());
+        }
+        o.showing = Some((session.session, usize::from(frame.is_some())));
+        o.draws.push((session.clone(), frame.as_ref().map(|f| (f.width, f.height))));
+        Ok(frame.map(|f| format!("fake://frame/{}/{}", session.session, f.monitor_id)))
     }
 }
 
@@ -226,6 +238,10 @@ impl SettingsStore for MemoryStore {
 pub struct Inbox {
     pub islands: Vec<IslandEvent>,
     pub states: usize,
+    /// `screen-ink://draw`로 보낸 판서 세션
+    pub draws: Vec<DrawSession>,
+    /// 섬 단추 → 판서 엔진 명령(세션, 명령)
+    pub draw_commands: Vec<(u64, String)>,
 }
 
 #[derive(Clone, Default)]
@@ -238,6 +254,14 @@ impl Notifier for RecordingNotifier {
 
     fn island(&self, event: &IslandEvent) {
         self.0.lock().unwrap().islands.push(event.clone());
+    }
+
+    fn draw(&self, session: &DrawSession) {
+        self.0.lock().unwrap().draws.push(session.clone());
+    }
+
+    fn draw_command(&self, session: u64, command: &str) {
+        self.0.lock().unwrap().draw_commands.push((session, command.to_string()));
     }
 }
 

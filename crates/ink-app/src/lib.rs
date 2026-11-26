@@ -3,6 +3,7 @@
 
 pub mod capture;
 pub mod case;
+pub mod draw;
 pub mod ports;
 pub mod service;
 pub mod state;
@@ -13,9 +14,11 @@ pub use ports::{
     SettingsStore, StoreError, StoreLocation, SystemEvent, SystemProbe, VisionSource, WindowCatalog,
 };
 pub use capture::CaptureInput;
+pub use draw::{DrawExportMeta, DrawExported, DrawFinish, DrawIslandPatch, DrawRestoreResult, ExportAction, KeptInk, KeptPayload, PenSample};
+pub use ink_domain::mode::DrawKind;
 pub use vision::VisionEngine;
 pub use service::{HotkeyOutcome, ImportPreview, InkService, PAUSE_SLOT};
 pub use state::{
-    CaptureView, ConflictSummary, InkState, IslandButton, IslandEvent, IslandHint, IslandKind, OverlayMonitor, OverlaySession, PreviewResult, RowStatus, SetShortcutResult,
-    ShortcutRow, UpdateResult,
+    CaptureView, ConflictSummary, DrawSession, DrawViewTransform, InkState, IslandButton, IslandEvent, IslandHint, IslandKind, KeptCompat, OverlayMonitor, OverlaySession,
+    PreviewResult, RowStatus, SetShortcutResult, ShortcutRow, UpdateResult,
 };

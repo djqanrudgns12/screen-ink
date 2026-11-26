@@ -2,7 +2,7 @@
 
 use crate::ports::StoreLocation;
 use ink_domain::shortcuts::Suggestion;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
@@ -165,11 +165,31 @@ pub struct IslandEvent {
     /// 추천 칩 하나(02 §1.6 — 지금 할 수 있을 때만)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub chip: Option<IslandButton>,
+    /// 판서 섬(`variant: "draw"`)의 지금 색 점(R·Y·G·O·B·L·W·K)
+    #[serde(rename = "penColor", skip_serializing_if = "Option::is_none")]
+    pub pen_color: Option<String>,
+    /// 판서 섬의 굵기(`4px`)
+    #[serde(rename = "penWidth", skip_serializing_if = "Option::is_none")]
+    pub pen_width: Option<String>,
 }
 
 impl IslandEvent {
     pub fn new(kind: IslandKind, text: impl Into<String>) -> Self {
-        Self { kind, text: text.into(), detail: None, button: None, variant: None, mode: None, value: None, hints: Vec::new(), thumb_url: None, button_key: None, chip: None }
+        Self {
+            kind,
+            text: text.into(),
+            detail: None,
+            button: None,
+            variant: None,
+            mode: None,
+            value: None,
+            hints: Vec::new(),
+            thumb_url: None,
+            button_key: None,
+            chip: None,
+            pen_color: None,
+            pen_width: None,
+        }
     }
 
     pub fn button(mut self, label: &str, action: &str, key: Option<&str>) -> Self {
@@ -197,6 +217,58 @@ impl IslandEvent {
         self.button = Some(IslandButton { label: "되돌리기".into(), action: "undo".into() });
         self
     }
+}
+
+// ───────────── 판서·칠판(A §2.5) ─────────────
+
+/// 확대·이동(`view = {s, tx, ty}`, A §2.1). `s` 1~8, `tx`·`ty` = 화면 CSS px에서 문서 원점 자리(≤ 0).
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct DrawViewTransform {
+    pub s: f64,
+    pub tx: f64,
+    pub ty: f64,
+}
+
+impl Default for DrawViewTransform {
+    fn default() -> Self {
+        DrawViewTransform { s: 1.0, tx: 0.0, ty: 0.0 }
+    }
+}
+
+/// 보관 판서를 지금 모니터에 불러올 수 있는지(02 §3.6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum KeptCompat {
+    /// 보관한 판서가 없음
+    None,
+    /// 같은 모니터·같은 크기·같은 배율 — 그대로
+    Same,
+    /// 같은 모니터인데 배율(또는 같은 비율의 해상도)만 바뀜 — 문서 크기 비율로 옮김
+    Rescaled,
+    /// 다른 모니터 — 불러올 수 없음
+    DifferentMonitor,
+}
+
+/// 판서 한 번(UI로 `screen-ink://draw`). 오버레이 창 `ink-overlay-<monitor.id>` 하나만 쓴다.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DrawSession {
+    pub session: u64,
+    /// false = Alt+1 판서(정지 화면 위), true = Alt+3 칠판(빈 바탕, `monitor.frameUrl` 없음)
+    pub board: bool,
+    /// 대상 모니터(bounds·scale·frameUrl). 판서는 웹뷰가 frameUrl을 직접 그린다(네이티브 정지 창 없음)
+    pub monitor: OverlayMonitor,
+    /// 진입 순간 모니터 구성 지문(`MonitorLayout::fingerprint`)
+    pub layout_fingerprint: String,
+    /// 시작 확대·이동 — 기본 {s:1,tx:0,ty:0}(실시간 확대·[판서로]에서 넘어오면 그 값)
+    pub initial_view: DrawViewTransform,
+    /// Alt+Shift+1(직전 판서 바로 열기) — 열자마자 `drawRestore`. 판서 중 다시 누르면 같은 세션이 true로 한 번 더 온다
+    pub restore_on_open: bool,
+    /// 보관한 판서가 있음(섬 "Ctrl+Shift+R 이전 판서")
+    pub has_kept: bool,
+    pub kept_compatible: KeptCompat,
+    /// 단축키 순간 커서(물리 px, 가상 화면) — 첫 이동 전 펜 고리 자리
+    pub cursor: ink_domain::geometry::PhysPoint,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
