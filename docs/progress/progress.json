@@ -12,9 +12,9 @@
   "levels": { "hard": "상", "mid": "중", "easy": "하" },
   "levelMeaning": { "hard": "새 OS API·성능 목표·설계 결정이 많음", "mid": "아는 방법으로 여러 파일·실측 필요", "easy": "작은 화면·문서·확인·측정 한 번" },
   "next": {
-    "win": ["3e-paste", "3f-win-cases", "3b-dpi", "3b-msaa", "D2"],
-    "mac": ["M9", "M10", "M3", "3e-chip", "4.1"],
-    "common": ["4.1", "4.9", "3e-chip", "3f-docs", "D1"]
+    "win": ["3f-win-cases", "4.2", "5.4", "6.1", "D10"],
+    "mac": ["M12", "M16", "M9", "M10", "M14"],
+    "common": ["4.9", "3e-handoff", "D11", "D1", "7.7"]
   },
   "tracks": [
     {
@@ -83,7 +83,7 @@
             { "id": "3e-output", "title": "복사(DIB+PNG)·저장·기록·결과 섬(썸네일·저장)", "platform": "common", "days": 0.6, "status": "done" },
             { "id": "3e-paste", "title": "한글·PPT에 붙여 넣어 크기·색 확인", "platform": "win", "days": 0.05, "status": "todo", "level": "easy" },
             { "id": "3e-chip", "title": "결과 섬 HEX 칩·주황 잔상 0.4초", "platform": "common", "days": 0.15, "status": "verify", "note": "구현·시험 끝, 실제 앱 확인 남음(잔상은 eval → CaptureOverlay로 옮길 것)", "level": "easy" },
-            { "id": "3e-handoff", "title": "[판서로] 이어받기 ≤ 150 ms", "platform": "common", "days": 0.2, "status": "todo", "note": "단계 4 판서가 먼저", "level": "mid" },
+            { "id": "3e-handoff", "title": "[판서로] 이어받기 ≤ 150 ms", "platform": "common", "days": 0.2, "status": "verify", "note": "[판서로] 프레임 재사용(캡처 0회)·범위 88% 확대, ≤150 ms 실측 남음", "level": "mid" },
             { "id": "3g-toolbar", "title": "선택 툴바(R-CAP-27): 위치 규칙·여러 모니터·취소/저장/복사·툴팁 키", "platform": "common", "days": 0.5, "status": "done", "note": "Windows 실제 앱 확인(2026-11-26: 확정 → 오른쪽 아래 툴바, [취소] 클릭으로 끝남). 위·안쪽 배치는 단위 시험, 맥은 인수인계 §2.6" },
             { "id": "3h-pin", "title": "캡처 핀(R-CAP-29): 툴바 [고정] → 늘 위 이미지 창·끌기·휠 확대·투명도·우클릭 메뉴·트레이 모두 닫기", "platform": "common", "days": 1, "status": "done", "note": "Windows 실제 앱 확인(2026-11-26): 원래 자리 생성·휠 125%·오른쪽 클릭 메뉴·끌기·두 번 클릭 닫기. Ctrl+휠 투명도·메뉴 복사/저장은 시험만, 맥 혼합 배율 자리는 인수인계 §2.6" },
             { "id": "3g-keys", "title": "화면 안 키 설정 반영(R-KEY-6): c-* 키로 판정, 맥 Cmd", "platform": "common", "days": 0.25, "status": "done", "note": "Space로 바꾸면 Space = 복사(서비스 시험)" },
@@ -104,7 +104,7 @@
             { "id": "4.5", "title": "글자 T(IME 보호)·고르기·다시 고치기", "platform": "common", "days": 0.375, "status": "verify", "note": "글자 T·IME 조합 보호·고르기·다시 고치기 구현, 한글 IME 실기 확인 남음", "level": "hard" },
             { "id": "4.6", "title": "나가기·보관·복원", "platform": "common", "days": 0.375, "status": "verify", "note": "나가기·keptInk 메모리 보관·복원(배율 맞춤·다른 모니터 거절·실행 취소 가능) 구현, 화면 확인 남음", "level": "mid" },
             { "id": "4.7", "title": "판서 결과 복사·저장", "platform": "common", "days": 0.375, "status": "verify", "note": "복사·저장 = 늘 모니터 전체(원본 바이트 IPC), 4K 멈칫 측정 남음", "level": "easy" },
-            { "id": "4.8", "title": "판서 섬·펜 색 고리·MiniMap·칠판 미리 보기", "platform": "common", "days": 0.375, "status": "todo", "level": "mid" },
+            { "id": "4.8", "title": "판서 섬·펜 색 고리·MiniMap·칠판 미리 보기", "platform": "common", "days": 0.375, "status": "verify", "note": "판서 섬 6색·4초 물러남·커서 비킴·펜 색 고리·MiniMap·칠판 미리 보기 구현, 미리보기·화면 확인 남음", "level": "mid" },
             { "id": "4.9", "title": "캡처 주석(R-CAP-28): 툴바 도구 = 4.1 엔진·범위 안·결과 합성·모자이크", "platform": "common", "days": 1, "status": "todo", "note": "2026-11-26 사용자 요청으로 1차", "level": "hard" }
           ]
         },
@@ -114,7 +114,7 @@
           "items": [
             { "id": "5.1", "title": "Magnifier(Magnification API)·M6", "platform": "win", "days": 0.4, "status": "verify", "note": "magnifier.rs(전용 스레드·미리 만들기·EXCLUDE 필터)·포트·유스케이스·가짜 시험, 실제 화면 확인 남음", "level": "hard" },
             { "id": "5.2", "title": "커서 따라가기·휠 단계·배지", "platform": "common", "days": 0.4, "status": "verify", "note": "zoom.rs 추적·휠 단계·배지 + 시험, 화면 확인 남음", "level": "mid" },
-            { "id": "5.3", "title": "Alt+1 전환", "platform": "common", "days": 0.4, "status": "todo", "level": "mid" },
+            { "id": "5.3", "title": "Alt+1 전환", "platform": "common", "days": 0.4, "status": "verify", "note": "확대 중 Alt+1 = 배율·위치 이어받기(돋보기 숨김 뒤 한 프레임 기다려 캡처), ≤150 ms 실측 남음", "level": "mid" },
             { "id": "5.4", "title": "4K 30 fps 미달 시 2안 판단", "platform": "win", "days": 0.4, "status": "partial", "note": "bench/m6-zoom.ps1·판단 기준 준비, 1080p·4K 측정 남음", "level": "mid" },
             { "id": "5.5", "title": "확대 섬·후광·MiniMap(원본 제외)", "platform": "common", "days": 0.4, "status": "verify", "note": "ZoomHud·후광·MiniMap(원본 제외) 구현, 화면 확인 남음", "level": "mid" }
           ]
@@ -173,7 +173,13 @@
             { "id": "M9", "title": "AX 요소 색인", "platform": "mac", "days": 1.5, "status": "todo", "level": "hard" },
             { "id": "M10", "title": "권한 스마트 흐름(화면 기록·손쉬운 사용)", "platform": "mac", "days": 1, "status": "partial", "level": "mid" },
             { "id": "M11", "title": "시스템 사건·지역 시각", "platform": "mac", "days": 0.5, "status": "verify", "level": "easy" },
-            { "id": "M-drag", "title": "듀얼 모니터 넘어 끌기·섬 위치", "platform": "mac", "days": 0.5, "status": "done" }
+            { "id": "M-drag", "title": "듀얼 모니터 넘어 끌기·섬 위치", "platform": "mac", "days": 0.5, "status": "done" },
+            { "id": "M12", "title": "맥 판서·칠판 확인(Alt+1·Alt+3, 웹뷰 판서·보관·복사)", "platform": "mac", "days": 0.5, "status": "todo", "note": "공통 코드(DrawOverlay·draw.rs)가 맥 오버레이에서 도는지 — show_draw 경로·Cmd 키", "level": "mid" },
+            { "id": "M13", "title": "맥 실시간 확대(Magnifier 포트: SCStream → Metal)", "platform": "mac", "days": 1.5, "status": "todo", "note": "R-ZOOM-1 맥 = SCStream → Metal. 지금 맥은 NoMagnifier(지원 안 함)", "level": "hard" },
+            { "id": "M14", "title": "맥 F2 창 캡처(ScreenCaptureKit 창 한 장·보호 화면 판정)", "platform": "mac", "days": 0.5, "status": "todo", "note": "Windows는 WGC(wgc_window.rs). 맥은 SCScreenshotManager/SCStream 창 필터", "level": "mid" },
+            { "id": "M15", "title": "맥 F3 녹화(Recorder 포트: SCStream + AVAssetWriter H.264)", "platform": "mac", "days": 1.5, "status": "todo", "note": "Windows는 MF 직접(recorder.rs, 5 Mbps). 맥은 지금 지원 안 함", "level": "hard" },
+            { "id": "M16", "title": "맥 캡처 주석·핀·결과 섬 칩·잔상 확인", "platform": "mac", "days": 0.25, "status": "todo", "note": "공통 코드 — 맥 화면에서 동작·좌표(Retina) 확인", "level": "easy" },
+            { "id": "M17", "title": "맥 첫 실행 시트 F키 안내 한 줄(fn+F1·표준 기능 키)", "platform": "mac", "days": 0.1, "status": "todo", "note": "사용자 결정 #9", "level": "easy" }
           ]
         },
         {
@@ -201,8 +207,8 @@
           "name": "Microsoft Store(MSIX, 무료·무경고)",
           "items": [
             { "id": "D1", "title": "개발자 계정(개인, 무료: 신분증·셀카)", "platform": "common", "days": 0.25, "status": "partial", "note": "게시자 표시 이름 찰떡쌤. 신분증 인증 때문에 등록 보류(사용자가 신분증 지참 후 진행)", "level": "easy" },
-            { "id": "D2", "title": "MSIX 포장 파이프라인(Tauri 빌드 → 매니페스트·아이콘·makeappx)", "platform": "win", "days": 1, "status": "todo", "level": "hard" },
-            { "id": "D3", "title": "패키지 모드 대응: 자동 실행 StartupTask·포터블 표시 무시·저장 위치", "platform": "win", "days": 0.5, "status": "todo", "level": "mid" },
+            { "id": "D2", "title": "MSIX 포장 파이프라인(Tauri 빌드 → 매니페스트·아이콘·makeappx)", "platform": "win", "days": 1, "status": "done", "note": "scripts/package-msix.ps1 + 매니페스트 템플릿, store·direct 포장·풀기 검증 통과(서명 없음)" },
+            { "id": "D3", "title": "패키지 모드 대응: 자동 실행 StartupTask·포터블 표시 무시·저장 위치", "platform": "win", "days": 0.5, "status": "verify", "note": "패키지 판정·StartupTask·저장 위치·로그 연결, 실제 MSIX 설치 확인 남음(사용자 승인)", "level": "mid" },
             { "id": "D4", "title": "스토어 등록 자료(설명·스크린숏·개인정보 처리방침 URL·연령 등급)", "platform": "common", "days": 0.5, "status": "partial", "note": "초안 docs/store/microsoft-store-listing.md. 남은 것: 스크린숏(실제 화면)·로고·게시자 표시 이름", "level": "easy" },
             { "id": "D5", "title": "인증 제출·통과", "platform": "win", "days": 0.5, "status": "todo", "level": "mid" },
             { "id": "D6", "title": "winget(msstore) 설치 확인·학교 PC Store 허용 여부 확인", "platform": "win", "days": 0.25, "status": "partial", "note": "학교 PC 스토어 열림 확인(사용자 2026-11-26), winget 확인 남음", "level": "easy" }
