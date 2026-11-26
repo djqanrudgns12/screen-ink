@@ -1231,25 +1231,42 @@ export class InkEngine {
         this.push({ type: 'remove', page, entries: [{ index, item: it }] });
         return true;
       }
-      if (it.text === e.text && it.color === e.color) return false;
-      const sz = this.measureText(e.text, it.fontSize, it.fontFamily);
+      const prevFamily = it.fontFamily;
+      const nextFamily = e.fontFamily || prevFamily;
+      const prevWeight = /** @type {any} */ (it).fontWeight;
+      const rawNextWeight = /** @type {any} */ (e).fontWeight;
+      const nextWeight = rawNextWeight !== undefined ? rawNextWeight : prevWeight;
+      if (it.text === e.text && it.color === e.color && prevFamily === nextFamily && prevWeight === nextWeight) {
+        return false;
+      }
+      const sz = this.measureText(e.text, it.fontSize, nextFamily);
+      /** @type {Record<string, any>} */
+      const patch = { text: e.text, color: e.color, fontFamily: nextFamily, w: sz.w, h: sz.h };
+      /** @type {Record<string, any>} */
+      const prev = { text: it.text, color: it.color, fontFamily: prevFamily, w: it.w, h: it.h };
+      if (nextWeight !== undefined || prevWeight !== undefined) {
+        patch.fontWeight = nextWeight;
+        prev.fontWeight = prevWeight;
+      }
       this.push({
         type: 'setAttr',
         page,
         ids: [it.id],
-        patch: { text: e.text, color: e.color, w: sz.w, h: sz.h },
-        prev: { [it.id]: { text: it.text, color: it.color, w: it.w, h: it.h } },
+        patch,
+        prev: { [it.id]: prev },
       });
       return true;
     }
     if (blank) return false;
     const sz = this.measureText(e.text, e.fontSize, e.fontFamily);
+    const fontWeight = /** @type {any} */ (e).fontWeight;
     /** @type {TextItem} */
     const item = withBBox({
       id: this.nextId(),
       kind: 'text',
       color: e.color,
       fontFamily: e.fontFamily,
+      ...(fontWeight != null ? { fontWeight } : {}),
       fontSize: e.fontSize,
       x: e.x,
       y: e.y,

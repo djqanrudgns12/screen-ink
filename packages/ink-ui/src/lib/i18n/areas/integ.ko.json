@@ -1,0 +1,10 @@
+{
+  "integ.icon.line": "직선",
+  "integ.icon.trash": "모두 지우기",
+  "integ.icon.windowTop": "창을 맨 위에",
+  "integ.setting.annotate.font": "주석 글꼴",
+  "integ.setting.annotate.style": "주석 도구 스타일",
+  "integ.setting.capture.delay": "지연 캡처 시간",
+  "integ.setting.record.cursor": "녹화에 커서 포함",
+  "integ.setting.update.snooze": "업데이트 알림 미루기"
+}

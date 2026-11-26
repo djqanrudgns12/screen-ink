@@ -712,6 +712,38 @@ test('글자_바깥클릭_확정과_더블클릭_다시고치기', () => {
   assert.equal(e.items.length, 0, '비우면 지움');
 });
 
+test('글자_commitText_글꼴과_굵기_저장_및_편집_되돌리기', () => {
+  const e = engine();
+  key(e, 'KeyT');
+  click(e, 100, 100);
+  e.editing = { .../** @type {any} */ (e.editing), fontFamily: 'Paperlogy', fontWeight: 600 };
+  e.textInput('제목');
+  assert.equal(e.commitText(), true);
+  const created = /** @type {any} */ (e.items[0]);
+  assert.equal(created.fontFamily, 'Paperlogy');
+  assert.equal(created.fontWeight, 600);
+
+  assert.equal(e.editTextItem(created.id), true);
+  e.editing = { .../** @type {any} */ (e.editing), fontFamily: 'Paperlogy', fontWeight: 600 };
+  assert.equal(e.commitText(), false, '변화가 없으면 명령을 쌓지 않음');
+
+  assert.equal(e.editTextItem(created.id), true);
+  e.editing = { .../** @type {any} */ (e.editing), fontFamily: 'Freesentation', fontWeight: 500 };
+  assert.equal(e.commitText(), true);
+  const updated = /** @type {any} */ (e.items[0]);
+  assert.equal(updated.fontFamily, 'Freesentation');
+  assert.equal(updated.fontWeight, 500);
+  assert.equal(e.undoStack.at(-1)?.type, 'setAttr');
+
+  e.undo();
+  assert.equal(/** @type {any} */ (e.items[0]).fontFamily, 'Paperlogy');
+  assert.equal(/** @type {any} */ (e.items[0]).fontWeight, 600);
+
+  e.redo();
+  assert.equal(/** @type {any} */ (e.items[0]).fontFamily, 'Freesentation');
+  assert.equal(/** @type {any} */ (e.items[0]).fontWeight, 500);
+});
+
 test('칠판_여러장_자리와_되돌리기', () => {
   const b = engine({ docOptions: { mode: 'board' } });
   drag(b, line(100, 100, 200, 100, 4));

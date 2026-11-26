@@ -196,28 +196,7 @@
         onTool(tool);
       }}
     >
-      {#if tool.icon === 'line'}
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.65"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-          class="ink-icon"
-        >
-          <path d="M5.5 18.5L18.5 5.5" />
-          {#if active}
-            <circle cx="5.5" cy="18.5" r="2" fill="currentColor" stroke="none" />
-            <circle cx="18.5" cy="5.5" r="2" fill="currentColor" stroke="none" />
-          {/if}
-        </svg>
-      {:else}
-        <AnnotateGlyph name={tool.icon} size={18} filled={active} />
-      {/if}
+      <AnnotateGlyph name={tool.icon} size={18} filled={active} />
     </button>
   {/each}
 
@@ -313,23 +292,7 @@
       onClear();
     }}
   >
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.65"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      class="ink-icon"
-    >
-      <path d="M4.5 7.25h15" />
-      <path d="M9.5 7.25V5.4a1.4 1.4 0 0 1 1.4-1.4h2.2a1.4 1.4 0 0 1 1.4 1.4v1.85" />
-      <path d="M6.75 7.25l.85 11.1a1.75 1.75 0 0 0 1.74 1.65h5.32a1.75 1.75 0 0 0 1.74-1.65l.85-11.1" />
-      <path d="M10.25 11.2v5.3M13.75 11.2v5.3" />
-    </svg>
+    <Icon name="trash" size={18} accent={false} />
   </button>
 
   <button
@@ -529,11 +492,5 @@
     pointer-events: none;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
     z-index: 10;
-  }
-
-  .ink-icon {
-    flex: none;
-    display: inline-block;
-    vertical-align: middle;
   }
 </style>

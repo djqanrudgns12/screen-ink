@@ -1,0 +1,11 @@
+{
+  "about.opensource.fontsLabel": "글꼴",
+  "about.opensource.fontsSub": "Freesentation · Paperlogy · IBM Plex Mono (SIL OFL 1.1)",
+  "about.opensource.iconsLabel": "아이콘",
+  "about.opensource.iconsSub": "슉쇽 맞춤 세트",
+  "about.opensource.libsLabel": "오픈소스",
+  "about.opensource.libsSub": "pdf-lib (MIT) · Svelte · bits-ui · Tauri",
+  "about.privacy.label": "외부 전송 없음",
+  "about.privacy.section": "개인정보·연결",
+  "about.privacy.sub": "설정과 캡처 기록은 이 컴퓨터에만 보관해요 · 업데이트 확인은 일반에서 끄고 켤 수 있어요"
+}

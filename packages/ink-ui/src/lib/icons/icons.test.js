@@ -32,20 +32,23 @@ const ADDED_7 = [
   'eyedropper', 'font', 'slider', 'check-circle', 'warning-triangle', 'external-link', 'help-circle',
 ];
 
+const INTEG_ICONS = ['window-top', 'line', 'line-fill', 'trash'];
+
 test('기존 F01 24종 순서와 키가 그대로 유지된다', () => {
   assert.deepEqual(ICON_NAMES.slice(0, 24), LEGACY_24);
 });
 
-test('10-custom-shookshok 35종 SVG와 추가 7종·채움 8종이 모두 ICONS에 있다', () => {
+test('10-custom-shookshok 35종 SVG와 추가 7종·채움 9종·통합 4종이 모두 ICONS에 있다', () => {
   const svgs = readdirSync(SVG_DIR)
     .filter((f) => f.endsWith('.svg'))
     .map((f) => f.replace(/\.svg$/, ''))
     .sort();
   assert.equal(svgs.length, 35);
-  for (const name of [...svgs, ...ADDED_7, ...FILL_ICON_NAMES]) {
+  for (const name of [...svgs, ...ADDED_7, ...FILL_ICON_NAMES, ...INTEG_ICONS]) {
     assert.ok(ICONS[name], `${name} 아이콘 정의 누락`);
     assert.ok(Array.isArray(ICONS[name].shapes) && ICONS[name].shapes.length > 0, `${name} 도형 누락`);
-    assert.ok(typeof ICONS[name].labelKey === 'string' && ICONS[name].labelKey in CATALOGS.ko, `${name} i18n 키 누락`);
+    assert.ok(typeof ICONS[name].labelKey === 'string' && ICONS[name].labelKey in CATALOGS.ko, `${name} ko i18n 키 누락`);
+    assert.ok(ICONS[name].labelKey in CATALOGS.en, `${name} en i18n 키 누락`);
   }
 });
 

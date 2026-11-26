@@ -30,7 +30,7 @@
     annotKeyRoute,
     annotTarget,
     clampMosaicBlock,
-    exportAnnotation,
+    exportAnnotationAsync,
     matchCaptureAnnotKey,
     mosaicSourcePlan,
     wheelStep,
@@ -48,6 +48,14 @@
     serializeAnnotateStyle,
     stepSize,
   } from '../models/inkSize.js';
+  import {
+    DEFAULT_FONT_FAMILY,
+    DEFAULT_FONT_WEIGHT,
+    normalizeFontWeight,
+    parseFontSetting,
+    pushRecentFont,
+    serializeFontSetting,
+  } from '../models/fontPicker.js';
   import { TEXT_SIZE_MUL, createInkEngine, itemCount } from '../ink/inkEngine.js';
   import { evidenceBoxes } from '../models/evidence.js';
   import {
@@ -180,6 +188,19 @@
   let annotBlock = $state(MOSAIC_BLOCK_DEFAULT);
   let annotStyle = $state(createDefaultAnnotateStyle());
   let lastSyncedStyleRaw = '';
+  let annotFont = $state(DEFAULT_FONT_FAMILY);
+  let annotFontWeight = $state(DEFAULT_FONT_WEIGHT);
+  /** @type {string[]} */
+  let annotRecentFonts = $state([]);
+  /** @type {{ family: string, weight: number } | null} */
+  let annotFontPreview = $state(null);
+  let lastSyncedFontRaw = '';
+  /** @type {string[]} */
+  let systemFonts = $state([]);
+  let systemFontsLoaded = false;
+  let fontFallbackNotice = $state('');
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let fontFallbackTimer = null;
   let panelOpen = $state(false);
   let eyedropperActive = $state(false);
   let hasOffscreenPixels = $state(false);
@@ -516,6 +537,51 @@
     }
   }
 
+  function clearFontFallbackNotice() {
+    if (fontFallbackTimer !== null) {
+      clearTimeout(fontFallbackTimer);
+      fontFallbackTimer = null;
+    }
+    fontFallbackNotice = '';
+  }
+
+  function showFontFallbackNotice() {
+    clearFontFallbackNotice();
+    fontFallbackNotice = t('font.fallbackNotice');
+    fontFallbackTimer = setTimeout(() => {
+      fontFallbackTimer = null;
+      fontFallbackNotice = '';
+    }, 3200);
+  }
+
+  /** @param {string} family @param {number} weight */
+  function setAnnotFont(family, weight) {
+    const normW = normalizeFontWeight(weight);
+    const nextRecent = pushRecentFont(annotRecentFonts, family, normW);
+    annotFont = family;
+    annotFontWeight = normW;
+    annotRecentFonts = nextRecent;
+    annotFontPreview = null;
+    const raw = serializeFontSetting({ family, weight: normW, recent: nextRecent });
+    lastSyncedFontRaw = raw;
+    if (typeof client?.updateSetting === 'function') {
+      Promise.resolve(client.updateSetting('annotate.font', raw)).catch(() => {});
+    }
+    const a = annot;
+    if (a?.engine.editing) {
+      a.engine.editing = /** @type {any} */ ({ ...a.engine.editing, fontFamily: family, fontWeight: normW });
+      a.engine.revs.active++;
+      a.engine.notify();
+    }
+  }
+
+  /** @param {{ family: string, weight: number } | null} pv */
+  function handleFontPreview(pv) {
+    annotFontPreview = pv
+      ? { family: pv.family, weight: normalizeFontWeight(pv.weight) }
+      : null;
+  }
+
   /** @param {boolean} report  지금 세션이 이어지면 Rust에 "0개"를 알린다(범위를 버림) */
   function dropAnnot(report) {
     const a = annot;
@@ -532,6 +598,7 @@
     annotHasMosaic = false;
     annotReported = 0;
     annotWheel = 0;
+    annotFontPreview = null;
     panelOpen = false;
     eyedropperActive = false;
     overOpts = false;
@@ -678,19 +745,24 @@
    * 주석을 쥔 창만 답한다.
    * @param {import('@screen-ink/client').CaptureCommitRequest} req
    */
-  function handleCommitRequest(req) {
+  async function handleCommitRequest(req) {
     const a = annot;
     if (!a || !monitor || activeSession === null || req.session !== activeSession || a.session !== req.session) return;
     if (typeof client.captureCommitAnnotated !== 'function') return;
     flushAnnotText();
     const items = a.engine.items;
     if (!items.length) return; // 개수 0 알림이 먼저 갔다 — Rust가 주석 없이 낸다
-    const out = exportAnnotation(items, {
+    const scale = monitor.scale > 0 ? monitor.scale : 1;
+    const out = await exportAnnotationAsync(items, {
       anchor: a.anchor,
       rect: req.rect,
-      scale: monitor.scale > 0 ? monitor.scale : 1,
+      scale,
       createCanvas,
     });
+    if (out.fontFallback) {
+      showFontFallbackNotice();
+    }
+    if (activeSession !== req.session || annot !== a) return;
     client.captureCommitAnnotated({ session: req.session, seq: req.seq, action: req.action, w: out.w, h: out.h, mosaics: out.mosaics }, out.rgba);
   }
 
@@ -888,6 +960,7 @@
       off();
       clearOverlay();
       clearAfterimage();
+      clearFontFallbackNotice();
     };
   });
 
@@ -957,6 +1030,14 @@
         annotStyle = parseAnnotateStyle(rawStyle);
         if (annotTool === 'mosaic') annotBlock = annotStyle.tools.mosaic?.size ?? annotBlock;
       }
+      const rawFont = state.settings['annotate.font'];
+      if (typeof rawFont === 'string' && rawFont !== lastSyncedFontRaw) {
+        lastSyncedFontRaw = rawFont;
+        const parsedFont = parseFontSetting(rawFont);
+        annotFont = parsedFont.family;
+        annotFontWeight = parsedFont.weight;
+        annotRecentFonts = parsedFont.recent;
+      }
     }
     if (Array.isArray(state.shortcuts)) {
       shortcutRows = state.shortcuts;
@@ -965,13 +1046,22 @@
   }
 
   $effect(() => {
-    if (typeof client?.getState !== 'function') return;
     let alive = true;
-    Promise.resolve(client.getState())
-      .then((s) => {
-        if (alive) applyStateKeys(s);
-      })
-      .catch(() => {});
+    if (typeof client?.getState === 'function') {
+      Promise.resolve(client.getState())
+        .then((s) => {
+          if (alive) applyStateKeys(s);
+        })
+        .catch(() => {});
+    }
+    if (!systemFontsLoaded && typeof client?.systemFonts === 'function') {
+      systemFontsLoaded = true;
+      Promise.resolve(client.systemFonts())
+        .then((list) => {
+          if (alive && Array.isArray(list)) systemFonts = list;
+        })
+        .catch(() => {});
+    }
     return () => {
       alive = false;
     };
@@ -1151,8 +1241,13 @@
   /** @param {KeyboardEvent} e */
   function handleKeydown(e) {
     if (activeSession === null) return;
-    // 주석 글자 상자 안 키는 상자가 맡는다(Enter 복사·Esc 취소로 새지 않게)
-    if (typeof HTMLTextAreaElement !== 'undefined' && e.target instanceof HTMLTextAreaElement) return;
+    // 주석 글자 상자 · 글꼴 검색 입력 안 키는 그 입력칸이 맡는다(Enter 복사·Esc 취소로 새지 않게)
+    if (
+      (typeof HTMLTextAreaElement !== 'undefined' && e.target instanceof HTMLTextAreaElement) ||
+      (typeof HTMLInputElement !== 'undefined' && e.target instanceof HTMLInputElement)
+    ) {
+      return;
+    }
     const annotKey = matchCaptureAnnotKey(e, {
       editing: annotEditing,
       eyedropper: eyedropperActive,
@@ -1272,6 +1367,8 @@
     if (key === 'mosaic' || key === 'eraser') return annotStyle.lastColor;
     return annotStyle.tools[key]?.color ?? annotColor ?? annotStyle.lastColor;
   });
+  let effectiveFont = $derived(annotFontPreview?.family ?? annotFont);
+  let effectiveFontWeight = $derived(annotFontPreview?.weight ?? annotFontWeight);
   let optsPos = $derived(
     placeToolOptions(toolbarPos, toolbarSize, { w: optsW || 284, h: optsH || 216 }, { w: viewportW, h: viewportH }, toolbarAnchorX),
   );
@@ -1376,6 +1473,9 @@
         {platform}
         mosaicBlock={annotBlock}
         mosaicImage={mosaicSource}
+        fontFamily={effectiveFont}
+        fontWeight={effectiveFontWeight}
+        onFontFallback={showFontFallbackNotice}
         onRightClick={() => annotTool && selectTool(annotTool)}
       />
     {/if}
@@ -1436,6 +1536,8 @@
         {panelOpen}
         activeColor={activeToolColor}
         activeSize={activeToolSize}
+        activeFont={effectiveFont}
+        activeFontWeight={effectiveFontWeight}
         isMarker={annotTool === 'marker'}
         canUndo={annotCanUndo}
         canRedo={annotCanRedo}
@@ -1456,6 +1558,10 @@
           color={activeToolColor}
           size={activeToolSize}
           recentColors={annotStyle.recentColors}
+          font={annotFont}
+          fontWeight={annotFontWeight}
+          recentFonts={annotRecentFonts}
+          {systemFonts}
           {eyedropperActive}
           showEyedropper={hasOffscreenPixels}
           displayScale={monitor.scale > 0 ? monitor.scale : 1}
@@ -1468,6 +1574,8 @@
           bind:boxHeight={optsH}
           onColor={setAnnotColor}
           onSize={setAnnotSize}
+          onFont={setAnnotFont}
+          onFontPreview={handleFontPreview}
           onEyedropper={toggleEyedropper}
           onHover={(v) => (overOpts = v)}
         />
@@ -1495,6 +1603,12 @@
         />
       </div>
     {/if}
+  </div>
+{/if}
+
+{#if fontFallbackNotice}
+  <div class="ink-font-notice" role="status" aria-live="polite">
+    {fontFallbackNotice}
   </div>
 {/if}
 
@@ -1666,5 +1780,24 @@
     top: 0;
     pointer-events: none;
     will-change: transform;
+  }
+
+  .ink-font-notice {
+    position: fixed;
+    left: 50%;
+    top: 16px;
+    transform: translateX(-50%);
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(16, 17, 20, 0.88);
+    color: #f7f8fa;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 45;
   }
 </style>

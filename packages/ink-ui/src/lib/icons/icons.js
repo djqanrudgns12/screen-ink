@@ -55,13 +55,17 @@ export const ICON_NAMES = [
   'warning-triangle',
   'external-link',
   'help-circle',
+  'window-top',
+  'line',
+  'trash',
 ];
 
-/** "지금 고른 도구"용 채움 변형 8종 */
+/** "지금 고른 도구"용 채움 변형 9종 */
 export const FILL_ICON_NAMES = [
   'rect-fill',
   'ellipse-fill',
   'arrow-fill',
+  'line-fill',
   'pen-fill',
   'marker-fill',
   'mosaic-fill',
@@ -445,8 +449,46 @@ export const ICONS = {
       { tag: 'circle', role: 'dot', attrs: { cx: 12, cy: 16.6, r: 0.9 } },
     ],
   },
+  'window-top': {
+    label: '창을 맨 위에',
+    labelKey: 'integ.icon.windowTop',
+    shapes: [
+      { tag: 'path', attrs: { d: 'M12.5 7.25H5.7a2.2 2.2 0 0 0-2.2 2.2v9.35a2.2 2.2 0 0 0 2.2 2.2h12.6a2.2 2.2 0 0 0 2.2-2.2v-5.3' } },
+      { tag: 'path', attrs: { d: 'M3.5 11.25h9.5' } },
+      { tag: 'circle', role: 'dot', attrs: { cx: 6.1, cy: 9.25, r: 0.8 } },
+      { tag: 'circle', role: 'dot', attrs: { cx: 8.6, cy: 9.25, r: 0.8 } },
+      { tag: 'path', attrs: { d: 'M16.5 3.25l4.25 4.25-1.5 1.5-1.1-.35-2.15 2.15.3 1.4-1.1 1.1-3.4-3.4 1.1-1.1 1.4.3 2.15-2.15-.35-1.1z' } },
+      { tag: 'path', attrs: { d: 'M13.5 10.5L10.75 13.25' } },
+    ],
+  },
+  line: {
+    label: '직선',
+    labelKey: 'integ.icon.line',
+    shapes: [
+      { tag: 'path', attrs: { d: 'M5.5 18.5L18.5 5.5' } },
+    ],
+  },
+  trash: {
+    label: '모두 지우기',
+    labelKey: 'integ.icon.trash',
+    shapes: [
+      { tag: 'path', attrs: { d: 'M4.5 7.25h15' } },
+      { tag: 'path', attrs: { d: 'M9.5 7.25V5.4a1.4 1.4 0 0 1 1.4-1.4h2.2a1.4 1.4 0 0 1 1.4 1.4v1.85' } },
+      { tag: 'path', attrs: { d: 'M6.75 7.25l.85 11.1a1.75 1.75 0 0 0 1.74 1.65h5.32a1.75 1.75 0 0 0 1.74-1.65l.85-11.1' } },
+      { tag: 'path', attrs: { d: 'M10.25 11.2v5.3M13.75 11.2v5.3' } },
+    ],
+  },
 
-  // ─────────────── 고른 도구용 채움 변형(*-fill 8종) ───────────────
+  // ─────────────── 고른 도구용 채움 변형(*-fill 9종) ───────────────
+  'line-fill': {
+    label: '직선',
+    labelKey: 'integ.icon.line',
+    shapes: [
+      { tag: 'path', attrs: { d: 'M5.5 18.5L18.5 5.5' } },
+      { tag: 'circle', role: 'dot', attrs: { cx: 5.5, cy: 18.5, r: 2 } },
+      { tag: 'circle', role: 'dot', attrs: { cx: 18.5, cy: 5.5, r: 2 } },
+    ],
+  },
   'rect-fill': {
     label: '사각형',
     labelKey: 'icon.rect',

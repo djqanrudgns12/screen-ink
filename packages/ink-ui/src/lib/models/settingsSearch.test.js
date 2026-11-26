@@ -70,3 +70,22 @@ test('빈 검색어나 공백만 있으면 빈 배열을 돌려준다', () => {
   assert.deepEqual(searchSettings(''), []);
   assert.deepEqual(searchSettings('   '), []);
 });
+
+test('업데이트·도형 방식·바뀐 설정 줄 이름을 찾고 숨은 annotate.font는 제외한다', () => {
+  const upd = searchSettings('업데이트', { lang: 'ko', translate: (k) => TR_KO[k] });
+  assert.ok(upd.some((r) => r.id === 'update.auto' && r.tab === 'general'));
+  assert.ok(upd.some((r) => r.id === 'update.check' && r.tab === 'general'));
+
+  const snapMode = searchSettings('도형 바꾸는 방식', { lang: 'ko', translate: (k) => TR_KO[k] });
+  assert.equal(snapMode[0]?.id, 'draw.shapeApply');
+
+  const elem = searchSettings('세부 영역', { lang: 'ko', translate: (k) => TR_KO[k] });
+  assert.equal(elem[0]?.id, 'capture.element');
+  assert.equal(elem[0]?.title, '세부 영역까지 찾기');
+
+  const zoomInit = searchSettings('처음 확대 크기', { lang: 'ko', translate: (k) => TR_KO[k] });
+  assert.equal(zoomInit[0]?.id, 'draw.startZoom');
+
+  const hiddenFont = searchSettings('annotate.font', { lang: 'ko', translate: (k) => TR_KO[k] });
+  assert.equal(hiddenFont.some((r) => r.id === 'annotate.font'), false);
+});

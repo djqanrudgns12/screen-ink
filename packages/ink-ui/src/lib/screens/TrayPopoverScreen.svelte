@@ -163,7 +163,7 @@
   {#if platform !== 'macos'}
     <div class="ink-pin-row">
       <MenuRow
-        icon="pin"
+        icon="window-top"
         label={t('tray.item.topmost')}
         combo={pinnedCount > 0 ? '' : comboOf('topmost')}
         {platform}

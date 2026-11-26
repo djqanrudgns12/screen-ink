@@ -387,3 +387,46 @@ test('온보딩 단계와 맥 권한 흉내: perm.refresh는 바뀔 때만 알�
   await c.run('settings.reveal');
   assert.equal(seen.length, beforeReveal);
 });
+
+test('맥 미리보기 OS 분기: 추천 키·예외 앱·경로·가져오기·섬 표기·시스템 글꼴', async () => {
+  const mac = createFakeClient({ platform: 'macos', frameUrl: 'frame.png' });
+  const s = await mac.getState();
+  assert.equal(s.settings['output.folder'], '~/Pictures/Shookshok');
+  assert.deepEqual(s.settings['capture.excluded'], [{ exe: 'LICEcap', mode: 'exclude', auto: false }]);
+  assert.equal(s.location.path, '~/Library/Application Support/Shookshok/settings.json');
+
+  const bad = await mac.setShortcut('active', 'Option+1');
+  assert.equal(bad.ok, false);
+  assert.ok(bad.suggestions.length > 0);
+  assert.ok(bad.suggestions.every((k) => k.includes('Cmd+') || k.includes('Option+')));
+
+  const preview = await mac.previewImport();
+  assert.equal(preview.path, '~/Desktop/Shookshok-settings-2026-11-25.json');
+  const activeChange = preview.changes.find((c) => c.path === 'shortcuts.active');
+  assert.equal(activeChange?.after, 'Cmd+Option+F2');
+
+  const seen = [];
+  mac.subscribe((e) => seen.push(e));
+
+  await mac.run('zoom');
+  const zoomIsl = seen.filter((e) => e.type === 'island').at(-1).island;
+  assert.ok(zoomIsl.hints.some((h) => h.key === '⌥1'));
+
+  await mac.setHotkeysEnabled(false);
+  assert.equal(seen.at(-1).island.detail, '⌥`');
+
+  await mac.run('capture.region');
+  await mac.captureInput({ type: 'command', name: 'copy' });
+  const copyIsl = seen.at(-1).island;
+  assert.equal(copyIsl.detail, '한글·PPT에 ⌘V');
+  assert.equal(copyIsl.buttonKey, 'Cmd+S');
+
+  await mac.run('folder.pick');
+  assert.equal((await mac.getState()).settings['output.folder'], '~/Desktop/수업자료/캡처');
+
+  await mac.resetAll();
+  assert.equal((await mac.getState()).settings['output.folder'], '~/Pictures/Shookshok');
+
+  const fonts = await mac.systemFonts();
+  assert.ok(Array.isArray(fonts) && fonts.includes('Apple SD Gothic Neo'));
+});

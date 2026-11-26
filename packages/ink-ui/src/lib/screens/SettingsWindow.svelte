@@ -439,13 +439,15 @@
               <Row label={t('settings.info.version')} sub={state?.version ?? '0.1.0'} subMono={true} />
               <Row label={t('settings.info.maker')} sub={t('settings.info.makerName')} />
               <Row label={t('settings.info.license')} sub="MIT" />
-              <Row label={t('settings.info.opensource')} sub={t('settings.info.opensourceList')} />
+              <Row label={t('about.opensource.fontsLabel')} sub={t('about.opensource.fontsSub')} />
+              <Row label={t('about.opensource.iconsLabel')} sub={t('about.opensource.iconsSub')} />
+              <Row label={t('about.opensource.libsLabel')} sub={t('about.opensource.libsSub')} />
             </Group>
           </section>
           <section>
-            <SectionLabel title={t('settings.info.connectSection')} tag={t('settings.info.connectTag')} />
+            <SectionLabel title={t('about.privacy.section')} />
             <Group>
-              <Row label={t('settings.info.updatesLabel')} sub={t('settings.info.updatesSub')} />
+              <Row label={t('about.privacy.label')} sub={t('about.privacy.sub')} />
             </Group>
           </section>
           <footer class="ink-info-credit">

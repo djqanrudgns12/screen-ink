@@ -4,20 +4,24 @@ import defaults from '../../../docs/shortcuts/defaults-v1.json' with { type: 'js
 import catalog from '../../../docs/shortcuts/catalog-v1.json' with { type: 'json' };
 
 const SNIPASTE = new Set(['F1', 'F3', 'Shift+F1', 'Ctrl+F1']);
-const SUGGEST = ['Ctrl+Alt+1', 'Ctrl+Alt+2', 'Ctrl+Alt+3', 'Alt+Shift+2', 'Alt+Shift+3', 'Ctrl+Shift+F1', 'Alt+Shift+F1', 'Ctrl+Alt+Q'];
+const SUGGEST_WIN = ['Ctrl+Alt+1', 'Ctrl+Alt+2', 'Ctrl+Alt+3', 'Alt+Shift+2', 'Alt+Shift+3', 'Ctrl+Shift+F1', 'Alt+Shift+F1', 'Ctrl+Alt+Q'];
+const SUGGEST_MAC = ['Cmd+Option+1', 'Cmd+Option+2', 'Cmd+Option+3', 'Option+Shift+2', 'Option+Shift+3', 'Cmd+Shift+F1', 'Option+Shift+F1', 'Cmd+Option+Q'];
 
-const DEFAULT_SETTINGS = {
-  'capture.result': 'copy', 'capture.evidence': false, 'capture.cursor': false, 'capture.sound': false, 'capture.element': true, 'capture.magnet': true,
-  'capture.historyMax': 20, 'capture.excluded': [{ exe: 'licecap.exe', mode: 'exclude', auto: false }],
-  'output.folder': 'C:\\Users\\…\\Pictures\\Shookshok', 'output.template': '수업_{yyyy}{MM}{dd}_{n}',
-  'record.fps': 30, 'record.mic': false, 'record.micDevice': '', 'record.cursor': true, 'record.firstHintDone': false, 'capture.delay': 3,
-  'draw.color': 'R', 'draw.width': 4, 'annotate.style': '', 'annotate.font': '', 'update.auto': true, 'update.snooze': '', 'draw.smoothing': 'light', 'draw.straighten': true, 'draw.shapeOnHold': true, 'draw.shapeApply': 'suggest',
-  'draw.startZoom': 1.75, 'draw.keep': true, 'draw.esc': 'step', 'draw.rightClickPan': true,
-  'zoom.follow': 'pointer', 'zoom.minimap': true,
-  'general.theme': 'system', 'general.lang': 'ko', 'general.autostart': true,
-  'onboarding.done': false, 'onboarding.step': 0,
-  'topmost.border': 4, 'topmost.sound': false,
-};
+function defaultSettingsFor(platform, lang = 'ko') {
+  const isMac = platform === 'macos';
+  return {
+    'capture.result': 'copy', 'capture.evidence': false, 'capture.cursor': false, 'capture.sound': false, 'capture.element': true, 'capture.magnet': true,
+    'capture.historyMax': 20, 'capture.excluded': [{ exe: isMac ? 'LICEcap' : 'licecap.exe', mode: 'exclude', auto: false }],
+    'output.folder': isMac ? '~/Pictures/Shookshok' : 'C:\\Users\\…\\Pictures\\Shookshok', 'output.template': '수업_{yyyy}{MM}{dd}_{n}',
+    'record.fps': 30, 'record.mic': false, 'record.micDevice': '', 'record.cursor': true, 'record.firstHintDone': false, 'capture.delay': 3,
+    'draw.color': 'R', 'draw.width': 4, 'annotate.style': '', 'annotate.font': '', 'update.auto': true, 'update.snooze': '', 'draw.smoothing': 'light', 'draw.straighten': true, 'draw.shapeOnHold': true, 'draw.shapeApply': 'suggest',
+    'draw.startZoom': 1.75, 'draw.keep': true, 'draw.esc': 'step', 'draw.rightClickPan': true,
+    'zoom.follow': 'pointer', 'zoom.minimap': true,
+    'general.theme': 'system', 'general.lang': lang, 'general.autostart': true,
+    'onboarding.done': false, 'onboarding.step': 0,
+    'topmost.border': 4, 'topmost.sound': false,
+  };
+}
 
 const CAPTURE_ISLAND = {
   region: { text: '범위 캡처', variant: 'region', hints: [{ key: '휠', label: '넓히기·좁히기' }, { key: 'Tab', label: '창' }, { key: 'Enter', label: '복사' }, { key: 'Esc', label: '취소' }] },
@@ -40,8 +44,10 @@ const inkItems = (doc) => {
  *   frameUrl = 미리보기에서 오버레이 바탕으로 쓸 정지 이미지(없으면 오버레이가 빈 바탕)
  */
 export function createFakeClient({ platform = 'windows', snipasteRunning = true, frameUrl = undefined, channel = 'unpackaged', autostartNotice = undefined, permissions = undefined, lang = 'ko', screenNeedsRelaunch = false } = {}) {
-  const combos = Object.fromEntries(Object.entries(defaults.slots).map(([id, v]) => [id, (platform === 'macos' ? v.mac : v.win) || '']));
-  const settings = { ...DEFAULT_SETTINGS, 'general.lang': lang };
+  const isMac = platform === 'macos';
+  const suggestPool = isMac ? SUGGEST_MAC : SUGGEST_WIN;
+  const combos = Object.fromEntries(Object.entries(defaults.slots).map(([id, v]) => [id, (isMac ? v.mac : v.win) || '']));
+  const settings = defaultSettingsFor(platform, lang);
   /** @type {{ screen: boolean, accessibility: boolean, screenRevoked: boolean, accessibilityRevoked: boolean } | undefined} */
   let perms = permissions
     ? {
@@ -136,8 +142,12 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       ...(perms ? { permissions: { ...perms } } : {}),
     };
   };
-  // 가져오기 장면: 다른 PC에서 내보낸 파일(3개가 다름)
-  const IMPORT_FILE = { 'draw.width': 8, 'general.theme': 'dark', 'shortcuts.active': 'Ctrl+Alt+F2' };
+  // 가져오기 장면: 다른 PC/Mac에서 내보낸 파일(3개가 다름)
+  const IMPORT_FILE = {
+    'draw.width': 8,
+    'general.theme': 'dark',
+    'shortcuts.active': isMac ? 'Cmd+Option+F2' : 'Ctrl+Alt+F2',
+  };
   const valueOf = (path) => (path.startsWith('shortcuts.') ? combos[path.slice(10)] : settings[path]);
   const emit = (e) => subs.forEach((h) => h(e));
   const island = (island) => emit({ type: 'island', island });
@@ -197,7 +207,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   });
   const zoomIsland = () => island({
     kind: 'mode', mode: 'zoom', variant: 'zoom', text: '실시간 확대', detail: '움직이는 화면 그대로', value: scaleLabel(zoomScale),
-    hints: [{ key: '휠', label: '배율' }, { key: 'Alt 1', label: '멈추고 쓰기' }, { key: 'Esc', label: '끝' }],
+    hints: [{ key: '휠', label: '배율' }, { key: isMac ? '⌥1' : 'Alt 1', label: '멈추고 쓰기' }, { key: 'Esc', label: '끝' }],
   });
   const endZoom = () => {
     if (mode.mode !== 'liveZoom') return;
@@ -265,7 +275,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       if (j.status === 'conflict') {
         combos[id] = prev;
         const used = new Set(Object.values(combos));
-        return { ok: false, status: 'conflict', reason: j.reason, suggestions: SUGGEST.filter((c) => !used.has(c) && !SNIPASTE.has(c)).slice(0, 3) };
+        return { ok: false, status: 'conflict', reason: j.reason, suggestions: suggestPool.filter((c) => !used.has(c) && !SNIPASTE.has(c)).slice(0, 3) };
       }
       history.push({ kind: 'shortcut', id, prev });
       changed();
@@ -288,7 +298,13 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       const changes = Object.entries(IMPORT_FILE)
         .filter(([path, after]) => valueOf(path) !== after)
         .map(([path, after]) => ({ path, before: valueOf(path), after }));
-      return { cancelled: false, path: 'C:\\Users\\…\\Desktop\\Shookshok-settings-2026-11-25.json', ok: true, changes, warnings: [] };
+      return {
+        cancelled: false,
+        path: isMac ? '~/Desktop/Shookshok-settings-2026-11-25.json' : 'C:\\Users\\…\\Desktop\\Shookshok-settings-2026-11-25.json',
+        ok: true,
+        changes,
+        warnings: [],
+      };
     },
     async applyImport() {
       history.push({ kind: 'whole', settings: { ...settings }, combos: { ...combos } });
@@ -300,12 +316,17 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       return { ok: true, state: state() };
     },
     async resetAll() {
-      Object.assign(settings, DEFAULT_SETTINGS);
-      for (const id of Object.keys(combos)) combos[id] = (platform === 'macos' ? defaults.slots[id].mac : defaults.slots[id].win) || '';
+      Object.assign(settings, defaultSettingsFor(platform, 'ko'));
+      for (const id of Object.keys(combos)) combos[id] = (isMac ? defaults.slots[id].mac : defaults.slots[id].win) || '';
       history.length = 0;
       changed();
       island({ kind: 'result', text: '처음 상태로 되돌렸어요' });
       return state();
+    },
+    async systemFonts() {
+      return isMac
+        ? ['Apple SD Gothic Neo', 'Nanum Gothic', 'Nanum Myeongjo', 'Pretendard', 'JetBrains Mono']
+        : ['Malgun Gothic', 'NanumGothic', 'Batang', 'Pretendard', 'D2Coding'];
     },
     async shortcutCapture(active) {
       shortcutCapturing = Boolean(active);
@@ -314,7 +335,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     isShortcutCapturing() { return shortcutCapturing; },
     async setHotkeysEnabled(enabled) {
       hotkeysEnabled = enabled; changed();
-      island(enabled ? { kind: 'info', text: '단축키를 다시 켰어요' } : { kind: 'off', text: '단축키를 잠시 껐어요', detail: 'Alt+`' });
+      island(enabled ? { kind: 'info', text: '단축키를 다시 켰어요' } : { kind: 'off', text: '단축키를 잠시 껐어요', detail: isMac ? '⌥`' : 'Alt+`' });
       return state();
     },
     // 고르기 흉내: 커서 주변에 큰 것 → 작은 것 사슬(화면 › 창 › 표 › 2행)을 만들고 휠로 단계를 바꾼다.
@@ -386,7 +407,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         await this.run('capture.cancel');
         emit({ type: 'afterimage', afterimage: { session: finishedSession, rect: r, durationMs: 400 } });
         lastRange = r;
-        island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${r.w}×${r.h}`, detail: '한글·PPT에 Ctrl+V', thumbUrl: frameUrl, button: { label: '저장', action: 'capture.saveLast' }, buttonKey: 'Ctrl+S', chip: { label: `${lastHex} 복사`, action: 'capture.copyHex' }, ...toDrawButton() });
+        island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${r.w}×${r.h}`, detail: isMac ? '한글·PPT에 ⌘V' : '한글·PPT에 Ctrl+V', thumbUrl: frameUrl, button: { label: '저장', action: 'capture.saveLast' }, buttonKey: isMac ? 'Cmd+S' : 'Ctrl+S', chip: { label: `${lastHex} 복사`, action: 'capture.copyHex' }, ...toDrawButton() });
         return;
       }
       const chain = chainAt(s.p);
@@ -492,7 +513,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       if (!b || meta.w !== b.w || meta.h !== b.h) return { ok: false, error: 'not monitor size' };
       drawLog.push({ type: 'export', action, w: meta.w, h: meta.h, bytes: bytes.byteLength });
       if (action === 'copy') {
-        island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${meta.w}×${meta.h}`, detail: '한글·PPT에 Ctrl+V' });
+        island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${meta.w}×${meta.h}`, detail: isMac ? '한글·PPT에 ⌘V' : '한글·PPT에 Ctrl+V' });
         return { ok: true };
       }
       saveSeq += 1;
@@ -636,7 +657,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       }
       if (action === 'folder.pick') {
         history.push({ kind: 'setting', path: 'output.folder', prev: settings['output.folder'] });
-        settings['output.folder'] = 'D:\\수업자료\\캡처'; changed(); return;
+        settings['output.folder'] = isMac ? '~/Desktop/수업자료/캡처' : 'D:\\수업자료\\캡처'; changed(); return;
       }
       if (action === 'settings.export') { island({ kind: 'result', text: '설정을 내보냈어요' }); return; }
       if (action === 'capture.history.clear') { island({ kind: 'info', text: '지울 기록이 없어요' }); return; }

@@ -1,0 +1,11 @@
+{
+  "about.opensource.fontsLabel": "Fonts",
+  "about.opensource.fontsSub": "Freesentation · Paperlogy · IBM Plex Mono (SIL OFL 1.1)",
+  "about.opensource.iconsLabel": "Icons",
+  "about.opensource.iconsSub": "ShookShok custom icon set",
+  "about.opensource.libsLabel": "Open-source libraries",
+  "about.opensource.libsSub": "pdf-lib (MIT) · Svelte · bits-ui · Tauri",
+  "about.privacy.label": "No background tracking",
+  "about.privacy.section": "Privacy & network",
+  "about.privacy.sub": "Settings and captures stay on this device · Automatic update checks can be toggled in General"
+}

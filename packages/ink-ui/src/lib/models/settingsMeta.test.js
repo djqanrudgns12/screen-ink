@@ -122,3 +122,19 @@ test('formats shapeOnHold subtitle according to draw.shapeApply mode and OS', ()
   assert.equal(formatShapeOnHoldSub('auto', 'macos', 'ko'), '0.5초 · ⌘Z로 원래 선');
   assert.equal(formatShapeOnHoldSub('auto', 'macos', 'en'), '0.5s · ⌘Z to revert');
 });
+
+test('formats update.auto and annotate.font metadata labels and values', () => {
+  const upd = describeSettingChange({ path: 'update.auto', before: true, after: false }, [], 'ko');
+  assert.equal(upd.label, '자동으로 새 판 확인');
+  assert.equal(upd.beforeText, '켬');
+  assert.equal(upd.afterText, '끔');
+
+  const fontChange = describeSettingChange(
+    { path: 'annotate.font', before: '', after: JSON.stringify({ f: 'Paperlogy', w: 600 }) },
+    [],
+    'ko',
+  );
+  assert.equal(fontChange.label, '주석 글꼴');
+  assert.equal(fontChange.beforeText, '비움');
+  assert.equal(fontChange.afterText, 'Paperlogy SB');
+});

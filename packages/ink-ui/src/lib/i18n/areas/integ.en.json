@@ -1,0 +1,10 @@
+{
+  "integ.icon.line": "Line",
+  "integ.icon.trash": "Clear all",
+  "integ.icon.windowTop": "Keep window on top",
+  "integ.setting.annotate.font": "Annotation font",
+  "integ.setting.annotate.style": "Annotation tool style",
+  "integ.setting.capture.delay": "Capture delay",
+  "integ.setting.record.cursor": "Include cursor in recording",
+  "integ.setting.update.snooze": "Snooze update notice"
+}

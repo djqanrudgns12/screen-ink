@@ -1,6 +1,7 @@
 // 설정 키 메타데이터(이름·표시값)와 가져오기 변경 목록·겹침 문구 도우미 (순수 JS)
 import { shortenPath } from './template.js';
 import { formatComboReadable, subjectParticle } from './shortcutDisplay.js';
+import { compactFontLabel, parseFontSetting } from './fontPicker.js';
 import { normalizeOs, translate } from '../i18n/core.js';
 
 /** @type {Record<string, string>} 설정 키 → 카탈로그 키 */
@@ -12,11 +13,13 @@ export const SETTING_LABEL_KEYS = {
   'capture.magnet': 'meta.setting.capture.magnet',
   'capture.historyMax': 'meta.setting.capture.historyMax',
   'capture.excluded': 'meta.setting.capture.excluded',
+  'capture.delay': 'integ.setting.capture.delay',
   'output.folder': 'meta.setting.output.folder',
   'output.template': 'meta.setting.output.template',
   'record.fps': 'meta.setting.record.fps',
   'record.mic': 'meta.setting.record.mic',
   'record.micDevice': 'meta.setting.record.micDevice',
+  'record.cursor': 'integ.setting.record.cursor',
   'draw.color': 'meta.setting.draw.color',
   'draw.width': 'meta.setting.draw.width',
   'draw.smoothing': 'meta.setting.draw.smoothing',
@@ -27,11 +30,15 @@ export const SETTING_LABEL_KEYS = {
   'draw.keep': 'meta.setting.draw.keep',
   'draw.esc': 'meta.setting.draw.esc',
   'draw.rightClickPan': 'meta.setting.draw.rightClickPan',
+  'annotate.font': 'integ.setting.annotate.font',
+  'annotate.style': 'integ.setting.annotate.style',
   'zoom.follow': 'meta.setting.zoom.follow',
   'zoom.minimap': 'meta.setting.zoom.minimap',
   'general.theme': 'meta.setting.general.theme',
   'general.lang': 'meta.setting.general.lang',
   'general.autostart': 'meta.setting.general.autostart',
+  'update.auto': 'updateUi.autoLabel',
+  'update.snooze': 'integ.setting.update.snooze',
   'topmost.border': 'meta.setting.topmost.border',
   'topmost.sound': 'meta.setting.topmost.sound',
 };
@@ -110,6 +117,12 @@ export function formatSettingValue(path, value, lang = 'ko') {
   if (path === 'draw.width') return `${value}px`;
   if (path === 'draw.startZoom') return `×${value}`;
   if (path === 'capture.historyMax') return translate(lang, 'meta.value.countItems', { n: value });
+  if (path === 'capture.delay') return `${value}s`;
+  if (path === 'annotate.font') {
+    if (!value) return translate(lang, 'common.empty');
+    const parsed = parseFontSetting(value);
+    return compactFontLabel(parsed.family, parsed.weight);
+  }
   if (path === 'topmost.border') return Number(value) === 0 ? translate(lang, 'common.off') : `${value}px`;
   if (path === 'capture.excluded') {
     return translate(lang, 'meta.value.countItems', { n: Array.isArray(value) ? value.length : 0 });
