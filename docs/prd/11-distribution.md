@@ -14,7 +14,8 @@
    - 파일 공유가 꼭 필요할 때 **가장 싼 길**은 저장소를 오픈소스로 공개하고 **Certum 오픈소스 코드 서명(€49/년)** 이나 **SignPath Foundation(무료)** 으로 서명하는 것이다(§3).
 3. **스토어를 더 늘린다면:** winget은 스토어에 올리면 따라온다. 국내 교사 접근성 때문에 **네이버 소프트웨어**를 검토할 만하다(§4).
    - 맥은 Mac App Store와 Homebrew 공식 목록 둘 다 막혀 있다. 그래서 자체 서명 dmg 직접 배포(2026-11-26 결정)를 유지한다.
-4. **학교 PC 주의:** 교육청이 관리하는 PC는 Microsoft Store가 막혀 있을 수 있다. 막혀 있으면 스토어 경로가 통째로 안 된다. **[확인 필요]** 학교 PC에서 확인한다(진척도 `D6`).
+4. **자동 업데이트는 Windows가 한다(§7).** 스토어판은 스토어가, 직접 배포판은 `.appinstaller` 파일로 Windows 앱 설치 관리자가 새 버전을 받는다. 앱 프로세스는 계속 네트워크 0이다.
+5. **학교 PC 주의:** 교육청이 관리하는 PC는 Microsoft Store가 막혀 있을 수 있다. 막혀 있으면 스토어 경로가 통째로 안 된다. **[확인 필요]** 학교 PC에서 확인한다(진척도 `D6`).
 
 ## 2. 방안 비교 (Windows)
 
@@ -77,14 +78,69 @@
 | WebView2 | 필요. Windows 11은 기본 내장, Windows 10은 대개 Edge와 함께 있다. MSIX는 WebView2 설치기를 대신 돌려 주지 못한다 → 없으면 앱이 알아채고 안내해야 한다 | 오래된 Windows 10 **[확인 필요]** |
 | 웹 한 번 클릭 설치 | `ms-appinstaller:` 링크는 2023-12부터 기본으로 꺼짐 → 파일을 받아 더블클릭하는 방식만 권한다 | 문서 |
 | 경고 | 앱 설치 관리자는 게시자 이름을 보여 준다. 내려받은 `.msix`에 SmartScreen 평판 검사가 붙는지는 Microsoft 문서에 없다 → 서명한 뒤 실제로 받아서 확인한다 | **[확인 필요]** |
-| 업데이트 | 한 파일 배포는 자동 업데이트가 없다(새 파일을 다시 나눔). 자동 업데이트는 `.appinstaller` 파일을 따로 호스팅해야 한다 | 문서 |
+| 업데이트 | `.msix`만 나누면 자동 업데이트가 없다. 대신 **`.appinstaller` 파일 하나**를 나누면 설치도 되고 자동 업데이트도 된다(§7) | 문서 |
 
 주의:
 - 스토어판과 직접 배포판은 매니페스트 `Publisher`가 다르다(스토어는 Partner Center가 준 게시자 이름, 직접 배포판은 인증서 주체). 그래서 Windows는 **서로 다른 앱**으로 본다. 한 PC에 둘 다 깔지 않도록 안내한다.
 - 공인 인증서 없이(무료로) 한 파일 무경고 배포를 하는 방법은 여전히 없다. 무료로 가려면 스토어 링크다(§1).
 - 서명한 NSIS 설치 파일(`setup.exe`)도 한 파일이고 인증서 비용은 같다. MSIX는 관리자 권한이 필요 없고 제거가 깔끔하며, 스토어용 포장과 같은 파이프라인(`D2`)을 쓴다.
 
-## 7. 출처
+## 7. 자동 업데이트 — 운영체제가 하게 한다 (2026-11-26 결정)
+
+**원칙: 업데이트는 앱이 아니라 Windows(스토어·앱 설치 관리자)가 한다.**
+- 이러면 앱 프로세스는 계속 네트워크 0이다. R-NET-1·R-NET-2를 그대로 지킨다.
+- 학교망 SSL 검사 때문에 업데이트가 실패해도 앱 동작에는 영향이 없다.
+
+| 받는 길 | 업데이트 방식 | 앱에 넣을 코드 | 비용 | 조건 |
+|---|---|---|---|---|
+| **① Microsoft Store**(기본) | 스토어가 자동 갱신 | 없음 | 0원 | 스토어가 열리는 PC |
+| **② 서명 MSIX + `.appinstaller`**(스토어가 막힌 PC·파일 공유) | `.appinstaller` 파일 하나를 나눈다. 받는 사람이 더블클릭하면 앱이 설치되고, 그 뒤에는 Windows가 그 주소를 보고 새 버전을 받는다(앱 시작 때 + 백그라운드 8시간마다) | 없음(선택: §7.2) | Certum €49/년 | 공인 인증서 → 저장소 공개(§8). `.appinstaller`와 `.msix`를 고정 HTTPS 주소에 호스팅 |
+| ③ NSIS·포터블 + 앱 안 업데이터 | 앱이 GitHub 릴리스를 확인하고 설치(06 §2, Tidy 이식) | 많음(네트워크) | 0원(minisign 키) | **2차**(R-NET-3). 첫 설치 때 SmartScreen 경고 |
+
+### 7.1 ② `.appinstaller` 구성
+
+```xml
+<AppInstaller xmlns="http://schemas.microsoft.com/appx/appinstaller/2021"
+  Uri="https://<호스트>/screen-ink.appinstaller" Version="0.2.0.0">
+  <MainPackage Name="<패키지 이름>" Publisher="<Certum 인증서 주체와 같게>"
+    Version="0.2.0.0" ProcessorArchitecture="x64"
+    Uri="https://<호스트>/screen-ink_0.2.0.0_x64.msix" />
+  <UpdateSettings>
+    <OnLaunch HoursBetweenUpdateChecks="0" ShowPrompt="false" UpdateBlocksActivation="false" />
+    <AutomaticBackgroundTask />
+  </UpdateSettings>
+</AppInstaller>
+```
+
+- **호스팅:** 저장소를 공개하면 GitHub Pages나 Releases를 쓴다. `.appinstaller`의 주소는 **바뀌면 안 된다.** 설치된 앱이 그 주소를 계속 본다.
+- **릴리스할 때마다:** 버전을 올린 `.msix`를 올리고 `.appinstaller`의 `Version`과 `Uri`를 바꾼다. 이 작업은 릴리스 스크립트가 한다(`D9`).
+- **스키마:** 2021 스키마를 쓴다. 2017 스키마에는 `ShowPrompt`·`UpdateBlocksActivation`이 없다.
+- **나누는 방법:** 받는 사람에게는 `.msix` 대신 **`.appinstaller` 파일 하나**를 준다. `ms-appinstaller:` 링크는 꺼져 있으니 파일을 받아 더블클릭하게 안내한다.
+- **[확인 필요]**
+  - 트레이에 상주한 채 실행 중일 때 업데이트가 언제 적용되는지. 백그라운드로 받아 두었다가 다음 실행 때 적용되는 것으로 보이지만 문서로 확인하지 못했다.
+  - GitHub `releases/latest/download/…` 리디렉션 주소를 App Installer가 따라가는지
+  - 학교 PC 정책
+
+### 7.2 (선택) 앱이 "새 버전 있어요"를 알려 주기
+
+- 상주 앱은 다시 시작할 일이 드물다. 그래서 백그라운드로 받아 둔 업데이트가 오래 미뤄질 수 있다.
+- 이때 앱이 Windows API(`Package.CheckUpdateAvailabilityAsync`)로 물어보고, 섬에 "다시 시작하면 새 버전이에요 [다시 시작]"을 띄울 수 있다.
+- 통신은 Windows가 하고 우리 실행 파일에는 HTTP가 들어가지 않는다. 다만 "앱이 업데이트를 확인한다"는 점에서 R-NET-1과 부딪힌다. 그래서 **사용자 결정** 항목으로 둔다(진척도 `D9` 메모).
+- 모드(캡처·판서·녹화) 중에는 묻지도, 띄우지도 않는다(06 §2.1과 같은 원칙).
+
+## 8. Certum 오픈소스 인증서 — 비용·범위 (2026-11-26 조사)
+
+| 항목 | 내용 |
+|---|---|
+| 가격 | **클라우드(SimplySign) €49 ≈ 약 7.2만 원**(1 € ≈ 1,475원, XE 2026-11-25). 해외 카드 결제 수수료를 더하면 약 7.3만 원. 실물 카드 세트는 €69 ≈ 약 10.2만 원 |
+| 기간 | **1년**. 매년 갱신(갱신 때도 같은 값 예상 **[확인 필요]**) |
+| 누구에게 | **개인**에게만. 인증서에 "Open Source Developer, <이름>"이 찍힌다 |
+| 다른 앱에도? | 인증서는 앱이 아니라 **사람**에게 나온다 → 유효 기간 안에는 다른 앱도 같은 인증서로 서명할 수 있다. **조건은 "오픈소스·비상업"**: 상업적으로 배포하는 소프트웨어에 서명하면 인증서가 **취소**된다(Certum 문서). 그러니 공개 오픈소스이고 돈을 받지 않는 앱이라면 추가 비용 없이 같이 쓴다. 비공개·유료 앱은 안 된다(일반 인증서 €209~ ≈ 31만 원~). 한 인증서로 여러 프로젝트를 서명하는 것을 명시한 조항은 찾지 못함 → 신청할 때 Certum에 확인 **[확인 필요]** |
+| 신청 서류 | 유효한 신분증 + 공과금 고지서(주소 증명) + 공개 오픈소스 프로젝트 주소(신청자와의 관계가 드러나야 함). 한국 거주자 서류 요건 **[확인 필요]** |
+| 스토어와의 관계 | 스토어판(MSIX)은 스토어가 서명하므로 이 인증서가 필요 없다. 이 인증서는 ② 직접 배포판에만 쓴다. 스토어에서 **유료로 팔면** 상업 배포가 되므로, 그 경우 직접 배포판 서명에 오픈소스 인증서를 쓰는 것이 약관에 걸릴 수 있다 **[확인 필요]** |
+| 저장소 공개와의 관계 | Certum은 공개 오픈소스가 조건이다 → 06 §2.2의 "코드 비공개 + 릴리스 전용 공개 저장소(B안)"와는 함께 쓸 수 없다. ②를 택하면 A안(공개)이 된다 |
+
+## 9. 출처
 
 - 개인 개발자 무료 등록: [Windows Developer Blog 2025-09-10](https://blogs.windows.com/windowsdeveloper/2025/09/10/free-developer-registration-for-individual-developers-on-microsoft-store/), [storedeveloper.microsoft.com](https://storedeveloper.microsoft.com/)
 - MSIX는 스토어가 서명, EXE/MSI는 신뢰 루트 CA 서명 필요: [MSIX 패키지 요구사항](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements), [Code signing options](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options), [Win32 앱 스토어 배포](https://learn.microsoft.com/en-us/windows/apps/distribute-through-store/how-to-distribute-your-win32-app-through-microsoft-store)
@@ -104,5 +160,10 @@
 - 앱 설치 관리자 보안(SmartScreen URL 검사·영역 정책): [App Installer 보안 기능](https://learn.microsoft.com/en-us/windows/msix/app-installer/app-installer-security-features)
 - `ms-appinstaller:` 기본 꺼짐(2023-12): [MSRC 블로그](https://www.microsoft.com/en-us/msrc/blog/2023/12/microsoft-addresses-app-installer-abuse)
 - Tauri 정적 VC 런타임: 로컬 `tauri-build 2.7.6`·`tauri-utils 2.10.4` 소스(`build.windows.staticVCRuntime` 기본 `true`)
+- `.appinstaller` 업데이트 설정(OnLaunch·AutomaticBackgroundTask 8시간): [AutomaticBackgroundTask](https://learn.microsoft.com/en-us/uwp/schemas/appinstallerschema/element-s4-automaticbackgroundtask), [update-settings](https://github.com/microsoftdocs/msix-docs/blob/main/msix-src/app-installer/update-settings.md), [App Installer 파일 개요](https://learn.microsoft.com/en-us/windows/msix/app-installer/app-installer-file-overview)
+- GitHub 릴리스로 `.appinstaller` 호스팅(독립 .msix만으로는 자동 업데이트 없음): [msix-docs #528](https://github.com/MicrosoftDocs/msix-docs/issues/528), 2021 스키마: [WindowsAppSDK #5125](https://github.com/microsoft/WindowsAppSDK/discussions/5125)
+- 앱에서 업데이트 확인: [App Consult 블로그](https://techcommunity.microsoft.com/t5/modern-work-app-consult-blog/implements-silent-auto-update-feature-as-far-as-possible-for/ba-p/1334405)
+- Certum 서류·상업 배포 서명 시 취소: [Certum 서류 안내](https://support.certum.eu/en/code-signing-required-documents/)
+- 환율: [XE EUR→KRW](https://www.xe.com/en-us/currencyconverter/convert/?Amount=1&From=EUR&To=KRW)
 
 가격·자격은 2026-11-26 기준이다. 사기 전에 각 판매처 공식 페이지에서 다시 확인한다.
