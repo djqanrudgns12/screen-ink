@@ -69,7 +69,8 @@ function click(e, x, y, button = 0) {
 }
 
 test('보정_후_CtrlZ는_원래_손획으로_복귀', () => {
-  const e = engine();
+  // draw.shapeApply 'auto'(바로 바꾸기) — A §2.3 그대로
+  const e = engine({ settings: { 'draw.shapeApply': 'auto' } });
   const { fx } = drag(e, line(100, 300, 400, 305), { holdMs: 560 });
   assert.equal(e.undoStack.length, 2, 'add + correct');
   assert.deepEqual(
@@ -90,6 +91,106 @@ test('보정_후_CtrlZ는_원래_손획으로_복귀', () => {
   key(e, 'KeyY', { ctrlKey: true });
   key(e, 'KeyY', { ctrlKey: true });
   assert.equal(e.items[0].kind, 'shape', '다시 실행 2번 = 보정까지');
+});
+
+test('멈춤도형_제안형_Enter_수락하면_correct_CtrlZ는_원래_손획', () => {
+  const e = engine(); // 기본 draw.shapeApply = 'suggest'
+  assert.equal(e.config.shapeApply, 'suggest');
+  const pts = line(100, 300, 400, 305);
+  // 누른 채 0.5초 멈추면 손획 위에 제안 도형 윤곽(점선·옅게)
+  e.pointerDown({ x: 100, y: 300, t: 0, button: 0 });
+  let t = 0;
+  for (const [x, y] of pts.slice(1)) e.pointerMove({ x, y, t: (t += 8) });
+  e.tick(t + 560);
+  const during = e.getPreview();
+  assert.equal(during.items[0].kind, 'stroke', '손획은 그대로');
+  assert.equal(during.ghosts.length, 1);
+  assert.ok(during.ghosts[0].kind === 'shape' && during.ghosts[0].dashed && during.ghosts[0].opacity < 1);
+  const fx = e.pointerUp({ x: 400, y: 305, t: t + 560, button: 0 });
+  assert.deepEqual(fx, [{ type: 'suggest', text: '직선으로 바꿀까요? · Enter', shape: 'line' }]);
+  assert.equal(e.items[0].kind, 'stroke');
+  assert.equal(e.undoStack.length, 1, '제안만으로는 문서 변화 없음');
+  assert.equal(e.islandPatch.suggestion, '직선으로 바꿀까요? · Enter');
+  assert.equal(e.getPreview().ghosts.length, 1);
+  assert.equal(e.needsTick(), true, '4초 시간 재기');
+
+  const r = key(e, 'Enter');
+  assert.equal(r.handled, true);
+  assert.deepEqual(r.effects, [
+    { type: 'suggestEnd', accepted: true },
+    { type: 'notice', text: `${INK_NOTICES.line} · Ctrl+Z로 원래 획` },
+  ]);
+  assert.equal(e.items[0].kind, 'shape');
+  assert.deepEqual(
+    e.undoStack.map((c) => c.type),
+    ['add', 'correct'],
+  );
+  assert.equal(e.suggestion, null);
+  key(e, 'KeyZ', { ctrlKey: true });
+  assert.equal(e.items[0].kind, 'stroke', 'Ctrl+Z 1번 = 원래 손획');
+  key(e, 'KeyZ', { ctrlKey: true });
+  assert.equal(e.items.length, 0);
+
+  // 섬 제안 클릭 = acceptSuggestion()
+  const c = engine();
+  drag(c, line(100, 300, 400, 305), { holdMs: 560 });
+  assert.deepEqual(c.acceptSuggestion()[0], { type: 'suggestEnd', accepted: true });
+  assert.equal(c.items[0].kind, 'shape');
+  assert.deepEqual(c.acceptSuggestion(), [], '제안이 없으면 아무 일 없음');
+});
+
+test('멈춤도형_제안은_새획_Esc_도구바꾸기_4초면_버림', () => {
+  const END = { type: 'suggestEnd', accepted: false };
+  /** @param {InkEngine} e */
+  const suggestOn = (e) => {
+    const { t } = drag(e, line(100, 300, 400, 305), { holdMs: 560 });
+    assert.ok(e.suggestion);
+    return t;
+  };
+  /** @param {InkEngine} e */
+  const unchanged = (e) => {
+    assert.equal(e.suggestion, null);
+    assert.equal(e.items[0].kind, 'stroke');
+    assert.equal(e.undoStack[0].type, 'add');
+    assert.ok(!e.undoStack.some((c) => c.type === 'correct'), 'correct 명령 없음');
+  };
+
+  const a = engine();
+  suggestOn(a);
+  assert.deepEqual(a.pointerDown({ x: 600, y: 600, t: 5000, button: 0 }), [END], '새 획 시작');
+  a.pointerUp({ x: 600, y: 600, t: 5000, button: 0 });
+  unchanged(a);
+
+  const b = engine();
+  suggestOn(b);
+  assert.deepEqual(key(b, 'Escape').effects, [END], 'Esc = 제안 버림(나가지 않음)');
+  unchanged(b);
+
+  const c = engine();
+  suggestOn(c);
+  assert.deepEqual(key(c, 'KeyM').effects, [END], '도구 바꾸기');
+  assert.equal(c.tool, 'marker');
+  unchanged(c);
+
+  const d = engine();
+  const t = suggestOn(d);
+  assert.deepEqual(d.tick(t + 3999), []);
+  assert.ok(d.suggestion, '4초 전에는 남음');
+  assert.deepEqual(d.tick(t + 4000), [END], '4초 지남');
+  unchanged(d);
+  assert.equal(d.needsTick(), false);
+
+  const u = engine();
+  suggestOn(u);
+  key(u, 'KeyZ', { ctrlKey: true });
+  assert.equal(u.suggestion, null, '되돌리기도 제안을 버림');
+  assert.equal(u.items.length, 0);
+  assert.deepEqual(key(u, 'Enter').effects, [], '버린 뒤 Enter는 아무 일 없음');
+
+  // 수정 키 도형·끔이면 제안 없음
+  const off = engine({ settings: { 'draw.shapeOnHold': false } });
+  drag(off, line(100, 300, 400, 305), { holdMs: 560 });
+  assert.equal(off.suggestion, null);
 });
 
 test('확대_2배에서_4px는_문서_2px로_저장', () => {
@@ -342,7 +443,7 @@ test('칠판_W_K_전환과_판서중_토글', () => {
   const n = b.undoStack.length;
   key(b, 'KeyW');
   assert.equal(b.undoStack.length, n, '이미 흰 칠판이면 명령 없음');
-  assert.deepEqual(b.islandPatch, { color: 'R', tool: 'pen', widthPx: 4, zoom: 1, background: 'white', board: true, pageIndex: 0, pageCount: 1 });
+  assert.deepEqual(b.islandPatch, { color: 'R', tool: 'pen', widthPx: 4, zoom: 1, background: 'white', board: true, pageIndex: 0, pageCount: 1, suggestion: null });
 });
 
 test('색키와_Ctrl휠은_고른항목_setAttr_되돌리기', () => {

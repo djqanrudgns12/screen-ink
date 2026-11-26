@@ -134,7 +134,11 @@ import {
  *   | { type: 'restore' }
  *   | { type: 'help', open: boolean }
  *   | { type: 'centerCursor' }
- *   | { type: 'notice', text: string, action?: 'undo' }} InkEffect
+ *   | { type: 'notice', text: string, action?: 'undo' }
+ *   | { type: 'suggest', text: string, shape: 'line' | 'circle' | 'ellipse' | 'rect' | 'arrow' }
+ *   | { type: 'suggestEnd', accepted: boolean }} InkEffect
+ *   suggest = 0.5초 멈춤 도형 제안(draw.shapeApply 'suggest') — 섬에 "원으로 바꿀까요? · Enter", 섬 클릭 = acceptSuggestion()
+ *   suggestEnd = 제안이 끝남(수락 또는 버림) — 섬 제안을 걷는다
  *
  * @typedef {Object} PointerSample  화면 CSS 좌표 + 사건 시각(event.timeStamp, ms)
  * @property {number} x
@@ -156,6 +160,7 @@ import {
  * @property {'off' | 'light' | 'strong'} [draw.smoothing]
  * @property {boolean} [draw.straighten]
  * @property {boolean} [draw.shapeOnHold]
+ * @property {'suggest' | 'auto'} [draw.shapeApply]  멈춤 도형: 제안(기본) / 바로 바꾸기
  * @property {number} [draw.startZoom]
  * @property {'step' | 'exit'} [draw.esc]
  * @property {boolean} [draw.rightClickPan]
@@ -193,6 +198,19 @@ export const HANDLE_RADIUS_PX = 8;
 export const WHEEL_STEP_DELTA = 50;
 /** 화살표 머리 길이 = 굵기 × 3.5(최소 6). */
 export const ARROW_HEAD_MUL = 3.5;
+/** 멈춤 도형 제안이 저절로 사라지는 시간(ms). */
+export const SUGGEST_TIMEOUT_MS = 4000;
+/** 모자이크(묶음 B) 기본 칸 크기(화면 px, Ctrl+휠로 조절 — 사용자 결정). */
+export const DEFAULT_MOSAIC_BLOCK = 10;
+
+/** 도형 이름 + 조사(섬 문구). */
+const SHAPE_TO = Object.freeze({
+  line: '직선으로',
+  circle: '원으로',
+  ellipse: '타원으로',
+  rect: '사각형으로',
+  arrow: '화살표로',
+});
 
 /** 섬 문구(04 S12·S14, A §2.6). */
 export const INK_NOTICES = Object.freeze({
@@ -202,6 +220,7 @@ export const INK_NOTICES = Object.freeze({
   circle: '원으로 바꿨어요',
   ellipse: '타원으로 바꿨어요',
   rect: '사각형으로 바꿨어요',
+  arrow: '화살표로 바꿨어요',
   cleared: '판서를 모두 지웠어요',
   restored: '이전 판서를 불러왔어요',
   rescaled: '배율이 바뀌어 크기를 맞췄어요',
@@ -504,6 +523,15 @@ export function estimateTextSize(text, fontSize) {
 }
 
 /**
+ * 제안 도형 윤곽(점선 · 옅게) — 2층 미리보기 전용.
+ * @param {ShapeItem} shaped
+ * @returns {ShapeItem}
+ */
+function ghostOf(shaped) {
+  return { ...shaped, id: 'ghost', dashed: true, opacity: 0.55 };
+}
+
+/**
  * id 'it-17' → 17.
  * @param {string} id
  */
@@ -549,6 +577,7 @@ export class InkEngine {
       smoothing: /** @type {'off' | 'light' | 'strong'} */ ('light'),
       straighten: true,
       shapeOnHold: true,
+      shapeApply: /** @type {'suggest' | 'auto'} */ ('suggest'),
       startZoom: DEFAULT_START_ZOOM,
       esc: /** @type {'step' | 'exit'} */ ('step'),
       rightClickPan: true,
@@ -574,6 +603,13 @@ export class InkEngine {
     this.gesture = null;
     /** @type {Set<string>} */
     this.hidden = new Set();
+    /**
+     * 멈춤 도형 제안(제안형) — 원래 손획 id·바꿀 도형·사라질 시각.
+     * @type {{ strokeId: string, page: number, shaped: ShapeItem, name: 'line' | 'circle' | 'ellipse' | 'rect' | 'arrow', text: string, expiresAt: number } | null}
+     */
+    this.suggestion = null;
+    /** 안쪽에서 생긴 알림(제안 버림 등) — 다음 입력 결과에 붙여 내보낸다. @type {InkEffect[]} */
+    this.outbox = [];
     /** 화면이 다시 그릴 곳을 알 수 있게 바뀔 때마다 올린다. */
     this.revs = { doc: 0, view: 0, active: 0, hidden: 0 };
     /** @type {{ kind: 'append', page: number, item: Item } | { kind: 'full' }} */
@@ -602,6 +638,7 @@ export class InkEngine {
     }
     if (typeof s['draw.straighten'] === 'boolean') this.config.straighten = s['draw.straighten'];
     if (typeof s['draw.shapeOnHold'] === 'boolean') this.config.shapeOnHold = s['draw.shapeOnHold'];
+    if (s['draw.shapeApply'] === 'suggest' || s['draw.shapeApply'] === 'auto') this.config.shapeApply = s['draw.shapeApply'];
     if (typeof s['draw.startZoom'] === 'number') this.config.startZoom = s['draw.startZoom'];
     if (s['draw.esc'] === 'step' || s['draw.esc'] === 'exit') this.config.esc = s['draw.esc'];
     if (typeof s['draw.rightClickPan'] === 'boolean') this.config.rightClickPan = s['draw.rightClickPan'];
@@ -683,6 +720,7 @@ export class InkEngine {
       board: this.doc.mode === 'board',
       pageIndex: this.doc.activePage,
       pageCount: this.doc.pages.length,
+      suggestion: this.suggestion ? this.suggestion.text : null,
     };
   }
 
@@ -710,20 +748,29 @@ export class InkEngine {
       redoDepth: this.redoStack.length,
       pageIndex: this.doc.activePage,
       pageCount: this.doc.pages.length,
+      suggestion: this.suggestion ? { text: this.suggestion.text, shape: this.suggestion.name } : null,
       revs: { ...this.revs },
     };
   }
 
-  /** 지금 그리는 중인 것(2층): 미리보기 항목들 + 끌어 고르기 사각형. 문서 좌표. */
+  /**
+   * 지금 그리는 중인 것(2층): 미리보기 항목들 + 끌어 고르기 사각형 + 제안 도형 윤곽(점선·옅게). 문서 좌표.
+   * ghosts는 items 안에도 들어 있다(그리기 순서 = items).
+   */
   getPreview() {
     /** @type {Item[]} */
     const items = [];
+    /** @type {Item[]} */
+    const ghosts = [];
     /** @type {Rect | null} */
     let marquee = null;
     const g = this.gesture;
     if (g?.kind === 'draw') {
       const it = this.previewDrawItem();
       if (it) items.push(it);
+      if (g.held && this.config.shapeApply === 'suggest' && !this.shapeKindFromMods()) {
+        ghosts.push(ghostOf(this.makeShape(g, g.held, 'ghost', this.mods.alt)));
+      }
     } else if (g?.kind === 'move' && g.moved) {
       for (const it of this.items) if (g.ids.includes(it.id)) items.push(translateItem(it, g.dx, g.dy));
     } else if (g?.kind === 'resize' && g.after) {
@@ -732,7 +779,9 @@ export class InkEngine {
     } else if (g?.kind === 'marquee') {
       marquee = rectFromPoints(g.start.x, g.start.y, g.end.x, g.end.y);
     }
-    return { items, marquee };
+    if (this.suggestion && this.suggestion.page === this.doc.activePage) ghosts.push(ghostOf(this.suggestion.shaped));
+    items.push(...ghosts);
+    return { items, ghosts, marquee };
   }
 
   /** 고른 항목을 감싸는 상자(문서 px, 끌어 옮기는 중이면 옮긴 자리). */
@@ -764,7 +813,51 @@ export class InkEngine {
   needsTick() {
     const g = this.gesture;
     if (g?.kind === 'draw' && !g.held && this.freehandHoldEligible(g)) return true;
+    if (this.suggestion) return true; // 4초 뒤 저절로 버림
     return this.edgePushActive();
+  }
+
+  /** 안쪽 알림을 꺼내 비운다(화면이 직접 부른 setTool 등 뒤에 써도 된다). @returns {InkEffect[]} */
+  takeEffects() {
+    if (!this.outbox.length) return [];
+    const out = this.outbox;
+    this.outbox = [];
+    return out;
+  }
+
+  // ── 멈춤 도형 제안(draw.shapeApply 'suggest') ──
+
+  /** 제안 버림(문서 변화 없음). */
+  dropSuggestion() {
+    if (!this.suggestion) return false;
+    this.suggestion = null;
+    this.revs.active++;
+    this.outbox.push({ type: 'suggestEnd', accepted: false });
+    return true;
+  }
+
+  /**
+   * 제안 수락(Enter·섬 클릭) → correct(원래 손획, 도형) 명령. 그 뒤 Ctrl+Z 1번 = 원래 손획.
+   * @returns {InkEffect[]}
+   */
+  acceptSuggestion() {
+    const sg = this.suggestion;
+    if (!sg) return this.takeEffects();
+    this.suggestion = null;
+    this.revs.active++;
+    const before = this.doc.pages[sg.page]?.items.find((i) => i.id === sg.strokeId);
+    if (!before) {
+      this.outbox.push({ type: 'suggestEnd', accepted: false });
+      this.notify();
+      return this.takeEffects();
+    }
+    this.push({ type: 'correct', page: sg.page, before, after: sg.shaped });
+    this.outbox.push(
+      { type: 'suggestEnd', accepted: true },
+      { type: 'notice', text: `${INK_NOTICES[sg.name]} · ${this.undoLabel}로 원래 획` },
+    );
+    this.notify();
+    return this.takeEffects();
   }
 
   // ── 문서 변경(명령) ──
@@ -773,6 +866,7 @@ export class InkEngine {
    * @param {InkCommand} cmd
    */
   push(cmd) {
+    this.dropSuggestion();
     const before = this.doc;
     this.doc = applyCommand(this.doc, cmd);
     this.undoStack.push(cmd);
@@ -791,6 +885,7 @@ export class InkEngine {
   }
 
   undo() {
+    this.dropSuggestion();
     const cmd = this.undoStack.pop();
     if (!cmd) return false;
     this.doc = invertCommand(this.doc, cmd);
@@ -800,6 +895,7 @@ export class InkEngine {
   }
 
   redo() {
+    this.dropSuggestion();
     const cmd = this.redoStack.pop();
     if (!cmd) return false;
     this.doc = applyCommand(this.doc, cmd);
@@ -936,6 +1032,7 @@ export class InkEngine {
 
   /** @param {InkTool} tool */
   setTool(tool) {
+    if (tool !== 'pan') this.dropSuggestion();
     if (this.editing) this.commitText();
     if (tool !== 'select' && tool !== 'pan' && this.selection.length) this.selection = [];
     if (tool === 'pan') {
@@ -982,6 +1079,7 @@ export class InkEngine {
   /** @param {number} index */
   gotoPage(index) {
     if (index < 0 || index >= this.doc.pages.length || index === this.doc.activePage) return false;
+    this.dropSuggestion();
     this.doc = { ...this.doc, activePage: index };
     this.selection = [];
     this.markDoc({ kind: 'full' });
@@ -1145,21 +1243,22 @@ export class InkEngine {
     if (button === 2) {
       fx.push(...this.rightClick());
       this.notify();
-      return fx;
+      return [...fx, ...this.takeEffects()];
     }
     if (button !== 0) return fx;
+    this.dropSuggestion(); // 새 획 시작 = 제안 버림
     if (this.editing) {
       this.commitText();
       this.gesture = { kind: 'swallow' };
       this.notify();
-      return fx;
+      return [...fx, ...this.takeEffects()];
     }
     if (this.tool === 'pan') {
       this.tool = this.prevTool === 'pan' ? 'pen' : this.prevTool;
       this.gesture = { kind: 'swallow' };
       this.revs.active++;
       this.notify();
-      return fx;
+      return [...fx, ...this.takeEffects()];
     }
     const d = this.docPoint(e);
     if (this.tool === 'pen' || this.tool === 'marker') this.startDraw(e, d);
@@ -1170,7 +1269,7 @@ export class InkEngine {
       this.gesture = { kind: 'swallow' };
     }
     this.notify();
-    return fx;
+    return [...fx, ...this.takeEffects()];
   }
 
   /** @returns {InkEffect[]} */
@@ -1225,10 +1324,10 @@ export class InkEngine {
   pointerUp(e) {
     this.cursor = { x: e.x, y: e.y };
     this.updateMods(e);
-    if (!this.gesture) return [];
+    if (!this.gesture) return this.takeEffects();
     const fx = this.finishGesture(e);
     this.notify();
-    return fx;
+    return [...this.takeEffects(), ...fx];
   }
 
   /** 포인터가 창을 떠남 — 가장자리 밀기 멈춤. */
@@ -1240,6 +1339,7 @@ export class InkEngine {
   pointerCancel() {
     this.cancelGesture();
     this.notify();
+    return this.takeEffects();
   }
 
   /**
@@ -1416,7 +1516,7 @@ export class InkEngine {
       const { raw, snapped } = shapeFromDrag(kind, g.start, g.end, { straighten: this.config.straighten });
       return this.makeShape(g, snapped ?? raw, 'preview', dashed);
     }
-    if (g.held) return this.makeShape(g, g.held, 'preview', dashed);
+    if (g.held && this.config.shapeApply === 'auto') return this.makeShape(g, g.held, 'preview', dashed);
     return /** @type {StrokeItem} */ ({
       id: 'preview',
       kind: 'stroke',
@@ -1461,9 +1561,20 @@ export class InkEngine {
     this.push({ type: 'add', page, item: stroke });
     if (g.held) {
       const shaped = this.makeShape(g, g.held, stroke.id, dashed);
-      this.push({ type: 'correct', page, before: stroke, after: shaped });
-      const name = g.held.shape === 'ellipse' ? (g.held.circle ? 'circle' : 'ellipse') : g.held.shape;
-      fx.push({ type: 'notice', text: `${INK_NOTICES[/** @type {'line'|'circle'|'ellipse'|'rect'} */ (name)]} · ${this.undoLabel}로 원래 획` });
+      const name = /** @type {'line' | 'circle' | 'ellipse' | 'rect' | 'arrow'} */ (
+        g.held.shape === 'ellipse' ? (g.held.circle ? 'circle' : 'ellipse') : g.held.shape
+      );
+      if (this.config.shapeApply === 'auto') {
+        // 바로 바꾸기: add → correct 2명령(A §2.3)
+        this.push({ type: 'correct', page, before: stroke, after: shaped });
+        fx.push({ type: 'notice', text: `${INK_NOTICES[name]} · ${this.undoLabel}로 원래 획` });
+      } else {
+        // 제안형(기본): 손획은 그대로, Enter·섬 클릭으로 수락할 때까지 제안만 띄운다
+        const text = `${SHAPE_TO[name]} 바꿀까요? · Enter`;
+        this.suggestion = { strokeId: stroke.id, page, shaped, name, text, expiresAt: e.t + SUGGEST_TIMEOUT_MS };
+        this.revs.active++;
+        fx.push({ type: 'suggest', text, shape: name });
+      }
     }
     return fx;
   }
@@ -1626,7 +1737,7 @@ export class InkEngine {
     const widthMode = this.platform === 'macos' ? Boolean(e.metaKey) : Boolean(e.ctrlKey);
     const changed = widthMode ? this.changeWidth(dir) : this.zoomStep(dir, { x: e.x, y: e.y });
     if (changed) this.notify();
-    return [];
+    return this.takeEffects();
   }
 
   /**
@@ -1642,6 +1753,7 @@ export class InkEngine {
     let changed = false;
     const g = this.gesture;
     if (g?.kind === 'draw') changed = this.checkHold(t) || changed;
+    if (this.suggestion && t >= this.suggestion.expiresAt) changed = this.dropSuggestion() || changed;
     if (this.edgePushActive() && this.cursor) {
       const push = edgePushDelta(this.cursor, this.viewport, dt);
       if (this.setView(panBy(this.view, push.dx, push.dy, this.viewport, this.doc.docSize))) {
@@ -1654,7 +1766,7 @@ export class InkEngine {
       }
     }
     if (changed) this.notify();
-    return [];
+    return this.takeEffects();
   }
 
   // ── 키 ──
@@ -1692,9 +1804,13 @@ export class InkEngine {
       if (e.code === 'Escape' && !e.ctrlKey && !e.altKey && !e.metaKey) {
         effects.push(...this.escape());
         this.notify();
-        return { handled: true, effects };
+        return { handled: true, effects: [...effects, ...this.takeEffects()] };
       }
       return { handled: false, effects };
+    }
+    const plain = !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey;
+    if (this.suggestion && !this.gesture && plain && (e.code === 'Enter' || e.code === 'NumpadEnter')) {
+      return { handled: true, effects: [...effects, ...this.acceptSuggestion()] };
     }
     if (e.code === 'Tab') return { handled: true, effects };
     if (e.code && MOD_CODES.has(e.code)) return { handled: e.code.startsWith('Alt'), effects };
@@ -1702,9 +1818,9 @@ export class InkEngine {
     if (!id) return { handled: false, effects };
     if (e.repeat && NO_REPEAT.has(id)) return { handled: true, effects };
     if (this.gesture && !['d-exit', 'd-undo', 'd-redo'].includes(id)) return { handled: true, effects };
-    effects.push(...this.runAction(id));
+    const out = this.runAction(id);
     this.notify();
-    return { handled: true, effects };
+    return { handled: true, effects: [...effects, ...this.takeEffects(), ...out] };
   }
 
   /**
@@ -1796,6 +1912,7 @@ export class InkEngine {
     if (this.config.esc === 'exit') {
       if (this.editing) this.commitText();
       this.cancelGesture();
+      this.dropSuggestion();
       return [{ type: 'exit', reason: 'esc' }];
     }
     if (this.helpOpen) {
@@ -1803,6 +1920,7 @@ export class InkEngine {
       return [{ type: 'help', open: false }];
     }
     if (this.cancelGesture()) return [];
+    if (this.dropSuggestion()) return []; // Esc = 제안 버림
     if (this.editing) {
       this.commitText();
       return [];
@@ -1831,6 +1949,7 @@ export class InkEngine {
    * @param {InkDocument} doc
    */
   loadDocument(doc) {
+    this.dropSuggestion();
     this.doc = createInkDocument(doc);
     this.undoStack = [];
     this.redoStack = [];
@@ -1864,7 +1983,7 @@ export class InkEngine {
     }
     const target = { ...this.doc, pages, activePage: clamp(src.activePage ?? 0, 0, pages.length - 1) };
     this.loadDocument(target);
-    return [{ type: 'notice', text: status === 'rescaled' ? INK_NOTICES.rescaled : INK_NOTICES.restored }];
+    return [...this.takeEffects(), { type: 'notice', text: status === 'rescaled' ? INK_NOTICES.rescaled : INK_NOTICES.restored }];
   }
 }
 
