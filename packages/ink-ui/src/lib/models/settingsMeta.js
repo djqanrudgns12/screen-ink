@@ -98,6 +98,15 @@ export function describeSettingChange(change, shortcuts = []) {
 }
 
 /**
+ * "멈추면 도형으로" 줄의 보조 문구 — 고른 도형 보정 방식(draw.shapeApply)에 맞춘다.
+ * @param {'suggest' | 'auto' | string | null | undefined} shapeApply
+ * @returns {string}
+ */
+export function formatShapeOnHoldSub(shapeApply) {
+  return shapeApply === 'auto' ? '0.5초 · Ctrl+Z = 원래 획' : '0.5초 멈추면 바꿀지 물어봐요';
+}
+
+/**
  * 설정 위치(`state.location`) 표시 문자열을 만든다.
  * @param {{ path: string, portable: boolean, readOnly?: boolean } | null | undefined} location
  * @param {number} [maxPathLen=32]

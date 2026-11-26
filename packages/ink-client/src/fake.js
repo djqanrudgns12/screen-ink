@@ -61,8 +61,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   let kept = null;
   /** @type {{session: number, board: boolean, quiet: boolean} | null} */
   let ended = null;
-  /** @type {{color: string, tool: string, widthPx: number, zoom: number, pageIndex: number, pageCount: number, background: string, suggestion?: string | null}} */
-  let look = { color: 'R', tool: 'pen', widthPx: 4, zoom: 1, pageIndex: 0, pageCount: 1, background: 'frame', suggestion: null };
+  /** @type {{color: string, tool: string, widthPx: number, zoom: number, pageIndex: number, pageCount: number, background: string, idleDim?: boolean, avoid?: boolean, suggestion?: string | null}} */
+  let look = { color: 'R', tool: 'pen', widthPx: 4, zoom: 1, pageIndex: 0, pageCount: 1, background: 'frame', idleDim: undefined, avoid: undefined, suggestion: null };
   /** @type {any[]} */
   const drawLog = [];
   let saveSeq = 0;
@@ -103,10 +103,15 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
 
   const zoomText = (z) => (Math.round(z * 100) % 10 === 0 ? z.toFixed(1) : z.toFixed(2));
   const drawIslandEvent = () => {
-    const base = { kind: 'mode', mode: drawSession?.board ? 'board' : 'draw' };
+    const base = {
+      kind: 'mode',
+      mode: drawSession?.board ? 'board' : 'draw',
+      ...(typeof look.idleDim === 'boolean' ? { idleDim: look.idleDim } : {}),
+      ...(typeof look.avoid === 'boolean' ? { avoid: look.avoid } : {}),
+    };
     if (drawSession?.board || look.background !== 'frame') {
       return {
-        ...base, variant: 'board', text: `칠판 · ${look.background === 'black' ? '검은색' : '흰색'}`, value: `${look.pageIndex + 1} / ${look.pageCount}`,
+        ...base, variant: 'board', penColor: look.color, text: `칠판 · ${look.background === 'black' ? '검은색' : '흰색'}`, value: `${look.pageIndex + 1} / ${look.pageCount}`,
         hints: [{ key: 'W·K', label: '바탕' }, { key: 'Esc', label: '보관' }, { key: '?', label: '단축키' }],
       };
     }
@@ -391,7 +396,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     async drawIsland(patch) {
       const p = patch ?? {};
       if (mode.mode !== 'draw' || (p.session != null && p.session !== mode.session)) return;
-      for (const k of ['color', 'tool', 'widthPx', 'zoom', 'pageIndex', 'pageCount', 'background']) if (p[k] != null) look[k] = p[k];
+      for (const k of ['color', 'tool', 'widthPx', 'zoom', 'pageIndex', 'pageCount', 'background', 'idleDim', 'avoid']) if (p[k] != null) look[k] = p[k];
       look.suggestion = p.suggestion || null;
       island(drawIslandEvent());
       if (p.notice) island({ kind: 'info', text: p.notice, ...(p.noticeAction === 'undo' ? { button: { label: '되돌리기', action: 'draw.undo' } } : {}) });

@@ -1,10 +1,14 @@
 <script>
+  import { normalizeMinimapViewport } from '../models/drawUi.js';
+
   /**
    * 확대 중 위치 지도(96×60 또는 112×70, 주황 사각 = 보이는 영역, F13·F14 · 10 §5).
    * @type {{
    *   size?: 'sm' | 'md',
    *   viewport?: { x: number, y: number, w: number, h: number },
    *   label?: string,
+   *   zoomText?: string,
+   *   ariaLabel?: string,
    *   class?: string,
    * }}
    */
@@ -12,17 +16,19 @@
     size = 'md',
     viewport = { x: 0.3, y: 0.28, w: 0.45, h: 0.46 },
     label = '모니터 1',
+    zoomText = '',
+    ariaLabel = '위치 지도',
     class: className = '',
   } = $props();
 
-  let clamp01 = (v) => Math.max(0, Math.min(1, v));
-  let vx = $derived(clamp01(viewport.x) * 100);
-  let vy = $derived(clamp01(viewport.y) * 100);
-  let vw = $derived(clamp01(viewport.w) * 100);
-  let vh = $derived(clamp01(viewport.h) * 100);
+  let norm = $derived(normalizeMinimapViewport(viewport));
+  let vx = $derived(norm.x * 100);
+  let vy = $derived(norm.y * 100);
+  let vw = $derived(norm.w * 100);
+  let vh = $derived(norm.h * 100);
 </script>
 
-<div aria-label="위치 지도" class="ink-minimap {className}" data-size={size}>
+<div aria-label={ariaLabel} class="ink-minimap {className}" data-size={size}>
   <span
     class="ink-minimap-view"
     style:left={`${vx}%`}
@@ -32,6 +38,9 @@
   ></span>
   {#if label}
     <span class="ink-minimap-label ink-mono">{label}</span>
+  {/if}
+  {#if zoomText}
+    <span class="ink-minimap-zoom ink-mono">{zoomText}</span>
   {/if}
 </div>
 
@@ -54,6 +63,7 @@
   .ink-minimap-view {
     position: absolute;
     border-radius: 3px;
+    background: rgba(255, 159, 10, 0.1);
     box-shadow: 0 0 0 1.5px var(--ink-accent);
     box-sizing: border-box;
   }
@@ -64,6 +74,15 @@
     bottom: 5px;
     font-size: 9.5px;
     color: var(--ink-island-sub);
+    white-space: nowrap;
+  }
+
+  .ink-minimap-zoom {
+    position: absolute;
+    right: 6px;
+    bottom: 4px;
+    font-size: 9.5px;
+    color: var(--ink-island-accent-text);
     white-space: nowrap;
   }
 </style>

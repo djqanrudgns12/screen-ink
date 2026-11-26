@@ -267,6 +267,16 @@ test('판서 섬 조각과 안내, 펜 지연 기록', async () => {
   await c.drawIsland({ notice: '판서를 모두 지웠어요', noticeAction: 'undo' });
   assert.equal(seen.at(-1).island.button.action, 'draw.undo');
   assert.equal(seen.at(-2).island.button, undefined, '제안 없이 오면 걷힌다');
+
+  // 4초 물러남(idleDim)·커서 회피(avoid) 전달 + 칠판 색 점
+  await c.drawIsland({ idleDim: true, avoid: true });
+  assert.equal(seen.at(-1).island.idleDim, true);
+  assert.equal(seen.at(-1).island.avoid, true);
+  await c.drawIsland({ background: 'black', color: 'W', idleDim: false, avoid: false });
+  assert.deepEqual(
+    [seen.at(-1).island.variant, seen.at(-1).island.penColor, seen.at(-1).island.text, seen.at(-1).island.idleDim, seen.at(-1).island.avoid],
+    ['board', 'W', '칠판 · 검은색', false, false],
+  );
 });
 
 test('결과 섬 HEX 칩과 주황 잔상 0.4초 이벤트를 흉내 낸다', async () => {
