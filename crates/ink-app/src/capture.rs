@@ -533,9 +533,10 @@ impl InkService {
             }
             return;
         }
-        let mut ev = IslandEvent::new(IslandKind::Result, "복사했어요").variant("result").button("저장", "capture.saveLast", Some("Ctrl+S"));
+        let save_key = self.key_text("c-save");
+        let mut ev = IslandEvent::new(IslandKind::Result, "복사했어요").variant("result").button("저장", "capture.saveLast", save_key.as_deref());
         ev.value = Some(size);
-        ev.detail = Some("한글·PPT에 Ctrl+V".into());
+        ev.detail = Some(format!("한글·PPT에 {}", self.paste_text()));
         ev.thumb_url = thumb;
         if let Some(h) = hex {
             ev.chip = Some(IslandButton { label: format!("{h} 복사"), action: "capture.copyHex".into() });

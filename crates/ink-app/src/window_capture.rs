@@ -190,10 +190,12 @@ impl InkService {
             }
             return;
         }
-        let mut ev = IslandEvent::new(IslandKind::Result, "창을 복사했어요").variant("result").button("저장", "capture.saveLast", Some("Ctrl+S"));
+        let save_key = self.key_text("c-save");
+        let mut ev = IslandEvent::new(IslandKind::Result, "창을 복사했어요").variant("result").button("저장", "capture.saveLast", save_key.as_deref());
         ev.value = Some(format!("{cw}×{ch}"));
         // 스냅숏 자르기는 가린 창까지 함께 찍힌다 — 그때는 "가려진 부분까지"라고 하지 않는다
-        ev.detail = Some(if method == "snapshot" { "한글·PPT에 Ctrl+V" } else { "가려진 부분까지 · Ctrl+V" }.into());
+        let paste = self.paste_text();
+        ev.detail = Some(if method == "snapshot" { format!("한글·PPT에 {paste}") } else { format!("가려진 부분까지 · {paste}") });
         ev.thumb_url = thumb;
         self.island(ev);
     }

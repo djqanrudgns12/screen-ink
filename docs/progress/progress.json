@@ -13,7 +13,7 @@
   "levelMeaning": { "hard": "새 OS API·성능 목표·설계 결정이 많음", "mid": "아는 방법으로 여러 파일·실측 필요", "easy": "작은 화면·문서·확인·측정 한 번" },
   "next": {
     "win": ["3f-win-cases", "4.2", "5.4", "6.1", "D10"],
-    "mac": ["M16", "M9", "M10", "M14"],
+    "mac": ["M17", "M9", "M10", "M14", "M-sign"],
     "common": ["3e-handoff", "4.9", "D11", "D1", "7.7"]
   },
   "tracks": [
@@ -178,7 +178,7 @@
             { "id": "M13", "title": "맥 실시간 확대(Magnifier 포트: SCStream → Metal)", "platform": "mac", "days": 1.5, "status": "todo", "note": "R-ZOOM-1 맥 = SCStream → Metal. 지금 맥은 NoMagnifier(지원 안 함)", "level": "hard" },
             { "id": "M14", "title": "맥 F2 창 캡처(ScreenCaptureKit 창 한 장·보호 화면 판정)", "platform": "mac", "days": 0.5, "status": "todo", "note": "Windows는 WGC(wgc_window.rs). 맥은 SCScreenshotManager/SCStream 창 필터", "level": "mid" },
             { "id": "M15", "title": "맥 F3 녹화(Recorder 포트: SCStream + AVAssetWriter H.264)", "platform": "mac", "days": 1.5, "status": "todo", "note": "Windows는 MF 직접(recorder.rs, 5 Mbps). 맥은 지금 지원 안 함", "level": "hard" },
-            { "id": "M16", "title": "맥 캡처 주석·핀·결과 섬 칩·잔상 확인", "platform": "mac", "days": 0.25, "status": "todo", "note": "공통 코드 — 맥 화면에서 동작·좌표(Retina) 확인", "level": "easy" },
+            { "id": "M16", "title": "맥 캡처 주석·핀·결과 섬 칩·잔상 확인", "platform": "mac", "days": 0.25, "status": "verify", "note": "2026-11-26 맥 실기: 주석 3종·원본 바이트 합성·잔상·HEX 칩·[판서로] 71 ms·핀 확인, 결과 섬 0.2초 사라짐·핀 혼합 배율·⌘V 표기 고침. 남음: 캡처 중 한글 조합 안 됨(버그, 인수인계 §2.1)", "level": "easy" },
             { "id": "M17", "title": "맥 첫 실행 시트 F키 안내 한 줄(fn+F1·표준 기능 키)", "platform": "mac", "days": 0.1, "status": "todo", "note": "사용자 결정 #9", "level": "easy" }
           ]
         },

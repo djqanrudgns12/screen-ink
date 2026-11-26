@@ -84,13 +84,26 @@
   });
 
   // 섬: 화면에서 섬이 사라지면 창도 숨긴다(투명 창이 클릭을 가로막지 않게).
+  // 캡처 확정은 모드 끝(End) 바로 뒤에 결과 섬(Result)을 보낸다 → End로 잠깐 빈 순간에 숨김을 보내면, 늦게 닿은
+  // 숨김이 Rust가 방금 띄운 결과 섬 창을 숨겼다(2026-11-26 맥 실측). 잠깐 기다려 그때도 비어 있을 때만 숨긴다.
+  const ISLAND_HIDE_SETTLE_MS = 120;
   onMount(() => {
     if (view !== 'island' || !shell) return;
+    /** @type {ReturnType<typeof setTimeout> | null} */
+    let timer = null;
+    const empty = () => !shell.querySelector('.ink-island-host');
     const mo = new MutationObserver(() => {
-      if (!shell.querySelector('.ink-island-host')) client.run('island.hidden');
+      if (!empty() || timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        if (empty()) client.run('island.hidden');
+      }, ISLAND_HIDE_SETTLE_MS);
     });
     mo.observe(shell, { childList: true, subtree: true });
-    return () => mo.disconnect();
+    return () => {
+      mo.disconnect();
+      if (timer) clearTimeout(timer);
+    };
   });
 </script>
 

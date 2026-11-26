@@ -108,11 +108,28 @@ impl<R: Runtime> ink_app::PinHost for TauriPinHost<R> {
                 .build();
             match built {
                 Ok(win) => {
-                    // 위치 먼저(그 모니터 배율을 받게) → 크기(원래 그림 1:1). 맥 혼합 배율 자리는 [확인 필요](인수인계 §2.6)
-                    let _ = win.set_position(PhysicalPosition::new(rect.x, rect.y));
-                    let _ = win.set_size(PhysicalSize::new(w.max(1), h.max(1)));
-                    let _ = win.show();
-                    let _ = win.set_focus();
+                    // 맥: 혼합 배율에서 Tauri 물리 좌표는 옆 화면으로 어긋난다 → 메인 스레드에서 포인트로 직접 놓는다(M16)
+                    #[cfg(target_os = "macos")]
+                    {
+                        let bounds = PhysRect::new(rect.x, rect.y, w.max(1) as i32, h.max(1) as i32);
+                        let _ = app.run_on_main_thread(move || {
+                            let placed = win.ns_window().is_ok_and(|ns| ink_platform_macos::window::place_rect(ns, &ink_platform_macos::space(), bounds));
+                            if !placed {
+                                let _ = win.set_position(PhysicalPosition::new(rect.x, rect.y));
+                                let _ = win.set_size(PhysicalSize::new(w.max(1), h.max(1)));
+                            }
+                            let _ = win.show();
+                            let _ = win.set_focus();
+                        });
+                    }
+                    // 위치 먼저(그 모니터 배율을 받게) → 크기(원래 그림 1:1)
+                    #[cfg(not(target_os = "macos"))]
+                    {
+                        let _ = win.set_position(PhysicalPosition::new(rect.x, rect.y));
+                        let _ = win.set_size(PhysicalSize::new(w.max(1), h.max(1)));
+                        let _ = win.show();
+                        let _ = win.set_focus();
+                    }
                 }
                 Err(e) => log::warn!("pin window {id}: {e}"),
             }
@@ -135,12 +152,30 @@ pub fn zoom<R: Runtime>(win: &tauri::WebviewWindow<R>, store: &PinStore, id: u64
     if z == e.zoom {
         return Some(z);
     }
-    let pos = win.outer_position().ok()?;
-    let size = win.outer_size().ok()?;
-    let cur = PhysRect::new(pos.x, pos.y, size.width as i32, size.height as i32);
+    // 맥: 지금 자리도 포인트에서 계약 물리 px로 읽고, 새 자리도 포인트로 놓는다(혼합 배율, open과 같은 까닭)
+    #[cfg(target_os = "macos")]
+    let space = ink_platform_macos::space();
+    #[cfg(target_os = "macos")]
+    let mac_cur = win.ns_window().ok().and_then(|ns| ink_platform_macos::window::frame_phys(ns, &space));
+    #[cfg(not(target_os = "macos"))]
+    let mac_cur: Option<PhysRect> = None;
+    let cur = match mac_cur {
+        Some(r) => r,
+        None => {
+            let pos = win.outer_position().ok()?;
+            let size = win.outer_size().ok()?;
+            PhysRect::new(pos.x, pos.y, size.width as i32, size.height as i32)
+        }
+    };
     let next = zoom_rect(cur, e.w, e.h, z, (fx, fy));
-    let _ = win.set_size(PhysicalSize::new(next.w as u32, next.h as u32));
-    let _ = win.set_position(PhysicalPosition::new(next.x, next.y));
+    #[cfg(target_os = "macos")]
+    let placed = win.ns_window().is_ok_and(|ns| ink_platform_macos::window::place_rect(ns, &space, next));
+    #[cfg(not(target_os = "macos"))]
+    let placed = false;
+    if !placed {
+        let _ = win.set_size(PhysicalSize::new(next.w as u32, next.h as u32));
+        let _ = win.set_position(PhysicalPosition::new(next.x, next.y));
+    }
     store.set_zoom(id, z);
     Some(z)
 }

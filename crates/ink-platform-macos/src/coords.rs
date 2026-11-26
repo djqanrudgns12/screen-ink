@@ -260,6 +260,20 @@ impl Space {
         }
     }
 
+    /// 물리 px 사각형 → CG 전역 포인트(핀 창처럼 임의 사각형을 포인트로 놓을 때). [`Self::rect_to_phys`]의 반대 —
+    /// 가운데가 있는 화면의 배율로 잰다(혼합 배율에서 Tauri 물리 좌표로 놓으면 옆 화면으로 어긋난다, M16).
+    pub fn rect_to_points(&self, r: PhysRect) -> RectF {
+        let center = PhysPoint { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+        match self.screen_at_phys(center) {
+            Some(s) => {
+                let (x0, y0) = unmap(s, r.x as f64, r.y as f64);
+                let (x1, y1) = unmap(s, r.right() as f64, r.bottom() as f64);
+                RectF::new(x0, y0, x1 - x0, y1 - y0)
+            }
+            None => RectF::new(r.x as f64, r.y as f64, r.w as f64, r.h as f64),
+        }
+    }
+
     /// 물리 px 한 점 → CG 전역 포인트(커서 옮기기 등).
     pub fn to_points(&self, p: PhysPoint) -> (f64, f64) {
         match self.screen_at_phys(p) {
@@ -341,6 +355,12 @@ mod tests {
         // 오른쪽 화면에 걸친 창은 가운데 화면 배율로 잰다
         assert_eq!(s.rect_to_phys(RectF::new(2000.0, 100.0, 400.0, 300.0)), PhysRect::new(3920, 100, 400, 300));
         assert_eq!(s.rect_to_phys(RectF::new(100.0, 100.0, 400.0, 300.0)), PhysRect::new(200, 200, 800, 600));
+        // 반대(핀 창 놓기): 4K 범위 700,350 400x250pt, FHD 범위 2300,300 400x250pt — 2026-11-26 실측 어긋남 자리
+        assert_eq!(s.rect_to_points(PhysRect::new(1400, 700, 800, 500)), RectF::new(700.0, 350.0, 400.0, 250.0));
+        assert_eq!(s.rect_to_points(PhysRect::new(4220, 300, 400, 250)), RectF::new(2300.0, 300.0, 400.0, 250.0));
+        for r in [PhysRect::new(3920, 100, 400, 300), PhysRect::new(200, 200, 800, 600)] {
+            assert_eq!(s.rect_to_phys(s.rect_to_points(r)), r, "왕복");
+        }
     }
 
     #[test]

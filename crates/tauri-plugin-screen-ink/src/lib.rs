@@ -150,6 +150,7 @@ impl<R: Runtime> Notifier for TauriNotifier<R> {
     }
 
     fn island(&self, event: &IslandEvent) {
+        log::debug!("island {:?}", event.kind);
         // 모드 끝은 거두기만 — 창을 새로 보이지 않는다(UI가 섬을 치우면 창도 숨김)
         if event.kind != IslandKind::End {
             show_island(&self.app);
@@ -938,7 +939,10 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             }
         }
         "popover.close" => hide(POPOVER),
-        "island.hidden" => hide(ISLAND),
+        "island.hidden" => {
+            log::debug!("island hidden by ui");
+            hide(ISLAND)
+        }
         "folder.open" => {
             hide(POPOVER);
             if let Some(p) = output_folder(&app) {

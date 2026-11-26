@@ -1,6 +1,6 @@
 // 맥 자동 입력 시험 도구(손쉬운 사용 권한 필요) — 단계를 차례로 보낸다. 좌표는 CG 전역 포인트.
 //   swift bench/mac/input.swift "move 960 540" "key opt+1" "wait 0.6" "drag 800 400 1100 500" "key esc"
-// 단계: move x y · key [cmd+|opt+|shift+|ctrl+]이름 · drag x0 y0 x1 y1 [걸음] · click x y · rclick x y
+// 단계: move x y · dclick x y · key [cmd+|opt+|shift+|ctrl+]이름 · drag x0 y0 x1 y1 [걸음] · click x y · rclick x y
 //       · down x y · to x y [걸음](누른 채 옮기기) · up · circle cx cy r(누른 채 한 바퀴, 놓지 않음)
 //       · scroll 칸(+ = 위, 커서 자리) · type 글자(ASCII) · wait 초
 // 키 이름: a~z · 0~9 · esc · enter · space · tab · delete · f1~f4 · up · down · left · right
@@ -38,7 +38,10 @@ func key(_ spec: String) {
     let e = CGEvent(keyboardEventSource: src, virtualKey: k, keyDown: true); e?.flags = flags; post(e); usleep(15_000)
   }
   for down in [true, false] {
-    let e = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: down); e?.flags = flags; post(e); usleep(20_000)
+    // 기본 플래그(F 키의 fn 표시 등)는 두고 보조 키만 더한다 — 빈 값으로 덮으면 F1 전역 단축키가 안 먹는다
+    let e = CGEvent(keyboardEventSource: src, virtualKey: code, keyDown: down)
+    if let e { e.flags = e.flags.union(flags) }
+    post(e); usleep(20_000)
   }
   for m in parts.reversed() {
     let (f, k) = mods[m]!
@@ -80,6 +83,16 @@ for step in CommandLine.arguments.dropFirst() {
       mouse(.leftMouseDragged, CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t)); usleep(16_000)
     }
     usleep(40_000); mouse(.leftMouseUp, b); usleep(80_000)
+  case "dclick":
+    let p = CGPoint(x: n[0], y: n[1])
+    mouse(.mouseMoved, p); usleep(60_000)
+    for state in [1, 2] as [Int64] {
+      for t in [CGEventType.leftMouseDown, .leftMouseUp] {
+        let e = CGEvent(mouseEventSource: src, mouseType: t, mouseCursorPosition: p, mouseButton: .left)
+        e?.setIntegerValueField(.mouseEventClickState, value: state); post(e); usleep(30_000)
+      }
+    }
+    usleep(60_000)
   case "down": mouse(.mouseMoved, CGPoint(x: n[0], y: n[1])); usleep(60_000); mouse(.leftMouseDown, cursor); usleep(50_000)
   case "to":
     let (a, b) = (cursor, CGPoint(x: n[0], y: n[1]))

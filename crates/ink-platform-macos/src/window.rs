@@ -141,6 +141,30 @@ pub fn place(ns_window: *mut c_void, space: &Space, bounds: PhysRect) -> bool {
     true
 }
 
+/// 계약 물리 px 사각형 그대로 창을 놓는다(핀 창 — 원래 자리 1:1). 혼합 배율에서 Tauri 물리 좌표는 옆 화면으로
+/// 어긋나서(4K에서 50pt, FHD에서 190pt, 2026-11-26 실측) 포인트로 바꿔 직접 놓는다. 메인 스레드가 아니면 false.
+pub fn place_rect(ns_window: *mut c_void, space: &Space, r: PhysRect) -> bool {
+    let (Some(w), Some(mtm)) = (window(ns_window), MainThreadMarker::new()) else { return false };
+    let Some(primary_h) = NSScreen::screens(mtm).firstObject().map(|p| p.frame().size.height) else { return false };
+    let RectF { x, y, w: pw, h: ph } = space.rect_to_points(r);
+    let frame = NSRect::new(NSPoint::new(x, primary_h - (y + ph)), NSSize::new(pw, ph));
+    // SAFETY: NSWindow 공개 메서드.
+    unsafe {
+        let _: () = msg_send![w, setFrame: frame, display: true];
+    }
+    true
+}
+
+/// 지금 창 틀 → 계약 물리 px(핀 휠 확대가 지금 자리를 읽을 때). 메인 스레드가 아니면 None.
+pub fn frame_phys(ns_window: *mut c_void, space: &Space) -> Option<PhysRect> {
+    let (w, mtm) = (window(ns_window)?, MainThreadMarker::new()?);
+    let primary_h = NSScreen::screens(mtm).firstObject().map(|p| p.frame().size.height)?;
+    // SAFETY: NSWindow 공개 메서드.
+    let f: NSRect = unsafe { msg_send![w, frame] };
+    let cg = crate::coords::cocoa_to_cg(RectF::new(f.origin.x, f.origin.y, f.size.width, f.size.height), primary_h);
+    Some(space.rect_to_phys(cg))
+}
+
 /// 화면 하나를 덮는 창 틀(Cocoa 좌표: 원점 = 주 화면 왼쪽 아래).
 pub(crate) fn screen_frame(mtm: MainThreadMarker, s: &Placed) -> Option<NSRect> {
     let primary_h = NSScreen::screens(mtm).firstObject().map(|p| p.frame().size.height)?;

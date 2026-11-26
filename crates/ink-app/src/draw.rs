@@ -482,8 +482,16 @@ impl InkService {
         }
     }
 
+    /// 결과 섬 안내의 붙여 넣기 키: Windows `Ctrl+V`, 맥 `⌘V`(맥에서도 "Ctrl+V"라고 하던 것, 2026-11-26 맥 M16).
+    pub(crate) fn paste_text(&self) -> String {
+        match self.platform {
+            Platform::Win => "Ctrl+V".into(),
+            Platform::Mac => spoken("Cmd+V", Platform::Mac),
+        }
+    }
+
     /// 섬에 쓸 키 글자: Windows = 표준 표기(`Alt+Shift+1`), 맥 = 기호. 비운 칸이면 None.
-    fn key_text(&self, slot: &str) -> Option<String> {
+    pub(crate) fn key_text(&self, slot: &str) -> Option<String> {
         let combo = self.settings.shortcut(slot);
         if combo.is_empty() {
             return None;
@@ -885,7 +893,7 @@ impl InkService {
         match meta.action {
             ExportAction::Copy => match self.ports.clipboard.set_image(w, h, &px) {
                 Ok(()) => {
-                    let mut ev = IslandEvent::new(IslandKind::Result, "복사했어요").variant("result").detail("한글·PPT에 Ctrl+V");
+                    let mut ev = IslandEvent::new(IslandKind::Result, "복사했어요").variant("result").detail(format!("한글·PPT에 {}", self.paste_text()));
                     ev.value = Some(format!("{w}×{h}"));
                     ev.thumb_url = thumb;
                     self.island(ev);
