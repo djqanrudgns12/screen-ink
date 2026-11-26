@@ -22,6 +22,8 @@ const COMMANDS: &[&str] = &[
     "draw_island",
     "draw_pen_metrics",
     "zoom_input",
+    "capture_annotations",
+    "capture_commit_annotated",
 ];
 
 fn main() {

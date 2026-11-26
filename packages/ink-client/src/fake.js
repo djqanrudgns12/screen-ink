@@ -72,6 +72,21 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   let lastRange = null;
   /** 다음 판서 진입의 시작 보기(확대 → 판서 · [판서로]) */
   let nextView = null;
+  /**
+   * 캡처 주석(4.9) 흉내: 창(모니터) → 주석 개수, 부탁 순번·기다리는 부탁, 받은 답(시험용).
+   * @type {{ session: number, items: Map<number, number>, seq: number, pending: any, answers: any[], bypass: boolean }}
+   */
+  const annot = { session: 0, items: new Map(), seq: 0, pending: null, answers: [], bypass: false };
+  const annotated = () => mode.mode === 'capture' && annot.session === mode.session && [...annot.items.values()].some((n) => n > 0);
+  /** 주석 없이(또는 답을 받은 뒤) 그 결과를 지금 경로로 */
+  const runPlain = async (self, action) => {
+    annot.bypass = true;
+    try {
+      await self.captureInput({ type: 'command', name: action });
+    } finally {
+      annot.bypass = false;
+    }
+  };
 
   const judge = (slot, combo) => {
     if (!combo) return { status: 'off' };
@@ -280,6 +295,19 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         { name: '표', r: { x: Math.max(240, p.x - 360), y: Math.max(120, p.y - 120), w: 720, h: 240 } },
         { name: '2행', r: { x: Math.max(240, p.x - 360), y: p.y - 20, w: 720, h: 40 } },
       ];
+      // 캡처 주석(4.9): 주석이 있으면 결과 전에 주석 층을 부탁한다(진짜는 Rust commit → screen-ink://capture-commit)
+      const commitAction =
+        input.type === 'command' && ['copy', 'save', 'quickSave', 'pin'].includes(input.name)
+          ? input.name
+          : (input.type === 'key' && input.key === 'Enter') || input.type === 'dblclick'
+            ? 'copy'
+            : null;
+      if (commitAction && !annot.bypass && annotated()) {
+        annot.seq += 1;
+        annot.pending = { session: mode.session, seq: annot.seq, action: commitAction, rect: s.rect ?? chainAt(s.p)[s.level].r };
+        emit({ type: 'captureCommit', request: { ...annot.pending } });
+        return;
+      }
       if (input.type === 'move') {
         s.p = { x: input.x, y: input.y };
         if (s.down) {
@@ -368,6 +396,30 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     async overlayReady(session) {
       if (mode.mode === 'capture' && mode.session === session) readyLog.push(session);
     },
+    async captureAnnotations(session, monitorId, items) {
+      if (mode.mode !== 'capture' || mode.session !== session) return;
+      if (annot.session !== session) {
+        annot.session = session;
+        annot.items = new Map();
+        annot.pending = null;
+      }
+      if (items > 0) annot.items.set(monitorId, items);
+      else annot.items.delete(monitorId);
+      if (!annotated() && annot.pending) {
+        const p = annot.pending;
+        annot.pending = null;
+        await runPlain(this, p.action);
+      }
+    },
+    async captureCommitAnnotated(meta, rgba) {
+      const p = annot.pending;
+      if (!p || mode.mode !== 'capture' || meta.session !== p.session || meta.seq !== p.seq) return;
+      annot.pending = null;
+      annot.answers.push({ meta, bytes: rgba ? rgba.length : 0 });
+      await runPlain(this, p.action);
+    },
+    /** 시험용: 받은 주석 층 답(머리·바이트 수) */
+    get annotatedLog() { return annot.answers.map((a) => ({ ...a })); },
     /** 시험용: overlayReady가 받아들인 세션들 */
     get readyLog() { return [...readyLog]; },
     async drawReady(session, paintMs) {

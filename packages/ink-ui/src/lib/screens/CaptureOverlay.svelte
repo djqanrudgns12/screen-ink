@@ -1,8 +1,39 @@
 <script>
+  import { untrack } from 'svelte';
+  import AnnotateLayer from '../components/AnnotateLayer.svelte';
+  import AnnotateOptions from '../components/AnnotateOptions.svelte';
   import CaptureToolbar from '../components/CaptureToolbar.svelte';
   import Magnifier from '../components/Magnifier.svelte';
   import SelectionFrame from '../components/SelectionFrame.svelte';
-  import { TOOLBAR_ACTIONS, comboMap, placeToolbar, toolbarOwner, toolbarTooltip } from '../models/captureToolbar.js';
+  import {
+    ANNOT_COLORS,
+    ANNOT_WIDTHS,
+    MOSAIC_BLOCKS,
+    TOOLBAR_ACTIONS,
+    TOOLBAR_ANNOTATE_TOOLS,
+    TOOLBAR_HISTORY,
+    annotOptionsKind,
+    comboMap,
+    estimateToolbarWidth,
+    placeToolOptions,
+    placeToolbar,
+    toggleAnnotTool,
+    toolbarOwner,
+    toolbarTooltip,
+  } from '../models/captureToolbar.js';
+  import {
+    MOSAIC_BLOCK_DEFAULT,
+    anchorToCss,
+    annotDocOptions,
+    annotEngineSettings,
+    annotKeyRoute,
+    annotTarget,
+    clampMosaicBlock,
+    exportAnnotation,
+    mosaicSourcePlan,
+    wheelStep,
+  } from '../models/captureAnnotate.js';
+  import { MAX_WIDTH_PX, MIN_WIDTH_PX, createInkEngine, itemCount } from '../ink/inkEngine.js';
   import { evidenceBoxes } from '../models/evidence.js';
   import {
     buildMagnifierPatch,
@@ -12,6 +43,8 @@
     computeSampleRect,
     findMonitorForOverlay,
     isPhysicalPointInMonitor,
+    isPhysicalRectOverlappingMonitor,
+    physicalRectToClient,
     physicalToClient,
     resolveCaptureFrame,
     resolveMonitorGuides,
@@ -115,6 +148,48 @@
   /** @type {{ clientX: number, clientY: number } | null} */
   let pendingPointer = null;
 
+  // ── 캡처 주석(4.9, R-CAP-28): 판서 엔진을 범위 안 문서로. 결과 판정은 Rust, 주석 층은 부탁받으면 보낸다 ──
+  /** @type {string | null} 고른 주석 도구(null = 범위 조정) */
+  let annotTool = $state(null);
+  /**
+   * 이 창의 주석(세션당 하나, 처음 도구를 고를 때 만든다). anchor = 그때 범위 왼쪽 위(물리 px) = 문서 원점.
+   * @type {{ session: number, engine: import('../ink/inkEngine.js').InkEngine, anchor: { x: number, y: number }, off: () => void } | null}
+   */
+  let annot = $state.raw(null);
+  let annotCanUndo = $state(false);
+  let annotCanRedo = $state(false);
+  let annotEditing = $state(false);
+  let annotHasMosaic = $state(false);
+  let annotColor = $state('R');
+  let annotWidth = $state(4);
+  let annotBlock = $state(MOSAIC_BLOCK_DEFAULT);
+  /** 마지막으로 Rust에 알린 주석 개수(0 ↔ n이 바뀔 때만 알린다) */
+  let annotReported = 0;
+  let annotWheel = 0;
+  /** 모자이크 미리보기 원본(정지 이미지를 문서 원점에서 시작하게 옮긴 캔버스) */
+  /** @type {HTMLCanvasElement | null} */
+  let mosaicSource = $state.raw(null);
+  let mosaicSourceKey = '';
+  /** 오프스크린(확대경) 이미지가 준비될 때마다 올린다 */
+  let frameRev = $state(0);
+  let optsW = $state(0);
+  let optsH = $state(0);
+  let overOpts = $state(false);
+  /** @type {Record<string, any>} 판서 설정(색·굵기·떨림 보정 — 주석도 같은 값) */
+  let drawSettings = {};
+  /** @type {Array<{ id: string, combo: string }>} */
+  let shortcutRows = [];
+
+  // ── 확정 직후 주황 잔상 0.4초(R-CAP-26): Rust가 창마다 screen-ink://afterimage(그 창 CSS 사각형) ──
+  /** @type {{ token: number, x: number, y: number, width: number, height: number } | null} */
+  let afterimage = $state(null);
+  let afterimageSeq = 0;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let afterimageTimer = null;
+  /** 세션이 끝난 뒤에도 잔상 좌표를 바꿀 수 있게(가짜 클라이언트처럼 css가 없는 알림) */
+  /** @type {import('@screen-ink/client').OverlayMonitor | null} */
+  let lastMonitor = null;
+
   function nowMs() {
     return typeof performance !== 'undefined' && typeof performance.now === 'function'
       ? performance.now()
@@ -150,6 +225,8 @@
   }
 
   function clearOverlay() {
+    // 모드가 끝남 — 주석은 버린다(Rust 쪽 세션도 끝났으니 알리지 않음)
+    dropAnnot(false);
     cancelPendingWork();
     releaseOffscreen();
     if (imgEl) {
@@ -231,6 +308,7 @@
         }
       }
     }
+    if (drawn) frameRev += 1; // 모자이크 미리보기 원본을 다시 만들 수 있다
     if (requirePixels && !drawn) {
       magnifierReady = false;
       return;
@@ -313,6 +391,265 @@
     });
   }
 
+  // ─────────────── 캡처 주석(4.9) ───────────────
+
+  /** @param {number} w @param {number} h */
+  function createCanvas(w, h) {
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    return c;
+  }
+
+  function releaseMosaicSource() {
+    if (mosaicSource) {
+      mosaicSource.width = 0;
+      mosaicSource.height = 0;
+    }
+    mosaicSource = null;
+    mosaicSourceKey = '';
+  }
+
+  /**
+   * 엔진이 바뀔 때마다: 단추 상태 + 주석 개수가 0 ↔ n으로 바뀌면 Rust에 알린다(결과 경로를 고름).
+   * @param {import('../ink/inkEngine.js').InkEngine} engine
+   */
+  function syncAnnot(engine) {
+    const a = annot;
+    if (!a || a.engine !== engine) return;
+    const n = itemCount(engine.doc);
+    annotCanUndo = engine.canUndo;
+    annotCanRedo = engine.canRedo;
+    annotEditing = Boolean(engine.editing);
+    annotHasMosaic = engine.items.some((it) => it.kind === 'mosaic');
+    annotColor = engine.color;
+    annotWidth = engine.widthPx;
+    if (n > 0 !== annotReported > 0) {
+      annotReported = n;
+      if (monitor && activeSession === a.session && typeof client.captureAnnotations === 'function') {
+        client.captureAnnotations(a.session, monitor.id, n);
+      }
+    }
+  }
+
+  /** 이 세션의 주석 엔진(없으면 지금 범위로 만든다). */
+  function ensureAnnot() {
+    if (annot && annot.session === activeSession) return annot;
+    const rect = captureView?.rect;
+    if (activeSession === null || !monitor || !rect || !(rect.w > 0) || !(rect.h > 0)) return null;
+    const engine = createInkEngine({
+      docOptions: annotDocOptions(activeSession, rect, monitor),
+      platform,
+      shortcuts: shortcutRows.length ? shortcutRows : undefined,
+      settings: annotEngineSettings(drawSettings),
+    });
+    const a = { session: activeSession, engine, anchor: { x: rect.x, y: rect.y }, off: () => {} };
+    annot = a;
+    annotReported = 0;
+    a.off = engine.subscribe(syncAnnot);
+    syncAnnot(engine);
+    return a;
+  }
+
+  /** @param {boolean} report  지금 세션이 이어지면 Rust에 "0개"를 알린다(범위를 버림) */
+  function dropAnnot(report) {
+    const a = annot;
+    if (!a) return;
+    a.off();
+    if (report && annotReported > 0 && monitor && activeSession === a.session && typeof client.captureAnnotations === 'function') {
+      client.captureAnnotations(a.session, monitor.id, 0);
+    }
+    annot = null;
+    annotTool = null;
+    annotCanUndo = false;
+    annotCanRedo = false;
+    annotEditing = false;
+    annotHasMosaic = false;
+    annotReported = 0;
+    annotWheel = 0;
+    overOpts = false;
+    releaseMosaicSource();
+  }
+
+  /** 입력 중인 글자를 확정(결과·도구 바꾸기 전에) */
+  function flushAnnotText() {
+    const a = annot;
+    if (a?.engine.editing) {
+      a.engine.commitText();
+      a.engine.notify();
+    }
+  }
+
+  /**
+   * 툴바 도구 단추: 같은 도구 = 해제(범위 조정으로).
+   * @param {string} id
+   */
+  function selectTool(id) {
+    const next = toggleAnnotTool(annotTool, id);
+    if (next === annotTool) return;
+    if (next) {
+      const a = ensureAnnot();
+      if (!a) return;
+      const target = annotTarget(next);
+      if (target.engineTool) a.engine.setTool(target.engineTool);
+      else if (a.engine.editing) a.engine.commitText();
+      a.engine.notify();
+    } else {
+      flushAnnotText();
+    }
+    annotTool = next;
+  }
+
+  /** @param {string} code */
+  function setAnnotColor(code) {
+    const a = ensureAnnot();
+    if (!a) return;
+    a.engine.setColor(/** @type {any} */ (code));
+    a.engine.notify();
+  }
+
+  /** @param {number} px */
+  function setAnnotWidth(px) {
+    const a = ensureAnnot();
+    if (!a) return;
+    a.engine.widthPx = Math.max(MIN_WIDTH_PX, Math.min(MAX_WIDTH_PX, Math.round(px)));
+    a.engine.revs.active++;
+    a.engine.notify();
+  }
+
+  /** @param {number} px */
+  function setAnnotBlock(px) {
+    annotBlock = clampMosaicBlock(px);
+  }
+
+  /** @param {'undo' | 'redo'} dir */
+  function annotHistory(dir) {
+    const a = annot;
+    if (!a) return;
+    a.engine.runAction(dir === 'undo' ? 'd-undo' : 'd-redo');
+    a.engine.notify();
+  }
+
+  /** @param {string} name */
+  function handleToolbarCommand(name) {
+    if (name === 'annot.undo') return annotHistory('undo');
+    if (name === 'annot.redo') return annotHistory('redo');
+    // 쓰던 글자를 먼저 확정 → 개수 알림이 결과 단추보다 먼저 Rust에 닿는다
+    flushAnnotText();
+    sendCaptureInput({ type: 'command', name });
+  }
+
+  /**
+   * Ctrl(맥 Cmd)+휠: 굵기 1~30 · 모자이크 칸 6~24.
+   * @param {WheelEvent} e
+   */
+  function annotWheelStep(e) {
+    const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? viewportH || 800 : 1;
+    const r = wheelStep(annotWheel, e.deltaY * k);
+    annotWheel = r.acc;
+    if (!r.dir) return;
+    if (annotTool === 'mosaic') setAnnotBlock(annotBlock + r.dir);
+    else if (annot && annot.engine.changeWidth(r.dir)) annot.engine.notify();
+  }
+
+  /**
+   * Rust의 부탁(주석이 있는 범위의 결과): 투명 주석 층 + 모자이크 사각형을 원본 바이트로 보낸다.
+   * 주석을 쥔 창만 답한다.
+   * @param {import('@screen-ink/client').CaptureCommitRequest} req
+   */
+  function handleCommitRequest(req) {
+    const a = annot;
+    if (!a || !monitor || activeSession === null || req.session !== activeSession || a.session !== req.session) return;
+    if (typeof client.captureCommitAnnotated !== 'function') return;
+    flushAnnotText();
+    const items = a.engine.items;
+    if (!items.length) return; // 개수 0 알림이 먼저 갔다 — Rust가 주석 없이 낸다
+    const out = exportAnnotation(items, {
+      anchor: a.anchor,
+      rect: req.rect,
+      scale: monitor.scale > 0 ? monitor.scale : 1,
+      createCanvas,
+    });
+    client.captureCommitAnnotated({ session: req.session, seq: req.seq, action: req.action, w: out.w, h: out.h, mosaics: out.mosaics }, out.rgba);
+  }
+
+  // 모자이크를 쓰면(도구를 골랐거나 이미 있음) 미리보기 원본을 한 번 만든다(정지 이미지가 준비된 뒤)
+  $effect(() => {
+    const a = annot;
+    const mon = monitor;
+    const needed = Boolean(a) && (annotTool === 'mosaic' || annotHasMosaic);
+    const rev = frameRev;
+    // 만든 결과(mosaicSource)에는 기대지 않는다
+    untrack(() => {
+      if (!a || !mon || !needed || !offscreenCanvas) return;
+      const key = `${a.session}|${a.anchor.x}|${a.anchor.y}|${rev}`;
+      if (key === mosaicSourceKey && mosaicSource) return;
+      const plan = mosaicSourcePlan(a.anchor, mon);
+      if (!plan) return;
+      const c = createCanvas(plan.w, plan.h);
+      const ctx = c.getContext('2d');
+      if (!ctx) return;
+      try {
+        ctx.drawImage(offscreenCanvas, plan.dx, plan.dy, plan.dw, plan.dh);
+      } catch {
+        c.width = 0;
+        c.height = 0;
+        return;
+      }
+      releaseMosaicSource();
+      mosaicSource = c;
+      mosaicSourceKey = key;
+    });
+  });
+
+  // ─────────────── 주황 잔상(R-CAP-26) ───────────────
+
+  function reducedMotion() {
+    try {
+      return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {
+      return false;
+    }
+  }
+
+  function clearAfterimage() {
+    if (afterimageTimer !== null) clearTimeout(afterimageTimer);
+    afterimageTimer = null;
+    afterimage = null;
+  }
+
+  /**
+   * 확정 직후 고른 자리에 0.4초. 창은 Rust가 클릭 통과로 띄우고 400 ms 뒤 숨긴다.
+   * prefers-reduced-motion: reduce면 그리지 않는다(10 §6).
+   * @param {import('@screen-ink/client').AfterimageEvent} ev
+   */
+  function showAfterimage(ev) {
+    if (!ev?.rect) return;
+    if (typeof ev.monitorId === 'number' && ev.monitorId !== monitorId) return;
+    // 이미 새 세션이 떠 있으면 지난 잔상은 버린다
+    if (activeSession !== null && ev.session !== activeSession) return;
+    clearAfterimage();
+    if (reducedMotion()) return;
+    const mon = monitor ?? lastMonitor;
+    const css = ev.css
+      ? { x: ev.css.x, y: ev.css.y, width: ev.css.w, height: ev.css.h }
+      : mon && isPhysicalRectOverlappingMonitor(ev.rect, mon)
+        ? physicalRectToClient(ev.rect, mon)
+        : null;
+    if (!css) return;
+    // 고르기 화면(어둡게·툴바)이 아직 남아 있으면 걷고 잔상만
+    if (activeSession !== null) clearOverlay();
+    const token = ++afterimageSeq;
+    afterimage = { token, ...css };
+    afterimageTimer = setTimeout(
+      () => {
+        afterimageTimer = null;
+        if (afterimage?.token === token) afterimage = null;
+      },
+      Math.max(0, ev.durationMs ?? 400) + 40,
+    );
+  }
+
   function handleMainImgLoad() {
     if (activeSession === null || nativeFrame) return;
     const loadedAt = nowMs();
@@ -338,6 +675,9 @@
     const targetMonitorId = monitorId;
     const off = client.subscribe((e) => {
       if (e.type === 'overlay') {
+        // 새 세션: 지난 주석·잔상은 버린다
+        dropAnnot(false);
+        clearAfterimage();
         cancelPendingWork();
         releaseOffscreen();
         patch = null;
@@ -363,6 +703,7 @@
         }
 
         sessionReceivedAt = nowMs();
+        lastMonitor = mon;
         activeSession = e.overlay.session;
         sessionKind = e.overlay.kind;
         nativeFrame = isNative;
@@ -401,7 +742,16 @@
       } else if (e.type === 'capture') {
         if (activeSession !== null && e.view?.session === activeSession) {
           captureView = e.view;
+          // 우클릭으로 범위를 버리면(다시 고르기) 주석도 버린다
+          if (e.view.phase === 'hover' && annot) dropAnnot(true);
         }
+      } else if (e.type === 'captureCommit') {
+        handleCommitRequest(e.request);
+      } else if (e.type === 'afterimage') {
+        showAfterimage(e.afterimage);
+      } else if (e.type === 'draw') {
+        // 잔상 0.4초 중에 판서가 열림([판서로]·Alt+1) — 판서 화면 위에 주황 틀을 남기지 않는다
+        clearAfterimage();
       } else if (e.type === 'state') {
         applyStateKeys(e.state);
         const mode = e.state?.mode;
@@ -416,6 +766,7 @@
     return () => {
       off();
       clearOverlay();
+      clearAfterimage();
     };
   });
 
@@ -471,6 +822,12 @@
     if (!state) return;
     if (Array.isArray(state.shortcuts)) combos = comboMap(state.shortcuts);
     if (typeof state.platform === 'string') platform = state.platform === 'macos' || state.platform === 'mac' ? 'macos' : 'windows';
+    // 캡처 주석: 판서 설정(색·굵기)·판서 키(실행 취소·다시 실행)를 그대로
+    if (state.settings && typeof state.settings === 'object') drawSettings = state.settings;
+    if (Array.isArray(state.shortcuts)) {
+      shortcutRows = state.shortcuts;
+      annot?.engine.setShortcuts(state.shortcuts);
+    }
   }
 
   $effect(() => {
@@ -519,6 +876,8 @@
   /** @param {PointerEvent} e */
   function handlePointerMove(e) {
     if (activeSession === null || !monitor) return;
+    // 주석 도구를 고른 동안 범위 밖 움직임은 고르기에 보내지 않는다(범위 안은 주석 층이 받음)
+    if (annotTool) return;
     pendingPointer = { clientX: e.clientX, clientY: e.clientY };
     if (!moveRaf && typeof requestAnimationFrame === 'function') {
       moveRaf = requestAnimationFrame(flushPointerMove);
@@ -530,6 +889,14 @@
   /** @param {PointerEvent} e */
   function handlePointerDown(e) {
     if (activeSession === null || !monitor) return;
+    if (annotTool) {
+      // 도구를 고른 동안 범위 밖 클릭은 범위를 바꾸지 않는다. 우클릭 = 도구 해제(범위 조정으로)
+      if (e.button === 2) {
+        e.preventDefault();
+        selectTool(annotTool);
+      }
+      return;
+    }
     const rect = rootEl?.getBoundingClientRect();
     const input = toCapturePointerInput('down', e, monitor, rect);
     if (!input) return;
@@ -557,6 +924,7 @@
   /** @param {PointerEvent} e */
   function handlePointerUp(e) {
     if (activeSession === null || !monitor) return;
+    if (annotTool) return;
     if (pendingPointer) {
       if (moveRaf && typeof cancelAnimationFrame === 'function') {
         cancelAnimationFrame(moveRaf);
@@ -573,6 +941,7 @@
   /** @param {MouseEvent} e */
   function handleDblClick(e) {
     if (activeSession === null || !monitor) return;
+    if (annotTool) return; // 도구를 고른 동안 더블클릭은 복사가 아니다
     const rect = rootEl?.getBoundingClientRect();
     const input = toCapturePointerInput('dblclick', e, monitor, rect);
     if (!input) return;
@@ -582,6 +951,12 @@
   /** @param {WheelEvent} e */
   function handleWheel(e) {
     if (activeSession === null || !monitor) return;
+    if (annotTool) {
+      // 주석 중 휠: Ctrl(맥 Cmd)+휠 = 굵기·모자이크 칸, 그냥 휠은 삼킨다(확정 뒤 범위는 휠로 바뀌지 않음)
+      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) annotWheelStep(e);
+      return;
+    }
     const input = toCaptureWheelInput(e);
     if (!input) return;
     e.preventDefault();
@@ -614,6 +989,27 @@
   /** @param {KeyboardEvent} e */
   function handleKeydown(e) {
     if (activeSession === null) return;
+    // 주석 글자 상자 안 키는 상자가 맡는다(Enter 복사·Esc 취소로 새지 않게)
+    if (typeof HTMLTextAreaElement !== 'undefined' && e.target instanceof HTMLTextAreaElement) return;
+    if (annot) {
+      const route = annotKeyRoute(e, { editing: annotEditing, toolActive: Boolean(annotTool), keymap: annot.engine.keymap, platform });
+      if (route === 'text') return;
+      if (route === 'release') {
+        // 도구를 고른 상태의 첫 Esc = 도구만 해제(주석 유지). 도구가 없을 때 Esc = 캡처 취소(Rust)
+        e.preventDefault();
+        if (annotTool) selectTool(annotTool);
+        return;
+      }
+      if (route === 'undo' || route === 'redo') {
+        e.preventDefault();
+        annotHistory(route);
+        return;
+      }
+      if (route === 'swallow') {
+        e.preventDefault();
+        return;
+      }
+    }
     if (e.key === 'Shift' && !e.repeat && !e.ctrlKey && !e.altKey && !e.metaKey) {
       colorFormat = toggleColorFormat(colorFormat);
     }
@@ -656,12 +1052,22 @@
         toolbarOwner(captureView.rect, sessionMonitors.length ? sessionMonitors : [monitor]) === monitor.id,
     ),
   );
-  let toolbarTips = $derived(Object.fromEntries(TOOLBAR_ACTIONS.map((a) => [a.id, toolbarTooltip(a, combos, platform)])));
+  let toolbarTips = $derived(Object.fromEntries([...TOOLBAR_ACTIONS, ...TOOLBAR_HISTORY].map((a) => [a.id, toolbarTooltip(a, combos, platform)])));
+  /** @type {{ w: number, h: number }} */
+  let toolbarSize = $derived({ w: toolbarW || estimateToolbarWidth([TOOLBAR_ANNOTATE_TOOLS, TOOLBAR_HISTORY, TOOLBAR_ACTIONS]), h: toolbarH || 40 });
   let toolbarPos = $derived(
     activeFrame
-      ? placeToolbar(activeFrame, { w: viewportW, h: viewportH }, { w: toolbarW || TOOLBAR_ACTIONS.length * 34 + 8, h: toolbarH || 40 })
-      : { x: 0, y: 0, side: 'below' },
+      ? placeToolbar(activeFrame, { w: viewportW, h: viewportH }, toolbarSize)
+      : /** @type {{ x: number, y: number, side: 'below' | 'above' | 'inside' }} */ ({ x: 0, y: 0, side: 'below' }),
   );
+  // 보조 옵션(색·굵기 / 모자이크 칸): 도구를 고른 동안만 툴바 바깥쪽 4px
+  let optionsKind = $derived(annotOptionsKind(annotTool));
+  let optsPos = $derived(placeToolOptions(toolbarPos, toolbarSize, { w: optsW || 240, h: optsH || 28 }, { w: viewportW, h: viewportH }));
+  // 주석 층: 이 창 주석이 있고 범위가 정해진 동안(다시 끄는 중에도 같은 화면 자리에 남아 지금 범위로 잘린다)
+  let annotVisible = $derived(
+    Boolean(annot && annot.session === activeSession && monitor && activeFrame && (captureView?.phase === 'confirmed' || captureView?.phase === 'drag')),
+  );
+  let annotAnchorCss = $derived(annot && monitor ? anchorToCss(annot.anchor, monitor) : { x: 0, y: 0 });
 
   let magBoxW = $derived(colorFormat === 'rgb' ? 214 : 186);
   let magPos = $derived(
@@ -681,6 +1087,7 @@
     data-session={activeSession}
     data-phase={captureView?.phase ?? 'hover'}
     data-native-frame={nativeFrame ? 'true' : undefined}
+    data-annot-tool={annotTool ?? undefined}
     role="application"
     aria-label="캡처 화면"
     onpointerdown={handlePointerDown}
@@ -732,6 +1139,20 @@
       <div class="ink-overlay-scrim" aria-hidden="true"></div>
     {/if}
 
+    {#if annotVisible && annot && monitor && activeFrame}
+      <AnnotateLayer
+        engine={annot.engine}
+        tool={annotTool}
+        frame={activeFrame}
+        anchorCss={annotAnchorCss}
+        scale={monitor.scale > 0 ? monitor.scale : 1}
+        {platform}
+        mosaicBlock={annotBlock}
+        mosaicImage={mosaicSource}
+        onRightClick={() => annotTool && selectTool(annotTool)}
+      />
+    {/if}
+
     {#if activeGuides.length > 0}
       <svg class="ink-overlay-guides" aria-hidden="true">
         {#each activeGuides as g, i (i)}
@@ -769,17 +1190,42 @@
     {#if toolbarVisible}
       <CaptureToolbar
         actions={TOOLBAR_ACTIONS}
+        tools={TOOLBAR_ANNOTATE_TOOLS}
+        history={TOOLBAR_HISTORY}
+        activeTool={annotTool}
+        canUndo={annotCanUndo}
+        canRedo={annotCanRedo}
         tooltips={toolbarTips}
         x={toolbarPos.x}
         y={toolbarPos.y}
         bind:width={toolbarW}
         bind:height={toolbarH}
         onHover={(v) => (overToolbar = v)}
-        onCommand={(name) => sendCaptureInput({ type: 'command', name })}
+        onTool={selectTool}
+        onCommand={handleToolbarCommand}
       />
+      {#if optionsKind !== 'none'}
+        <AnnotateOptions
+          kind={optionsKind === 'mosaic' ? 'mosaic' : 'stroke'}
+          colors={ANNOT_COLORS}
+          widths={ANNOT_WIDTHS}
+          blocks={MOSAIC_BLOCKS}
+          color={annotColor}
+          width={annotWidth}
+          block={annotBlock}
+          x={optsPos.x}
+          y={optsPos.y}
+          bind:boxWidth={optsW}
+          bind:boxHeight={optsH}
+          onColor={setAnnotColor}
+          onWidth={setAnnotWidth}
+          onBlock={setAnnotBlock}
+          onHover={(v) => (overOpts = v)}
+        />
+      {/if}
     {/if}
 
-    {#if magnifierReady && cursorCss && cursorPhys && !(toolbarVisible && overToolbar)}
+    {#if magnifierReady && cursorCss && cursorPhys && !annotTool && !(toolbarVisible && (overToolbar || overOpts))}
       <div
         class="ink-overlay-mag"
         style:transform={`translate3d(${magPos.x}px, ${magPos.y}px, 0)`}
@@ -797,6 +1243,22 @@
   </div>
 {/if}
 
+{#if afterimage}
+  <!-- 확정 직후 고른 자리 주황 잔상 0.4초(R-CAP-26). 창은 클릭 통과(Rust), 여기도 포인터를 받지 않는다 -->
+  <div class="ink-afterimage-layer" aria-hidden="true">
+    <SelectionFrame
+      x={afterimage.x}
+      y={afterimage.y}
+      width={afterimage.width}
+      height={afterimage.height}
+      state="afterimage"
+      scrim={false}
+      instant
+      label="방금 고른 범위"
+    />
+  </div>
+{/if}
+
 <style>
   .ink-overlay {
     position: fixed;
@@ -809,6 +1271,22 @@
     user-select: none;
     -webkit-user-select: none;
     z-index: 40;
+  }
+
+  /* 주석 도구를 고른 동안 범위 밖은 고르기 십자가 아니다 */
+  .ink-overlay[data-annot-tool] {
+    cursor: default;
+  }
+
+  .ink-afterimage-layer {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    pointer-events: none;
+    background: transparent;
+    z-index: 41;
   }
 
   .ink-overlay-img {

@@ -117,6 +117,27 @@
  * @property {number} session
  * @property {PhysRect} rect
  * @property {number} durationMs
+ * @property {number} [monitorId]   이 알림을 받는 오버레이 창의 모니터(Rust가 창마다 emit_to)
+ * @property {{x: number, y: number, w: number, h: number}} [css]  그 창 기준 CSS 사각형 — 없으면 화면이 rect를 직접 바꾼다
+ * @property {number} [token]       세대(늦게 끝난 타이머가 새 잔상을 지우지 않게)
+ *
+ * @typedef {'copy'|'save'|'quickSave'|'pin'} CommitAction
+ *
+ * @typedef {Object} CaptureCommitRequest  캡처 주석(4.9): 주석이 있는 범위의 결과를 내기 전 Rust의 부탁
+ * @property {number} session
+ * @property {number} seq          답에 그대로 돌려줄 순번(늦은 답 거르기)
+ * @property {CommitAction} action
+ * @property {PhysRect} rect       결과 범위(물리 px) — 주석 층은 rect.w × rect.h
+ *
+ * @typedef {{x: number, y: number, w: number, h: number, block: number}} MosaicRect  결과 그림 기준 물리 px(왼쪽 위 = 범위 왼쪽 위), block = 칸(물리 px)
+ *
+ * @typedef {Object} CaptureCommitMeta  주석 층 답의 머리
+ * @property {number} session
+ * @property {number} seq
+ * @property {CommitAction} action
+ * @property {number} w            주석 층 크기(층이 없으면 0)
+ * @property {number} h
+ * @property {MosaicRect[]} mosaics
  *
  * @typedef {Object} OverlayMonitor
  * @property {number} id
@@ -261,8 +282,38 @@
  * @property {(patch: DrawIslandPatch) => Promise<void>} drawIsland
  * @property {(sample: PenSample) => Promise<void>} drawPenMetrics  로그 한 줄 `pen latency n=.. p50=.. p95=.. max=.. ms`
  * @property {(input: ZoomInput) => Promise<void>} zoomInput  실시간 확대 입력(휠·확대 안 키·끝). 결과는 'zoom'·'island' 이벤트로
- * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView} | {type: 'afterimage', afterimage: AfterimageEvent} | {type: 'zoom', zoom: LiveZoomState | null} | {type: 'draw', draw: DrawSession} | ({type: 'drawCommand'} & DrawCommand)) => void) => () => void} subscribe
+ * @property {(session: number, monitorId: number, items: number) => Promise<void>} [captureAnnotations]  캡처 주석(4.9): 이 창의 주석 개수(0 ↔ n이 바뀔 때). 0개면 결과는 지금 경로 그대로
+ * @property {(meta: CaptureCommitMeta, rgba: Uint8Array | Uint8ClampedArray | null) => Promise<void>} [captureCommitAnnotated]  'captureCommit' 부탁의 답 — 투명 주석 층(곧은 알파 RGBA, getImageData 그대로) + 모자이크 사각형. Rust가 원본에 합성
+ * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView} | {type: 'afterimage', afterimage: AfterimageEvent} | {type: 'zoom', zoom: LiveZoomState | null} | {type: 'draw', draw: DrawSession} | ({type: 'drawCommand'} & DrawCommand) | {type: 'captureCommit', request: CaptureCommitRequest}) => void) => () => void} subscribe
  */
+
+/**
+ * 주석 층 답의 원본 바이트 본문: `[머리 길이 u32 LE][머리 JSON(UTF-8)][RGBA]`(Rust `AnnotatedCommit::decode`와 1:1).
+ * base64로 바꾸지 않는다(03 §4).
+ * @param {CaptureCommitMeta} meta
+ * @param {Uint8Array | Uint8ClampedArray | null | undefined} rgba
+ * @returns {Uint8Array}
+ */
+export function encodeAnnotatedCommit(meta, rgba) {
+  const head = new TextEncoder().encode(JSON.stringify(meta));
+  const body = rgba ?? new Uint8Array(0);
+  const out = new Uint8Array(4 + head.length + body.length);
+  new DataView(out.buffer).setUint32(0, head.length, true);
+  out.set(head, 4);
+  out.set(body, 4 + head.length);
+  return out;
+}
+
+/**
+ * encodeAnnotatedCommit의 반대(시험·가짜 클라이언트용).
+ * @param {Uint8Array} bytes
+ * @returns {{ meta: CaptureCommitMeta, rgba: Uint8Array }}
+ */
+export function decodeAnnotatedCommit(bytes) {
+  const n = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(0, true);
+  const meta = JSON.parse(new TextDecoder().decode(bytes.subarray(4, 4 + n)));
+  return { meta, rgba: bytes.subarray(4 + n) };
+}
 
 export const SHORTCUT_GROUPS = [
   { id: 'capture', title: '캡처·녹화', scope: 'global' },

@@ -26,4 +26,6 @@ permissions = [
   "allow-draw-island",
   "allow-draw-pen-metrics",
   "allow-zoom-input",
+  "allow-capture-annotations",
+  "allow-capture-commit-annotated",
 ]

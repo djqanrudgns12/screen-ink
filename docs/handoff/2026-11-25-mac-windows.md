@@ -1,5 +1,7 @@
 # 인수인계 — 단계 3 이후, 맥 / Windows 나눔
 
+> **2026-11-26 마감 뒤에는 [2026-11-26-mac-handoff.md](2026-11-26-mac-handoff.md)가 작업 지시서다.** 이 문서의 §1 공통 규칙·§5 파일 지도는 그대로 유효하고(앱 이름·로그 경로는 새 문서 §1-1이 우선), 나머지는 기록으로 남긴다.
+
 - 기준: 브랜치 `feat/foundation`, 커밋 `61e2450`(2026-11-25). 맥 작업 반영 2026-11-26 아침(§2.1 진행 표·§2.5·§3.0·§4)
 - **학교에서 바로 할 일은 §3.0**에 순서대로 적었다.
 - **진척도(%)·남은 일 전체 목록은 [docs/progress/README.md](../progress/README.md)**(원본 `docs/progress/progress.json`). 항목 상태를 바꾸면 JSON을 고치고 `npm run progress`로 보고서를 다시 만든다. 커밋 전 `npm run progress -- --check`.

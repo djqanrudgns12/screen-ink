@@ -79,6 +79,9 @@
       return client.overlayReady(session, ui);
     },
     captureInput: (input) => client.captureInput(input),
+    // 캡처 주석(4.9): 개수 알림·주석 층 답(가짜 클라이언트가 부탁 → 답 → 결과를 흉내)
+    captureAnnotations: (session, monitorId, items) => client.captureAnnotations(session, monitorId, items),
+    captureCommitAnnotated: (meta, rgba) => client.captureCommitAnnotated(meta, rgba),
     subscribe(handler) {
       return client.subscribe((e) => {
         if (e.type === 'overlay') {

@@ -183,6 +183,10 @@ pub struct OverlayLog {
     pub highlights: Vec<Option<PhysRect>>,
     /// 판서로 띄운 세션과 받은 배경 이미지 크기(칠판은 None)
     pub draws: Vec<(DrawSession, Option<(u32, u32)>)>,
+    /// 캡처 주석(4.9): 오버레이에 부탁한 주석 층(받은 순서)
+    pub commit_requests: Vec<ink_app::capture::CommitRequest>,
+    /// 주석 층을 부탁할 길이 없는 척(request_commit = false)
+    pub no_commit: bool,
 }
 
 #[derive(Clone, Default)]
@@ -212,6 +216,15 @@ impl OverlayHost for FakeOverlay {
         if o.showing.map(|(s, _)| s) == Some(session) {
             o.showing = None;
         }
+    }
+
+    fn request_commit(&mut self, request: &ink_app::capture::CommitRequest) -> bool {
+        let mut o = self.0.lock().unwrap();
+        if o.no_commit {
+            return false;
+        }
+        o.commit_requests.push(*request);
+        true
     }
 
     fn show_draw(&mut self, session: &DrawSession, frame: Option<Frame>) -> Result<Option<String>, String> {
@@ -334,6 +347,10 @@ pub struct Desk {
     pub texts: Vec<String>,
     pub saved: Vec<(String, String, u32, u32)>,
     pub clipboard_locked: bool,
+    /// 클립보드에 넣은 그림 화소(BGRA) — `images`와 같은 순서
+    pub image_bgra: Vec<Vec<u8>>,
+    /// 저장한 그림 화소(BGRA) — `saved`와 같은 순서
+    pub saved_bgra: Vec<Vec<u8>>,
 }
 
 /// 클립보드·저장 폴더 흉내.
@@ -341,12 +358,13 @@ pub struct Desk {
 pub struct FakeDesk(pub Arc<Mutex<Desk>>);
 
 impl ink_app::Clipboard for FakeDesk {
-    fn set_image(&mut self, w: u32, h: u32, _bgra: &[u8]) -> Result<(), String> {
+    fn set_image(&mut self, w: u32, h: u32, bgra: &[u8]) -> Result<(), String> {
         let mut d = self.0.lock().unwrap();
         if d.clipboard_locked {
             return Err("locked".into());
         }
         d.images.push((w, h));
+        d.image_bgra.push(bgra.to_vec());
         Ok(())
     }
 
@@ -357,8 +375,11 @@ impl ink_app::Clipboard for FakeDesk {
 }
 
 impl ink_app::FileSink for FakeDesk {
-    fn save_png(&mut self, folder: &str, stem: &str, w: u32, h: u32, _bgra: &[u8]) -> Result<ink_app::SavedFile, String> {
-        self.0.lock().unwrap().saved.push((folder.into(), stem.into(), w, h));
+    fn save_png(&mut self, folder: &str, stem: &str, w: u32, h: u32, bgra: &[u8]) -> Result<ink_app::SavedFile, String> {
+        let mut d = self.0.lock().unwrap();
+        d.saved.push((folder.into(), stem.into(), w, h));
+        d.saved_bgra.push(bgra.to_vec());
+        drop(d);
         Ok(ink_app::SavedFile { name: format!("{stem}.png"), path: format!("{folder}\\{stem}.png"), fell_back: folder.is_empty() })
     }
 
@@ -374,24 +395,28 @@ pub struct PinBoard {
     pub open: BTreeMap<u64, (PhysRect, u32, u32)>,
     pub closed: Vec<u64>,
     pub fail_open: bool,
+    /// 핀 그림 화소(BGRA, 열린 핀)
+    pub bgra: BTreeMap<u64, Arc<Vec<u8>>>,
 }
 
 #[derive(Clone, Default)]
 pub struct FakePins(pub Arc<Mutex<PinBoard>>);
 
 impl ink_app::PinHost for FakePins {
-    fn open(&mut self, id: u64, rect: PhysRect, w: u32, h: u32, _bgra: Arc<Vec<u8>>) -> Result<(), String> {
+    fn open(&mut self, id: u64, rect: PhysRect, w: u32, h: u32, bgra: Arc<Vec<u8>>) -> Result<(), String> {
         let mut b = self.0.lock().unwrap();
         if b.fail_open {
             return Err("no window".into());
         }
         b.open.insert(id, (rect, w, h));
+        b.bgra.insert(id, bgra);
         Ok(())
     }
 
     fn close(&mut self, id: u64) {
         let mut b = self.0.lock().unwrap();
         b.open.remove(&id);
+        b.bgra.remove(&id);
         b.closed.push(id);
     }
 }
@@ -485,6 +510,11 @@ impl OverlayHost for TracedOverlay {
 
     fn flash_afterimage(&mut self, session: u64, rect: PhysRect, layout: &MonitorLayout) {
         self.0.flash_afterimage(session, rect, layout);
+    }
+
+    fn request_commit(&mut self, request: &ink_app::capture::CommitRequest) -> bool {
+        self.1.push("overlay.request_commit");
+        self.0.request_commit(request)
     }
 }
 
