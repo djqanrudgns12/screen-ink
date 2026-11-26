@@ -92,6 +92,7 @@ fn make_panel(w: &AnyObject, key: bool) -> bool {
         AnyObject::set_class(w, cls);
         let mask: usize = msg_send![w, styleMask];
         let _: () = msg_send![w, setStyleMask: mask | 1 << 7]; // NSWindowStyleMaskNonactivatingPanel
+        prevent_activation(w);
         let _: () = msg_send![w, setFloatingPanel: true];
         let _: () = msg_send![w, setBecomesKeyOnlyIfNeeded: false];
         let _: () = msg_send![w, setHidesOnDeactivate: false];
@@ -249,6 +250,51 @@ pub fn reset_cursor() {
             let _: () = msg_send![c, set];
         }
     }
+}
+
+/// 만든 뒤에 `NonactivatingPanel`을 켜면 창 서버의 "활성화 막기" 표시가 갱신되지 않는 경우가 있다 → 키 창이 될 때
+/// 앱이 활성화되며 설정 창이 있는 다른 Space로 넘어간다(전체 화면 앱 위 트레이 팝오버가 안 보이는 원인 후보,
+/// R2-BUG-TRAY-2). 비공개 `_setPreventsActivation:`이 있으면 그 표시를 바로 갱신한다(없으면 아무 일도 없다).
+fn prevent_activation(w: &AnyObject) {
+    let sel = sel!(_setPreventsActivation:);
+    // SAFETY: 응답하는지 먼저 묻고, BOOL 하나를 받는 메서드로만 부른다.
+    unsafe {
+        let ok: Bool = msg_send![w, respondsToSelector: sel];
+        if ok.as_bool() {
+            let _: () = msg_send![w, _setPreventsActivation: Bool::YES];
+        }
+    }
+}
+
+/// 그 창이 지금 Space에 있는지(`isOnActiveSpace`). 창이 없으면 false.
+pub fn on_active_space(ns_window: *mut c_void) -> bool {
+    let Some(w) = window(ns_window) else { return false };
+    // SAFETY: NSWindow 공개 메서드.
+    let b: Bool = unsafe { msg_send![w, isOnActiveSpace] };
+    b.as_bool()
+}
+
+/// 그 창이 키 창인지.
+pub fn is_key(ns_window: *mut c_void) -> bool {
+    let Some(w) = window(ns_window) else { return false };
+    // SAFETY: NSWindow 공개 메서드.
+    let b: Bool = unsafe { msg_send![w, isKeyWindow] };
+    b.as_bool()
+}
+
+/// 그 창의 층(`level`).
+pub fn level(ns_window: *mut c_void) -> isize {
+    let Some(w) = window(ns_window) else { return 0 };
+    // SAFETY: NSWindow 공개 메서드(NSInteger).
+    unsafe { msg_send![w, level] }
+}
+
+/// 우리 앱이 지금 활성 앱인지(메인 스레드가 아니면 false).
+pub fn app_active() -> bool {
+    let Some(app) = app() else { return false };
+    // SAFETY: NSApplication 공개 메서드.
+    let b: Bool = unsafe { msg_send![&*app, isActive] };
+    b.as_bool()
 }
 
 /// 모드가 끝나면 포커스를 원래 앱(전체 화면 앱 등)으로 돌려준다.

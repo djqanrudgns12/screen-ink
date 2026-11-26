@@ -170,6 +170,7 @@
 | R2-BUG-TRAY-4 | P0 | 가설 C 대응: 맥에서는 `w.show()` 대신 `order_front` + Tauri 상태만 맞춤(섬·오버레이와 같은 방식). | 같은 실기 |
 | R2-BUG-TRAY-5 | P1 | Windows 대응점: 전체 화면(독점 아님) 앱 위에서 팝오버가 뒤로 가지 않는지. | Windows 실기 표 |
 
+- **[완료 2026-11-27 — R2-BUG-TRAY-1·2·3·4 코드]** 클릭마다 판단 한 줄(`tray click: …`, INFO), 패널로 바꿀 때 `_setPreventsActivation:`(있으면), 다른 Space에 "보임"으로 남은 팝오버는 숨기지 않고 데려옴, 맥은 Tauri `show()` 대신 `order_front`+`make_key`. **실기 미실행**(설치판이 떠 있어 개발 앱이 같은 앱 하나만 규칙으로 바로 꺼짐) → 다음 설치판에서 사람 실기 1회.
 - 실기 확인은 **사용자 화면을 빼앗지 않게** 사람이 한 번(총괄이 다른 앱을 강제로 앞으로 가져오는 자동 시험은 하지 않는다 — 2026-11-26 사용자 피드백).
 
 ### 6.7 글꼴 (R2-FONT) — §4.1
@@ -219,7 +220,9 @@
 ### 6.12 텍스트 주석 글꼴 고르기 (R2-TXT) — 새 요청
 > 요청: 캡처 뒤 텍스트 넣기에서 글꼴까지 바꾸게, UI/UX 훌륭하게, Tidy Task 할일의 글꼴 부분 디자인·배치 참조.
 
-- 참고: Tidy `src/components/fontPicker/{FontPickerPanel,FontPickerTrigger,FontPickerWindow}.svelte`, `src/lib/fonts/{fontCatalog,fontPickerProtocol,fontPickerTheme}.js` — 분석·옮길 설계 = 제미나이 [research/tidy-font-picker.md](research/tidy-font-picker.md)(작성 중).
+- 참고: Tidy `src/components/fontPicker/{FontPickerPanel,FontPickerTrigger,FontPickerWindow}.svelte`, `src/lib/fonts/{fontCatalog,fontPickerProtocol,fontPickerTheme}.js` — 분석 = 제미나이 [research/tidy-font-picker.md](research/tidy-font-picker.md) · [스크린숏](research/tidy-font-shots/).
+- **Tidy에서 가져올 것(분석 요지)**: 줄 이름을 **그 글꼴로 그린다**(따로 견본 칸 없음) · 글꼴을 **묶음 탭**(고딕·명조·손글씨·둥근·제목·고정폭 + 내 글꼴)과 **굵기·시리즈 알약**(L·M·SB·B)으로 접어 작은 패널(약 252×332) 안에 · 마우스를 올리면 그 줄만 미리 보기 · 고르는 동안 글자 선택을 지킴(`mousedown.preventDefault`) · 테마별 대비를 계산된 색으로 보증 · 앱 시작 뒤 쉬는 시간에 미리 불러오기.
+- **[기본안] 슉쇽 배치 = 제미나이 "안 가"**: 글자 도구를 고르면 툴바 위에 한 줄 알약 `[글꼴 이름 ▾] │ 크기 슬라이더 │ 색` → 글꼴 단추를 누르면 그 바로 위에 붙는 팝오버(약 264×320, 별도 창 없이 캡처 화면 안 — 초점·한글 입력·Esc 단계가 꼬이지 않음). 이 컴퓨터 글꼴이 많을 때만 맨 위 검색 칸(Tidy에 없음, 슉쇽에 더함).
 
 | ID | 우선 | 요구 | 수용 기준 |
 |---|---|---|---|

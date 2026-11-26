@@ -466,12 +466,20 @@ fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 /// 트레이 팝오버 열기·닫기. 위치: Windows = 아이콘 위(작업 표시줄이 위면 아래), 맥 = 메뉴 막대 아이콘 바로 아래.
 fn toggle_popover<R: Runtime>(app: &AppHandle<R>, tray_rect: Rect) {
     let Some(w) = app.get_webview_window(POPOVER) else { return };
-    if w.is_visible().unwrap_or(false) {
+    let visible = w.is_visible().unwrap_or(false);
+    // 맥: 다른 Space(전체 화면 앱 등)에서 "보임"으로 남은 팝오버는 숨기지 않고 지금 Space로 데려온다(R2-BUG-TRAY-3)
+    #[cfg(target_os = "macos")]
+    let on_space = w.ns_window().is_ok_and(ink_platform_macos::window::on_active_space);
+    #[cfg(not(target_os = "macos"))]
+    let on_space = true;
+    if visible && on_space {
+        log::info!("tray click: hide (visible on this space)");
         let _ = w.hide();
         return;
     }
     let just_closed = app.state::<PopoverClock>().0.lock().unwrap_or_else(|e| e.into_inner()).is_some_and(|t| t.elapsed() < Duration::from_millis(250));
     if just_closed {
+        log::info!("tray click: ignored (closed {} ms ago)", app.state::<PopoverClock>().0.lock().unwrap_or_else(|e| e.into_inner()).map_or(0, |t| t.elapsed().as_millis()));
         return;
     }
     // 맥: tray-icon 사각형은 "포인트 × 그 화면 배율" → 포인트로 돌려 아이콘 바로 아래에 붙인다(혼합 배율에서도 정확)
@@ -494,12 +502,22 @@ fn toggle_popover<R: Runtime>(app: &AppHandle<R>, tray_rect: Rect) {
         let st = s.state();
         let _ = app.emit(EVT_STATE, &st);
     }
-    // 맥: 활성화하지 않는 패널을 지금 Space(전체 화면 앱 포함)에 올리고 키 창으로만 — 앱을 활성화하면 Space가 넘어간다
+    // 맥: 활성화하지 않는 패널을 지금 Space(전체 화면 앱 포함)에 올리고 키 창으로만 — 앱을 활성화하면 Space가 넘어간다.
+    // Tauri `show()`는 부르지 않는다(층·순서를 다시 써 전체 화면 창 뒤로 갈 수 있다 — R2-BUG-TRAY-4). 창 보임은 NSWindow가 판단한다.
+    // 클릭마다 판단 근거를 한 줄 남긴다(R2-BUG-TRAY-1 — 숫자·참거짓만): 재발하면 이 줄로 가설을 가린다.
     #[cfg(target_os = "macos")]
     if let Ok(ns) = w.ns_window() {
-        ink_platform_macos::window::order_front(ns);
-        let _ = w.show();
-        ink_platform_macos::window::make_key(ns);
+        use ink_platform_macos::window as mw;
+        let active_before = mw::app_active();
+        mw::order_front(ns);
+        mw::make_key(ns);
+        log::info!(
+            "tray click: show (was visible {visible}, on space {on_space}, app active {active_before}->{}, key {}, on space now {}, level {})",
+            mw::app_active(),
+            mw::is_key(ns),
+            mw::on_active_space(ns),
+            mw::level(ns)
+        );
         return;
     }
     let _ = w.show();
