@@ -86,8 +86,10 @@
  * @property {{key: string, label: string}[]} [hints]  둘째 줄 키 안내
  * @property {string} [thumbUrl]    결과 섬 썸네일(ink://thumb/…, 작은 BMP)
  * @property {string} [buttonKey]   단추 옆 키캡(예: 'Ctrl+S')
- * @property {'R'|'Y'|'G'|'O'|'B'|'L'|'W'|'K'} [penColor]  판서 섬(variant 'draw')의 지금 색 점
+ * @property {'R'|'Y'|'G'|'O'|'B'|'L'|'W'|'K'} [penColor]  판서 섬(variant 'draw'·'board')의 지금 색 점
  * @property {string} [penWidth]    판서 섬의 굵기('4px')
+ * @property {boolean} [idleDim]    판서 섬 4초 무동작 40% 물러남
+ * @property {boolean} [avoid]      커서가 섬 bbox+24px 안에 와서 위로 비켜 감
  * @property {{label: string, action: InkAction}} [chip]  추천 칩 하나(예: '#RRGGBB 복사' → 'capture.copyHex')
  * @property {{label: string, action: InkAction}} [secondaryButton]  주 단추 옆 보조 단추(결과 섬 [판서로] → 'capture.toDraw') — 누르면 run(action)
  * @property {string} [secondaryButtonKey]  보조 단추 옆 키캡(예: 'Alt+1') — 단추가 넘치면 생략
@@ -205,7 +207,8 @@
  * @property {number} [pageIndex]
  * @property {number} [pageCount]
  * @property {'frame'|'white'|'black'} [background]
- * @property {boolean} [idleDim]     4초 무동작 물러남(섬 표현은 아직 없음)
+ * @property {boolean} [idleDim]     4초 무동작 40% 물러남
+ * @property {boolean} [avoid]       커서가 섬 bbox+24px 안에 와서 위로 비켜 감
  * @property {string} [notice]       보정·안내 한 줄('수평으로 맞췄어요' 등)
  * @property {'undo'} [noticeAction]  안내에 [되돌리기] 단추(모두 지우기 뒤) → drawCommand 'undo'
  * @property {string | null} [suggestion]  멈춤 도형 제안 글 — 조각마다 보낸다(없으면 걷힘). 섬 [바꾸기] → drawCommand 'acceptSuggestion'

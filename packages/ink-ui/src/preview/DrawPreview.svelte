@@ -2,13 +2,24 @@
   import '../lib/tokens.css';
   import { onMount } from 'svelte';
   import DrawCanvas from '../lib/components/DrawCanvas.svelte';
+  import Island from '../lib/components/Island.svelte';
   import MiniMap from '../lib/components/MiniMap.svelte';
-  import { InkEngine, INK_COLORS } from '../lib/ink/inkEngine.js';
-  import { visibleDocFraction } from '../lib/ink/coords.js';
+  import { InkEngine } from '../lib/ink/inkEngine.js';
   import { renderDocument } from '../lib/ink/canvasRender.js';
+  import {
+    DRAW_IDLE_DIM_MS,
+    DRAW_MINIMAP_MARGIN_PX,
+    DRAW_PALETTE_EXPAND_MS,
+    ISLAND_AVOID_MARGIN_PX,
+    drawMinimapState,
+    formatBoardIslandText,
+    resolveDrawIdleDim,
+    shouldAvoidIsland,
+    shouldExpandDrawPalette,
+  } from '../lib/models/drawUi.js';
 
   /**
-   * 브라우저 미리보기 `?draw=1` — DrawCanvas 데모(가짜 배경 그림 + FakeInkClient 단축키·설정).
+   * 브라우저 미리보기 `?draw=1` — DrawCanvas + 실제 판서 섬(6/8색 펼침·4초 물러남·커서 회피) + MiniMap 데모.
    * `&board=1` 칠판, `&platform=macos` 맥 키, `&apply=auto` 멈춤 도형 바로 바꾸기, `&desync=0` desynchronized 끔.
    * @type {{ client: import('@screen-ink/client').InkClient }}
    */
@@ -82,7 +93,7 @@
   /** @type {HTMLCanvasElement | null} */
   let frame = $state.raw(null);
   let patch = $state.raw(engine.islandPatch);
-  let fraction = $state.raw({ x: 0, y: 0, w: 1, h: 1 });
+  let minimap = $state.raw(drawMinimapState(engine.view, engine.viewport, engine.doc.docSize));
   let notice = $state('');
   /** @type {string | null} */
   let suggestion = $state(null);
@@ -94,7 +105,29 @@
   let kept = null;
   /** @type {any} */
   let canvasRef = $state(null);
+  /** @type {HTMLDivElement | null} */
+  let islandAnchor = $state(null);
+
+  // 4.8 판서 섬 상태(0.8초 펼침 · 4초 40% 물러남 · bbox+24px 커서 회피) + 데모 강제 토글
+  let paletteTransient = $state(false);
+  let forcePalette = $state(false);
+  let autoIdleDim = $state(false);
+  let forceIdleDim = $state(false);
+  let islandHover = $state(false);
+  let cursorAvoid = $state(false);
+
   let noticeTimer = 0;
+  let idleTimer = 0;
+  let paletteTimer = 0;
+  let prevColor = engine.islandPatch.color;
+
+  function resetIdle() {
+    autoIdleDim = false;
+    clearTimeout(idleTimer);
+    idleTimer = window.setTimeout(() => {
+      autoIdleDim = true;
+    }, DRAW_IDLE_DIM_MS);
+  }
 
   /** @param {string} text */
   function showNotice(text) {
@@ -105,6 +138,7 @@
 
   /** @param {import('../lib/ink/inkEngine.js').InkEffect} fx */
   function handleEffect(fx) {
+    resetIdle();
     switch (fx.type) {
       case 'notice':
         showNotice(fx.text);
@@ -144,12 +178,45 @@
     }
   }
 
+  /** @param {PointerEvent} ev */
+  function handleStagePointerMove(ev) {
+    resetIdle();
+    if (suggestion || forcePalette || paletteTransient || !islandAnchor) {
+      cursorAvoid = false;
+      return;
+    }
+    cursorAvoid = shouldAvoidIsland(
+      { x: ev.clientX, y: ev.clientY },
+      islandAnchor.getBoundingClientRect(),
+      ISLAND_AVOID_MARGIN_PX,
+    );
+  }
+
+  function handleStagePointerLeave() {
+    cursorAvoid = false;
+  }
+
+  function toggleBoardBackground() {
+    const next = patch.background === 'frame' ? 'white' : patch.background === 'white' ? 'black' : 'frame';
+    engine.setBackground(next);
+  }
+
   onMount(() => {
     frame = board ? null : makeFakeFrame();
+    resetIdle();
     const off = engine.subscribe(() => {
-      patch = engine.islandPatch;
-      fraction = visibleDocFraction(engine.view, engine.viewport, engine.doc.docSize);
+      const next = engine.islandPatch;
+      const variant = next.board || next.background !== 'frame' ? 'board' : 'draw';
+      if (shouldExpandDrawPalette(prevColor, next.color, variant)) {
+        paletteTransient = true;
+        clearTimeout(paletteTimer);
+        paletteTimer = window.setTimeout(() => (paletteTransient = false), DRAW_PALETTE_EXPAND_MS);
+      }
+      prevColor = next.color;
+      patch = next;
+      minimap = drawMinimapState(engine.view, engine.viewport, engine.doc.docSize);
       undoDepth = engine.undoStack.length;
+      resetIdle();
     });
     client
       .getState()
@@ -158,7 +225,12 @@
         engine.setSettings({ ...state.settings, ...(params.get('apply') === 'auto' ? { 'draw.shapeApply': 'auto' } : {}) });
       })
       .catch(() => {});
-    return off;
+    return () => {
+      off();
+      clearTimeout(noticeTimer);
+      clearTimeout(idleTimer);
+      clearTimeout(paletteTimer);
+    };
   });
 
   const TOOL_LABEL = /** @type {Record<string, string>} */ ({
@@ -169,9 +241,34 @@
     eraser: '지우개',
     pan: '손',
   });
+
+  let isBoardView = $derived(patch.board || patch.background !== 'frame');
+  let boardText = $derived(formatBoardIslandText({ background: patch.background, pageIndex: patch.pageIndex, pageCount: patch.pageCount }));
+  let zoomValue = $derived.by(() => {
+    if (patch.zoom <= 1 + 1e-6) return '';
+    const r = Math.round(patch.zoom * 100);
+    return r % 10 === 0 ? `×${(r / 100).toFixed(1)}` : `×${(r / 100).toFixed(2)}`;
+  });
+  let islandIdleDim = $derived(
+    resolveDrawIdleDim({
+      explicitIdleDim: forceIdleDim ? true : undefined,
+      autoIdleDim,
+      hovering: islandHover,
+      hasAction: Boolean(suggestion),
+    }),
+  );
+  let islandAvoid = $derived(cursorAvoid && !suggestion && !forcePalette && !paletteTransient);
 </script>
 
-<div class="draw-preview">
+<svelte:window onkeydown={resetIdle} />
+
+<div
+  class="draw-preview"
+  role="presentation"
+  onpointermove={handleStagePointerMove}
+  onpointerdown={resetIdle}
+  onpointerleave={handleStagePointerLeave}
+>
   <DrawCanvas
     bind:this={canvasRef}
     {engine}
@@ -181,24 +278,30 @@
     onPenMetrics={(m) => (metrics = m)}
   />
 
-  <div class="draw-preview-island" aria-live="polite">
-    <span class="dot" style:background={INK_COLORS[/** @type {keyof typeof INK_COLORS} */ (patch.color)]}></span>
-    <b>{patch.board ? '칠판' : '판서'}</b>
-    <span>{TOOL_LABEL[patch.tool] ?? patch.tool} {patch.widthPx}px</span>
-    <span class="zoom">×{patch.zoom.toFixed(2)}</span>
-    <span class="muted">{patch.background}{patch.board ? ` · ${patch.pageIndex + 1} / ${patch.pageCount}` : ''}</span>
-    <span class="muted">undo {undoDepth}</span>
-    {#if metrics}
-      <span class="muted">pen n={metrics.n} p50={metrics.p50} p95={metrics.p95} max={metrics.max} ms</span>
-    {/if}
-    <button type="button" onclick={() => (metrics = canvasRef?.getPenMetrics?.() ?? null)}>지연 보기</button>
+  <div class="draw-preview-island-wrap">
+    <div class="draw-preview-island-anchor" bind:this={islandAnchor}>
+      <Island
+        variant={isBoardView ? 'board' : 'draw'}
+        penColor={patch.color}
+        penWidth={isBoardView ? '' : `${patch.widthPx}px`}
+        text={suggestion ? suggestion : isBoardView ? boardText.text : `판서 · ${TOOL_LABEL[patch.tool] ?? patch.tool}`}
+        value={suggestion ? '' : isBoardView ? boardText.value : zoomValue}
+        keys={suggestion ? undefined : isBoardView ? ['W', 'K'] : ['?']}
+        {platform}
+        paletteExpanded={forcePalette || paletteTransient}
+        idleDim={islandIdleDim}
+        avoid={islandAvoid}
+        onSelectColor={(code) => engine.setColor(code)}
+        button={suggestion
+          ? { label: '바꾸기', key: 'Enter', onClick: () => engine.acceptSuggestion().forEach(handleEffect) }
+          : null}
+        onmouseenter={() => (islandHover = true)}
+        onmouseleave={() => (islandHover = false)}
+      />
+    </div>
   </div>
 
-  {#if suggestion}
-    <button type="button" class="draw-preview-suggest" onclick={() => engine.acceptSuggestion().forEach(handleEffect)}>
-      {suggestion}
-    </button>
-  {:else if notice}
+  {#if notice}
     <div class="draw-preview-notice">{notice}</div>
   {/if}
 
@@ -209,8 +312,32 @@
     </div>
   {/if}
 
-  {#if patch.zoom > 1}
-    <MiniMap class="draw-preview-minimap" size="sm" viewport={fraction} label="" />
+  <div class="draw-preview-hud" aria-label="판서 미리보기 도구">
+    <span class="muted">undo {undoDepth}</span>
+    <button type="button" data-active={forcePalette ? 'true' : undefined} onclick={() => (forcePalette = !forcePalette)}>
+      색 펼침
+    </button>
+    <button type="button" data-active={forceIdleDim ? 'true' : undefined} onclick={() => (forceIdleDim = !forceIdleDim)}>
+      4초 물러남
+    </button>
+    <button type="button" onclick={toggleBoardBackground}>
+      바탕: {patch.background === 'white' ? '흰 칠판' : patch.background === 'black' ? '검은 칠판' : '화면'}
+    </button>
+    <button type="button" onclick={() => (metrics = canvasRef?.getPenMetrics?.() ?? null)}>지연 보기</button>
+    {#if metrics}
+      <span class="muted">pen n={metrics.n} p50={metrics.p50} p95={metrics.p95} max={metrics.max} ms</span>
+    {/if}
+  </div>
+
+  {#if minimap.visible}
+    <div
+      class="draw-preview-minimap"
+      aria-hidden="true"
+      style:right={`${DRAW_MINIMAP_MARGIN_PX}px`}
+      style:bottom={`${DRAW_MINIMAP_MARGIN_PX}px`}
+    >
+      <MiniMap size="sm" viewport={minimap.viewport} label="" />
+    </div>
   {/if}
 </div>
 
@@ -228,9 +355,23 @@
     font-family: 'IBM Plex Sans KR', sans-serif;
   }
 
-  .draw-preview-island,
+  .draw-preview-island-wrap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 14px;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 30;
+  }
+
+  .draw-preview-island-anchor {
+    display: inline-flex;
+    pointer-events: none;
+  }
+
   .draw-preview-notice,
-  .draw-preview-suggest,
   .draw-preview-help {
     position: absolute;
     left: 50%;
@@ -245,18 +386,36 @@
     align-items: center;
     white-space: nowrap;
     pointer-events: none;
+    z-index: 25;
   }
 
-  .draw-preview-island {
-    top: 14px;
+  .draw-preview-notice {
+    top: 62px;
   }
 
-  .draw-preview-island button,
-  .draw-preview-suggest {
-    pointer-events: auto;
+  .draw-preview-help {
+    bottom: 64px;
+    border-radius: 12px;
+    white-space: normal;
+    max-width: 720px;
   }
 
-  .draw-preview-island button {
+  .draw-preview-hud {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    background: rgba(17, 18, 20, 0.85);
+    color: #f7f8fa;
+    border-radius: 999px;
+    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    z-index: 25;
+  }
+
+  .draw-preview-hud button {
     background: rgba(255, 255, 255, 0.12);
     color: inherit;
     border: none;
@@ -266,45 +425,21 @@
     cursor: pointer;
   }
 
-  .draw-preview-notice,
-  .draw-preview-suggest {
-    top: 60px;
-  }
-
-  .draw-preview-suggest {
-    border: 1px solid #ff9f0a;
-    font: inherit;
-    font-size: 13px;
-    cursor: pointer;
-  }
-
-  .draw-preview-help {
-    bottom: 24px;
-    border-radius: 12px;
-    white-space: normal;
-    max-width: 720px;
-  }
-
-  .dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
-  }
-
-  .zoom {
-    color: #ffb340;
+  .draw-preview-hud button[data-active='true'] {
+    background: var(--ink-accent);
+    color: #111315;
+    font-weight: 500;
   }
 
   .muted {
-    color: rgba(247, 248, 250, 0.6);
+    color: rgba(247, 248, 250, 0.65);
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
+    font-size: 11.5px;
   }
 
-  :global(.draw-preview-minimap) {
+  .draw-preview-minimap {
     position: absolute;
-    right: 16px;
-    bottom: 16px;
+    pointer-events: none;
+    z-index: 20;
   }
 </style>

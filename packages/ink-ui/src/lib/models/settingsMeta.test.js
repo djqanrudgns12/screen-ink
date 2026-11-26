@@ -5,6 +5,7 @@ import {
   formatFirstRunConflict,
   formatLocationSub,
   formatSettingValue,
+  formatShapeOnHoldSub,
 } from './settingsMeta.js';
 
 test('formats setting values into short Korean labels', () => {
@@ -88,4 +89,10 @@ test('formats first-run conflict notice for Snipaste, PowerToys, and generic con
     formatFirstRunConflict({ count: 1, app: '카카오톡', combos: ['Alt+1'] }, 'windows'),
     { prefix: 'Alt 1 키는 ', app: '카카오톡', suffix: '이 쓰고 있어요', canHowto: true },
   );
+});
+
+test('formats shapeOnHold subtitle according to draw.shapeApply mode', () => {
+  assert.equal(formatShapeOnHoldSub('suggest'), '0.5초 멈추면 바꿀지 물어봐요');
+  assert.equal(formatShapeOnHoldSub(undefined), '0.5초 멈추면 바꿀지 물어봐요');
+  assert.equal(formatShapeOnHoldSub('auto'), '0.5초 · Ctrl+Z = 원래 획');
 });

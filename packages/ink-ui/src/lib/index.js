@@ -93,6 +93,7 @@ export {
   SETTING_LABELS,
   formatSettingValue,
   describeSettingChange,
+  formatShapeOnHoldSub,
   formatLocationSub,
   formatFirstRunConflict,
 } from './models/settingsMeta.js';
@@ -160,3 +161,26 @@ export {
 } from './ink/canvasRender.js';
 export { createPenLatencyMeter, summarizeLatency } from './ink/penMetrics.js';
 export { HALO_SIZE, MINIMAP_MARGIN, isLiveZoomMode, applyZoomEvent, haloBox, showMinimap } from './models/zoomHud.js';
+export {
+  DRAW_PALETTE_EXPAND_MS,
+  DRAW_IDLE_DIM_MS,
+  DRAW_IDLE_OPACITY,
+  ISLAND_AVOID_MARGIN_PX,
+  DRAW_MINIMAP_MARGIN_PX,
+  DRAW_PEN_SWATCHES,
+  BOARD_EXTRA_SWATCHES,
+  BOARD_PEN_SWATCHES,
+  isDrawIslandVariant,
+  getDrawPaletteSwatches,
+  shouldExpandDrawPalette,
+  resolveDrawIdleDim,
+  shouldAvoidIsland,
+  estimateTopIslandRect,
+  formatBoardIslandMeta,
+  formatBoardIslandText,
+  computeCursorRing,
+  sessionCursorToCss,
+  normalizeMinimapViewport,
+  drawMinimapState,
+  buildBoardPreviewSamples,
+} from './models/drawUi.js';

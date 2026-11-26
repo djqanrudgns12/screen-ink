@@ -2,8 +2,18 @@
   import { untrack } from 'svelte';
   import CheatSheet from './CheatSheet.svelte';
   import DrawCanvas from '../components/DrawCanvas.svelte';
+  import MiniMap from '../components/MiniMap.svelte';
   import { InkEngine, documentOptionsFromSession } from '../ink/inkEngine.js';
   import { renderDocument } from '../ink/canvasRender.js';
+  import {
+    DRAW_IDLE_DIM_MS,
+    DRAW_MINIMAP_MARGIN_PX,
+    ISLAND_AVOID_MARGIN_PX,
+    drawMinimapState,
+    estimateTopIslandRect,
+    sessionCursorToCss,
+    shouldAvoidIsland,
+  } from '../models/drawUi.js';
 
   /**
    * S12 Alt+1 판서 · S14 Alt+3 칠판 — 오버레이 창(모니터 1개) 하나에 판서 한 번(A §2.4·§3.7).
@@ -40,6 +50,8 @@
   let bgFailed = $state(false);
   /** @type {any} */
   let canvasRef = $state(null);
+  let minimap = $state.raw(drawMinimapState(engine.view, engine.viewport, engine.doc.docSize));
+  let initialCursor = $derived(sessionCursorToCss(session));
 
   let frameUrl = $derived(session.board ? '' : session.monitor?.frameUrl || '');
   // 정지 화면이 읽히기 전에는 캔버스를 숨긴다 — 투명 창 너머 바탕이 곧 그 화면이라, 빈 바탕색이 번쩍이지 않게
@@ -49,6 +61,10 @@
   let readySent = false;
   let stateApplied = false;
   let lastPatchKey = '';
+  let idleDim = false;
+  let cursorAvoid = false;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let idleTimer = null;
   const mountedAt = nowMs();
 
   function nowMs() {
@@ -114,7 +130,47 @@
       pageIndex: p.pageIndex,
       pageCount: p.pageCount,
       suggestion: p.suggestion,
+      idleDim,
+      avoid: cursorAvoid,
     };
+  }
+
+  function resetIdleTimer() {
+    if (idleTimer !== null) clearTimeout(idleTimer);
+    if (idleDim) {
+      idleDim = false;
+      pushIsland();
+    }
+    idleTimer = setTimeout(() => {
+      idleTimer = null;
+      if (finished || idleDim) return;
+      idleDim = true;
+      pushIsland();
+    }, DRAW_IDLE_DIM_MS);
+  }
+
+  /** @param {PointerEvent} e */
+  function handleOverlayPointerMove(e) {
+    resetIdleTimer();
+    const vw = typeof window !== 'undefined' ? window.innerWidth : engine.viewport.w;
+    const rect = estimateTopIslandRect(vw);
+    const nextAvoid =
+      !engine.suggestion && shouldAvoidIsland({ x: e.clientX, y: e.clientY }, rect, ISLAND_AVOID_MARGIN_PX);
+    if (nextAvoid !== cursorAvoid) {
+      cursorAvoid = nextAvoid;
+      pushIsland();
+    }
+  }
+
+  function handleOverlayPointerLeave() {
+    if (cursorAvoid) {
+      cursorAvoid = false;
+      pushIsland();
+    }
+  }
+
+  function syncMinimap() {
+    minimap = drawMinimapState(engine.view, engine.viewport, engine.doc.docSize);
   }
 
   /** 섬 한 줄이 바뀔 때만 drawIsland(포인터 이동마다 IPC를 타지 않게). */
@@ -139,9 +195,19 @@
       if (e.type === 'state') applyState(e.state);
       else if (e.type === 'drawCommand' && e.session === sessionId) runCommand(e.command);
     });
-    const unsubscribe = engine.subscribe(() => pushIsland());
+    const unsubscribe = engine.subscribe(() => {
+      syncMinimap();
+      resetIdleTimer();
+      pushIsland();
+    });
+    syncMinimap();
+    resetIdleTimer();
     return () => {
       alive = false;
+      if (idleTimer !== null) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+      }
       off();
       unsubscribe();
     };
@@ -250,11 +316,17 @@
   }
 </script>
 
+<svelte:window onkeydown={resetIdleTimer} />
+
 <div
   class="ink-draw-overlay {className}"
   data-monitor={monitorId}
   data-board={session.board ? 'true' : undefined}
   role="presentation"
+  onpointermove={handleOverlayPointerMove}
+  onpointerdown={resetIdleTimer}
+  onpointerleave={handleOverlayPointerLeave}
+  onwheel={resetIdleTimer}
   oncontextmenu={handleContextMenu}
 >
   <div class="ink-draw-canvas-wrap" data-ready={canvasReady ? 'true' : undefined}>
@@ -262,11 +334,23 @@
       bind:this={canvasRef}
       {engine}
       backgroundImage={bgImage}
+      {initialCursor}
       onEffect={handleEffect}
       onPenMetrics={(sample) => client.drawPenMetrics(sample)}
       onFirstPaint={sendReady}
     />
   </div>
+
+  {#if minimap.visible}
+    <div
+      class="ink-draw-minimap"
+      aria-hidden="true"
+      style:right={`${DRAW_MINIMAP_MARGIN_PX}px`}
+      style:bottom={`${DRAW_MINIMAP_MARGIN_PX}px`}
+    >
+      <MiniMap size="sm" viewport={minimap.viewport} label="" />
+    </div>
+  {/if}
 
   {#if helpOpen}
     <CheatSheet {client} mode="draw" bind:open={helpOpen} onClose={() => (engine.helpOpen = false)} />
@@ -296,5 +380,11 @@
   .ink-draw-canvas-wrap :global(.ink-draw) {
     position: absolute;
     inset: 0;
+  }
+
+  .ink-draw-minimap {
+    position: absolute;
+    pointer-events: none;
+    z-index: 20;
   }
 </style>
