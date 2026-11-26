@@ -34,7 +34,9 @@ export { default as FirstRunSheet } from './screens/FirstRunSheet.svelte';
 export { default as CheatSheet } from './screens/CheatSheet.svelte';
 export { default as IslandHost } from './screens/IslandHost.svelte';
 export { default as CaptureOverlay } from './screens/CaptureOverlay.svelte';
+export { default as DrawOverlay } from './screens/DrawOverlay.svelte';
 export { default as PinView } from './screens/PinView.svelte';
+export { default as ZoomHud } from './screens/ZoomHud.svelte';
 
 // 순수 모델
 export { eventToCombo, isEscapeOnly, isClearOnly } from './models/keyCombo.js';
@@ -91,6 +93,7 @@ export {
   SETTING_LABELS,
   formatSettingValue,
   describeSettingChange,
+  formatShapeOnHoldSub,
   formatLocationSub,
   formatFirstRunConflict,
 } from './models/settingsMeta.js';
@@ -157,3 +160,27 @@ export {
   createCanvasTextMeasurer,
 } from './ink/canvasRender.js';
 export { createPenLatencyMeter, summarizeLatency } from './ink/penMetrics.js';
+export { HALO_SIZE, MINIMAP_MARGIN, isLiveZoomMode, applyZoomEvent, haloBox, showMinimap } from './models/zoomHud.js';
+export {
+  DRAW_PALETTE_EXPAND_MS,
+  DRAW_IDLE_DIM_MS,
+  DRAW_IDLE_OPACITY,
+  ISLAND_AVOID_MARGIN_PX,
+  DRAW_MINIMAP_MARGIN_PX,
+  DRAW_PEN_SWATCHES,
+  BOARD_EXTRA_SWATCHES,
+  BOARD_PEN_SWATCHES,
+  isDrawIslandVariant,
+  getDrawPaletteSwatches,
+  shouldExpandDrawPalette,
+  resolveDrawIdleDim,
+  shouldAvoidIsland,
+  estimateTopIslandRect,
+  formatBoardIslandMeta,
+  formatBoardIslandText,
+  computeCursorRing,
+  sessionCursorToCss,
+  normalizeMinimapViewport,
+  drawMinimapState,
+  buildBoardPreviewSamples,
+} from './models/drawUi.js';

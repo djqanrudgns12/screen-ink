@@ -749,6 +749,9 @@
         handleCommitRequest(e.request);
       } else if (e.type === 'afterimage') {
         showAfterimage(e.afterimage);
+      } else if (e.type === 'draw') {
+        // 잔상 0.4초 중에 판서가 열림([판서로]·Alt+1) — 판서 화면 위에 주황 틀을 남기지 않는다
+        clearAfterimage();
       } else if (e.type === 'state') {
         applyStateKeys(e.state);
         const mode = e.state?.mode;

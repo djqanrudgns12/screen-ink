@@ -4,6 +4,8 @@
 //! - 커서가 움직일 때는 이 메모리만 본다 — 느린 앱이 있어도 화면이 굳지 않는다.
 //! - 응답 없는 창은 묻지 않고(SendMessageTimeout SMTO_ABORTIFHUNG 50 ms), 연결·처리 시간 제한을 짧게 둔다.
 //! - 모드가 바뀌면 세대 번호를 올려 늦게 끝난 옛 결과를 버린다.
+//! - UIA가 비었거나(요소 ≤ 1개) 실패한 창은 같은 일꾼이 MSAA로 이어서 색인한다(`msaa`, 08 §4.2 M) —
+//!   MSAA는 따로 격리된 일꾼과 100 ms 마감이라 이 일꾼이 멈추지 않는다.
 
 use ink_domain::geometry::{PhysPoint, PhysRect};
 use ink_domain::recog::{Control, ElementCand};
@@ -35,7 +37,7 @@ pub struct UiaIndex {
     gen: Arc<AtomicU64>,
 }
 
-fn responsive(hwnd: u64) -> bool {
+pub(crate) fn responsive(hwnd: u64) -> bool {
     use windows_sys::Win32::UI::WindowsAndMessaging::{SendMessageTimeoutW, SMTO_ABORTIFHUNG, WM_NULL};
     let mut out = 0usize;
     // SAFETY: WM_NULL은 아무 일도 하지 않는 메시지, 50 ms 안에 돌아온다.
@@ -61,12 +63,28 @@ fn index_window(auto: &UIAutomation, hwnd: u64) -> uiautomation::Result<Vec<Elem
             continue;
         }
         let control = e.get_cached_control_type().map(|c| Control::from_uia(c as i32)).unwrap_or(Control::Other);
-        out.push(ElementCand { rect, control });
+        out.push(ElementCand { rect, control, from_msaa: false });
         if out.len() >= KEEP_ELEMENTS {
             break;
         }
     }
     Ok(out)
+}
+
+/// UIA 색인 → 비었으면(요소 ≤ 1개·실패) MSAA로 이어서(M 근거). UIA가 준 것은 남기고 MSAA 요소를 덧붙인다.
+fn index_with_fallback(auto: &UIAutomation, msaa: &mut crate::msaa::Msaa, job: &Job) -> Vec<ElementCand> {
+    let uia = index_window(auto, job.window);
+    let n = uia.as_ref().ok().map(|v| v.len());
+    let mut found = uia.unwrap_or_default();
+    if crate::msaa::uia_is_empty(n) {
+        let t = Instant::now();
+        let m = msaa.index(job.window, &job.exe);
+        if !m.is_empty() {
+            log::info!("msaa fallback {} elements in {} ms", m.len(), (t.elapsed().as_secs_f64() * 1000.0).round() as i64);
+        }
+        found.extend(m);
+    }
+    found
 }
 
 /// 연결·처리 시간 제한(D17): 기본 2초를 짧게.
@@ -102,13 +120,14 @@ impl UiaIndex {
                 }
             };
             set_timeouts(&auto);
+            let mut msaa = crate::msaa::Msaa::new();
             while let Ok(job) = rx.recv() {
                 if job.gen != g.load(Ordering::SeqCst) {
                     p.lock().unwrap_or_else(|e| e.into_inner()).remove(&job.window);
                     continue;
                 }
                 let t = Instant::now();
-                let found = if responsive(job.window) { index_window(&auto, job.window).unwrap_or_default() } else { Vec::new() };
+                let found = if responsive(job.window) { index_with_fallback(&auto, &mut msaa, &job) } else { Vec::new() };
                 let took = t.elapsed().as_secs_f64() * 1000.0;
                 p.lock().unwrap_or_else(|e| e.into_inner()).remove(&job.window);
                 if job.gen != g.load(Ordering::SeqCst) {

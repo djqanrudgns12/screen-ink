@@ -9,7 +9,7 @@ use ink_platform_fake::FakeWorld;
 
 fn world() -> FakeWorld {
     let w = FakeWorld::new();
-    w.elements.0.lock().unwrap().by_window.insert(1, vec![ElementCand { rect: PhysRect::new(300, 300, 300, 40), control: Control::DataItem }]);
+    w.elements.0.lock().unwrap().by_window.insert(1, vec![ElementCand { rect: PhysRect::new(300, 300, 300, 40), control: Control::DataItem, from_msaa: false }]);
     w
 }
 

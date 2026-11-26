@@ -21,7 +21,7 @@ fn pattern(x: i32, y: i32) -> [u8; 4] {
 
 fn world() -> FakeWorld {
     let w = FakeWorld::new();
-    w.elements.0.lock().unwrap().by_window.insert(1, vec![ElementCand { rect: RANGE, control: Control::DataItem }]);
+    w.elements.0.lock().unwrap().by_window.insert(1, vec![ElementCand { rect: RANGE, control: Control::DataItem, from_msaa: false }]);
     let (fw, fh) = (1920i32, 1080i32);
     let bgra: Vec<u8> = (0..fh).flat_map(|y| (0..fw).flat_map(move |x| pattern(x, y))).collect();
     w.screen.0.lock().unwrap().frames = Some(vec![Frame { monitor_id: 0, width: fw as u32, height: fh as u32, bgra: Arc::new(bgra) }]);
@@ -40,7 +40,7 @@ fn open(s: &mut InkService) -> u64 {
     s.capture_input(CaptureInput::Move { x: 420, y: 320 });
     match s.mode() {
         Mode::Capture { session, .. } => session,
-        Mode::Idle => panic!("캡처가 열려야 함"),
+        _ => panic!("캡처가 열려야 함"),
     }
 }
 

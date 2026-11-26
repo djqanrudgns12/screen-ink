@@ -3,9 +3,10 @@
 //! - 쓰기: 임시 파일 → fsync → 이름 바꾸기(원자적). 반쯤 쓴 파일이 남지 않는다(05 §11-3).
 //! - 백업: 열 때와 5분마다 `settings.json.bak` 교대. 새 파일이 이전 백업의 절반 이하로 줄면 백업을 덮지 않는다.
 //! - 손상: 원본을 `settings.json.broken-<시각>`으로 보관 → 백업으로 복구 → 그것도 안 되면 첫 실행처럼.
-//! - 위치: 실행 파일 옆 `shookshok.portable`(또는 옛 `screen-ink.portable`)이 있으면 그 옆 `data\`, 아니면 사용자 설정 폴더(R-SET-1).
+//! - 위치: 실행 파일 옆 `Shookshok.portable`(또는 옛 `screen-ink.portable`)이 있으면 그 옆 `data\`, 아니면 사용자 설정 폴더(R-SET-1).
 
 use ink_app::{Loaded, SettingsStore, StoreError, StoreLocation};
+use ink_domain::package::{resolve_storage_policy, InstallChannel, StoragePolicy};
 use serde_json::{json, Value};
 use std::fs;
 use std::io::Write;
@@ -13,18 +14,30 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub const FILE_NAME: &str = "settings.json";
-pub const PORTABLE_MARKER: &str = "shookshok.portable";
+pub const PORTABLE_MARKER: &str = "Shookshok.portable";
+/// 소문자 표기(대소문자 구분 파일 시스템 대비).
+pub const PORTABLE_MARKER_LOWER: &str = "shookshok.portable";
 /// 이름을 바꾸기 전 표시 파일 — 이것도 포터블로 본다.
 pub const LEGACY_PORTABLE_MARKER: &str = "screen-ink.portable";
 const BACKUP_EVERY: Duration = Duration::from_secs(5 * 60);
 
-/// 설정 폴더 정하기. `exe_dir` = 실행 파일 폴더, `user_config` = `%APPDATA%\shookshok` 같은 사용자 폴더.
-pub fn resolve_dir(exe_dir: &Path, user_config: &Path) -> (PathBuf, bool) {
-    if exe_dir.join(PORTABLE_MARKER).is_file() || exe_dir.join(LEGACY_PORTABLE_MARKER).is_file() {
-        (exe_dir.join("data"), true)
-    } else {
-        (user_config.to_path_buf(), false)
-    }
+/// 실행 파일 폴더에 포터블 표시 파일(새 이름·옛 이름)이 있는지 확인한다.
+pub fn has_portable_marker(exe_dir: &Path) -> bool {
+    exe_dir.join(PORTABLE_MARKER).is_file() || exe_dir.join(PORTABLE_MARKER_LOWER).is_file() || exe_dir.join(LEGACY_PORTABLE_MARKER).is_file()
+}
+
+/// 설정 폴더와 저장 정책 정하기. `channel`이 MSIX 패키지이면 포터블 표시 파일을 무시한다.
+pub fn resolve_dir_for(exe_dir: &Path, user_config: &Path, channel: InstallChannel) -> (PathBuf, StoragePolicy) {
+    let policy = resolve_storage_policy(channel, has_portable_marker(exe_dir));
+    let dir = if policy.use_portable_dir { exe_dir.join("data") } else { user_config.to_path_buf() };
+    (dir, policy)
+}
+
+/// 설정 폴더 정하기. `exe_dir` = 실행 파일 폴더, `user_config` = `%APPDATA%\Shookshok` 같은 사용자 폴더.
+/// 패키지 모드(`MsixStore`·`MsixDirect`)에서는 `resolve_storage_policy` 규칙에 따라 포터블 표시 파일을 무시한다.
+pub fn resolve_dir(exe_dir: &Path, user_config: &Path, channel: InstallChannel) -> (PathBuf, bool) {
+    let (dir, policy) = resolve_dir_for(exe_dir, user_config, channel);
+    (dir, policy.use_portable_dir)
 }
 
 pub struct JsonFileStore {
@@ -224,16 +237,24 @@ mod tests {
     }
 
     #[test]
-    fn 포터블_표시_파일이_있으면_실행_파일_옆_data() {
+    fn 포터블_표시_파일이_있으면_실행_파일_옆_data_패키지에서는_무시() {
         let d = temp_dir("portable");
         let user = d.join("user");
-        assert_eq!(resolve_dir(&d, &user), (user.clone(), false));
+        assert_eq!(resolve_dir(&d, &user, InstallChannel::Unpackaged), (user.clone(), false));
+
         fs::write(d.join(PORTABLE_MARKER), b"").unwrap();
-        assert_eq!(resolve_dir(&d, &user), (d.join("data"), true));
-        // 옛 이름의 표시 파일도 포터블
+        assert_eq!(resolve_dir(&d, &user, InstallChannel::Unpackaged), (d.join("data"), true));
+        // MSIX 패키지 모드에서는 표시 파일이 있어도 무시하고 사용자(가상화) 폴더를 쓴다.
+        assert_eq!(resolve_dir(&d, &user, InstallChannel::MsixStore), (user.clone(), false));
+        assert_eq!(resolve_dir(&d, &user, InstallChannel::MsixDirect), (user.clone(), false));
+        let (_, policy) = resolve_dir_for(&d, &user, InstallChannel::MsixStore);
+        assert_eq!(policy.label_ko, "MSIX 패키지");
+
+        // 옛 이름의 표시 파일도 비패키지에서는 포터블, 패키지에서는 무시
         fs::remove_file(d.join(PORTABLE_MARKER)).unwrap();
         fs::write(d.join(LEGACY_PORTABLE_MARKER), b"").unwrap();
-        assert_eq!(resolve_dir(&d, &user), (d.join("data"), true));
+        assert_eq!(resolve_dir(&d, &user, InstallChannel::Unpackaged), (d.join("data"), true));
+        assert_eq!(resolve_dir(&d, &user, InstallChannel::MsixDirect), (user.clone(), false));
         let _ = fs::remove_dir_all(&d);
     }
 }

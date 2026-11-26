@@ -5,6 +5,8 @@
   import Row from '../components/Row.svelte';
   import Switch from '../components/Switch.svelte';
   import Segmented from '../components/Segmented.svelte';
+  import { formatShapeOnHoldSub } from '../models/settingsMeta.js';
+  import { buildBoardPreviewSamples } from '../models/drawUi.js';
 
   /**
    * S04 설정 · 판서·확대 화면(F06).
@@ -40,6 +42,12 @@
   let settings = $derived(state?.settings ?? {});
   let penColor = $derived(settings['draw.color'] ?? 'R');
   let penWidth = $derived(Number(settings['draw.width'] ?? 4));
+  let shapeApply = $derived(settings['draw.shapeApply'] ?? 'suggest');
+  let shapeOnHoldSub = $derived(formatShapeOnHoldSub(shapeApply));
+  // "멈추면 도형으로"가 꺼져 있으면 도형 보정 방식은 쓸 일이 없다 — 흐리게
+  let shapeOff = $derived(!settings['draw.shapeOnHold']);
+  let boardShortcut = $derived(state?.platform === 'macos' ? '⌥3' : 'Alt+3');
+  let boardPreviews = $derived(buildBoardPreviewSamples({ penColor, penWidth }));
 
   function setSetting(path, value) {
     client.updateSetting(path, value);
@@ -119,11 +127,23 @@
           onCheckedChange={(v) => setSetting('draw.straighten', v)}
         />
       </Row>
-      <Row label="멈추면 도형으로" sub="0.5초 · Ctrl+Z = 원래 획">
+      <Row label="멈추면 도형으로" sub={shapeOnHoldSub}>
         <Switch
           checked={Boolean(settings['draw.shapeOnHold'])}
           label="멈추면 도형으로"
           onCheckedChange={(v) => setSetting('draw.shapeOnHold', v)}
+        />
+      </Row>
+      <Row label="도형 보정" class={shapeOff ? 'ink-row-off' : ''}>
+        <Segmented
+          label="도형 보정"
+          value={settings['draw.shapeApply'] ?? 'suggest'}
+          disabled={shapeOff}
+          options={[
+            { value: 'suggest', label: '물어보고 바꾸기' },
+            { value: 'auto', label: '바로 바꾸기' },
+          ]}
+          onChange={(v) => setSetting('draw.shapeApply', v)}
         />
       </Row>
     </Group>
@@ -172,6 +192,32 @@
           onCheckedChange={(v) => setSetting('draw.rightClickPan', v)}
         />
       </Row>
+      <Row label="칠판 미리 보기" sub={`${boardShortcut} · W 흰색 · K 검은색`}>
+        <div class="ink-board-previews" role="group" aria-label="흰 칠판과 검은 칠판 미리 보기">
+          {#each boardPreviews as board (board.id)}
+            <div
+              class="ink-board-mini"
+              data-board={board.id}
+              style:background={board.bg}
+              title={board.substituted ? `${board.label} (검정 펜은 흰색으로)` : board.label}
+            >
+              <svg viewBox="0 0 84 40" class="ink-board-mini-svg" aria-hidden="true">
+                <path
+                  d="M 10 24 C 22 10, 34 30, 48 16 S 66 24, 74 14"
+                  fill="none"
+                  stroke={board.strokeColor}
+                  stroke-width={board.strokeWidth}
+                  stroke-linecap="round"
+                />
+              </svg>
+              <span class="ink-board-mini-tag">
+                <kbd class="ink-mono">{board.key}</kbd>
+                <span>{board.id === 'white' ? '흰색' : '검은색'}</span>
+              </span>
+            </div>
+          {/each}
+        </div>
+      </Row>
     </Group>
   </section>
 
@@ -202,6 +248,10 @@
 </div>
 
 <style>
+  :global(.ink-row-wrap.ink-row-off) {
+    opacity: 0.45;
+  }
+
   .ink-page {
     flex: 1;
     min-height: 0;
@@ -312,5 +362,55 @@
     min-width: 28px;
     text-align: right;
     color: var(--ink-text);
+  }
+
+  .ink-board-previews {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ink-board-mini {
+    position: relative;
+    width: 92px;
+    height: 44px;
+    border-radius: var(--ink-r-row);
+    box-sizing: border-box;
+    overflow: hidden;
+    flex: none;
+  }
+
+  .ink-board-mini[data-board='white'] {
+    box-shadow: inset 0 0 0 1px var(--ink-line-strong);
+    color: #5e5e5b;
+  }
+
+  .ink-board-mini[data-board='black'] {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+    color: #c9ccd3;
+  }
+
+  .ink-board-mini-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .ink-board-mini-tag {
+    position: absolute;
+    left: 6px;
+    bottom: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9.5px;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .ink-board-mini-tag kbd {
+    font-size: 9px;
+    font-weight: 600;
+    opacity: 0.9;
   }
 </style>

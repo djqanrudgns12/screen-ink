@@ -38,6 +38,17 @@ jobs:
         run: cargo test --workspace --exclude screen-ink --exclude ink-platform-windows
       - name: clippy(Windows 어댑터·플러그인 포함)
         run: cargo clippy --workspace --exclude screen-ink --all-targets -- -D warnings
+      # ink-platform-windows 중 화면을 쓰지 않는 순수 판정만(DPI 보정·MSAA 걸음·확대경, RB-15·16 판정 — 실제 창 시험은 ignore)
+      - name: 시험(Windows 어댑터 순수 판정)
+        run: |
+          cargo test -p ink-platform-windows --lib -- dpi:: msaa:: magnifier::
+          cargo test -p ink-platform-windows --test rb15_16
+      # 저장소 작업 공간 밖 시험 도구(RB-04·RB-20 시험 앱, Snipaste 판독)
+      - name: clippy(시험 도구)
+        run: |
+          cargo clippy --manifest-path bench/recog/tools/rb04-win32/Cargo.toml -- -D warnings
+          cargo clippy --manifest-path bench/recog/tools/rb20-frozen/Cargo.toml -- -D warnings
+          cargo clippy --manifest-path bench/recog/tools/snipaste-diff/Cargo.toml -- -D warnings
 
   macos:
     runs-on: macos-latest

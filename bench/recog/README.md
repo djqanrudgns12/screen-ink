@@ -34,11 +34,36 @@
    → `모니터 N, 배율 1.000, 정답 점 32개`. 사례의 `points`가 문서의 모든 정답(그릇은 빈 자리 점)으로 바뀐다.
 5. RB-12(혼합 배율)는 배율이 다른 모니터에서 2~4를 한 번 더.
 
+## 자동 정답 — RB-14(캔버스·WebGL·영상)와 RB-04(Win32 시험 앱)
+
+- **RB-14**: `pages/rb14.html`도 같은 표지·layout 규칙이다(2D 캔버스·WebGL 가위 상자·움직이는 16:9 영상 틀). 위 2~4를 `rb14.html`로.
+  콘솔의 `window.__rb14Truth()`는 정답(CSS px) 확인용.
+- **RB-04**: Win32 시험 앱이 자기 컨트롤의 물리 px 정답을 직접 쓴다.
+  ```powershell
+  cargo build --release --manifest-path bench/recog/tools/rb04-win32/Cargo.toml
+  <target>eleaseb04-win32.exe --dpi pmv2 --out rb04-truth.json     # 창을 옮기면 다시 씀
+  # F1 → Enter로 사례를 뜬 뒤
+  <target>eleaseb04-win32.exe merge bench/recog/cases/<사례>.json rb04-truth.json "RB-04 Win32 100%"
+  ```
+  `--dpi unaware|system`은 D12(DPI 모르는 창) 시험용 — 정답은 언제나 물리 px.
+
+## 시험 도구 (`tools/`, 저장소 작업 공간 밖 · 릴리스에 넣지 않음)
+
+| 도구 | 하는 일 |
+|---|---|
+| `rb04-win32` | RB-04 Win32 표준 컨트롤 시험 앱 + 정답 JSON + `merge` |
+| `rb20-frozen` | RB-20 멈춘 시험 앱: `--mode hung · infinite-msaa · hang-location · slow-msaa`, `--life`초 뒤 스스로 끝남 |
+| `snipaste-diff` | Snipaste F1 전·후 PNG → 강조 사각형(`ink-vision::diff_rect`) — `compare-snipaste.ps1`이 부름 |
+
+화면에서 돌리는 순서·명령·시간(RB-15·16 실제 창, DPI 실측, RB-20, 사례 17종, G3, Snipaste 대조, 붙여 넣기)은
+[RUNBOOK-windows.md](RUNBOOK-windows.md).
+
 ## 재생
 
 ```powershell
 cargo test -p ink-platform-fake --test replay                    # CI: 기준선보다 떨어지면 실패
 cargo run -p ink-platform-fake --bin recog-replay                 # 점별 CSV → bench/results/recog-replay.csv
+cargo run -p ink-platform-fake --bin recog-replay -- --vision-only --filter RB-01,RB-03 --min-top1 80   # 관문 G3(V만)
 ```
 
 `cases/baseline.json` = `{ "<사례 id>": <Top-1로 맞힌 점 수> }`. 로직을 고쳐 좋아졌으면 숫자를 올린다(내리지 않는다).

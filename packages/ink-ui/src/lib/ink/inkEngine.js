@@ -125,7 +125,9 @@ import {
  *   | { type: 'correct', page: number, before: Item, after: Item }
  *   | { type: 'clear', page: number, items: Item[] }
  *   | { type: 'setBg', page: number, before: InkBackground, after: InkBackground }
- *   | { type: 'addPage', index: number, page: BoardPage }} InkCommand
+ *   | { type: 'addPage', index: number, page: BoardPage }
+ *   | { type: 'replaceDoc', before: { pages: BoardPage[], activePage: number }, after: { pages: BoardPage[], activePage: number } }} InkCommand
+ *   replaceDoc = 보관 판서 복원(Ctrl+Shift+R) — 장 전체를 바꾸고, Ctrl+Z 1번이면 복원 전 장으로.
  *   setAttr.next = 항목마다 다른 값(고른 획들의 굵기 ±1 등). 없으면 patch를 모두에.
  *
  * @typedef {{ type: 'exit', reason: 'esc' | 'rightClick' }
@@ -456,6 +458,8 @@ export function applyCommand(doc, cmd) {
       pages.splice(cmd.index, 0, { ...cmd.page, items: cmd.page.items.slice() });
       return { ...doc, pages, activePage: cmd.index };
     }
+    case 'replaceDoc':
+      return { ...doc, pages: cmd.after.pages, activePage: cmd.after.activePage };
     default:
       return doc;
   }
@@ -501,6 +505,8 @@ export function invertCommand(doc, cmd) {
       const activePage = clamp(doc.activePage >= cmd.index ? doc.activePage - 1 : doc.activePage, 0, pages.length - 1);
       return { ...doc, pages, activePage };
     }
+    case 'replaceDoc':
+      return { ...doc, pages: cmd.before.pages, activePage: cmd.before.activePage };
     default:
       return doc;
   }
@@ -907,7 +913,7 @@ export class InkEngine {
 
   /** @param {InkCommand} cmd */
   afterHistory(cmd) {
-    if (cmd.type !== 'addPage' && cmd.page !== this.doc.activePage && cmd.page < this.doc.pages.length) {
+    if (cmd.type !== 'addPage' && cmd.type !== 'replaceDoc' && cmd.page !== this.doc.activePage && cmd.page < this.doc.pages.length) {
       this.doc = { ...this.doc, activePage: cmd.page };
     }
     const ids = new Set(this.items.map((i) => i.id));
@@ -1976,13 +1982,27 @@ export class InkEngine {
     if (status === 'differentMonitor') return [{ type: 'notice', text: INK_NOTICES.differentMonitor }];
     const src = kept && 'document' in kept ? kept.document : /** @type {InkDocument | null | undefined} */ (kept);
     if (status === 'none' || !src || !Array.isArray(src.pages)) return [];
-    let pages = src.pages;
+    let pages = createInkDocument(src).pages;
     if (status === 'rescaled' && src.docSize?.w > 0) {
       const k = this.doc.docSize.w / src.docSize.w;
       pages = rescaleDocument(createInkDocument(src), k).pages;
     }
-    const target = { ...this.doc, pages, activePage: clamp(src.activePage ?? 0, 0, pages.length - 1) };
-    this.loadDocument(target);
+    // 실행 취소할 수 있는 명령 하나로(그 전 기록은 그대로) — Ctrl+Z 1번 = 복원 전 판서
+    if (this.editing) this.commitText();
+    this.cancelGesture();
+    this.selection = [];
+    if (this.hidden.size) {
+      this.hidden = new Set();
+      this.revs.hidden++;
+    }
+    this.push({
+      type: 'replaceDoc',
+      before: { pages: this.doc.pages, activePage: this.doc.activePage },
+      after: { pages, activePage: clamp(src.activePage ?? 0, 0, pages.length - 1) },
+    });
+    this.syncIdCounters();
+    this.revs.active++;
+    this.notify();
     return [...this.takeEffects(), { type: 'notice', text: status === 'rescaled' ? INK_NOTICES.rescaled : INK_NOTICES.restored }];
   }
 }

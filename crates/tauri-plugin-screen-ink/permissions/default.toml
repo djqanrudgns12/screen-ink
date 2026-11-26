@@ -19,6 +19,13 @@ permissions = [
   "allow-pin-info",
   "allow-pin-action",
   "allow-pin-zoom",
+  "allow-draw-ready",
+  "allow-draw-finish",
+  "allow-draw-restore",
+  "allow-draw-export",
+  "allow-draw-island",
+  "allow-draw-pen-metrics",
+  "allow-zoom-input",
   "allow-capture-annotations",
   "allow-capture-commit-annotated",
 ]

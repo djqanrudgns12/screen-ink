@@ -549,7 +549,7 @@ test('모두지우기_E는_clear_명령과_되돌리기_알림', () => {
   assert.deepEqual(key(e, 'KeyE', { repeat: true }).effects, [], '누르고 있어도 한 번');
 });
 
-test('명령_9종_적용과_되돌리기_왕복', () => {
+test('명령_9종과_replaceDoc_적용과_되돌리기_왕복', () => {
   const s = withBBox({ id: 'it-1', kind: 'stroke', tool: 'pen', color: 'R', width: 4, opacity: 1, dashed: false, points: [{ x: 100, y: 100, p: 0.5, t: 0 }, { x: 200, y: 200, p: 0.5, t: 8 }] });
   const r = withBBox({ id: 'it-2', kind: 'shape', shape: 'rect', color: 'B', width: 2, opacity: 1, dashed: false, x1: 100, y1: 100, x2: 200, y2: 200 });
   const tx = withBBox({ id: 'it-3', kind: 'text', color: 'G', fontFamily: 'IBM Plex Sans KR', fontSize: 24, x: 10, y: 10, w: 48, h: 31.2, text: '가나' });
@@ -566,6 +566,11 @@ test('명령_9종_적용과_되돌리기_왕복', () => {
     { type: 'clear', page: 0, items: [s, r, tx] },
     { type: 'setBg', page: 0, before: 'frame', after: 'black' },
     { type: 'addPage', index: 1, page: { id: 'page-2', background: 'frame', items: [] } },
+    {
+      type: 'replaceDoc',
+      before: { pages: base.pages, activePage: 0 },
+      after: { pages: [{ id: 'page-1', background: 'white', items: [r] }, { id: 'page-2', background: 'black', items: [] }], activePage: 1 },
+    },
   ];
   for (const cmd of cmds) {
     const applied = applyCommand(base, cmd);
@@ -598,7 +603,7 @@ test('보관_내보내기와_같은모니터_배율변경_다른모니터_복원
   const same = engine();
   assert.deepEqual(same.restoreKept({ document: kept }, 'same'), [{ type: 'notice', text: INK_NOTICES.restored }]);
   assert.equal(same.items.length, 1);
-  assert.equal(same.canUndo, false);
+  assert.equal(same.undoStack.at(-1)?.type, 'replaceDoc', '복원 = 실행 취소할 수 있는 명령 1개');
   drag(same, line(10, 10, 50, 10, 4));
   assert.notEqual(same.items[1].id, same.items[0].id, '복원 뒤 새 id가 겹치지 않음');
 
@@ -612,6 +617,51 @@ test('보관_내보내기와_같은모니터_배율변경_다른모니터_복원
   assert.deepEqual(other.restoreKept(kept, 'differentMonitor'), [{ type: 'notice', text: INK_NOTICES.differentMonitor }]);
   assert.equal(other.items.length, 0);
   assert.deepEqual(other.restoreKept(null, 'none'), []);
+});
+
+test('복원은_CtrlZ_1번이면_복원전_판서로_그전_기록은_남는다', () => {
+  const src = engine();
+  drag(src, line(500, 500, 700, 500, 10));
+  const kept = src.exportDocument();
+
+  const e = engine();
+  drag(e, line(100, 100, 300, 100, 10));
+  drag(e, line(100, 200, 300, 200, 10));
+  const before = e.items.map((i) => i.id);
+  key(e, 'KeyS');
+  click(e, 200, 100);
+  assert.equal(e.selection.length, 1);
+  assert.deepEqual(e.restoreKept(kept, 'same'), [{ type: 'notice', text: INK_NOTICES.restored }]);
+  assert.equal(e.items.length, 1, '보관 판서로 바뀜');
+  assert.equal(/** @type {any} */ (e.items[0]).points[0].x, 500);
+  assert.equal(e.selection.length, 0);
+  assert.deepEqual(
+    e.undoStack.map((c) => c.type),
+    ['add', 'add', 'replaceDoc'],
+    '그 전 기록을 지우지 않음',
+  );
+
+  key(e, 'KeyZ', { ctrlKey: true });
+  assert.deepEqual(e.items.map((i) => i.id), before, 'Ctrl+Z 1번 = 복원 전 두 획');
+  key(e, 'KeyZ', { ctrlKey: true });
+  assert.equal(e.items.length, 1, '그 전 기록도 이어서 되돌림');
+  key(e, 'KeyY', { ctrlKey: true });
+  key(e, 'KeyY', { ctrlKey: true });
+  assert.equal(/** @type {any} */ (e.items[0]).points[0].x, 500, '다시 실행 = 다시 복원');
+
+  // 복원 뒤 새 획 id가 보관 판서·되돌린 판서 어느 쪽과도 겹치지 않음
+  key(e, 'KeyP');
+  drag(e, line(10, 10, 50, 10, 4));
+  assert.equal(e.items.length, 2);
+  const newId = e.items.at(-1)?.id ?? '';
+  assert.ok(!before.includes(newId) && !kept.pages[0].items.some((i) => i.id === newId), `새 id ${newId}`);
+
+  // 빈 문서에서도 같은 명령(되돌리면 빈 판서)
+  const empty = engine();
+  empty.restoreKept(kept, 'rescaled');
+  assert.equal(empty.items.length, 1);
+  empty.undo();
+  assert.equal(empty.items.length, 0);
 });
 
 test('가장자리_밀기와_멈춤판정은_tick으로_돈다', () => {

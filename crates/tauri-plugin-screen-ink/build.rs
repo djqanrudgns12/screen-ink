@@ -15,6 +15,13 @@ const COMMANDS: &[&str] = &[
     "pin_info",
     "pin_action",
     "pin_zoom",
+    "draw_ready",
+    "draw_finish",
+    "draw_restore",
+    "draw_export",
+    "draw_island",
+    "draw_pen_metrics",
+    "zoom_input",
     "capture_annotations",
     "capture_commit_annotated",
 ];

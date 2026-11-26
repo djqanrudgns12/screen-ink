@@ -1,6 +1,12 @@
 <script>
   import { keycaps } from '@screen-ink/client';
   import Icon from '../icons/Icon.svelte';
+  import {
+    DRAW_PALETTE_EXPAND_MS,
+    formatBoardIslandMeta,
+    getDrawPaletteSwatches,
+    shouldExpandDrawPalette,
+  } from '../models/drawUi.js';
   import { extractHexColor, formatCapturePath, shouldOmitButtonKeys } from '../models/islandQueue.js';
   import Keycap from './Keycap.svelte';
 
@@ -24,6 +30,10 @@
    *   countdown?: number | null,
    *   penColor?: 'R' | 'Y' | 'G' | 'O' | 'B' | 'L' | 'W' | 'K',
    *   penWidth?: string,
+   *   paletteExpanded?: boolean,
+   *   idleDim?: boolean,
+   *   avoid?: boolean,
+   *   onSelectColor?: (code: 'R' | 'Y' | 'G' | 'O' | 'B' | 'L' | 'W' | 'K') => void,
    *   micOff?: boolean,
    *   button?: { label: string, key?: string, stop?: boolean, onClick?: () => void } | null,
    *   secondaryButton?: { label: string, key?: string, onClick?: () => void } | null,
@@ -54,8 +64,12 @@
     platform = 'windows',
     keyHint = '',
     countdown = null,
-    penColor = 'R',
+    penColor = undefined,
     penWidth = '',
+    paletteExpanded = false,
+    idleDim = false,
+    avoid = false,
+    onSelectColor = undefined,
     micOff = false,
     button = null,
     secondaryButton = null,
@@ -74,6 +88,53 @@
   /** @type {HTMLDivElement | null} */
   let islandEl = $state(null);
   let overflowDetected = $state(false);
+  let paletteHovered = $state(false);
+  let paletteTransient = $state(false);
+  /** @type {string | null} */
+  let prevPenColor = null;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let paletteTimer = null;
+
+  function schedulePaletteCollapse() {
+    if (paletteTimer !== null) clearTimeout(paletteTimer);
+    paletteTimer = setTimeout(() => {
+      paletteTimer = null;
+      paletteTransient = false;
+    }, DRAW_PALETTE_EXPAND_MS);
+  }
+
+  function handlePaletteEnter() {
+    paletteHovered = true;
+    if (paletteTimer !== null) {
+      clearTimeout(paletteTimer);
+      paletteTimer = null;
+    }
+  }
+
+  function handlePaletteLeave() {
+    paletteHovered = false;
+    paletteTransient = true;
+    schedulePaletteCollapse();
+  }
+
+  $effect(() => {
+    const color = activePenColor;
+    const v = variant;
+    if (shouldExpandDrawPalette(prevPenColor, color, v)) {
+      paletteTransient = true;
+      schedulePaletteCollapse();
+    }
+    prevPenColor = color ?? null;
+  });
+
+  $effect(() => {
+    return () => {
+      if (paletteTimer !== null) {
+        clearTimeout(paletteTimer);
+        paletteTimer = null;
+      }
+    };
+  });
   $effect(() => {
     void thumbUrl;
     thumbFailed = false;
@@ -104,6 +165,11 @@
   });
 
   let mutedSurface = $derived(variant === 'off' || variant === 'security');
+  let activePenColor = $derived(penColor ?? (variant === 'draw' ? 'R' : undefined));
+  let hasPenPalette = $derived((variant === 'draw' || variant === 'board') && Boolean(activePenColor));
+  let paletteSwatches = $derived(getDrawPaletteSwatches(variant === 'board'));
+  let showExpandedPalette = $derived(hasPenPalette && (paletteExpanded || paletteHovered || paletteTransient));
+  let boardMeta = $derived(variant === 'board' ? formatBoardIslandMeta({ text, detail, value }) : null);
   let hasSecondLine = $derived(showHints && Array.isArray(hints) && hints.length > 0);
   let hasThumb = $derived(Boolean(thumbnail || (thumbUrl && !thumbFailed)));
   let pathItems = $derived(formatCapturePath(path, level));
@@ -144,6 +210,9 @@
   data-thumb={hasThumb ? 'true' : undefined}
   data-result-card={isResultCard ? 'true' : undefined}
   data-compact-keys={omitButtonKeys ? 'true' : undefined}
+  data-idle-dim={idleDim ? 'true' : undefined}
+  data-avoid={avoid ? 'true' : undefined}
+  data-palette-open={showExpandedPalette ? 'true' : undefined}
   {onmouseenter}
   {onmouseleave}
 >
@@ -181,10 +250,52 @@
         <span class="ink-island-rec-dot" aria-hidden="true"></span>
       {:else if variant === 'draw'}
         <span
-          class="ink-island-pen-dot"
-          style:background={`var(--ink-pen-${penColor})`}
-          aria-hidden="true"
-        ></span>
+          class="ink-island-palette"
+          role="group"
+          aria-label="펜 색"
+          onmouseenter={handlePaletteEnter}
+          onmouseleave={handlePaletteLeave}
+        >
+          {#if showExpandedPalette}
+            <span class="ink-island-swatches">
+              {#each paletteSwatches as sw (sw.code)}
+                {#if onSelectColor}
+                  <button
+                    type="button"
+                    class="ink-island-swatch ink-mono ink-focus"
+                    aria-label={`${sw.label} (${sw.code})`}
+                    aria-pressed={activePenColor === sw.code}
+                    data-selected={activePenColor === sw.code ? 'true' : undefined}
+                    data-bordered={sw.needsBorder ? 'true' : undefined}
+                    style:background={`var(--ink-pen-${sw.code})`}
+                    style:color={sw.lightFg ? 'var(--ink-pen-fg-light)' : 'var(--ink-pen-fg-dark)'}
+                    onclick={() => onSelectColor?.(sw.code)}
+                  >
+                    {sw.code}
+                  </button>
+                {:else}
+                  <span
+                    class="ink-island-swatch ink-mono"
+                    data-selected={activePenColor === sw.code ? 'true' : undefined}
+                    data-bordered={sw.needsBorder ? 'true' : undefined}
+                    style:background={`var(--ink-pen-${sw.code})`}
+                    style:color={sw.lightFg ? 'var(--ink-pen-fg-light)' : 'var(--ink-pen-fg-dark)'}
+                    aria-hidden="true"
+                  >
+                    {sw.code}
+                  </span>
+                {/if}
+              {/each}
+            </span>
+          {:else}
+            <span
+              class="ink-island-pen-dot"
+              data-bordered={activePenColor === 'K' ? 'true' : undefined}
+              style:background={`var(--ink-pen-${activePenColor})`}
+              aria-hidden="true"
+            ></span>
+          {/if}
+        </span>
       {:else if variant === 'off'}
         <span class="ink-island-off-dot" aria-hidden="true"></span>
       {:else if iconName}
@@ -194,6 +305,55 @@
         >
           <Icon name={iconName} size={16} inverted={true} />
         </span>
+        {#if variant === 'board' && hasPenPalette}
+          <span
+            class="ink-island-palette"
+            role="group"
+            aria-label="칠판 펜 색"
+            onmouseenter={handlePaletteEnter}
+            onmouseleave={handlePaletteLeave}
+          >
+            {#if showExpandedPalette}
+              <span class="ink-island-swatches">
+                {#each paletteSwatches as sw (sw.code)}
+                  {#if onSelectColor}
+                    <button
+                      type="button"
+                      class="ink-island-swatch ink-mono ink-focus"
+                      aria-label={`${sw.label} (${sw.code})`}
+                      aria-pressed={activePenColor === sw.code}
+                      data-selected={activePenColor === sw.code ? 'true' : undefined}
+                      data-bordered={sw.needsBorder ? 'true' : undefined}
+                      style:background={`var(--ink-pen-${sw.code})`}
+                      style:color={sw.lightFg ? 'var(--ink-pen-fg-light)' : 'var(--ink-pen-fg-dark)'}
+                      onclick={() => onSelectColor?.(sw.code)}
+                    >
+                      {sw.code}
+                    </button>
+                  {:else}
+                    <span
+                      class="ink-island-swatch ink-mono"
+                      data-selected={activePenColor === sw.code ? 'true' : undefined}
+                      data-bordered={sw.needsBorder ? 'true' : undefined}
+                      style:background={`var(--ink-pen-${sw.code})`}
+                      style:color={sw.lightFg ? 'var(--ink-pen-fg-light)' : 'var(--ink-pen-fg-dark)'}
+                      aria-hidden="true"
+                    >
+                      {sw.code}
+                    </span>
+                  {/if}
+                {/each}
+              </span>
+            {:else}
+              <span
+                class="ink-island-pen-dot"
+                data-bordered={activePenColor === 'K' ? 'true' : undefined}
+                style:background={`var(--ink-pen-${activePenColor})`}
+                aria-hidden="true"
+              ></span>
+            {/if}
+          </span>
+        {/if}
       {/if}
 
       <span class="ink-island-main">
@@ -222,10 +382,16 @@
       {/if}
 
       {#if detail}
+        {#if boardMeta?.dotBeforeDetail}
+          <span class="ink-island-middot" aria-hidden="true">·</span>
+        {/if}
         <span class="ink-island-detail">{detail}</span>
       {/if}
 
       {#if value}
+        {#if boardMeta?.dotBeforeValue}
+          <span class="ink-island-middot" aria-hidden="true">·</span>
+        {/if}
         <span class="ink-island-val ink-mono" data-muted={valueMuted ? 'true' : undefined}>{value}</span>
       {/if}
 
@@ -338,6 +504,19 @@
     white-space: nowrap;
     overflow: hidden;
     pointer-events: auto;
+    transition:
+      opacity 300ms ease,
+      transform 180ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .ink-island[data-idle-dim='true'] {
+    opacity: 0.4;
+  }
+
+  .ink-island[data-avoid='true'] {
+    transform: translateY(-120%);
+    opacity: 0.15;
+    pointer-events: none;
   }
 
   .ink-island[data-twoline='true'] {
@@ -525,11 +704,67 @@
     animation: ink-pulse-rec 1.6s ease-in-out infinite;
   }
 
+  .ink-island-palette {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+  }
+
+  .ink-island-swatches {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 3px;
+  }
+
+  .ink-island-swatch {
+    width: 16px;
+    height: 16px;
+    border: 0;
+    border-radius: 50%;
+    padding: 0;
+    display: inline-grid;
+    place-items: center;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1;
+    flex: none;
+    box-sizing: border-box;
+  }
+
+  button.ink-island-swatch {
+    cursor: pointer;
+  }
+
+  .ink-island-swatch[data-bordered='true'] {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  }
+
+  .ink-island-swatch[data-selected='true'] {
+    box-shadow:
+      0 0 0 1.5px var(--ink-island),
+      0 0 0 3px var(--ink-island-text);
+  }
+
   .ink-island-pen-dot {
     width: 14px;
     height: 14px;
     border-radius: 50%;
     box-shadow: 0 0 0 2px var(--ink-island), 0 0 0 3.5px var(--ink-island-text);
+    flex: none;
+  }
+
+  .ink-island-pen-dot[data-bordered='true'] {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+      0 0 0 2px var(--ink-island),
+      0 0 0 3.5px var(--ink-island-text);
+  }
+
+  .ink-island-middot {
+    color: var(--ink-island-sub);
+    font-size: 12px;
+    margin: 0 -4px;
     flex: none;
   }
 

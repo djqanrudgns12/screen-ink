@@ -1,7 +1,7 @@
 //! tauri-plugin-screen-ink — 앱 핵심(InkService)을 Tauri에 붙인다(03 §2·§6).
 //!
 //! - 명령 `plugin:screen-ink|…` = `InkClient` 메서드(packages/ink-client/src/tauri.js와 1:1)
-//! - 이벤트 `screen-ink://state` · `screen-ink://island`
+//! - 이벤트 `screen-ink://state` · `screen-ink://island` · `screen-ink://draw`(판서 세션)
 //! - 창: `ink-popover`(트레이 팝오버 S01) · `ink-settings`(S02~S05) · `ink-island`(섬 S17)
 //! - 전역 단축키 = tauri-plugin-global-shortcut 어댑터, 트레이 아이콘 = 코드로 그림(tray_art)
 //!
@@ -12,6 +12,7 @@ mod adapters;
 mod overlay;
 mod pins;
 mod tray_art;
+mod zoom_hud;
 
 use ink_app::{
     HotkeyError, HotkeyOutcome, HotkeyRegistry, ImportPreview, InkService, InkState, IslandEvent, IslandKind, MonitorProbe, Notifier, Ports, PreviewResult, ScreenSource,
@@ -42,13 +43,15 @@ pub const ISLAND: &str = "ink-island";
 const TRAY_ID: &str = "screen-ink";
 /// 화면에 보이는 앱 이름(docs/brand/README.md). 내부 식별자(플러그인·이벤트·트레이 ID)는 `screen-ink` 그대로.
 pub const APP_NAME: &str = "슉쇽";
-/// 폴더·파일 이름에 쓰는 영문 이름(사진\shookshok, %APPDATA%\shookshok).
-pub const APP_DIR: &str = "shookshok";
+/// 폴더·파일 이름에 쓰는 영문 이름(사진\Shookshok, %APPDATA%\Shookshok). 화면에 보이는 영문은 `ShookShok`.
+pub const APP_DIR: &str = "Shookshok";
 /// 이름을 바꾸기 전 설정 폴더 — 새 폴더가 없으면 한 번 옮긴다.
 const LEGACY_DIR: &str = "screen-ink";
 const EVT_STATE: &str = "screen-ink://state";
 const EVT_ISLAND: &str = "screen-ink://island";
 const EVT_CAPTURE: &str = "screen-ink://capture";
+const EVT_DRAW: &str = "screen-ink://draw";
+const EVT_DRAW_COMMAND: &str = "screen-ink://draw-command";
 /// 설정 창에 첫 실행 시트(S06)를 다시 띄우라는 신호(앱 셸이 듣는다)
 const EVT_FIRST_RUN: &str = "screen-ink://first-run";
 /// 섬 창을 UI가 닫아 주지 않을 때의 안전 시간
@@ -148,11 +151,26 @@ impl<R: Runtime> Notifier for TauriNotifier<R> {
         if event.kind != IslandKind::End {
             show_island(&self.app);
         }
+        if event.secondary_button.as_ref().is_some_and(|b| b.action == ACTION_TO_DRAW) {
+            release_capture_frame_later(&self.app);
+        }
         let _ = self.app.emit(EVT_ISLAND, event);
     }
 
     fn capture(&self, view: &ink_app::CaptureView) {
         let _ = self.app.emit(EVT_CAPTURE, view);
+    }
+
+    fn draw(&self, session: &ink_app::DrawSession) {
+        let _ = self.app.emit(EVT_DRAW, session);
+    }
+
+    fn draw_command(&self, session: u64, command: &str) {
+        let _ = self.app.emit(EVT_DRAW_COMMAND, serde_json::json!({ "session": session, "command": command }));
+    }
+
+    fn zoom(&self, state: Option<&ink_app::LiveZoomState>) {
+        zoom_hud::emit(&self.app, state);
     }
 }
 
@@ -405,7 +423,7 @@ fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     });
 
     WebviewWindowBuilder::new(app, ISLAND, WebviewUrl::App("index.html?view=island".into()))
-        .title("shookshok island")
+        .title("ShookShok island")
         .inner_size(560.0, 88.0)
         .resizable(false)
         .decorations(false)
@@ -543,6 +561,26 @@ fn open_folder(path: &std::path::Path) {
     }
 }
 
+/// 결과 섬 [판서로](3e-handoff) 동작 이름 — `InkClient.run('capture.toDraw')`.
+const ACTION_TO_DRAW: &str = "capture.toDraw";
+
+/// [판서로]가 쥔 정지 프레임(모니터 한 장, 4K ≈ 33 MB)을 30초 뒤에 놓는다(B §5, M3 대기 메모리).
+/// 서비스 잠금을 쥔 채 불린다 — 여기서는 스레드만 띄우고, 놓기는 그 뒤 메인 스레드에서(새 결과면 서비스가 나이로 거른다).
+fn release_capture_frame_later<R: Runtime>(app: &AppHandle<R>) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(ink_app::capture::CAPTURE_FRAME_TTL + Duration::from_millis(200));
+        let h = app.clone();
+        let _ = app.run_on_main_thread(move || {
+            if let Some(ink) = h.try_state::<Ink>() {
+                if ink.lock().expire_capture_frame() {
+                    log::debug!("capture frame released (to-draw idle)");
+                }
+            }
+        });
+    });
+}
+
 /// 아직 만들지 않은 모드(단계 2 이후) — 눌린 것은 알려 준다.
 fn not_ready<R: Runtime>(app: &AppHandle<R>, slot_or_action: &str) {
     let label = catalog().slot(slot_or_action).map(|s| s.label.clone()).unwrap_or_else(|| slot_or_action.to_string());
@@ -565,18 +603,45 @@ fn start_capture<R: Runtime>(app: &AppHandle<R>, kind: CaptureKind) {
     app.state::<Ink>().lock().start_capture(kind);
 }
 
+/// 트레이·명령에서 판서·칠판·직전 판서 열기(단축키가 꺼져 있어도).
+fn start_draw<R: Runtime>(app: &AppHandle<R>, kind: ink_app::DrawKind) {
+    if let Some(p) = app.get_webview_window(POPOVER) {
+        let _ = p.hide();
+    }
+    app.state::<Ink>().lock().start_draw(kind);
+}
+
+/// `draw_export` 머리글 → 메타(머리글 이름은 소문자, 값은 글자).
+fn export_meta(headers: &tauri::http::HeaderMap) -> Result<ink_app::DrawExportMeta, String> {
+    ink_app::DrawExportMeta::parse(|name| headers.get(name).and_then(|v| v.to_str().ok()).map(str::to_string))
+}
+
 #[cfg(not(debug_assertions))]
 fn sync_autostart<R: Runtime>(app: &AppHandle<R>, on: bool) {
-    use tauri_plugin_autostart::ManagerExt;
-    let m = app.autolaunch();
-    let now = m.is_enabled().unwrap_or(false);
-    let r = match (on, now) {
-        (true, false) => m.enable(),
-        (false, true) => m.disable(),
-        _ => Ok(()),
-    };
-    if let Err(e) = r {
-        log::warn!("autostart sync failed: {e}");
+    let channel = app.state::<Ink>().lock().install_channel();
+    match ink_domain::package::autostart_backend(channel) {
+        ink_domain::package::AutostartBackend::StartupTask => match app.state::<Ink>().lock().sync_autostart_via_port(on) {
+            Ok(notice) => {
+                if let Some(msg) = &notice.guidance_ko {
+                    log::info!("startup task notice: {msg}");
+                }
+            }
+            Err(e) => log::warn!("startup task sync failed: {e}"),
+        },
+        ink_domain::package::AutostartBackend::RegistryRun => {
+            app.state::<Ink>().lock().set_autostart_notice(None);
+            use tauri_plugin_autostart::ManagerExt;
+            let m = app.autolaunch();
+            let now = m.is_enabled().unwrap_or(false);
+            let r = match (on, now) {
+                (true, false) => m.enable(),
+                (false, true) => m.disable(),
+                _ => Ok(()),
+            };
+            if let Err(e) = r {
+                log::warn!("autostart sync failed: {e}");
+            }
+        }
     }
 }
 
@@ -595,9 +660,10 @@ fn get_state(ink: State<'_, Ink>) -> InkState {
 
 #[tauri::command]
 fn update_setting<R: Runtime>(app: AppHandle<R>, ink: State<'_, Ink>, path: String, value: Value) -> UpdateResult {
-    let r = ink.lock().update_setting(&path, &value);
+    let mut r = ink.lock().update_setting(&path, &value);
     if r.ok && path == "general.autostart" {
         sync_autostart(&app, value.as_bool().unwrap_or(false));
+        r.state = ink.lock().state();
     }
     r
 }
@@ -672,6 +738,51 @@ fn capture_commit_annotated(ink: State<'_, Ink>, request: tauri::ipc::Request<'_
     let commit = ink_app::capture::AnnotatedCommit::decode(body)?;
     ink.lock().capture_commit_annotated(commit);
     Ok(())
+}
+
+/// 판서 배경을 그렸다 → 진입 계측(M4) `mode enter draw [N ms]` 한 줄.
+#[tauri::command]
+fn draw_ready(ink: State<'_, Ink>, session: u64, paint_ms: Option<f64>) {
+    ink.lock().draw_ready(session, paint_ms);
+}
+
+/// 판서 끝(Esc·우클릭 1×) 또는 Rust가 먼저 끝낸 세션의 늦은 끝 — 항목이 있으면 보관.
+#[tauri::command]
+fn draw_finish(ink: State<'_, Ink>, payload: ink_app::DrawFinish) {
+    ink.lock().draw_finish(payload);
+}
+
+/// Ctrl+Shift+R · Alt+Shift+1 복원 판정(모니터·배율 규칙).
+#[tauri::command]
+fn draw_restore(ink: State<'_, Ink>, session: u64) -> ink_app::DrawRestoreResult {
+    ink.lock().draw_restore(session)
+}
+
+/// 합성 결과 원본 바이트(base64 아님, 03 §4) — 본문 = RGBA, 머리글 `x-ink-action`·`x-ink-w`·`x-ink-h`.
+/// 서비스는 메인 스레드에서만 만지므로 동기 명령(캡처 Enter 저장과 같은 길).
+#[tauri::command]
+fn draw_export(ink: State<'_, Ink>, request: tauri::ipc::Request<'_>) -> Result<ink_app::DrawExported, String> {
+    let meta = export_meta(request.headers())?;
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else { return Err("draw_export expects raw bytes".into()) };
+    Ok(ink.lock().draw_export(meta, bytes.clone()))
+}
+
+/// 판서 섬 한 줄 갱신(색·도구·굵기·배율·쪽·안내).
+#[tauri::command]
+fn draw_island(ink: State<'_, Ink>, patch: ink_app::DrawIslandPatch) {
+    ink.lock().draw_island(patch);
+}
+
+/// 펜 지연(M5) 요약을 로그 한 줄로.
+#[tauri::command]
+fn draw_pen_metrics(ink: State<'_, Ink>, sample: ink_app::PenSample) {
+    ink.lock().draw_pen_metrics(sample);
+}
+
+/// 실시간 확대 입력(휠·확대 안 키·끝) — HUD·미리보기용. 실제 앱의 휠은 돋보기 훅이 넘긴다.
+#[tauri::command]
+fn zoom_input(ink: State<'_, Ink>, input: ink_app::ZoomInput) {
+    ink.lock().zoom_input(input);
 }
 
 /// 핀 화면이 처음 묻는 것: 그림 크기·주소·배율(R-CAP-29).
@@ -855,6 +966,13 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             let h = app.clone();
             app.run_on_main_thread(move || h.state::<Ink>().lock().copy_last_hex()).map_err(|e| e.to_string())?;
         }
+        // 결과 섬 [판서로]: 방금 고른 범위를 확대한 채 그 모니터 판서로(정지 프레임 재사용, ≤ 150 ms)
+        ACTION_TO_DRAW => {
+            hide(POPOVER);
+            let pressed = Instant::now();
+            let h = app.clone();
+            app.run_on_main_thread(move || h.state::<Ink>().lock().capture_to_draw_at(pressed)).map_err(|e| e.to_string())?;
+        }
         "app.quit" => {
             let _ = app.global_shortcut().unregister_all();
             app.exit(0);
@@ -875,6 +993,24 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             let h = app.clone();
             app.run_on_main_thread(move || start_capture(&h, kind)).map_err(|e| e.to_string())?;
         }
+        "draw" | "board" | "draw.restore" => {
+            let kind = match action.as_str() {
+                "draw" => ink_app::DrawKind::Draw,
+                "board" => ink_app::DrawKind::Board,
+                _ => ink_app::DrawKind::Restore,
+            };
+            let h = app.clone();
+            app.run_on_main_thread(move || start_draw(&h, kind)).map_err(|e| e.to_string())?;
+        }
+        // 섬 단추 → 판서 엔진(멈춤 도형 [바꾸기] · 모두 지우기 [되돌리기])
+        "draw.acceptSuggestion" | "draw.undo" => {
+            let command = action.trim_start_matches("draw.").to_string();
+            let h = app.clone();
+            app.run_on_main_thread(move || {
+                h.state::<Ink>().lock().draw_command(&command);
+            })
+            .map_err(|e| e.to_string())?;
+        }
         "pins.closeAll" => {
             let h = app.clone();
             app.run_on_main_thread(move || {
@@ -885,6 +1021,11 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
         "capture.cancel" => {
             let h = app.clone();
             app.run_on_main_thread(move || h.state::<Ink>().lock().end_capture()).map_err(|e| e.to_string())?;
+        }
+        "zoom" => {
+            hide(POPOVER);
+            let h = app.clone();
+            app.run_on_main_thread(move || h.state::<Ink>().lock().start_zoom()).map_err(|e| e.to_string())?;
         }
         other => {
             hide(POPOVER);
@@ -897,6 +1038,17 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
 }
 
 // ───────────────────────── 조립 ─────────────────────────
+
+fn package_runtime() -> Box<dyn ink_app::PackageRuntime> {
+    #[cfg(windows)]
+    {
+        Box::new(ink_platform_windows::package::WindowsPackageRuntime)
+    }
+    #[cfg(not(windows))]
+    {
+        Box::new(ink_app::UnpackagedRuntime)
+    }
+}
 
 fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error>> {
     let started = Instant::now();
@@ -934,7 +1086,9 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         // 이름 바꾸기 전에 쓰던 설정을 그대로 가져간다. 실패하면 새 폴더에서 처음부터.
         let _ = std::fs::rename(&legacy, &user_dir);
     }
-    let (dir, portable) = ink_store::resolve_dir(&exe_dir, &user_dir);
+    let pkg_runtime = package_runtime();
+    let channel = pkg_runtime.channel();
+    let (dir, portable) = ink_store::resolve_dir(&exe_dir, &user_dir, channel);
     let (screen, windows, monitors) = screen_ports();
     let ports = Ports {
         hotkeys: Box::new(TauriHotkeys { app: app.clone() }),
@@ -953,6 +1107,13 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         pins: Box::new(pins::TauriPinHost::new(app.clone(), pin_store)),
     };
     let mut service = InkService::new(ports, Platform::current(), app.package_info().version.to_string());
+    service.set_package_runtime(pkg_runtime);
+    #[cfg(windows)]
+    if channel.is_packaged() {
+        service.set_autostart(Box::new(ink_platform_windows::package::WindowsStartupTaskAutostart::default()));
+    }
+    // 실시간 확대(Alt+2): Windows = Magnification API + HUD, 그 밖 = 없음
+    service.set_magnifier(zoom_hud::magnifier(app));
     // 개발용 사람 정답 도구: 확정할 때마다 인식 시험 사례를 쓴다(시험 문서 화면에서만, 08 §5.2)
     if let Ok(dir) = std::env::var("SCREEN_INK_CASE_DIR") {
         log::warn!("recognition cases will be written on every confirm");
@@ -962,7 +1123,7 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
     let first_run = service.is_first_run();
     let autostart = service.settings().bool("general.autostart");
     let initial = service.state();
-    log::info!("shookshok ready: {} hotkey(s) not registered", failed);
+    log::info!("ShookShok ready: {} hotkey(s) not registered", failed);
     app.manage(Ink(Mutex::new(service)));
 
     // 창·트레이는 플러그인 초기화가 끝난 뒤 이벤트 루프에서 만든다. 플러그인 setup은 플러그인 목록
@@ -973,10 +1134,10 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         let h = handle.clone();
         if let Err(e) = handle.run_on_main_thread(move || {
             if let Err(e) = finish_setup(&h, initial, first_run, autostart, started) {
-                log::error!("shookshok setup failed: {e}");
+                log::error!("ShookShok setup failed: {e}");
             }
         }) {
-            log::error!("shookshok setup could not be scheduled: {e}");
+            log::error!("ShookShok setup could not be scheduled: {e}");
         }
     });
     Ok(())
@@ -984,6 +1145,9 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
 
 fn finish_setup<R: Runtime>(app: &AppHandle<R>, initial: InkState, first_run: bool, autostart: bool, started: Instant) -> tauri::Result<()> {
     build_static_windows(app)?;
+    if let Err(e) = zoom_hud::build(app) {
+        log::error!("zoom hud window: {e}");
+    }
     // 맥: 독 아이콘 없이 메뉴 막대에만(트레이 앱), 섬은 오버레이 위·모든 Space
     #[cfg(target_os = "macos")]
     {
@@ -1098,6 +1262,13 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             pin_info,
             pin_action,
             pin_zoom,
+            draw_ready,
+            draw_finish,
+            draw_restore,
+            draw_export,
+            draw_island,
+            draw_pen_metrics,
+            zoom_input,
             capture_annotations,
             capture_commit_annotated
         ])
@@ -1112,4 +1283,22 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             }
         })
         .build()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tauri::http::{HeaderMap, HeaderName, HeaderValue};
+
+    #[test]
+    fn 내보내기_머리글은_대소문자와_무관하게_읽는다() {
+        let mut h = HeaderMap::new();
+        for (k, v) in [("X-Ink-Action", "save"), ("X-INK-W", "1920"), ("x-ink-h", "1080"), ("X-Ink-Session", "4")] {
+            h.insert(HeaderName::from_bytes(k.as_bytes()).unwrap(), HeaderValue::from_static(v));
+        }
+        let m = export_meta(&h).unwrap();
+        assert_eq!((m.action, m.w, m.h, m.session, m.bgra), (ink_app::ExportAction::Save, 1920, 1080, Some(4), false));
+        h.remove("x-ink-w");
+        assert!(export_meta(&h).is_err());
+    }
 }

@@ -155,6 +155,10 @@
       client.setShortcut('active', 'Shift+F2');
     } else if (kind === 'chip') {
       void client.run('capture.region').then(() => client.captureInput({ type: 'command', name: 'copy' }));
+    } else if (kind === 'draw') {
+      void client.run('draw');
+    } else if (kind === 'board') {
+      void client.run('board');
     } else if (kind === 'off') {
       client.setHotkeysEnabled(false);
     } else if (kind === 'on') {
@@ -383,6 +387,8 @@
         <div class="pv-bar-group">
           <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('result')}>결과 띄우기(1.2초)</button>
           <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('chip')}>결과 + HEX 칩</button>
+          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('draw')}>판서 섬</button>
+          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('board')}>칠판 섬</button>
           <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('off')}>단축키 꺼짐</button>
           <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('on')}>단축키 켜기</button>
           <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('info')}>안내</button>
@@ -451,7 +457,15 @@
         </div>
         <div class="pv-isl-item">
           <p>판서<small class="ink-mono">Alt 1 · 계속 보임</small></p>
-          <Island variant="draw" penColor="R" text="펜" penWidth="4px" value="×1.75" keys={['?']} />
+          <Island variant="draw" penColor="R" text="판서 · 펜" penWidth="4px" value="×1.75" keys={['?']} />
+        </div>
+        <div class="pv-isl-item">
+          <p>판서 · 6색 펼침<small class="ink-mono">색 키 · 0.8초</small></p>
+          <Island variant="draw" penColor="O" paletteExpanded={true} text="판서 · 펜" penWidth="4px" />
+        </div>
+        <div class="pv-isl-item">
+          <p>판서 · 4초 물러남<small class="ink-mono">무동작 · 40%</small></p>
+          <Island variant="draw" penColor="R" idleDim={true} text="판서 · 펜" penWidth="4px" value="×1.75" />
         </div>
         <div class="pv-isl-item">
           <p>실시간 확대<small class="ink-mono">Alt 2</small></p>
@@ -459,7 +473,11 @@
         </div>
         <div class="pv-isl-item">
           <p>칠판<small class="ink-mono">Alt 3</small></p>
-          <Island variant="board" text="칠판" detail="흰색" value="1 / 3" keys={['W', 'K']} />
+          <Island variant="board" penColor="R" text="칠판 · 흰색" value="1 / 1" keys={['W', 'K']} />
+        </div>
+        <div class="pv-isl-item">
+          <p>칠판 · 8색 펼침<small class="ink-mono">W·K 포함 · 0.8초</small></p>
+          <Island variant="board" penColor="W" paletteExpanded={true} text="칠판 · 검은색" value="2 / 3" />
         </div>
         <div class="pv-isl-item">
           <p>창 고정<small class="ink-mono">Alt Shift D</small></p>

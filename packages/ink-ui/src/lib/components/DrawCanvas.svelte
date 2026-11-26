@@ -11,6 +11,7 @@
     resolveInkColor,
   } from '../ink/canvasRender.js';
   import { createPenLatencyMeter } from '../ink/penMetrics.js';
+  import { computeCursorRing } from '../models/drawUi.js';
 
   /**
    * 판서 캔버스(A §3.1·§3.5, 4.2) — 3층 canvas(0 배경 · 1 굳힌 판서 · 2 지금 획) + DOM 층(글자 입력 상자 · 펜 고리).
@@ -28,6 +29,7 @@
    *   desynchronized?: boolean,
    *   keyboard?: boolean,
    *   cursorRing?: boolean,
+   *   initialCursor?: { x: number, y: number } | null,
    *   onEffect?: (effect: import('../ink/inkEngine.js').InkEffect) => void,
    *   onPenMetrics?: (summary: import('../ink/penMetrics.js').PenLatencySummary) => void,
    *   onFirstPaint?: (at: number) => void,
@@ -40,6 +42,7 @@
     desynchronized = true,
     keyboard = true,
     cursorRing = true,
+    initialCursor = null,
     onEffect,
     onPenMetrics,
     onFirstPaint,
@@ -96,6 +99,9 @@
   let rootRect = { left: 0, top: 0 };
   /** @type {string | null} */
   let openedKey = null;
+  let hasRingPos = false;
+  let ringX = 0;
+  let ringY = 0;
   const meter = createPenLatencyMeter();
 
   /** @param {number} w @param {number} h */
@@ -223,8 +229,11 @@
 
   /** @param {PointerEvent | MouseEvent} ev */
   function moveRing(ev) {
+    ringX = ev.clientX - rootRect.left;
+    ringY = ev.clientY - rootRect.top;
+    hasRingPos = true;
     if (!ringEl) return;
-    ringEl.style.transform = `translate(${ev.clientX - rootRect.left}px, ${ev.clientY - rootRect.top}px)`;
+    ringEl.style.transform = `translate(${ringX}px, ${ringY}px)`;
   }
 
   /** @param {PointerEvent} ev */
@@ -282,7 +291,10 @@
     ringVisible = false;
   }
 
-  function handlePointerEnter() {
+  /** @param {PointerEvent} ev */
+  function handlePointerEnter(ev) {
+    if (rootEl) rootRect = rootEl.getBoundingClientRect();
+    moveRing(ev);
     ringVisible = true;
   }
 
@@ -465,13 +477,28 @@
     };
   });
 
-  let ring = $derived.by(() => {
-    if (toolState === 'eraser') return { d: Math.max(10, eraserCss), dot: 0, color: '#FFFFFF' };
-    if (toolState === 'pen' || toolState === 'marker') {
-      return { d: Math.max(14, widthPx + 10), dot: Math.max(2, widthPx), color: resolveInkColor(colorCode, bgState) };
+  // 진입 순간 커서 자리 및 도구 전환 후 고리 재마운트 때 (0,0) 번쩍임 방지
+  $effect(() => {
+    if (initialCursor && !hasRingPos) {
+      ringX = initialCursor.x;
+      ringY = initialCursor.y;
+      hasRingPos = true;
+      ringVisible = true;
     }
-    return null;
+    if (ringEl && hasRingPos) {
+      ringEl.style.transform = `translate(${ringX}px, ${ringY}px)`;
+    }
   });
+
+  let ring = $derived(
+    computeCursorRing({
+      tool: toolState,
+      color: colorCode,
+      widthPx,
+      background: bgState,
+      eraserCss,
+    }),
+  );
 </script>
 
 <svelte:window onkeydown={handleKeyDown} onkeyup={handleKeyUp} onblur={handleBlur} />
@@ -522,20 +549,23 @@
     <div
       bind:this={ringEl}
       class="ink-draw-ring"
-      data-eraser={toolState === 'eraser' ? 'true' : undefined}
+      data-kind={ring.kind}
+      data-eraser={ring.kind === 'eraser' ? 'true' : undefined}
+      data-dashed={ring.dashed ? 'true' : undefined}
       data-visible={ringVisible ? 'true' : undefined}
-      style:width={`${ring.d}px`}
-      style:height={`${ring.d}px`}
-      style:margin-left={`${-ring.d / 2}px`}
-      style:margin-top={`${-ring.d / 2}px`}
+      style:width={`${ring.diameter}px`}
+      style:height={`${ring.diameter}px`}
+      style:margin-left={`${-ring.diameter / 2}px`}
+      style:margin-top={`${-ring.diameter / 2}px`}
       style:border-color={ring.color}
     >
-      {#if ring.dot}
+      {#if ring.dot > 0}
         <span
           class="ink-draw-ring-dot"
           style:width={`${ring.dot}px`}
           style:height={`${ring.dot}px`}
           style:background={ring.color}
+          style:opacity={ring.dotOpacity}
         ></span>
       {/if}
     </div>
@@ -604,11 +634,12 @@
     left: 0;
     top: 0;
     box-sizing: border-box;
-    border: 2px solid;
+    border: 1.5px solid;
     border-radius: 50%;
     box-shadow:
-      0 0 0 1px rgba(0, 0, 0, 0.45),
-      inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+      0 0 0 1px rgba(255, 255, 255, 0.72),
+      0 0 0 2px rgba(0, 0, 0, 0.32),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.22);
     pointer-events: none;
     display: none;
     will-change: transform;
@@ -616,6 +647,10 @@
 
   .ink-draw-ring[data-visible='true'] {
     display: block;
+  }
+
+  .ink-draw-ring[data-dashed='true'] {
+    border-style: dashed;
   }
 
   .ink-draw-ring[data-eraser='true'] {
@@ -627,6 +662,7 @@
     left: 50%;
     top: 50%;
     border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
     transform: translate(-50%, -50%);
   }
 </style>

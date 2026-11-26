@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>붙여 넣기 시험 패턴</title>
+<!--
+  3e-paste 시험 패턴(R-CAP-7, C §2.4): 화면 배율과 상관없이 정확히 400×200 **물리 px** 블록.
+  - 1 px 검은 테두리 · 20 px 격자(#D0D0D0) · 색 칸 셋: #FF9F0A (30,50,100,100) · #2F6FED (150,50,100,100) · #2E9E6A (270,50,100,100)
+  - 캔버스 화소 = 화면 화소(CSS 크기 = 400 / devicePixelRatio), 부드럽게 하기 없음.
+  - 확인: bench/recog/check-paste.ps1 이 같은 배치를 기준으로 본다(여기 숫자를 바꾸면 거기도 바꿀 것).
+-->
+<style>
+  html, body { margin: 0; background: #ffffff; font-family: "Malgun Gothic", sans-serif; }
+  #wrap { position: absolute; left: 40px; top: 40px; }
+  canvas { display: block; image-rendering: pixelated; }
+  p { position: absolute; left: 40px; top: 8px; margin: 0; font-size: 13px; color: #374151; }
+</style>
+</head>
+<body>
+<p id="info"></p>
+<div id="wrap"><canvas id="c" width="400" height="200"></canvas></div>
+<script>
+  const dpr = window.devicePixelRatio || 1;
+  const c = document.getElementById('c');
+  c.style.width = (400 / dpr) + 'px';
+  c.style.height = (200 / dpr) + 'px';
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, 400, 200);
+  g.fillStyle = '#D0D0D0';
+  for (let x = 20; x < 400; x += 20) g.fillRect(x, 0, 1, 200);
+  for (let y = 20; y < 200; y += 20) g.fillRect(0, y, 400, 1);
+  g.fillStyle = '#FF9F0A'; g.fillRect(30, 50, 100, 100);
+  g.fillStyle = '#2F6FED'; g.fillRect(150, 50, 100, 100);
+  g.fillStyle = '#2E9E6A'; g.fillRect(270, 50, 100, 100);
+  g.fillStyle = '#000000';
+  g.fillRect(0, 0, 400, 1); g.fillRect(0, 199, 400, 1); g.fillRect(0, 0, 1, 200); g.fillRect(399, 0, 1, 200);
+  document.getElementById('info').textContent = '붙여 넣기 시험 패턴 400×200 물리 px (배율 ' + Math.round(dpr * 100) + '%) — 확대 100%에서 F1로 테두리까지 정확히';
+</script>
+</body>
+</html>

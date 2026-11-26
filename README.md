@@ -1,4 +1,4 @@
-# 슉쇽 (shookshok)
+# 슉쇽 (ShookShok)
 
 발표자를 위한 **화면 필기·확대·스마트 캡처** 데스크톱 앱. 아이캔 줌잇(판서·확대)과 Snipaste(스마트 캡처)의 장점을 한 앱으로 합친다.
 Windows 먼저, 이어서 macOS. 한국어 우선 + English. 무료(이후 MS Store).
@@ -89,3 +89,7 @@ apps/screen-ink              단독 앱 셸
 ## 라이선스
 
 [MIT](LICENSE) © 2026 djqanrudgns12
+
+## Code Signing Policy
+
+Free code signing provided by SignPath.io, certificate by SignPath Foundation

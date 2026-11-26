@@ -20,7 +20,7 @@
 | 칸 | 값 |
 |---|---|
 | 게시자 표시 이름 | **`찰떡쌤`**(계정 등록 때 넣음) |
-| 앱 이름(예약) | 한국어 **`슉쇽`** · 영어 **`shookshok`**(2026-11-26 결정, `docs/brand/README.md`). 예약은 Partner Center 계정이 승인되면 |
+| 앱 이름(예약) | 한국어 **`슉쇽`** · 영어 **`ShookShok`**(2026-11-26 결정, `docs/brand/README.md`). 예약은 Partner Center 계정이 승인되면 |
 | 가격 | 무료 |
 | 시장 | 모든 시장(대한민국 포함) |
 | 범주 | 생산성(Productivity). 보조 범주 교육(Education). 하위 범주는 제출 화면 목록에서 고른다 |
@@ -118,15 +118,15 @@ Full version:
 
 First submission (capture only):
 
-> Press F1 and shookshok highlights the table, image or button under your cursor. Paste straight into documents and slides. Works offline and collects no data.
+> Press F1 and ShookShok highlights the table, image or button under your cursor. Paste straight into documents and slides. Works offline and collects no data.
 
 ### 3.1 Description
 
 ```text
-shookshok is a screen tool for teachers who present from their computer. One shortcut captures the screen, zooms where you need it, and lets you draw right on top.
+ShookShok is a screen tool for teachers who present from their computer. One shortcut captures the screen, zooms where you need it, and lets you draw right on top.
 
 ■ Capture that finds what you mean (F1)
-Press F1 and hover: shookshok highlights the table, image, button or paragraph under the cursor. Scroll to pick a bigger or smaller area, click, done. The result goes straight to the clipboard, ready to paste with Ctrl+V. Dragging snaps to window and cell edges.
+Press F1 and hover: ShookShok highlights the table, image, button or paragraph under the cursor. Scroll to pick a bigger or smaller area, click, done. The result goes straight to the clipboard, ready to paste with Ctrl+V. Dragging snaps to window and cell edges.
 
 ■ Small things that matter in class
 · Inside F1, press R for the last area, comma/period to step through recent areas
@@ -193,14 +193,14 @@ For the first submission, delete the "Draw, zoom and whiteboard" paragraph.
 ## 6. 인증 담당자에게 남기는 말 (Notes for certification, 영어)
 
 ```text
-shookshok is a full-trust Win32 desktop app (Tauri 2 + WebView2) packaged as MSIX. It needs runFullTrust because it:
+ShookShok is a full-trust Win32 desktop app (Tauri 2 + WebView2) packaged as MSIX. It needs runFullTrust because it:
 - registers global hotkeys (RegisterHotKey) — F1/F2/F3 and Alt+1/2/3 by default;
 - captures all monitors and shows topmost overlay windows over other apps;
 - reads window bounds and UI Automation element bounds to find the area under the cursor (bounds and control types only; no text or titles are read or stored).
 The app has no network code, no account and no telemetry.
 
 How to test:
-1. Launch shookshok. It lives in the notification area (tray); the settings window opens on first run.
+1. Launch ShookShok. It lives in the notification area (tray); the settings window opens on first run.
 2. Press F1, move the mouse over any window — the element under the cursor is highlighted. Scroll to change the area, click (or press Enter) to copy. Paste into Paint to check.
 3. Press Esc to cancel a capture.
 4. If F1 is already taken by another app, the app shows a notice and the key can be changed in Settings > Shortcuts.
