@@ -335,6 +335,28 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
         Ok(painted_at)
     }
 
+    fn show_draw(&mut self, session: &ink_app::DrawSession, frame: Option<Frame>) -> Result<Option<String>, String> {
+        let m = &session.monitor;
+        // 창은 prepare(배치가 바뀌면 다시 맞춤)가 미리 만들어 둔다 — 아직이면 다음 진입부터
+        let w = self.app.get_webview_window(&label(m.id)).ok_or("overlay window not ready")?;
+        // 판서는 네이티브 정지 창·강조를 쓰지 않는다(배경도 확대·이동과 같은 변환으로 웹뷰가 그림, A §2.5)
+        self.layout = None;
+        let url = match &frame {
+            Some(f) => {
+                self.frames.put(session.session, std::slice::from_ref(f));
+                Some(frame_url(session.session, m.id))
+            }
+            None => {
+                self.frames.put(session.session, &[]);
+                None
+            }
+        };
+        // 투명 창을 먼저 보여도 화면은 그대로다(배경 = 방금 찍은 그 화면). 세션 알림은 서비스가 곧 보낸다.
+        show_raw(&w, true).map_err(|e| e.to_string())?;
+        focus_raw(&w);
+        Ok(url)
+    }
+
     fn hide(&mut self, session: u64) {
         #[cfg(windows)]
         self.freeze.hide_all();

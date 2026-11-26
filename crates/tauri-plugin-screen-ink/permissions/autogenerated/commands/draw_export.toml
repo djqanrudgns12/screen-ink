@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-draw-export"
+description = "Enables the draw_export command without any pre-configured scope."
+commands.allow = ["draw_export"]
+
+[[permission]]
+identifier = "deny-draw-export"
+description = "Denies the draw_export command without any pre-configured scope."
+commands.deny = ["draw_export"]

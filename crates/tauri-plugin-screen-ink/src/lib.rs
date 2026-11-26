@@ -1,7 +1,7 @@
 //! tauri-plugin-screen-ink — 앱 핵심(InkService)을 Tauri에 붙인다(03 §2·§6).
 //!
 //! - 명령 `plugin:screen-ink|…` = `InkClient` 메서드(packages/ink-client/src/tauri.js와 1:1)
-//! - 이벤트 `screen-ink://state` · `screen-ink://island`
+//! - 이벤트 `screen-ink://state` · `screen-ink://island` · `screen-ink://draw`(판서 세션)
 //! - 창: `ink-popover`(트레이 팝오버 S01) · `ink-settings`(S02~S05) · `ink-island`(섬 S17)
 //! - 전역 단축키 = tauri-plugin-global-shortcut 어댑터, 트레이 아이콘 = 코드로 그림(tray_art)
 //!
@@ -43,6 +43,8 @@ const TRAY_ID: &str = "screen-ink";
 const EVT_STATE: &str = "screen-ink://state";
 const EVT_ISLAND: &str = "screen-ink://island";
 const EVT_CAPTURE: &str = "screen-ink://capture";
+const EVT_DRAW: &str = "screen-ink://draw";
+const EVT_DRAW_COMMAND: &str = "screen-ink://draw-command";
 /// 설정 창에 첫 실행 시트(S06)를 다시 띄우라는 신호(앱 셸이 듣는다)
 const EVT_FIRST_RUN: &str = "screen-ink://first-run";
 /// 섬 창을 UI가 닫아 주지 않을 때의 안전 시간
@@ -147,6 +149,14 @@ impl<R: Runtime> Notifier for TauriNotifier<R> {
 
     fn capture(&self, view: &ink_app::CaptureView) {
         let _ = self.app.emit(EVT_CAPTURE, view);
+    }
+
+    fn draw(&self, session: &ink_app::DrawSession) {
+        let _ = self.app.emit(EVT_DRAW, session);
+    }
+
+    fn draw_command(&self, session: u64, command: &str) {
+        let _ = self.app.emit(EVT_DRAW_COMMAND, serde_json::json!({ "session": session, "command": command }));
     }
 }
 
@@ -559,6 +569,19 @@ fn start_capture<R: Runtime>(app: &AppHandle<R>, kind: CaptureKind) {
     app.state::<Ink>().lock().start_capture(kind);
 }
 
+/// 트레이·명령에서 판서·칠판·직전 판서 열기(단축키가 꺼져 있어도).
+fn start_draw<R: Runtime>(app: &AppHandle<R>, kind: ink_app::DrawKind) {
+    if let Some(p) = app.get_webview_window(POPOVER) {
+        let _ = p.hide();
+    }
+    app.state::<Ink>().lock().start_draw(kind);
+}
+
+/// `draw_export` 머리글 → 메타(머리글 이름은 소문자, 값은 글자).
+fn export_meta(headers: &tauri::http::HeaderMap) -> Result<ink_app::DrawExportMeta, String> {
+    ink_app::DrawExportMeta::parse(|name| headers.get(name).and_then(|v| v.to_str().ok()).map(str::to_string))
+}
+
 #[cfg(not(debug_assertions))]
 fn sync_autostart<R: Runtime>(app: &AppHandle<R>, on: bool) {
     use tauri_plugin_autostart::ManagerExt;
@@ -648,6 +671,45 @@ fn capture_input<R: Runtime>(window: tauri::WebviewWindow<R>, ink: State<'_, Ink
     #[cfg(not(target_os = "macos"))]
     let _ = &window;
     ink.lock().capture_input(input);
+}
+
+/// 판서 배경을 그렸다 → 진입 계측(M4) `mode enter draw [N ms]` 한 줄.
+#[tauri::command]
+fn draw_ready(ink: State<'_, Ink>, session: u64, paint_ms: Option<f64>) {
+    ink.lock().draw_ready(session, paint_ms);
+}
+
+/// 판서 끝(Esc·우클릭 1×) 또는 Rust가 먼저 끝낸 세션의 늦은 끝 — 항목이 있으면 보관.
+#[tauri::command]
+fn draw_finish(ink: State<'_, Ink>, payload: ink_app::DrawFinish) {
+    ink.lock().draw_finish(payload);
+}
+
+/// Ctrl+Shift+R · Alt+Shift+1 복원 판정(모니터·배율 규칙).
+#[tauri::command]
+fn draw_restore(ink: State<'_, Ink>, session: u64) -> ink_app::DrawRestoreResult {
+    ink.lock().draw_restore(session)
+}
+
+/// 합성 결과 원본 바이트(base64 아님, 03 §4) — 본문 = RGBA, 머리글 `x-ink-action`·`x-ink-w`·`x-ink-h`.
+/// 서비스는 메인 스레드에서만 만지므로 동기 명령(캡처 Enter 저장과 같은 길).
+#[tauri::command]
+fn draw_export(ink: State<'_, Ink>, request: tauri::ipc::Request<'_>) -> Result<ink_app::DrawExported, String> {
+    let meta = export_meta(request.headers())?;
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else { return Err("draw_export expects raw bytes".into()) };
+    Ok(ink.lock().draw_export(meta, bytes.clone()))
+}
+
+/// 판서 섬 한 줄 갱신(색·도구·굵기·배율·쪽·안내).
+#[tauri::command]
+fn draw_island(ink: State<'_, Ink>, patch: ink_app::DrawIslandPatch) {
+    ink.lock().draw_island(patch);
+}
+
+/// 펜 지연(M5) 요약을 로그 한 줄로.
+#[tauri::command]
+fn draw_pen_metrics(ink: State<'_, Ink>, sample: ink_app::PenSample) {
+    ink.lock().draw_pen_metrics(sample);
 }
 
 /// 핀 화면이 처음 묻는 것: 그림 크기·주소·배율(R-CAP-29).
@@ -850,6 +912,24 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             };
             let h = app.clone();
             app.run_on_main_thread(move || start_capture(&h, kind)).map_err(|e| e.to_string())?;
+        }
+        "draw" | "board" | "draw.restore" => {
+            let kind = match action.as_str() {
+                "draw" => ink_app::DrawKind::Draw,
+                "board" => ink_app::DrawKind::Board,
+                _ => ink_app::DrawKind::Restore,
+            };
+            let h = app.clone();
+            app.run_on_main_thread(move || start_draw(&h, kind)).map_err(|e| e.to_string())?;
+        }
+        // 섬 단추 → 판서 엔진(멈춤 도형 [바꾸기] · 모두 지우기 [되돌리기])
+        "draw.acceptSuggestion" | "draw.undo" => {
+            let command = action.trim_start_matches("draw.").to_string();
+            let h = app.clone();
+            app.run_on_main_thread(move || {
+                h.state::<Ink>().lock().draw_command(&command);
+            })
+            .map_err(|e| e.to_string())?;
         }
         "pins.closeAll" => {
             let h = app.clone();
@@ -1066,7 +1146,13 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             capture_input,
             pin_info,
             pin_action,
-            pin_zoom
+            pin_zoom,
+            draw_ready,
+            draw_finish,
+            draw_restore,
+            draw_export,
+            draw_island,
+            draw_pen_metrics
         ])
         .register_uri_scheme_protocol(overlay::SCHEME, |ctx, req| overlay::serve(ctx, req))
         .setup(|app, _api| setup(app))
@@ -1079,4 +1165,22 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             }
         })
         .build()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tauri::http::{HeaderMap, HeaderName, HeaderValue};
+
+    #[test]
+    fn 내보내기_머리글은_대소문자와_무관하게_읽는다() {
+        let mut h = HeaderMap::new();
+        for (k, v) in [("X-Ink-Action", "save"), ("X-INK-W", "1920"), ("x-ink-h", "1080"), ("X-Ink-Session", "4")] {
+            h.insert(HeaderName::from_bytes(k.as_bytes()).unwrap(), HeaderValue::from_static(v));
+        }
+        let m = export_meta(&h).unwrap();
+        assert_eq!((m.action, m.w, m.h, m.session, m.bgra), (ink_app::ExportAction::Save, 1920, 1080, Some(4), false));
+        h.remove("x-ink-w");
+        assert!(export_meta(&h).is_err());
+    }
 }

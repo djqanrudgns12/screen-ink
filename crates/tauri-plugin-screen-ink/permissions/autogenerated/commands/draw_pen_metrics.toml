@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-draw-pen-metrics"
+description = "Enables the draw_pen_metrics command without any pre-configured scope."
+commands.allow = ["draw_pen_metrics"]
+
+[[permission]]
+identifier = "deny-draw-pen-metrics"
+description = "Denies the draw_pen_metrics command without any pre-configured scope."
+commands.deny = ["draw_pen_metrics"]

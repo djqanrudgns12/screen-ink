@@ -20,6 +20,12 @@ screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있
 - `allow-pin-info`
 - `allow-pin-action`
 - `allow-pin-zoom`
+- `allow-draw-ready`
+- `allow-draw-finish`
+- `allow-draw-restore`
+- `allow-draw-export`
+- `allow-draw-island`
+- `allow-draw-pen-metrics`
 
 ## Permission Table
 
@@ -78,6 +84,162 @@ Enables the capture_input command without any pre-configured scope.
 <td>
 
 Denies the capture_input command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-draw-export`
+
+</td>
+<td>
+
+Enables the draw_export command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-draw-export`
+
+</td>
+<td>
+
+Denies the draw_export command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-draw-finish`
+
+</td>
+<td>
+
+Enables the draw_finish command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-draw-finish`
+
+</td>
+<td>
+
+Denies the draw_finish command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-draw-island`
+
+</td>
+<td>
+
+Enables the draw_island command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-draw-island`
+
+</td>
+<td>
+
+Denies the draw_island command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-draw-pen-metrics`
+
+</td>
+<td>
+
+Enables the draw_pen_metrics command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-draw-pen-metrics`
+
+</td>
+<td>
+
+Denies the draw_pen_metrics command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-draw-ready`
+
+</td>
+<td>
+
+Enables the draw_ready command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-draw-ready`
+
+</td>
+<td>
+
+Denies the draw_ready command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-draw-restore`
+
+</td>
+<td>
+
+Enables the draw_restore command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-draw-restore`
+
+</td>
+<td>
+
+Denies the draw_restore command without any pre-configured scope.
 
 </td>
 </tr>
