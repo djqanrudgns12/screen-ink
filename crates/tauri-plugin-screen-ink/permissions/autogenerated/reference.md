@@ -17,6 +17,9 @@ screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있
 - `allow-reset-all`
 - `allow-overlay-ready`
 - `allow-capture-input`
+- `allow-pin-info`
+- `allow-pin-action`
+- `allow-pin-zoom`
 
 ## Permission Table
 
@@ -127,6 +130,84 @@ Enables the overlay_ready command without any pre-configured scope.
 <td>
 
 Denies the overlay_ready command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-pin-action`
+
+</td>
+<td>
+
+Enables the pin_action command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-pin-action`
+
+</td>
+<td>
+
+Denies the pin_action command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-pin-info`
+
+</td>
+<td>
+
+Enables the pin_info command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-pin-info`
+
+</td>
+<td>
+
+Denies the pin_info command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-pin-zoom`
+
+</td>
+<td>
+
+Enables the pin_zoom command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-pin-zoom`
+
+</td>
+<td>
+
+Denies the pin_zoom command without any pre-configured scope.
 
 </td>
 </tr>

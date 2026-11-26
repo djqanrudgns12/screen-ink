@@ -46,6 +46,8 @@
   let hotkeysEnabled = $derived(state?.hotkeysEnabled ?? true);
   let recording = $derived(Boolean(state?.recording?.active));
   let pinnedCount = $derived(state?.pinnedCount ?? 0);
+  // 캡처 핀(R-CAP-29)
+  let pinCount = $derived(state?.pins ?? 0);
   let conflictCount = $derived(state?.conflicts?.count ?? 0);
   let settingsCombo = $derived(platform === 'macos' ? 'Cmd+,' : 'Ctrl+,');
 
@@ -162,6 +164,17 @@
           모두 풀기
         </button>
       {/if}
+    </div>
+  {/if}
+
+  {#if pinCount > 0}
+    <div class="ink-pin-row">
+      <MenuRow icon="pin" label="고정한 캡처" combo="" {platform} onclick={() => runAction('pins.closeAll')}>
+        {#snippet trailing()}
+          <span class="ink-pin-count ink-mono">{pinCount}</span>
+        {/snippet}
+      </MenuRow>
+      <button type="button" class="ink-pin-release ink-focus" onclick={() => runAction('pins.closeAll')}>모두 닫기</button>
     </div>
   {/if}
 

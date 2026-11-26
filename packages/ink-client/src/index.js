@@ -28,7 +28,8 @@
  * @property {Platform} platform
  * @property {ThemePref} theme
  * @property {boolean} hotkeysEnabled
- * @property {number} pinnedCount
+ * @property {number} pinnedCount   창 항상 위 고정(R-TOP) 개수
+ * @property {number} [pins]        캡처 핀(R-CAP-29) 개수
  * @property {{active: boolean, elapsedMs: number}} recording
  * @property {Record<string, any>} settings   설정 값(05 §1 표의 키)
  * @property {ShortcutRow[]} shortcuts
@@ -131,6 +132,9 @@
  * @property {(path: string) => Promise<{ok: boolean, error?: string, state: InkState}>} applyImport  시트 [가져오기] — 되돌리기 1건
  * @property {() => Promise<InkState>} resetAll   모두 처음으로(확인 시트 뒤)
  * @property {(session: number, ui?: {loadMs?: number, paintMs?: number}) => Promise<void>} overlayReady  오버레이가 정지 이미지를 **그린 뒤**(load + 다음 프레임) — 진입 계측 M1. ui = 세션 알림→load, load→그림(선택)
+ * @property {(id: number) => Promise<{w: number, h: number, url: string, zoom: number} | null>} pinInfo  캡처 핀(R-CAP-29) 창이 처음 묻는 것
+ * @property {(id: number, action: 'close'|'closeAll'|'copy'|'save'|'drag'|'menu') => Promise<void>} pinAction  핀 동작(drag = 끌어 옮기기 시작, menu = 오른쪽 클릭 메뉴)
+ * @property {(id: number, dy: -1|1, fx: number, fy: number) => Promise<number | null>} pinZoom  휠 한 칸 확대(-1)·축소(1), 커서 자리 = 창 안 비율 → 새 배율(%)
  * @property {(input: CaptureInput) => Promise<void>} captureInput  오버레이 입력 전달(포인터 이동은 rAF로 묶어 프레임당 한 번). 결과는 'capture' 이벤트로
  * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView}) => void) => () => void} subscribe
  */

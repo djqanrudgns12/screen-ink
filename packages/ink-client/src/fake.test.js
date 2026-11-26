@@ -99,6 +99,22 @@ test('선택 툴바 단추(command)는 키와 같은 결과', async () => {
   assert.equal((await c.getState()).mode.mode, 'idle');
 });
 
+test('툴바 [고정]은 핀을 만들고 트레이 개수가 늘고, 모두 닫기로 0', async () => {
+  const c = createFakeClient();
+  await c.run('capture.region');
+  await c.captureInput({ type: 'move', x: 800, y: 500 });
+  await c.captureInput({ type: 'command', name: 'pin' });
+  let s = await c.getState();
+  assert.equal(s.mode.mode, 'idle');
+  assert.equal(s.pins, 1);
+  const info = await c.pinInfo(1);
+  assert.equal(info.w, 720);
+  assert.equal(await c.pinZoom(1, -1, 0.5, 0.5), 125);
+  await c.run('pins.closeAll');
+  s = await c.getState();
+  assert.equal(s.pins, 0);
+});
+
 test('키캡은 Windows에서 Shift, 맥에서 기호', () => {
   assert.deepEqual(keycaps('Alt+Shift+D'), ['Alt', 'Shift', 'D']);
   assert.deepEqual(keycaps('Option+Shift+1', 'macos'), ['⌥', '⇧', '1']);

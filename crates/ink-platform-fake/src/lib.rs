@@ -313,6 +313,34 @@ impl ink_app::FileSink for FakeDesk {
     }
 }
 
+/// 핀 창 흉내: 연 핀(id → 자리·크기)과 닫은 id를 기록한다.
+#[derive(Debug, Default)]
+pub struct PinBoard {
+    pub open: BTreeMap<u64, (PhysRect, u32, u32)>,
+    pub closed: Vec<u64>,
+    pub fail_open: bool,
+}
+
+#[derive(Clone, Default)]
+pub struct FakePins(pub Arc<Mutex<PinBoard>>);
+
+impl ink_app::PinHost for FakePins {
+    fn open(&mut self, id: u64, rect: PhysRect, w: u32, h: u32, _bgra: Arc<Vec<u8>>) -> Result<(), String> {
+        let mut b = self.0.lock().unwrap();
+        if b.fail_open {
+            return Err("no window".into());
+        }
+        b.open.insert(id, (rect, w, h));
+        Ok(())
+    }
+
+    fn close(&mut self, id: u64) {
+        let mut b = self.0.lock().unwrap();
+        b.open.remove(&id);
+        b.closed.push(id);
+    }
+}
+
 /// 고정 시계(2026-03-04 09:05:07).
 #[derive(Clone, Default)]
 pub struct FixedClock;
@@ -338,6 +366,7 @@ pub struct FakeWorld {
     pub overlay: FakeOverlay,
     pub elements: FakeElements,
     pub desk: FakeDesk,
+    pub pins: FakePins,
     /// 진짜 V 엔진(그 자리에서 전처리)을 쓸지
     pub vision: bool,
 }
@@ -362,6 +391,7 @@ impl FakeWorld {
             clipboard: Box::new(self.desk.clone()),
             files: Box::new(self.desk.clone()),
             clock: Box::new(FixedClock),
+            pins: Box::new(self.pins.clone()),
         }
     }
 

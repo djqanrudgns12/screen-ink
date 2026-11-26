@@ -229,6 +229,7 @@ impl InkService {
             theme: self.settings.str("general.theme").to_string(),
             hotkeys_enabled: self.hotkeys_enabled,
             pinned_count: self.pinned_count,
+            pins: self.cap.pins.len() as u32,
             recording: Recording::default(),
             settings: self.settings.values.clone(),
             conflicts: ConflictSummary { count: bad.len(), app, combos: bad.iter().map(|r| r.combo.clone()).collect() },
@@ -981,7 +982,7 @@ impl InkService {
         self.ports.store.save_section("settings", &self.settings.to_data()).map_err(|e| Failure { reason: e.to_string(), owner: None })
     }
 
-    fn emit_state(&self) {
+    pub(crate) fn emit_state(&self) {
         self.ports.notifier.state(&self.state());
     }
 

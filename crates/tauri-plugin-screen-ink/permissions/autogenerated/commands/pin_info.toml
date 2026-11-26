@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-pin-info"
+description = "Enables the pin_info command without any pre-configured scope."
+commands.allow = ["pin_info"]
+
+[[permission]]
+identifier = "deny-pin-info"
+description = "Denies the pin_info command without any pre-configured scope."
+commands.deny = ["pin_info"]

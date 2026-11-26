@@ -15,6 +15,8 @@ export const TOOLBAR_EDGE = 8;
  */
 export const TOOLBAR_ACTIONS = Object.freeze([
   { id: 'cancel', icon: 'close', label: '취소', slot: 'c-cancel', command: 'cancel' },
+  // 캡처 핀(R-CAP-29) — 키 칸 없음(툴팁 = 이름 + 한 줄 설명)
+  { id: 'pin', icon: 'pin', label: '화면에 고정', slot: '', command: 'pin' },
   { id: 'save', icon: 'save', label: '저장', slot: 'c-save', command: 'save' },
   { id: 'copy', icon: 'copy', label: '복사', slot: 'c-copy', command: 'copy', primary: true },
 ]);

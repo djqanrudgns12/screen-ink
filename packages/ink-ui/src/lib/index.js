@@ -33,6 +33,7 @@ export { default as FirstRunSheet } from './screens/FirstRunSheet.svelte';
 export { default as CheatSheet } from './screens/CheatSheet.svelte';
 export { default as IslandHost } from './screens/IslandHost.svelte';
 export { default as CaptureOverlay } from './screens/CaptureOverlay.svelte';
+export { default as PinView } from './screens/PinView.svelte';
 
 // 순수 모델
 export { eventToCombo, isEscapeOnly, isClearOnly } from './models/keyCombo.js';

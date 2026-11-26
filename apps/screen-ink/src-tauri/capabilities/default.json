@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "screen-ink 창 세 개: 트레이 팝오버 · 설정 · 섬",
-  "windows": ["ink-popover", "ink-settings", "ink-island", "ink-overlay-*"],
+  "description": "screen-ink 창: 트레이 팝오버 · 설정 · 섬 · 오버레이 · 캡처 핀",
+  "windows": ["ink-popover", "ink-settings", "ink-island", "ink-overlay-*", "ink-pin-*"],
   "permissions": [
     "core:default",
     "core:window:allow-hide",

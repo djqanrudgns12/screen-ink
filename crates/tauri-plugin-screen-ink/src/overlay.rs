@@ -94,6 +94,16 @@ pub fn serve<R: Runtime>(ctx: UriSchemeContext<'_, R>, req: Request<Vec<u8>>) ->
         let Some(bmp) = ctx.app_handle().try_state::<crate::adapters::ThumbStore>().and_then(|t| t.bmp(id)) else { return not_found() };
         return Response::builder().header("Content-Type", "image/bmp").header("Cache-Control", "no-store").header("Access-Control-Allow-Origin", "*").body(bmp).unwrap_or_else(|_| not_found());
     }
+    if first == Some("pin") {
+        let Some(id) = parts.next().and_then(|s| s.parse::<u64>().ok()) else { return not_found() };
+        let Some(p) = ctx.app_handle().try_state::<crate::pins::PinStore>().and_then(|s| s.get(id)) else { return not_found() };
+        return Response::builder()
+            .header("Content-Type", "image/bmp")
+            .header("Cache-Control", "no-store")
+            .header("Access-Control-Allow-Origin", "*")
+            .body(ink_domain::bmp::encode(p.w, p.h, &p.bgra))
+            .unwrap_or_else(|_| not_found());
+    }
     let (Some("frame"), Some(s), Some(m)) = (first, parts.next(), parts.next()) else { return not_found() };
     let (Ok(session), Ok(monitor)) = (s.parse::<u64>(), m.parse::<u32>()) else { return not_found() };
     let Some(store) = ctx.app_handle().try_state::<FrameStore>() else { return not_found() };

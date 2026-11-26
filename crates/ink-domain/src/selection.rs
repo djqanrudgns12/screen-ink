@@ -47,6 +47,8 @@ pub enum Command {
     Save,
     QuickSave,
     Cancel,
+    /// 캡처 핀(R-CAP-29)
+    Pin,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -70,6 +72,8 @@ pub enum Effect {
     Redraw,
     Copy(PhysRect),
     Save { rect: PhysRect, quick: bool },
+    /// 그 범위를 화면에 고정(캡처 핀)
+    Pin(PhysRect),
     Cancel,
     /// WASD — OS 커서를 1 px 옮긴다(어댑터)
     SetCursor(PhysPoint),
@@ -346,6 +350,7 @@ impl Selector {
                 Command::Copy => self.rect().map_or(Effect::None, Effect::Copy),
                 Command::Save => self.rect().map_or(Effect::None, |rect| Effect::Save { rect, quick: false }),
                 Command::QuickSave => self.rect().map_or(Effect::None, |rect| Effect::Save { rect, quick: true }),
+                Command::Pin => self.rect().map_or(Effect::None, Effect::Pin),
             },
         }
     }
@@ -742,6 +747,7 @@ mod tests {
         assert_eq!(s.handle(Input::Command(Command::Copy), &mut c), Effect::Copy(r));
         assert_eq!(s.handle(Input::Command(Command::Save), &mut c), Effect::Save { rect: r, quick: false });
         assert_eq!(s.handle(Input::Command(Command::QuickSave), &mut c), Effect::Save { rect: r, quick: true });
+        assert_eq!(s.handle(Input::Command(Command::Pin), &mut c), Effect::Pin(r));
         assert_eq!(s.handle(Input::Command(Command::Cancel), &mut c), Effect::Cancel);
     }
 

@@ -281,6 +281,9 @@ $env:CARGO_HTTP_CHECK_REVOKE='false'
 - **숨은 "인식 근거 보기"**: 설정 파일 `capture.evidence: true`면 사슬 마디마다 근거 색·점수. AX(M9)를 붙인 뒤 맥 요소가 초록(A)으로 보이는지 확인하는 데 쓴다.
 - **느린 앱 강등 문턱 150 → 500 ms**(R-CAP-15). AX 색인 시간이 500 ms를 넘는 앱만 창 단위로 떨어진다.
 - **근거 준비 시점**: UIA·AX 미리 깨우기와 V 전처리는 이제 정지 화면을 띄우기 **전**에 시작한다(`warm_evidence`). 맥 진입 시간(M7)이 그대로인지 `sh bench/m1-overlay-mac.sh 30`으로 확인한다.
+- **캡처 핀(R-CAP-29)**: 툴바 [고정] → `ink-pin-<id>` 창(Tauri, 테두리 없음·투명·늘 위·작업 표시줄 없음), 그림은 `ink://…/pin/<id>`. 휠 확대는 Rust `pins::zoom`(창 크기·자리), 끌기 = `start_dragging`, 오른쪽 클릭 = Tauri 네이티브 메뉴(`pin:<동작>:<id>`).
+  - 코드: `crates/tauri-plugin-screen-ink/src/pins.rs`, `packages/ink-ui/src/lib/screens/PinView.svelte`, 서비스 `pin_*`(capture.rs), 순수 계산 `ink-domain::pin`.
+  - 맥 확인: 자리는 Tauri 물리 좌표(`set_position`·`set_size`)라 혼합 배율에서 어긋날 수 있다 → 오버레이처럼 `window::place`로 바꿀지 판단. 늘 위 층이 다른 앱 위·전체 화면 앱 위에서 보이는지, 끌기·메뉴가 되는지.
 - **진입 계측 한 줄**: 모드가 끝날 때 `selection probe: V first … A first … moves …` 로그가 남는다(`SCREEN_INK_LOG=debug` 필요 없음, info).
 
 ### 3.0 오늘(2026-11-26) 학교에서 할 일 — 순서대로

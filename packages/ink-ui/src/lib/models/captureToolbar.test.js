@@ -53,7 +53,8 @@ test('툴팁은 지금 설정된 키를 읽기 표기로', () => {
   assert.equal(toolbarTooltip(copy, { 'c-copy': '' }), '복사', '키를 비웠으면 이름만');
 });
 
-test('단추 순서: 취소 · 저장 · 복사(주황)', () => {
-  assert.deepEqual(TOOLBAR_ACTIONS.map((a) => a.id), ['cancel', 'save', 'copy']);
+test('단추 순서: 취소 · 고정 · 저장 · 복사(주황)', () => {
+  assert.deepEqual(TOOLBAR_ACTIONS.map((a) => a.id), ['cancel', 'pin', 'save', 'copy']);
+  assert.equal(toolbarTooltip(TOOLBAR_ACTIONS[1], {}), '화면에 고정', '키 없는 단추는 이름만');
   assert.equal(TOOLBAR_ACTIONS.filter((a) => a.primary).map((a) => a.id).join(), 'copy');
 });

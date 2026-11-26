@@ -10,6 +10,7 @@
 
 mod adapters;
 mod overlay;
+mod pins;
 mod tray_art;
 
 use ink_app::{
@@ -649,6 +650,35 @@ fn capture_input<R: Runtime>(window: tauri::WebviewWindow<R>, ink: State<'_, Ink
     ink.lock().capture_input(input);
 }
 
+/// 핀 화면이 처음 묻는 것: 그림 크기·주소·배율(R-CAP-29).
+#[tauri::command]
+fn pin_info(store: State<'_, pins::PinStore>, id: u64) -> Option<pins::PinView> {
+    pins::view(&store, id)
+}
+
+/// 핀 화면 동작: close · closeAll · copy · save · drag(끌어 옮기기) · menu(오른쪽 클릭 메뉴).
+#[tauri::command]
+fn pin_action<R: Runtime>(window: tauri::WebviewWindow<R>, ink: State<'_, Ink>, id: u64, action: String) -> Result<(), String> {
+    match action.as_str() {
+        "close" => ink.lock().pin_close(id),
+        "closeAll" => {
+            ink.lock().pin_close_all();
+        }
+        "copy" => ink.lock().pin_copy(id),
+        "save" => ink.lock().pin_save(id),
+        "drag" => window.start_dragging().map_err(|e| e.to_string())?,
+        "menu" => pins::popup_menu(&window, id).map_err(|e| e.to_string())?,
+        other => return Err(format!("unknown pin action: {other}")),
+    }
+    Ok(())
+}
+
+/// 핀 휠 한 칸 확대·축소(커서 자리 `fx`·`fy` = 창 안 비율). 새 배율(%).
+#[tauri::command]
+fn pin_zoom<R: Runtime>(window: tauri::WebviewWindow<R>, store: State<'_, pins::PinStore>, id: u64, dy: i32, fx: f64, fy: f64) -> Option<u32> {
+    pins::zoom(&window, &store, id, dy, fx, fy)
+}
+
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ImportPick {
@@ -811,6 +841,13 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             let h = app.clone();
             app.run_on_main_thread(move || start_capture(&h, kind)).map_err(|e| e.to_string())?;
         }
+        "pins.closeAll" => {
+            let h = app.clone();
+            app.run_on_main_thread(move || {
+                h.state::<Ink>().lock().pin_close_all();
+            })
+            .map_err(|e| e.to_string())?;
+        }
         "capture.cancel" => {
             let h = app.clone();
             app.run_on_main_thread(move || h.state::<Ink>().lock().end_capture()).map_err(|e| e.to_string())?;
@@ -838,6 +875,22 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
     app.manage(frames.clone());
     let thumbs = adapters::ThumbStore::default();
     app.manage(thumbs.clone());
+    let pin_store = pins::PinStore::default();
+    app.manage(pin_store.clone());
+    // 핀 오른쪽 클릭 메뉴(pin:<동작>:<id>) → 서비스
+    app.on_menu_event(|app, event| {
+        let Some((action, id)) = pins::parse_menu_id(event.id().as_ref()) else { return };
+        let mut ink = app.state::<Ink>().inner().lock();
+        match action {
+            "copy" => ink.pin_copy(id),
+            "save" => ink.pin_save(id),
+            "close" => ink.pin_close(id),
+            "closeAll" => {
+                ink.pin_close_all();
+            }
+            _ => {}
+        }
+    });
 
     let exe_dir = std::env::current_exe()?.parent().map(|p| p.to_path_buf()).unwrap_or_default();
     let (dir, portable) = ink_store::resolve_dir(&exe_dir, &app.path().config_dir()?.join("screen-ink"));
@@ -856,6 +909,7 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         clipboard: Box::new(adapters::TauriClipboard { app: app.clone() }),
         files: Box::new(adapters::TauriFiles { app: app.clone() }),
         clock: Box::new(adapters::SystemClock),
+        pins: Box::new(pins::TauriPinHost::new(app.clone(), pin_store)),
     };
     let mut service = InkService::new(ports, Platform::current(), app.package_info().version.to_string());
     // 개발용 사람 정답 도구: 확정할 때마다 인식 시험 사례를 쓴다(시험 문서 화면에서만, 08 §5.2)
@@ -999,7 +1053,10 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             apply_import,
             reset_all,
             overlay_ready,
-            capture_input
+            capture_input,
+            pin_info,
+            pin_action,
+            pin_zoom
         ])
         .register_uri_scheme_protocol(overlay::SCHEME, |ctx, req| overlay::serve(ctx, req))
         .setup(|app, _api| setup(app))

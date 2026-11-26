@@ -131,6 +131,24 @@ impl VisionSource for NoVision {
     fn clear(&mut self) {}
 }
 
+/// 캡처 핀(R-CAP-29): 고른 범위를 화면 위에 떠 있는 그림 창으로. 창·확대·끌기·투명도는 어댑터,
+/// 목록과 그림(복사·저장용)은 서비스가 쥔다. 그림은 Arc라 복사 없이 함께 쓴다.
+pub trait PinHost: Send {
+    /// `rect`(가상 화면 물리 px, 원래 자리·같은 크기)에 그림 창을 띄운다.
+    fn open(&mut self, id: u64, rect: ink_domain::geometry::PhysRect, w: u32, h: u32, bgra: std::sync::Arc<Vec<u8>>) -> Result<(), String>;
+    fn close(&mut self, id: u64);
+}
+
+/// 핀 창을 못 만드는 곳(시험·미지원).
+pub struct NoPins;
+
+impl PinHost for NoPins {
+    fn open(&mut self, _id: u64, _rect: ink_domain::geometry::PhysRect, _w: u32, _h: u32, _bgra: std::sync::Arc<Vec<u8>>) -> Result<(), String> {
+        Err("pins not supported".into())
+    }
+    fn close(&mut self, _id: u64) {}
+}
+
 /// 클립보드(03 §3): 이미지는 CF_DIB + PNG, 글은 유니코드. 잠겨 있으면 어댑터가 3번 다시 해 본다(50 ms).
 pub trait Clipboard: Send {
     fn set_image(&mut self, w: u32, h: u32, bgra: &[u8]) -> Result<(), String>;
@@ -229,6 +247,7 @@ pub struct Ports {
     pub vision: Box<dyn VisionSource>,
     pub clipboard: Box<dyn Clipboard>,
     pub files: Box<dyn FileSink>,
+    pub pins: Box<dyn PinHost>,
     pub clock: Box<dyn Clock>,
 }
 

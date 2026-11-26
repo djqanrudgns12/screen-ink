@@ -53,6 +53,7 @@ impl From<CaptureInput> for Input {
             CaptureInput::Key { key, code, ctrl, shift, alt, meta } => Input::Key(Key { key, code, ctrl, shift, alt, meta }),
             CaptureInput::Command { name } => match name.as_str() {
                 "copy" => Input::Command(Command::Copy),
+                "pin" => Input::Command(Command::Pin),
                 "save" => Input::Command(Command::Save),
                 "quickSave" => Input::Command(Command::QuickSave),
                 // 모르는 단추는 취소로 바꾸지 않는다 — 아무 일도 없게(빈 키)
@@ -95,6 +96,9 @@ pub struct CaptureState {
     pub(crate) raw: Vec<RawWindow>,
     /// 진입 계측(08 §4.7): 첫 근거 도착·커서 이동 질의 시간 — 모드가 끝날 때 한 줄
     pub(crate) probe: EntryProbe,
+    /// 캡처 핀(R-CAP-29): id → 그림(복사·저장용). 앱을 끄면 사라진다.
+    pub(crate) pins: std::collections::BTreeMap<u64, LastCapture>,
+    pub(crate) pin_seq: u64,
 }
 
 /// 한 번의 고르기 동안 잰 것(08 §4.7 "첫 강조 ≤ 진입 + 30 ms", "커서 이동 질의 ≤ 5 ms").
@@ -384,6 +388,7 @@ impl InkService {
             Effect::Cancel => self.end_capture(),
             Effect::Copy(rect) => self.finish(rect, false, false),
             Effect::Save { rect, quick } => self.finish(rect, true, quick),
+            Effect::Pin(rect) => self.pin_rect(rect),
         }
     }
 
@@ -451,35 +456,9 @@ impl InkService {
         if self.cap.case_dir.is_some() {
             self.write_case(rect);
         }
-        let Some(snap) = self.snapshot.as_ref() else { return };
-        let mode_name = self.cap.selector.as_ref().map(|s| s.mode_name()).unwrap_or("drag");
-        let refs: Vec<FrameRef> = self
-            .cap
-            .frames
-            .iter()
-            .filter_map(|f| snap.layout.monitors.iter().find(|m| m.id == f.monitor_id).map(|m| FrameRef { bounds: m.bounds, w: f.width, h: f.height, bgra: &f.bgra }))
-            .collect();
-        let (w, h, mut px) = image::crop(&refs, rect);
-        // 커서 포함 = 설정("커서도 찍기") XOR 이번에 ` 키
-        let toggled = self.cap.selector.as_ref().is_some_and(|s| s.cursor_included());
-        if self.settings.bool("capture.cursor") != toggled {
-            if let Some(c) = self.cap.cursor.as_ref() {
-                image::composite_cursor(&mut px, w, h, (rect.x, rect.y), c);
-            }
-        }
-        let center = PhysPoint { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
-        let app = snap.window_at(center, true).map(|w| w.exe.trim_end_matches(".exe").to_string()).filter(|s| !s.is_empty());
+        let Some((w, h, px, app)) = self.render_rect(rect) else { return };
+        self.remember_range(rect);
         let hex = image::uniform_color(w, h, &px).map(|c| format!("#{:02X}{:02X}{:02X}", c[0], c[1], c[2]));
-        let layout = snap.layout.fingerprint();
-
-        // 기록(사각형만)
-        let max = self.settings.get("capture.historyMax").and_then(|v| v.as_u64()).unwrap_or(20) as usize;
-        self.cap.ranges.push(HistoryEntry { rect, layout, mode: mode_name.into(), at: self.ports.clock.unix() }, max);
-        if !self.readonly {
-            if let Ok(v) = serde_json::to_value(&self.cap.ranges) {
-                let _ = self.ports.store.save_section("history", &v);
-            }
-        }
 
         let (tw, th, tpx) = image::thumbnail(w, h, &px, 160, 96);
         let thumb = self.ports.overlay.thumbnail(tw, th, tpx);
@@ -523,6 +502,110 @@ impl InkService {
         self.island(ev);
     }
 
+    /// 확정한 범위의 결과 그림(정지 이미지 자르기 + 커서 합성)과 그 자리 앱 이름(파일 이름 {app}).
+    fn render_rect(&self, rect: PhysRect) -> Option<(u32, u32, Vec<u8>, Option<String>)> {
+        let snap = self.snapshot.as_ref()?;
+        let refs: Vec<FrameRef> = self
+            .cap
+            .frames
+            .iter()
+            .filter_map(|f| snap.layout.monitors.iter().find(|m| m.id == f.monitor_id).map(|m| FrameRef { bounds: m.bounds, w: f.width, h: f.height, bgra: &f.bgra }))
+            .collect();
+        let (w, h, mut px) = image::crop(&refs, rect);
+        // 커서 포함 = 설정("커서도 찍기") XOR 이번에 ` 키
+        let toggled = self.cap.selector.as_ref().is_some_and(|s| s.cursor_included());
+        if self.settings.bool("capture.cursor") != toggled {
+            if let Some(c) = self.cap.cursor.as_ref() {
+                image::composite_cursor(&mut px, w, h, (rect.x, rect.y), c);
+            }
+        }
+        let center = PhysPoint { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
+        let app = snap.window_at(center, true).map(|w| w.exe.trim_end_matches(".exe").to_string()).filter(|s| !s.is_empty());
+        Some((w, h, px, app))
+    }
+
+    /// 범위 기록(사각형만 — R·쉼표·마침표로 다시 고르기).
+    fn remember_range(&mut self, rect: PhysRect) {
+        let Some(snap) = self.snapshot.as_ref() else { return };
+        let mode_name = self.cap.selector.as_ref().map(|s| s.mode_name()).unwrap_or("drag");
+        let layout = snap.layout.fingerprint();
+        let max = self.settings.get("capture.historyMax").and_then(|v| v.as_u64()).unwrap_or(20) as usize;
+        self.cap.ranges.push(HistoryEntry { rect, layout, mode: mode_name.into(), at: self.ports.clock.unix() }, max);
+        if !self.readonly {
+            if let Ok(v) = serde_json::to_value(&self.cap.ranges) {
+                let _ = self.ports.store.save_section("history", &v);
+            }
+        }
+    }
+
+    /// 툴바 [고정](R-CAP-29): 고른 범위를 원래 자리에 떠 있는 그림 창으로. 모드는 끝난다.
+    fn pin_rect(&mut self, rect: PhysRect) {
+        let Some((w, h, px, app)) = self.render_rect(rect) else { return };
+        self.remember_range(rect);
+        self.end_capture();
+        self.cap.pin_seq += 1;
+        let id = self.cap.pin_seq;
+        let bgra = Arc::new(px);
+        match self.ports.pins.open(id, rect, w, h, bgra.clone()) {
+            Ok(()) => {
+                self.cap.pins.insert(id, LastCapture { w, h, bgra, app, hex: None });
+                self.emit_state();
+            }
+            Err(e) => {
+                log::warn!("pin open failed: {e}");
+                self.island(IslandEvent::new(IslandKind::Problem, "화면에 고정하지 못했어요"));
+            }
+        }
+    }
+
+    /// 핀 닫기(더블클릭·Esc·메뉴).
+    pub fn pin_close(&mut self, id: u64) {
+        if self.cap.pins.remove(&id).is_some() {
+            self.ports.pins.close(id);
+            self.emit_state();
+        }
+    }
+
+    /// 핀 모두 닫기(메뉴·트레이). 닫은 개수.
+    pub fn pin_close_all(&mut self) -> usize {
+        let ids: Vec<u64> = self.cap.pins.keys().copied().collect();
+        for id in &ids {
+            self.ports.pins.close(*id);
+        }
+        self.cap.pins.clear();
+        if !ids.is_empty() {
+            self.emit_state();
+        }
+        ids.len()
+    }
+
+    /// 핀 메뉴 [복사].
+    pub fn pin_copy(&mut self, id: u64) {
+        let Some(p) = self.cap.pins.get(&id).cloned() else { return };
+        match self.ports.clipboard.set_image(p.w, p.h, &p.bgra) {
+            Ok(()) => {
+                let mut ev = IslandEvent::new(IslandKind::Result, "복사했어요").variant("result");
+                ev.value = Some(format!("{}×{}", p.w, p.h));
+                self.island(ev);
+            }
+            Err(e) => {
+                log::warn!("clipboard: {e}");
+                self.island(IslandEvent::new(IslandKind::Problem, "클립보드를 쓸 수 없어요"));
+            }
+        }
+    }
+
+    /// 핀 메뉴 [저장].
+    pub fn pin_save(&mut self, id: u64) {
+        let Some(p) = self.cap.pins.get(&id).cloned() else { return };
+        let ev = self.save_image(&p);
+        self.island(ev);
+    }
+
+    pub fn pin_count(&self) -> usize {
+        self.cap.pins.len()
+    }
+
     /// 섬 [저장] — 마지막 결과를 저장 폴더에.
     pub fn save_last(&mut self) {
         if let Some(ev) = self.save_last_inner() {
@@ -534,6 +617,11 @@ impl InkService {
 
     fn save_last_inner(&mut self) -> Option<IslandEvent> {
         let last = self.cap.last.clone()?;
+        Some(self.save_image(&last))
+    }
+
+    /// 그림 하나를 저장 폴더에(이름 규칙·오늘 순번) → 결과 섬.
+    fn save_image(&mut self, last: &LastCapture) -> IslandEvent {
         let mut t = self.ports.clock.local();
         let day = (t.year, t.month, t.day);
         if self.cap.save_day != day {
@@ -552,11 +640,11 @@ impl InkService {
                     .variant("result")
                     .button("폴더 열기", "folder.open", None);
                 ev.detail = Some(f.name);
-                Some(ev)
+                ev
             }
             Err(e) => {
                 log::warn!("save failed: {e}");
-                Some(IslandEvent::new(IslandKind::Problem, "저장하지 못했어요"))
+                IslandEvent::new(IslandKind::Problem, "저장하지 못했어요")
             }
         }
     }

@@ -12,6 +12,9 @@ const COMMANDS: &[&str] = &[
     "reset_all",
     "overlay_ready",
     "capture_input",
+    "pin_info",
+    "pin_action",
+    "pin_zoom",
 ];
 
 fn main() {

@@ -343,6 +343,42 @@
           "markdownDescription": "Denies the overlay_ready command without any pre-configured scope."
         },
         {
+          "description": "Enables the pin_action command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-pin-action",
+          "markdownDescription": "Enables the pin_action command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the pin_action command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-pin-action",
+          "markdownDescription": "Denies the pin_action command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the pin_info command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-pin-info",
+          "markdownDescription": "Enables the pin_info command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the pin_info command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-pin-info",
+          "markdownDescription": "Denies the pin_info command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the pin_zoom command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-pin-zoom",
+          "markdownDescription": "Enables the pin_zoom command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the pin_zoom command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-pin-zoom",
+          "markdownDescription": "Denies the pin_zoom command without any pre-configured scope."
+        },
+        {
           "description": "Enables the preview_import command without any pre-configured scope.",
           "type": "string",
           "const": "allow-preview-import",
@@ -451,10 +487,10 @@
           "markdownDescription": "Denies the update_setting command without any pre-configured scope."
         },
         {
-          "description": "screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있게 한다.\n#### This default permission set includes:\n\n- `allow-get-state`\n- `allow-update-setting`\n- `allow-preview-shortcut`\n- `allow-set-shortcut`\n- `allow-reset-shortcut-group`\n- `allow-undo`\n- `allow-set-hotkeys-enabled`\n- `allow-run`\n- `allow-preview-import`\n- `allow-apply-import`\n- `allow-reset-all`\n- `allow-overlay-ready`\n- `allow-capture-input`",
+          "description": "screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있게 한다.\n#### This default permission set includes:\n\n- `allow-get-state`\n- `allow-update-setting`\n- `allow-preview-shortcut`\n- `allow-set-shortcut`\n- `allow-reset-shortcut-group`\n- `allow-undo`\n- `allow-set-hotkeys-enabled`\n- `allow-run`\n- `allow-preview-import`\n- `allow-apply-import`\n- `allow-reset-all`\n- `allow-overlay-ready`\n- `allow-capture-input`\n- `allow-pin-info`\n- `allow-pin-action`\n- `allow-pin-zoom`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있게 한다.\n#### This default permission set includes:\n\n- `allow-get-state`\n- `allow-update-setting`\n- `allow-preview-shortcut`\n- `allow-set-shortcut`\n- `allow-reset-shortcut-group`\n- `allow-undo`\n- `allow-set-hotkeys-enabled`\n- `allow-run`\n- `allow-preview-import`\n- `allow-apply-import`\n- `allow-reset-all`\n- `allow-overlay-ready`\n- `allow-capture-input`"
+          "markdownDescription": "screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있게 한다.\n#### This default permission set includes:\n\n- `allow-get-state`\n- `allow-update-setting`\n- `allow-preview-shortcut`\n- `allow-set-shortcut`\n- `allow-reset-shortcut-group`\n- `allow-undo`\n- `allow-set-hotkeys-enabled`\n- `allow-run`\n- `allow-preview-import`\n- `allow-apply-import`\n- `allow-reset-all`\n- `allow-overlay-ready`\n- `allow-capture-input`\n- `allow-pin-info`\n- `allow-pin-action`\n- `allow-pin-zoom`"
         }
       ]
     }

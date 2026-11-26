@@ -32,6 +32,9 @@ const CAPTURE_ACTION = { 'capture.region': 'region', 'capture.window': 'window',
 export function createFakeClient({ platform = 'windows', snipasteRunning = true, frameUrl = undefined } = {}) {
   const combos = Object.fromEntries(Object.entries(defaults.slots).map(([id, v]) => [id, (platform === 'macos' ? v.mac : v.win) || '']));
   const settings = { ...DEFAULT_SETTINGS };
+  /** 캡처 핀 흉내: id → {w, h, zoom} */
+  const pins = new Map();
+  let pinSeq = 0;
   const history = [];
   const subs = new Set();
   let hotkeysEnabled = true;
@@ -57,7 +60,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     const bad = r.filter((x) => x.status === 'conflict' && x.scope === 'global');
     const owners = [...new Set(bad.map((x) => x.owner))];
     return {
-      platform, theme: settings['general.theme'], hotkeysEnabled, pinnedCount: 2, recording: { active: false, elapsedMs: 0 },
+      platform, theme: settings['general.theme'], hotkeysEnabled, pinnedCount: 2, pins: pins.size, recording: { active: false, elapsedMs: 0 },
       settings: { ...settings }, shortcuts: r, version: '0.1.0',
       conflicts: { count: bad.length, app: owners.length === 1 && owners[0] !== 'screen-ink' ? owners[0] : undefined, combos: bad.map((x) => x.combo) },
       readonly: false,
@@ -169,6 +172,14 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       } else if (input.type === 'key' && input.key === '?') {
         s.help = !s.help;
       }
+      if (input.type === 'command' && input.name === 'pin') {
+        const r = s.rect ?? chainAt(s.p)[s.level].r;
+        await this.run('capture.cancel');
+        pinSeq += 1;
+        pins.set(pinSeq, { w: r.w, h: r.h, zoom: 100 });
+        changed();
+        return;
+      }
       if (input.type === 'command' && (input.name === 'save' || input.name === 'quickSave')) {
         const r = s.rect ?? chainAt(s.p)[s.level].r;
         await this.run('capture.cancel');
@@ -194,12 +205,31 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         },
       });
     },
+    async pinInfo(id) {
+      const p = pins.get(id) ?? (id === 0 ? { w: 718, h: 240, zoom: 100 } : null);
+      return p ? { ...p, url: frameUrl } : null;
+    },
+    async pinAction(id, action) {
+      if (action === 'close') pins.delete(id);
+      else if (action === 'closeAll') pins.clear();
+      else if (action === 'copy') island({ kind: 'result', variant: 'result', text: '복사했어요' });
+      else if (action === 'save') island({ kind: 'result', variant: 'result', text: '저장했어요', button: { label: '폴더 열기', action: 'folder.open' } });
+      changed();
+    },
+    async pinZoom(id, dy) {
+      const p = pins.get(id) ?? { zoom: 100 };
+      const levels = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400];
+      const i = levels.indexOf(p.zoom);
+      p.zoom = levels[Math.max(0, Math.min(levels.length - 1, i - Math.sign(dy)))];
+      return p.zoom;
+    },
     async overlayReady(session) {
       if (mode.mode === 'capture' && mode.session === session) readyLog.push(session);
     },
     /** 시험용: overlayReady가 받아들인 세션들 */
     get readyLog() { return [...readyLog]; },
     async run(action) {
+      if (action === 'pins.closeAll') { pins.clear(); changed(); return; }
       if (CAPTURE_ACTION[action]) {
         const kind = CAPTURE_ACTION[action];
         sessionSeq += 1;

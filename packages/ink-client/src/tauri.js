@@ -20,6 +20,9 @@ export function createTauriClient() {
     resetAll: () => cmd('reset_all'),
     overlayReady: (session, ui) => cmd('overlay_ready', { session, loadMs: ui?.loadMs, paintMs: ui?.paintMs }),
     captureInput: (input) => cmd('capture_input', { input }),
+    pinInfo: (id) => cmd('pin_info', { id }),
+    pinAction: (id, action) => cmd('pin_action', { id, action }),
+    pinZoom: (id, dy, fx, fy) => cmd('pin_zoom', { id, dy, fx, fy }),
     subscribe(handler) {
       const offs = [
         listen('screen-ink://state', (e) => handler({ type: 'state', state: e.payload })),

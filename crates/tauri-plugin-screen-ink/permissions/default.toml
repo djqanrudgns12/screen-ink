@@ -16,4 +16,7 @@ permissions = [
   "allow-reset-all",
   "allow-overlay-ready",
   "allow-capture-input",
+  "allow-pin-info",
+  "allow-pin-action",
+  "allow-pin-zoom",
 ]

@@ -57,6 +57,8 @@ pub struct InkState {
     pub theme: String,
     pub hotkeys_enabled: bool,
     pub pinned_count: u32,
+    /// 캡처 핀 개수(R-CAP-29) — 트레이 "핀 n개 · 모두 닫기"
+    pub pins: u32,
     pub recording: Recording,
     pub settings: BTreeMap<String, Value>,
     pub shortcuts: Vec<ShortcutRow>,
