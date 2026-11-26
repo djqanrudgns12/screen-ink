@@ -11,6 +11,8 @@ pub const DOUBLE_PRESS_MS: u64 = 400;
 pub enum Mode {
     Idle,
     Capture { session: u64, kind: CaptureKind, started_ms: u64 },
+    /// 녹화 중이고 다른 모드가 없음(05 §8). 녹화는 판서·확대·캡처와 겹칠 수 있어 이 값은 "쉬는 중 + 녹화"를 뜻한다
+    Recording { started_ms: u64 },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -39,6 +41,9 @@ pub fn on_hotkey(mode: &Mode, slot: &str, now_ms: u64) -> ModeCommand {
             }
         }
         Mode::Capture { .. } => ModeCommand::Switch(k),
+        // 녹화 위에서: F3 = 녹화 끝, F1·F2 = 캡처 시작(녹화는 계속)
+        Mode::Recording { .. } if k == CaptureKind::Record => ModeCommand::End,
+        Mode::Recording { .. } => ModeCommand::Start(k),
     }
 }
 
@@ -60,5 +65,15 @@ mod tests {
         let m = Mode::Capture { session: 1, kind: CaptureKind::Window, started_ms: 1_000 };
         assert_eq!(on_hotkey(&m, "window", 1_300), ModeCommand::ActiveWindow);
         assert_eq!(on_hotkey(&m, "window", 1_500), ModeCommand::End);
+    }
+
+    #[test]
+    fn 녹화_중에는_f3가_끝_다른_캡처는_시작() {
+        let m = Mode::Recording { started_ms: 0 };
+        assert_eq!(on_hotkey(&m, "record", 100), ModeCommand::End);
+        assert_eq!(on_hotkey(&m, "region", 100), ModeCommand::Start(CaptureKind::Region));
+        assert_eq!(on_hotkey(&m, "window", 100), ModeCommand::Start(CaptureKind::Window));
+        let json = serde_json::to_value(m).unwrap();
+        assert_eq!(json, serde_json::json!({"mode": "recording", "startedMs": 0}));
     }
 }

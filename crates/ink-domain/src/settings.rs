@@ -56,6 +56,10 @@ fn fields() -> &'static [Field] {
             f("record.mic", Bool, json!(false)),
             // 빈 값 = 기본 장치. 장치가 사라지면 마이크를 끄고 알린다(05 §1)
             f("record.micDevice", Text(256), json!("")),
+            // 녹화에 커서를 넣을지(R-REC-3) · 첫 녹화 안내("판서는 영상에 함께")를 보였는지 · 지연 캡처 초(R-CAP-13)
+            f("record.cursor", Bool, json!(true)),
+            f("record.firstHintDone", Bool, json!(false)),
+            f("capture.delay", IntSet(&[3, 5, 10]), json!(3)),
             f("draw.color", Choice(&["R", "Y", "G", "O", "B", "L", "W", "K"]), json!("R")),
             f("draw.width", IntRange(1, 30), json!(4)),
             f("draw.smoothing", Choice(&["off", "light", "strong"]), json!("light")),
