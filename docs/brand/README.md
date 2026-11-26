@@ -5,20 +5,21 @@
 | 항목 | 값 | 상태 |
 |---|---|---|
 | 공식 앱 아이콘 | 최종 시안 **22번 검은 조리개** | **반영 끝**(이 문서 1장) |
-| 영문 앱 이름 | **`shookshok`** | **반영 끝**(3장) |
-| 한글 앱 이름 | **`슉쇽`** | **반영 끝**(3장) |
-| 앱 고유 ID | **`com.ssamuniverse.shookshok`** (가진 도메인 `ssamuniverse.com`을 거꾸로) | **반영 끝**(3장). 배포 뒤에는 바꾸지 않는다 |
+| 한글 앱 이름 | **`슉쇽`** — 한글로 쓸 수 있는 곳은 전부(앱 화면, 시작 메뉴·설치된 앱 목록, 한국어 문서) | **반영 끝**(3장) |
+| 영문 표기 | **`ShookShok`** — 영어로만 쓰는 곳(영어 스토어 설명·사이트 영어 부분·영문 병기) | **반영 끝**(3장) |
+| 파일·폴더 이름 | **`Shookshok`** — 실행 파일·설치 폴더·사진 폴더·설정 폴더·캡처 파일 이름 틀·내보내기 파일 | **반영 끝**(3장) |
+| 앱 고유 ID | **`com.ssamuniverse.shookshok`** (가진 도메인 `ssamuniverse.com`을 거꾸로, ID는 소문자 관례) | **반영 끝**(3장). 배포 뒤에는 바꾸지 않는다 |
 | 개발자 | **`찰떡쌤`** | **반영 끝**(2장) |
 | 라이선스 | **MIT 유지** | **반영 끝**(4장) |
 
 ## 1. 공식 앱 아이콘
 
-![공식 아이콘](official/shookshok-icon-256.png)
+![공식 아이콘](official/Shookshok-icon-256.png)
 
 - **모양:** 먹색 무광 6날 카메라 조리개 원반. 날개 사이 빈 공간이 흰 만년필 펜촉 실루엣(음각)이고, 펜촉 숨구멍에만 주황 점 하나. 캡처(조리개)와 판서(펜촉)를 한 기호로 묶었다.
 - **형태:** 원형. **원 바깥은 투명**(둥근 사각 타일 없음). 1024 캔버스에 지름 880px, 원 아래 옅은 그림자는 캔버스 안에서 끝난다.
 - **색:** 먹색·흑연 명암 + 흰 펜촉 + 주황(`#FF6A1A` 근처) 한 점. 이 밖의 색을 더하지 않는다.
-- **원본:** [`official/shookshok-icon-1024.png`](official/shookshok-icon-1024.png) (1024×1024 RGBA). 모든 규격은 이 파일 하나에서 만든다. 고치지 말고, 바꿀 때는 새 원본으로 통째로 갈아 끼운다.
+- **원본:** [`official/Shookshok-icon-1024.png`](official/Shookshok-icon-1024.png) (1024×1024 RGBA). 모든 규격은 이 파일 하나에서 만든다. 고치지 말고, 바꿀 때는 새 원본으로 통째로 갈아 끼운다.
 - **만든 과정:** 제미나이(antigravity `gemini-pro-orchestrator-neon`) 이미지 생성. 1차 01~10 → 2차 11~20(08·09 계열) → 최종 21~23(15번을 흑백·원형으로) 중 22번. 시안과 프롬프트는 [`icon-drafts/`](icon-drafts/)(최종은 [`icon-drafts/final/README.md`](icon-drafts/final/README.md)).
 
 ### 1.1 규격별 파일
@@ -34,7 +35,7 @@
 | Microsoft Store·MSIX 타일 | `icons/Square30x30Logo.png` … `Square310x310Logo.png`(9종) · `StoreLogo.png` | 30 ~ 310 · 50 |
 | 앱 안 아이콘(`AppIcon.svelte`) | `packages/ink-ui/src/lib/icons/app-icon-32.png` · `-64` · `-128` | 보이는 크기의 2배를 고른다(16→32, 24~32→64, 56~64→128) |
 | 트레이 원본 | `crates/tauri-plugin-screen-ink/assets/tray-app-32.png` | 32 (`icons/32x32.png`와 같은 파일) |
-| 문서·홍보용 | `docs/brand/official/shookshok-icon-256.png` | 256 |
+| 문서·홍보용 | `docs/brand/official/Shookshok-icon-256.png` | 256 |
 
 `tauri.conf.json`의 `bundle.icon` 목록(32 · 128 · 128@2x · icns · ico)은 그대로다. 파일만 바뀌었다.
 
@@ -87,27 +88,31 @@
 
 ## 3. 앱 이름 — 바꾼 자리(2026-11-26)
 
-이름 상수: `crates/tauri-plugin-screen-ink/src/lib.rs`의 `APP_NAME = "슉쇽"`(화면 문구), `APP_DIR = "shookshok"`(폴더·파일 이름). Rust 화면 문구는 이 둘을 쓴다.
+**표기 규칙(사용자):** 한글로 쓸 수 있는 곳은 **슉쇽**, 영어로만 쓰는 곳은 **ShookShok**, 파일·폴더 이름은 **Shookshok**, 앱 고유 ID는 소문자 `com.ssamuniverse.shookshok`.
+
+이름 상수: `crates/tauri-plugin-screen-ink/src/lib.rs`의 `APP_NAME = "슉쇽"`(화면 문구), `APP_DIR = "Shookshok"`(폴더·파일 이름). Rust 화면 문구는 이 둘을 쓴다.
 
 | 자리 | 전 | 후 |
 |---|---|---|
-| `tauri.conf.json` `productName` | `screen-ink` | `shookshok` (설치 폴더·시작 메뉴·exe 이름 `shookshok.exe`) |
+| `tauri.conf.json` `productName` | `screen-ink` | `Shookshok` — 실행 파일 `Shookshok.exe`, 설치 폴더, 설치 파일 이름, 맥 `Shookshok.app` |
 | 같은 파일 `identifier` | `kr.screenink.desktop` | `com.ssamuniverse.shookshok` |
-| `apps/screen-ink/index.html` 제목 · 로그 파일 이름 · 시작 실패 문구 | `screen-ink` | `슉쇽` · `shookshok` · `슉쇽을 시작하지 못했어요` |
+| 시작 메뉴·설치된 앱 목록 이름 | `screen-ink` | **슉쇽** — 스토어판(MSIX)은 패키지 표시 이름 `슉쇽`(MSIX 흐름이 매니페스트에 넣는다). 맥은 `Info.plist`의 `CFBundleDisplayName = 슉쇽`(Dock·Launchpad). **NSIS 설치본만 아직 `Shookshok`** — Tauri NSIS에 바로가기 이름 칸이 없어 설치 후크로 바꿔야 하고, 실제 설치로 시험한 뒤 넣는다 |
+| `apps/screen-ink/index.html` 제목 · 로그 파일 이름 · 시작 실패 문구 | `screen-ink` | `슉쇽` · `Shookshok` · `슉쇽을 시작하지 못했어요` |
 | 트레이 풍선말 · 팝오버 창 제목 · 트레이 메뉴 머리 · `aria-label` | `screen-ink`, `screen-ink 메뉴` | `슉쇽`, `슉쇽 메뉴` |
 | 설정 창 제목 · 사이드바 브랜드 · 파일 대화상자 필터 | `screen-ink 설정`, `screen-ink` | `슉쇽 설정`, `슉쇽` |
 | 설정 › 정보 | 버전 · 오픈소스 고지 | + `만든 이 찰떡쌤` · `라이선스 MIT` 줄, 맨 아래 `슉쇽 · v버전` + `© 2026 [마스코트] 찰떡쌤. MIT License.` |
 | 첫 실행 안내 | `screen-ink가 준비됐어요` | `슉쇽이 준비됐어요` + `[마스코트] Made by. 찰떡쌤` |
-| 기본 저장 폴더 | `사진\screen-ink` | `사진\shookshok` |
-| 설정 폴더 | `%APPDATA%\screen-ink` | `%APPDATA%\shookshok`. **새 폴더가 없고 옛 폴더가 있으면 시작할 때 한 번 옮긴다** |
-| 포터블 표시 파일 | `screen-ink.portable` | `shookshok.portable`. 옛 이름도 포터블로 본다 |
-| 파일 이름 기본 틀 · 이름이 비면 쓰는 이름 | `screen-ink_{yyyy}…`, `screen-ink` | `shookshok_{yyyy}…`, `shookshok` |
-| 설정 내보내기 파일 · `"app"` 칸 | `screen-ink-settings-날짜.json`, `screen-ink` | `shookshok-settings-날짜.json`, `shookshok` (가져오기는 `"app"`을 보지 않아 옛 파일도 그대로 읽힌다) |
+| 기본 저장 폴더 | `사진\screen-ink` | `사진\Shookshok` |
+| 설정 폴더 | `%APPDATA%\screen-ink` | `%APPDATA%\Shookshok`. **새 폴더가 없고 옛 폴더가 있으면 시작할 때 한 번 옮긴다**(Windows는 폴더 이름 대소문자를 가리지 않아 `shookshok`과 같은 폴더) |
+| 포터블 표시 파일 | `screen-ink.portable` | `Shookshok.portable`. 옛 이름도 포터블로 본다 |
+| 파일 이름 기본 틀 · 이름이 비면 쓰는 이름 | `screen-ink_{yyyy}…`, `screen-ink` | `Shookshok_{yyyy}…`, `Shookshok` |
+| 설정 내보내기 파일 · `"app"` 칸 | `screen-ink-settings-날짜.json`, `screen-ink` | `Shookshok-settings-날짜.json`, `shookshok`(파일 안의 식별 값이라 ID처럼 소문자. 가져오기는 이 칸을 보지 않아 옛 파일도 그대로 읽힌다) |
 | 오류 문구 | `이 파일은 screen-ink 설정이 아니에요` | `이 파일은 슉쇽 설정이 아니에요` |
-| 섬·오버레이·핀 창 제목(안 보임) | `screen-ink island` 등 | `shookshok island` 등 |
-| 안내 사이트(`site/`) | `screen-ink`, 주황 점 | `슉쇽`(한국어)·`shookshok`(영어), 앱 아이콘(`site/icon.png`, 파비콘 겸), 바닥 `슉쇽 shookshok · © 2026 찰떡쌤 · MIT License` |
-| 스토어 등록 자료 | 앱 이름 미정, `© 2026 screen-ink contributors` | 한국어 `슉쇽`·영어 `shookshok`, `© 2026 찰떡쌤. MIT License.` |
-| `LICENSE` · `README.md` 제목 | `djqanrudgns12`, `screen-ink (가칭)` | `찰떡쌤`, `슉쇽 (shookshok)` |
+| 섬·오버레이·핀 창 제목(안 보임) · 로그 문장 | `screen-ink island` 등 | `ShookShok island` 등 |
+| 안내 사이트(`site/`) | `screen-ink`, 주황 점 | 한국어 `슉쇽`·영어 `ShookShok`, 제목·바닥 `슉쇽 ShookShok`, 앱 아이콘(`site/icon.png`, 파비콘 겸) |
+| 스토어 등록 자료 | 앱 이름 미정, `© 2026 screen-ink contributors` | 한국어 `슉쇽`·영어 `ShookShok`, `© 2026 찰떡쌤. MIT License.` |
+| `LICENSE` · `README.md` 제목 | `djqanrudgns12`, `screen-ink (가칭)` | `찰떡쌤`, `슉쇽 (ShookShok)` |
+| 브랜드 그림 파일 | `shookshok-icon-*.png` | `docs/brand/official/Shookshok-icon-1024.png` · `-256.png` |
 
 그대로 둔 것(사용자에게 안 보임): 저장소·폴더 이름 `screen-ink`, 크레이트 `tauri-plugin-screen-ink`·`ink-*`, npm `@screen-ink/*`, 플러그인 이름과 명령 `plugin:screen-ink|…`, 이벤트 `screen-ink://…`, 트레이 ID, 스레드 이름. GitHub 주소(`djqanrudgns12/screen-ink`)도 그대로.
 
@@ -123,4 +128,5 @@ ID를 바꾸면서 달라지는 것: Tauri가 ID로 정하는 폴더(로그 `%LO
 
 - 실제 앱에서 이름·아이콘·정보 페이지 확인(트레이 풍선말, 설치 폴더 이름).
 - 맥판: 둥근 사각 아이콘 원본, 트레이 단색 템플릿.
-- Partner Center 앱 이름 예약(계정 승인 뒤): `슉쇽`, 영어 `shookshok`.
+- Partner Center 앱 이름 예약(계정 승인 뒤): `슉쇽`, 영어 `ShookShok`.
+- NSIS 설치본의 시작 메뉴·설치된 앱 이름을 `슉쇽`으로(설치 후크, 실제 설치로 시험).

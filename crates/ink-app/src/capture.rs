@@ -636,7 +636,7 @@ impl InkService {
         t.n = self.cap.save_seq;
         t.app = last.app.clone();
         let template = self.settings.str("output.template").to_string();
-        let stem = naming::render(&template, &t).unwrap_or_else(|_| "shookshok".into());
+        let stem = naming::render(&template, &t).unwrap_or_else(|_| "Shookshok".into());
         let folder = self.settings.str("output.folder").to_string();
         match self.ports.files.save_png(&folder, &stem, last.w, last.h, &last.bgra) {
             Ok(f) => {

@@ -43,8 +43,8 @@ pub const ISLAND: &str = "ink-island";
 const TRAY_ID: &str = "screen-ink";
 /// 화면에 보이는 앱 이름(docs/brand/README.md). 내부 식별자(플러그인·이벤트·트레이 ID)는 `screen-ink` 그대로.
 pub const APP_NAME: &str = "슉쇽";
-/// 폴더·파일 이름에 쓰는 영문 이름(사진\shookshok, %APPDATA%\shookshok).
-pub const APP_DIR: &str = "shookshok";
+/// 폴더·파일 이름에 쓰는 영문 이름(사진\Shookshok, %APPDATA%\Shookshok). 화면에 보이는 영문은 `ShookShok`.
+pub const APP_DIR: &str = "Shookshok";
 /// 이름을 바꾸기 전 설정 폴더 — 새 폴더가 없으면 한 번 옮긴다.
 const LEGACY_DIR: &str = "screen-ink";
 const EVT_STATE: &str = "screen-ink://state";
@@ -410,7 +410,7 @@ fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     });
 
     WebviewWindowBuilder::new(app, ISLAND, WebviewUrl::App("index.html?view=island".into()))
-        .title("shookshok island")
+        .title("ShookShok island")
         .inner_size(560.0, 88.0)
         .resizable(false)
         .decorations(false)
@@ -962,7 +962,7 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
     let first_run = service.is_first_run();
     let autostart = service.settings().bool("general.autostart");
     let initial = service.state();
-    log::info!("shookshok ready: {} hotkey(s) not registered", failed);
+    log::info!("ShookShok ready: {} hotkey(s) not registered", failed);
     app.manage(Ink(Mutex::new(service)));
 
     // 창·트레이는 플러그인 초기화가 끝난 뒤 이벤트 루프에서 만든다. 플러그인 setup은 플러그인 목록
@@ -973,10 +973,10 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         let h = handle.clone();
         if let Err(e) = handle.run_on_main_thread(move || {
             if let Err(e) = finish_setup(&h, initial, first_run, autostart, started) {
-                log::error!("shookshok setup failed: {e}");
+                log::error!("ShookShok setup failed: {e}");
             }
         }) {
-            log::error!("shookshok setup could not be scheduled: {e}");
+            log::error!("ShookShok setup could not be scheduled: {e}");
         }
     });
     Ok(())

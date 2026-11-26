@@ -49,9 +49,9 @@ fn fields() -> &'static [Field] {
             f("capture.excluded", ExcludedApps, json!([])),
             // 숨은 설정(설정 화면에 없음): 고르기 중 사슬 마디마다 근거 색·점수(08 §4.5, 시험대 정답 만들기)
             f("capture.evidence", Bool, json!(false)),
-            // 빈 값 = 사진 폴더 아래 shookshok(어댑터가 정함)
+            // 빈 값 = 사진 폴더 아래 Shookshok(어댑터가 정함)
             f("output.folder", Folder, json!("")),
-            f("output.template", Template, json!("shookshok_{yyyy}{MM}{dd}_{HH}{mm}{ss}")),
+            f("output.template", Template, json!("Shookshok_{yyyy}{MM}{dd}_{HH}{mm}{ss}")),
             f("record.fps", IntSet(&[30, 60]), json!(30)),
             f("record.mic", Bool, json!(false)),
             // 빈 값 = 기본 장치. 장치가 사라지면 마이크를 끄고 알린다(05 §1)

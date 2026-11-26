@@ -11,7 +11,7 @@ pub fn run() {
         // 로그: 사건마다 한 줄, 창 제목·파일 이름·사용자 이름은 쓰지 않는다(05 §9). 파일당 2MB.
         .plugin(
             tauri_plugin_log::Builder::new()
-                .targets([Target::new(TargetKind::LogDir { file_name: Some("shookshok".into()) }), Target::new(TargetKind::Stdout)])
+                .targets([Target::new(TargetKind::LogDir { file_name: Some("Shookshok".into()) }), Target::new(TargetKind::Stdout)])
                 .level(log::LevelFilter::Info)
                 .level_for("ink_app", ours)
                 .level_for("tauri_plugin_screen_ink", ours)

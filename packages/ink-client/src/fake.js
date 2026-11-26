@@ -9,7 +9,7 @@ const SUGGEST = ['Ctrl+Alt+1', 'Ctrl+Alt+2', 'Ctrl+Alt+3', 'Alt+Shift+2', 'Alt+S
 const DEFAULT_SETTINGS = {
   'capture.result': 'copy', 'capture.evidence': false, 'capture.cursor': false, 'capture.sound': false, 'capture.element': true, 'capture.magnet': true,
   'capture.historyMax': 20, 'capture.excluded': [{ exe: 'licecap.exe', mode: 'exclude', auto: false }],
-  'output.folder': 'C:\\Users\\…\\Pictures\\shookshok', 'output.template': '수업_{yyyy}{MM}{dd}_{n}',
+  'output.folder': 'C:\\Users\\…\\Pictures\\Shookshok', 'output.template': '수업_{yyyy}{MM}{dd}_{n}',
   'record.fps': 30, 'record.mic': false, 'record.micDevice': '',
   'draw.color': 'R', 'draw.width': 4, 'draw.smoothing': 'light', 'draw.straighten': true, 'draw.shapeOnHold': true,
   'draw.startZoom': 1.75, 'draw.keep': true, 'draw.esc': 'step', 'draw.rightClickPan': true,
@@ -68,7 +68,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       settings: { ...settings }, shortcuts: r, version: '0.1.0',
       conflicts: { count: bad.length, app: owners.length === 1 && owners[0] !== '슉쇽' ? owners[0] : undefined, combos: bad.map((x) => x.combo) },
       readonly: false,
-      location: { path: 'C:\\Users\\…\\AppData\\Roaming\\shookshok\\settings.json', portable: false, readOnly: false },
+      location: { path: 'C:\\Users\\…\\AppData\\Roaming\\Shookshok\\settings.json', portable: false, readOnly: false },
       notices: [],
       mode,
     };
@@ -162,7 +162,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       const changes = Object.entries(IMPORT_FILE)
         .filter(([path, after]) => valueOf(path) !== after)
         .map(([path, after]) => ({ path, before: valueOf(path), after }));
-      return { cancelled: false, path: 'C:\\Users\\…\\Desktop\\shookshok-settings-2026-11-25.json', ok: true, changes, warnings: [] };
+      return { cancelled: false, path: 'C:\\Users\\…\\Desktop\\Shookshok-settings-2026-11-25.json', ok: true, changes, warnings: [] };
     },
     async applyImport() {
       history.push({ kind: 'whole', settings: { ...settings }, combos: { ...combos } });

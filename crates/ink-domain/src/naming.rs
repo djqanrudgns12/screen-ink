@@ -117,7 +117,7 @@ fn render_parts(parts: &[Part], ctx: &NameContext) -> String {
 pub fn render(template: &str, ctx: &NameContext) -> Result<String, NamingError> {
     let parts = parse(template.trim())?;
     let s = sanitize(&render_parts(&parts, ctx));
-    Ok(if s.is_empty() { "shookshok".into() } else { s })
+    Ok(if s.is_empty() { "Shookshok".into() } else { s })
 }
 
 /// 금지 글자·제어 문자를 `_`로, 끝의 점·공백 제거, 예약 이름(CON·NUL·COM1…)은 앞에 `_`.
@@ -178,7 +178,7 @@ mod tests {
         assert_eq!(validate("{year}"), Err(NamingError::UnknownToken("year".into())));
         assert_eq!(validate("   "), Err(NamingError::Empty));
         assert_eq!(validate(&"가".repeat(201)), Err(NamingError::TooLong));
-        assert!(validate("shookshok_{yyyy}{MM}{dd}_{HH}{mm}{ss}").is_ok());
+        assert!(validate("Shookshok_{yyyy}{MM}{dd}_{HH}{mm}{ss}").is_ok());
     }
 
     #[test]

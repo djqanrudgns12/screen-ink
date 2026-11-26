@@ -184,7 +184,7 @@ pub fn ensure_overlays<R: Runtime>(app: &AppHandle<R>, layout: &MonitorLayout) {
         let w = match app.get_webview_window(&l) {
             Some(w) => w,
             None => match WebviewWindowBuilder::new(app, &l, WebviewUrl::App(format!("index.html?view=overlay&monitor={}", m.id).into()))
-                .title("shookshok overlay")
+                .title("ShookShok overlay")
                 .decorations(false)
                 .transparent(true)
                 .shadow(false)
