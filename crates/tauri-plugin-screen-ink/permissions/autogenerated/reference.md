@@ -20,6 +20,7 @@ screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있
 - `allow-pin-info`
 - `allow-pin-action`
 - `allow-pin-zoom`
+- `allow-zoom-input`
 
 ## Permission Table
 
@@ -442,6 +443,32 @@ Enables the update_setting command without any pre-configured scope.
 <td>
 
 Denies the update_setting command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-zoom-input`
+
+</td>
+<td>
+
+Enables the zoom_input command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-zoom-input`
+
+</td>
+<td>
+
+Denies the zoom_input command without any pre-configured scope.
 
 </td>
 </tr>

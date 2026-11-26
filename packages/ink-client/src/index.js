@@ -122,6 +122,21 @@
  *   command = 선택 툴바 단추(R-CAP-27) — 키와 같은 결과(Rust가 판단). meta = 맥 Cmd.
  *   좌표는 물리 px(가상 화면) = monitor.bounds + client × scale. wheel dy = -1 위(넓히기·부모) / 1 아래(좁히기·자식).
  *   key는 e.key와 e.code를 같이(한글 입력 중에도 code로 판단). Esc·우클릭·Enter 등 판단은 모두 Rust가 한다.
+ *
+ * @typedef {Object} LiveZoomState  실시간 확대 HUD(Alt+2, 04 S13 · R-ZOOM-6) — 'zoom' 이벤트, 끝나면 null.
+ *   InkState.mode = {mode:'liveZoom', session, monitorId, startedMs}. 좌표는 모두 Rust가 정한다.
+ * @property {number} session
+ * @property {number} monitorId
+ * @property {string} monitorLabel   위치 지도 이름('모니터 1', 배치 순서 — 창 제목 없음)
+ * @property {number} scale          1.25 · 1.5 · 2 · 2.5 · 3 · 4 · 6 · 8
+ * @property {string} scaleLabel     섬·배지 글자('×2.0', '×1.25')
+ * @property {{x: number, y: number, w: number, h: number}} viewport  위치 지도 0..1(원본 사각형 / 모니터)
+ * @property {{x: number, y: number}} [cursorCss]  확대 화면 위 커서(HUD 창 안 CSS px) — 44px 주황 후광 중심. 확대 화면 밖이면 없음
+ * @property {boolean} showMinimap   설정 zoom.minimap
+ *
+ * @typedef {{type:'wheel', dy:-1|1} | {type:'key', slot:'z-in'|'z-out'|'z-exit'} | {type:'exit'}} ZoomInput
+ *   실시간 확대 입력(미리보기·HUD). wheel dy = -1 위(더 확대) / 1 아래(덜 확대).
+ *   실제 앱의 휠은 Rust 돋보기 훅이 받는다(확대 모니터 안 세로 휠, Shift+휠은 아래 앱으로).
  */
 
 /**
@@ -142,7 +157,8 @@
  * @property {(id: number, action: 'close'|'closeAll'|'copy'|'save'|'drag'|'menu') => Promise<void>} pinAction  핀 동작(drag = 끌어 옮기기 시작, menu = 오른쪽 클릭 메뉴)
  * @property {(id: number, dy: -1|1, fx: number, fy: number) => Promise<number | null>} pinZoom  휠 한 칸 확대(-1)·축소(1), 커서 자리 = 창 안 비율 → 새 배율(%)
  * @property {(input: CaptureInput) => Promise<void>} captureInput  오버레이 입력 전달(포인터 이동은 rAF로 묶어 프레임당 한 번). 결과는 'capture' 이벤트로
- * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView} | {type: 'afterimage', afterimage: AfterimageEvent}) => void) => () => void} subscribe
+ * @property {(input: ZoomInput) => Promise<void>} zoomInput  실시간 확대 입력(휠·확대 안 키·끝). 결과는 'zoom'·'island' 이벤트로
+ * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView} | {type: 'afterimage', afterimage: AfterimageEvent} | {type: 'zoom', zoom: LiveZoomState | null}) => void) => () => void} subscribe
  */
 
 export const SHORTCUT_GROUPS = [

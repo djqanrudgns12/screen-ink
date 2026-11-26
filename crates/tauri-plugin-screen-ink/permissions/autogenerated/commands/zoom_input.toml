@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-zoom-input"
+description = "Enables the zoom_input command without any pre-configured scope."
+commands.allow = ["zoom_input"]
+
+[[permission]]
+identifier = "deny-zoom-input"
+description = "Denies the zoom_input command without any pre-configured scope."
+commands.deny = ["zoom_input"]

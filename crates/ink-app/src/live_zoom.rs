@@ -1,0 +1,365 @@
+//! 실시간 확대(Alt+2, 단계 5): 진입 → 60 Hz 틱(커서 따라가기) → 휠·키 배율 → 끝.
+//!
+//! 판단은 `ink_domain::zoom`(순수), 창은 `Magnifier` 포트. 틱은 어댑터가 메인 스레드에서 부른다(`tick_zoom`).
+//! 확대 안 키(`z-in`·`z-out`·`z-exit`)는 확대 중에만 전역 키로 잠시 잡고 끝나면 바로 푼다(R-KEY-6).
+//! 5.3(Alt+1 → 정지 판서 이어받기)은 판서 흐름 뒤 — 넘길 값은 `zoom_handoff`.
+
+use crate::ports::{Magnifier, NoMagnifier, SystemEvent, ZOOM_UNSUPPORTED};
+use crate::service::{HotkeyOutcome, InkService};
+use crate::state::{IslandEvent, IslandKind, LiveZoomState};
+use ink_domain::geometry::{PhysPoint, PhysRect};
+use ink_domain::mode::Mode;
+use ink_domain::shortcuts::{spoken, to_accelerator};
+use ink_domain::zoom::{self, FollowMode, LiveZoomView, ZoomCommand, LIVE_ZOOM_START, LIVE_ZOOM_STEPS, ZOOM_KEYS};
+use serde::Deserialize;
+use std::collections::BTreeMap;
+use std::time::Instant;
+
+/// 틱 간격을 모를 때(첫 틱) 쓰는 값.
+const FRAME_SEC: f64 = 1.0 / 60.0;
+
+/// 확대 HUD·가짜 클라이언트가 넘기는 입력(packages/ink-client `ZoomInput`). 실제 앱의 휠은 어댑터 훅이 넘긴다.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum ZoomInput {
+    /// 휠 한 칸: -1 위(더 확대) / 1 아래(덜 확대)
+    Wheel { dy: i32 },
+    /// 확대 화면 안 키 칸: "z-in" | "z-out" | "z-exit"
+    Key { slot: String },
+    Exit,
+}
+
+/// 5.3 `Alt+1` 이어받기에 넘길 값: 모니터·원본 사각형·배율과 판서 초기 변환(A 시안 `DrawViewTransform`).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ZoomHandoff {
+    pub monitor_id: u32,
+    /// 돋보기가 비추던 원본(가상 화면 물리 px)
+    pub source: PhysRect,
+    pub scale: f64,
+    /// 판서 `view = { s, tx, ty }`(CSS px, 문서 = 그 모니터 논리 px)
+    pub s: f64,
+    pub tx: f64,
+    pub ty: f64,
+}
+
+pub struct ZoomState {
+    pub(crate) magnifier: Box<dyn Magnifier>,
+    pub(crate) view: Option<LiveZoomView>,
+    /// 그 모니터 배율(CSS px 환산)
+    pub(crate) monitor_scale: f64,
+    pub(crate) monitor_label: String,
+    /// 마지막 틱의 커서(후광 자리)
+    pub(crate) cursor: PhysPoint,
+    /// 확대 중에만 잡은 키: 칸 → 가속기
+    pub(crate) keys: BTreeMap<String, String>,
+    pub(crate) last_tick: Option<Instant>,
+    /// 마지막으로 보낸 HUD 상태(같으면 다시 보내지 않는다)
+    pub(crate) last_sent: Option<LiveZoomState>,
+    pub(crate) entered: Option<Instant>,
+    pub(crate) ticks: u64,
+}
+
+impl Default for ZoomState {
+    fn default() -> Self {
+        ZoomState {
+            magnifier: Box::new(NoMagnifier),
+            view: None,
+            monitor_scale: 1.0,
+            monitor_label: String::new(),
+            cursor: PhysPoint::default(),
+            keys: BTreeMap::new(),
+            last_tick: None,
+            last_sent: None,
+            entered: None,
+            ticks: 0,
+        }
+    }
+}
+
+fn ms(d: std::time::Duration) -> f64 {
+    d.as_secs_f64() * 1000.0
+}
+
+impl InkService {
+    /// 돋보기 어댑터를 꽂는다(기본 = `NoMagnifier`). `Ports`를 바꾸지 않으려고 따로 받는다.
+    pub fn set_magnifier(&mut self, magnifier: Box<dyn Magnifier>) {
+        self.end_zoom();
+        self.zoom.magnifier = magnifier;
+    }
+
+    pub fn zoom_view(&self) -> Option<LiveZoomView> {
+        self.zoom.view.filter(|_| self.zooming())
+    }
+
+    /// 5.3에 넘길 값(확대 중일 때만).
+    pub fn zoom_handoff(&self) -> Option<ZoomHandoff> {
+        let v = self.zoom_view()?;
+        let (s, tx, ty) = zoom::to_draw_transform(&v, self.zoom.monitor_scale);
+        Some(ZoomHandoff { monitor_id: v.monitor_id, source: v.source, scale: v.scale, s, tx, ty })
+    }
+
+    fn zooming(&self) -> bool {
+        matches!(self.mode, Mode::LiveZoom { .. })
+    }
+
+    /// 트레이·명령에서 시작(단축키가 꺼져 있어도). 확대 중이면 새로 시작한다(캡처 메뉴와 같은 규칙).
+    pub fn start_zoom(&mut self) {
+        self.end_zoom();
+        self.end_capture();
+        self.begin_zoom(Instant::now());
+    }
+
+    /// `on_hotkey_at`이 먼저 묻는다. `None` = 확대와 무관하거나 확대를 끝낸 뒤 원래 처리로 넘김.
+    pub(crate) fn zoom_hotkey(&mut self, slot: &str, pressed: Instant) -> Option<HotkeyOutcome> {
+        let cmd = zoom::on_hotkey(&self.mode, slot)?;
+        // 전역 칸은 서비스가 등록한 것만(단축키를 잠시 껐으면 무시), 확대 안 키는 확대 중 잡은 것만
+        let allowed = if ZOOM_KEYS.contains(&slot) { self.zoom.keys.contains_key(slot) } else { self.hotkeys_enabled && self.registered.contains_key(slot) };
+        if !allowed {
+            return None;
+        }
+        match cmd {
+            ZoomCommand::Start => self.begin_zoom(pressed),
+            ZoomCommand::SwitchFromCapture => {
+                self.end_capture();
+                self.begin_zoom(pressed);
+            }
+            ZoomCommand::End => self.end_zoom(),
+            ZoomCommand::StepIn => self.zoom_step(-1),
+            ZoomCommand::StepOut => self.zoom_step(1),
+            ZoomCommand::EndThenPass => {
+                self.end_zoom();
+                return None;
+            }
+        }
+        Some(HotkeyOutcome::Zoom)
+    }
+
+    /// 커서 모니터에 돋보기를 띄운다. 실패하면 모드는 그대로(쉬는 중).
+    fn begin_zoom(&mut self, pressed: Instant) {
+        if self.ports.probe.secure_desktop() {
+            if !self.secure_notified {
+                self.secure_notified = true;
+                self.island(IslandEvent::new(IslandKind::Off, "보안 화면에서는 쓸 수 없어요").variant("security"));
+            }
+            return;
+        }
+        let t = Instant::now();
+        let layout = self.ports.monitors.layout();
+        let cursor = self.ports.monitors.cursor();
+        let Some(monitor) = layout.monitor_at(cursor).or_else(|| layout.nearest(cursor)).cloned() else {
+            self.island(IslandEvent::new(IslandKind::Problem, "화면을 찾지 못했어요"));
+            return;
+        };
+        let index = layout.monitors.iter().position(|m| m.id == monitor.id).unwrap_or(0);
+        let view = LiveZoomView::new(monitor.id, monitor.bounds, LIVE_ZOOM_START, cursor);
+        let probe_ms = ms(t.elapsed());
+
+        let t = Instant::now();
+        if let Err(e) = self.zoom.magnifier.start(monitor.bounds, view.source, view.scale) {
+            log::warn!("live zoom start failed: {e}");
+            let text = if e.starts_with(ZOOM_UNSUPPORTED) { "이 컴퓨터에서는 실시간 확대를 아직 쓸 수 없어요" } else { "실시간 확대를 시작하지 못했어요" };
+            self.island(IslandEvent::new(IslandKind::Problem, text));
+            return;
+        }
+        let start_ms = ms(t.elapsed());
+
+        self.session_seq += 1;
+        let session = self.session_seq;
+        self.mode = Mode::LiveZoom { session, monitor_id: monitor.id, started_ms: self.epoch.elapsed().as_millis() as u64 };
+        self.zoom.view = Some(view);
+        self.zoom.monitor_scale = monitor.scale;
+        self.zoom.monitor_label = zoom::monitor_label(index);
+        self.zoom.cursor = cursor;
+        self.zoom.last_tick = Some(Instant::now());
+        self.zoom.last_sent = None;
+        self.zoom.entered = Some(pressed);
+        self.zoom.ticks = 0;
+        self.register_zoom_keys();
+        self.island(self.zoom_island(view.scale));
+        self.emit_state();
+        self.emit_zoom();
+        // 계측 줄(05 §9): 숫자만. 진입 = 단축키 → 돋보기 첫 그림
+        log::info!(
+            "mode enter zoom [{} ms] (probe {}, magnifier {}, scale {}, monitors {})",
+            ms(pressed.elapsed()).round() as i64,
+            probe_ms.round() as i64,
+            start_ms.round() as i64,
+            view.scale,
+            layout.monitors.len()
+        );
+    }
+
+    /// 확대 끝(Alt+2·Esc·잠금·다른 모드 키). 확대 중이 아니면 아무 일도 없다.
+    pub fn end_zoom(&mut self) {
+        if !self.zooming() {
+            return;
+        }
+        self.zoom.magnifier.stop();
+        self.unregister_zoom_keys();
+        self.mode = Mode::Idle;
+        if let Some(at) = self.zoom.entered.take() {
+            log::info!("mode exit zoom ({} ticks, {:.1} s)", self.zoom.ticks, at.elapsed().as_secs_f64());
+        }
+        self.zoom.view = None;
+        self.zoom.last_tick = None;
+        self.zoom.last_sent = None;
+        self.ports.notifier.zoom(None);
+        self.island(IslandEvent::new(IslandKind::End, ""));
+        self.emit_state();
+    }
+
+    /// 어댑터가 60 Hz로 부른다(메인 스레드). 확대 중이 아니면 `false` — 틱을 멈추면 된다.
+    pub fn tick_zoom(&mut self) -> bool {
+        let now = Instant::now();
+        let dt = self.zoom.last_tick.map_or(FRAME_SEC, |t| now.saturating_duration_since(t).as_secs_f64());
+        self.zoom.last_tick = Some(now);
+        self.tick_zoom_with(dt)
+    }
+
+    /// 틱 하나(시험은 `dt_sec`를 직접 준다): 커서 읽기 → 따라가기 → 돋보기 갱신 → HUD(바뀐 때만).
+    pub fn tick_zoom_with(&mut self, dt_sec: f64) -> bool {
+        if !self.zooming() {
+            return false;
+        }
+        let Some(mut view) = self.zoom.view else { return false };
+        let cursor = self.ports.monitors.cursor();
+        // 설정을 바꾸면 바로(R-SET-0)
+        let follow = FollowMode::from_setting(self.settings.str("zoom.follow"));
+        zoom::step_follow(&mut view, cursor, follow, dt_sec);
+        self.zoom.view = Some(view);
+        self.zoom.cursor = cursor;
+        self.zoom.ticks += 1;
+        if !self.push_view(view) {
+            return false;
+        }
+        self.emit_zoom();
+        true
+    }
+
+    /// HUD·가짜 클라이언트 입력.
+    pub fn zoom_input(&mut self, input: ZoomInput) {
+        if !self.zooming() {
+            return;
+        }
+        match input {
+            ZoomInput::Wheel { dy } => self.zoom_step(dy.signum()),
+            ZoomInput::Key { slot } => match slot.as_str() {
+                zoom::ZOOM_IN_SLOT => self.zoom_step(-1),
+                zoom::ZOOM_OUT_SLOT => self.zoom_step(1),
+                zoom::ZOOM_EXIT_SLOT => self.end_zoom(),
+                _ => {}
+            },
+            ZoomInput::Exit => self.end_zoom(),
+        }
+    }
+
+    /// 잠금·절전·화면 구성 변경이면 확대를 끝낸다(02 §7). `on_system_event`가 먼저 부른다.
+    pub(crate) fn zoom_system_event(&mut self, ev: SystemEvent) {
+        if !self.zooming() {
+            return;
+        }
+        match ev {
+            SystemEvent::Lock | SystemEvent::Suspend => self.end_zoom(),
+            SystemEvent::DisplayChange => {
+                self.end_zoom();
+                self.island(IslandEvent::new(IslandKind::Info, "화면 구성이 바뀌어 확대를 끝냈어요"));
+            }
+            SystemEvent::Unlock | SystemEvent::Resume | SystemEvent::ThemeChange => {}
+        }
+    }
+
+    /// 한 단계 위·아래(커서 아래 점 고정). 끝 단계면 아무 일도 없다.
+    fn zoom_step(&mut self, dy: i32) {
+        let Some(mut view) = self.zoom_view() else { return };
+        let next = zoom::next_zoom_step(view.scale, dy, LIVE_ZOOM_STEPS);
+        if (next - view.scale).abs() < 1e-9 {
+            return;
+        }
+        let cursor = self.ports.monitors.cursor();
+        zoom::zoom_to(&mut view, cursor, next);
+        self.zoom.view = Some(view);
+        self.zoom.cursor = cursor;
+        if !self.push_view(view) {
+            return;
+        }
+        self.island(self.zoom_island(view.scale));
+        self.emit_zoom();
+    }
+
+    /// 돋보기에 지금 원본·배율. 돋보기가 스스로 멈췄으면 확대를 끝내고 `false`.
+    fn push_view(&mut self, view: LiveZoomView) -> bool {
+        match self.zoom.magnifier.update(view.source, view.scale) {
+            Ok(()) => true,
+            Err(e) => {
+                log::warn!("live zoom update failed: {e}");
+                self.end_zoom();
+                self.island(IslandEvent::new(IslandKind::Problem, "실시간 확대를 끝냈어요").detail("확대 화면이 멈췄어요"));
+                false
+            }
+        }
+    }
+
+    /// 확대 섬(04 S13): 확대 아이콘 · **실시간 확대** · 움직이는 화면 그대로 · `×2.0` / 휠 배율 · Alt 1 멈추고 쓰기 · Esc 끝.
+    fn zoom_island(&self, scale: f64) -> IslandEvent {
+        let draw = self.settings.shortcut("draw");
+        let exit = self.settings.shortcut(zoom::ZOOM_EXIT_SLOT);
+        let mut hints: Vec<(String, &str)> = vec![("휠".into(), "배율")];
+        if !draw.is_empty() {
+            hints.push((spoken(draw, self.platform), "멈추고 쓰기"));
+        }
+        if !exit.is_empty() {
+            hints.push((spoken(exit, self.platform), "끝"));
+        }
+        let pairs: Vec<(&str, &str)> = hints.iter().map(|(k, l)| (k.as_str(), *l)).collect();
+        let mut ev = IslandEvent::new(IslandKind::Mode, "실시간 확대").variant("zoom").detail("움직이는 화면 그대로").hints(&pairs);
+        ev.mode = Some(zoom::ZOOM_SLOT.into());
+        ev.value = Some(zoom::format_scale(scale));
+        ev
+    }
+
+    /// HUD 상태(바뀐 때만 보낸다).
+    fn emit_zoom(&mut self) {
+        let (Mode::LiveZoom { session, .. }, Some(view)) = (self.mode, self.zoom.view) else { return };
+        let state = LiveZoomState {
+            session,
+            monitor_id: view.monitor_id,
+            monitor_label: self.zoom.monitor_label.clone(),
+            scale: view.scale,
+            scale_label: zoom::format_scale(view.scale),
+            viewport: zoom::viewport(&view),
+            cursor_css: zoom::cursor_css(&view, self.zoom.cursor, self.zoom.monitor_scale),
+            show_minimap: self.settings.bool("zoom.minimap"),
+        };
+        if self.zoom.last_sent.as_ref() == Some(&state) {
+            return;
+        }
+        self.ports.notifier.zoom(Some(&state));
+        self.zoom.last_sent = Some(state);
+    }
+
+    /// 확대 안 키를 잠시 잡는다. 비운 칸·전역 칸과 같은 키·운영체제가 거절한 키는 건너뛴다(로그만).
+    fn register_zoom_keys(&mut self) {
+        for id in ZOOM_KEYS {
+            let combo = self.settings.shortcut(id).to_string();
+            if combo.is_empty() {
+                continue;
+            }
+            let Some(accel) = to_accelerator(&combo, self.platform) else { continue };
+            if self.registered.values().any(|a| *a == accel) {
+                continue;
+            }
+            match self.ports.hotkeys.register(id, &accel) {
+                Ok(()) => {
+                    self.zoom.keys.insert(id.to_string(), accel);
+                }
+                Err(e) => log::info!("zoom key {id} not registered: {e}"),
+            }
+        }
+    }
+
+    fn unregister_zoom_keys(&mut self) {
+        for (_, accel) in std::mem::take(&mut self.zoom.keys) {
+            self.ports.hotkeys.unregister(&accel);
+        }
+    }
+}
