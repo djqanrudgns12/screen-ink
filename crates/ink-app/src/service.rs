@@ -718,14 +718,20 @@ impl InkService {
                 .collect(),
         };
 
-        let t = Instant::now();
         // 자르기·V 전처리용으로 쥐어 둔다(픽셀은 Arc라 복사 없음)
         let kept = frames.clone();
+        // 근거 준비는 화면을 띄우기 전에 배경에서 시작한다 — 커서 아래 창 UIA 색인(미리 깨우기, D9)과
+        // V 전처리가 정지 화면 그리기와 겹친다(08 §4.7 "캡처와 겹쳐서 0 ms 추가"). 메인 스레드는 기다리지 않는다.
+        self.cap.probe = crate::capture::EntryProbe { pressed: Some(pressed), window: snapshot.window_at(cursor, true).map(|w| w.handle), ..Default::default() };
+        self.warm_evidence(&snapshot, &kept, cursor);
+
+        let t = Instant::now();
         let painted_at = match self.ports.overlay.show(&overlay, frames) {
             Ok(at) => at,
             Err(e) => {
                 log::warn!("overlay show failed: {e}");
                 self.ports.overlay.hide(session);
+                self.end_selection();
                 self.island(IslandEvent::new(IslandKind::Problem, "캡처 화면을 띄우지 못했어요"));
                 return;
             }
@@ -747,12 +753,7 @@ impl InkService {
         self.mode = Mode::Capture { session, kind, started_ms: self.now_ms() };
         self.island(capture_island(kind));
         self.emit_state();
-        // 고르기 시작: 상태 기계 + 커서 아래 창 UIA 색인(미리 깨우기, D9) + V 전처리 — 모두 진입 뒤(진입 시간에 안 들어감)
-        self.cap.probe = crate::capture::EntryProbe {
-            pressed: Some(pressed),
-            window: self.snapshot.as_ref().and_then(|s| s.window_at(cursor, true)).map(|w| w.handle),
-            ..Default::default()
-        };
+        // 고르기 시작: 상태 기계(근거는 위에서 이미 준비 중)
         self.start_selection(kept, cursor);
     }
 

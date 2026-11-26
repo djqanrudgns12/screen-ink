@@ -220,15 +220,19 @@ macro_rules! ctx {
 }
 
 impl InkService {
-    /// 진입 직후: 상태 기계 + UIA 미리 깨우기 + V 전처리(배경). 첫 보기를 내보낸다.
-    pub(crate) fn start_selection(&mut self, frames: Vec<Frame>, cursor: PhysPoint) {
-        let Some(snap) = self.snapshot.take() else { return };
+    /// 근거 준비 시작(배경): 커서 아래 창 UIA 색인 부탁 + V 전처리. 정지 화면을 띄우기 **전에** 부른다.
+    pub(crate) fn warm_evidence(&mut self, snap: &Snapshot, frames: &[Frame], cursor: PhysPoint) {
         if let Some(w) = snap.window_at(cursor, true) {
             if !w.window_only {
                 self.ports.elements.request(w.handle, &w.exe);
             }
         }
-        self.ports.vision.prepare(&frames, &snap.layout, cursor);
+        self.ports.vision.prepare(frames, &snap.layout, cursor);
+    }
+
+    /// 진입 직후: 고르기 상태 기계를 만들고 첫 보기를 내보낸다(근거는 `warm_evidence`가 이미 준비 중).
+    pub(crate) fn start_selection(&mut self, frames: Vec<Frame>, cursor: PhysPoint) {
+        let Some(snap) = self.snapshot.take() else { return };
         self.cap.frames = frames;
         let sel = {
             let ctx = ctx!(self, &snap);
