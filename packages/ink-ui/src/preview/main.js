@@ -3,6 +3,7 @@ import { mount } from 'svelte';
 import { createFakeClient } from '@screen-ink/client/fake';
 import sampleFrameUrl from '../../../../docs/mockups/v3/png/F04-keys.png';
 import Preview from './Preview.svelte';
+import DrawPreview from './DrawPreview.svelte';
 
 const params = new URLSearchParams(location.search);
 const client = createFakeClient({
@@ -13,4 +14,7 @@ const client = createFakeClient({
 // ?evidence=1 — 숨은 "인식 근거 보기"(capture.evidence)를 켠 채로
 if (params.get('evidence') === '1') client.updateSetting('capture.evidence', true);
 
-mount(Preview, { target: document.getElementById('app'), props: { client } });
+// ?draw=1 — 판서 캔버스(DrawCanvas) 데모. 그 밖에는 기존 미리보기 그대로.
+const target = /** @type {HTMLElement} */ (document.getElementById('app'));
+if (params.get('draw') === '1') mount(DrawPreview, { target, props: { client } });
+else mount(Preview, { target, props: { client } });
