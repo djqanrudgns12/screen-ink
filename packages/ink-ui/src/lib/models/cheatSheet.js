@@ -1,36 +1,40 @@
-// S16 단축키 한 장(F17) — state.shortcuts에서 현재 값으로 세 열 생성(비운 칸 제외, 맥 기호 적용)
+// S16 단축키 한 장(F17) — state.shortcuts의 현재 값으로 세 열 생성(비운 칸 제외, 쉬운 말·다국어·OS 맞춤, R2-FIX-7)
 import { keycaps } from '@screen-ink/client';
+import { normalizeLang, normalizeOs, translate } from '../i18n/core.js';
 
 const GLOBAL_ORDER = [
-  { id: 'region', label: '범위 캡처' },
-  { id: 'window', label: '창 캡처' },
-  { id: 'record', label: '화면 녹화' },
-  { id: 'draw', label: '판서' },
-  { id: 'zoom', label: '실시간 확대' },
-  { id: 'board', label: '칠판' },
-  { id: 'topmost', label: '창 항상 위' },
-  { id: 'pause', label: '단축키 켜기·끄기' },
-  { id: 'restore', label: '직전 판서 열기' },
+  { id: 'region', key: 'shortcuts.slot.region' },
+  { id: 'window', key: 'shortcuts.slot.window' },
+  { id: 'record', key: 'shortcuts.slot.record' },
+  { id: 'draw', key: 'shortcuts.slot.draw' },
+  { id: 'zoom', key: 'shortcuts.slot.zoom' },
+  { id: 'board', key: 'shortcuts.slot.board' },
+  { id: 'topmost', key: 'shortcuts.slot.topmost' },
+  { id: 'pause', key: 'shortcuts.slot.pause' },
+  { id: 'restore', key: 'shortcuts.slot.restore' },
 ];
 
 /**
  * 여러 칸을 한 줄로 묶는다. 비운 칸(`!combo`)은 빼고, 전부 비었으면 null을 반환한다.
- * @param {Map<string, { label: string, combo: string }>} byId
- * @param {Array<{ id: string, shortLabel?: string }>} entries
+ * 다중 키 조합이 둘 이상일 때는 키캡이 붙어 보이지 않도록 `keyGroups` + `separator`("또는"/"or")로 나눈다(R2-FIX-7).
+ * @param {Map<string, { label: string, combo: string, windowsOnly?: boolean }>} byId
+ * @param {Array<{ id: string, key?: string, shortLabel?: string }>} entries
  * @param {string} platform
- * @param {{ fixedLabel?: string }} [opts]
+ * @param {{ fixedLabel?: string, separator?: string, tr?: (k: string) => string }} [opts]
  */
 function buildGroupedRow(byId, entries, platform, opts = {}) {
+  const isMac = normalizeOs(platform) === 'mac';
+  const tr = opts.tr ?? ((k) => k);
   const present = [];
   for (const entry of entries) {
     const row = byId.get(entry.id);
-    if (row && row.combo) {
-      present.push({
-        label: entry.shortLabel ?? row.label,
-        combo: row.combo,
-        caps: keycaps(row.combo, platform),
-      });
-    }
+    if (!row || !row.combo) continue;
+    if (isMac && row.windowsOnly) continue;
+    present.push({
+      label: entry.key ? tr(entry.key) : entry.shortLabel ?? row.label,
+      combo: row.combo,
+      caps: keycaps(row.combo, platform),
+    });
   }
   if (present.length === 0) return null;
 
@@ -49,6 +53,16 @@ function buildGroupedRow(byId, entries, platform, opts = {}) {
     };
   }
 
+  // 둘 이상 묶였는데 다중 키 조합이 포함되면 그룹 사이에 구분자("또는"/"or")를 둔다(R2-FIX-7).
+  const hasMultiKey = present.length >= 2 && present.some((p) => p.caps.length >= 2);
+  if (hasMultiKey) {
+    return {
+      label,
+      keyGroups: present.map((p) => p.caps),
+      separator: opts.separator ?? tr('shortcuts.cheat.or'),
+    };
+  }
+
   return {
     label,
     keys: present.flatMap((p) => p.caps),
@@ -58,116 +72,141 @@ function buildGroupedRow(byId, entries, platform, opts = {}) {
 /**
  * `state.shortcuts`에서 S16 단축키 한 장의 세 열을 만든다.
  * @param {Array<{ id: string, scope: string, group: string, label: string, combo: string, windowsOnly?: boolean }>} shortcuts
- * @param {{ platform?: 'windows' | 'macos', mode?: 'draw' | 'capture' | 'zoom' }} [options]
- * @returns {Array<{ id: string, title: string, active: boolean, rows: Array<{ label: string, keys?: string[], note?: string, noteMono?: boolean }> }>}
+ * @param {{ platform?: 'windows' | 'macos', mode?: 'draw' | 'capture' | 'zoom', lang?: string }} [options]
+ * @returns {Array<{
+ *   id: string,
+ *   title: string,
+ *   active: boolean,
+ *   rows: Array<{
+ *     label: string,
+ *     keys?: string[],
+ *     keyGroups?: string[][],
+ *     separator?: string,
+ *     keyPrefix?: string,
+ *     note?: string,
+ *     noteMono?: boolean,
+ *   }>,
+ * }>}
  */
-export function buildCheatSheetColumns(shortcuts = [], { platform = 'windows', mode = 'draw' } = {}) {
+export function buildCheatSheetColumns(
+  shortcuts = [],
+  { platform = 'windows', mode = 'draw', lang = 'ko' } = {},
+) {
   const byId = new Map(shortcuts.map((s) => [s.id, s]));
-  const isMac = platform === 'macos';
+  const osKey = normalizeOs(platform);
+  const isMac = osKey === 'mac';
+  const l = normalizeLang(lang);
+  const tr = (key) => translate(l, key, undefined, osKey);
+
   const modCtrl = isMac ? '⌘' : 'Ctrl';
   const modAlt = isMac ? '⌥' : 'Alt';
   const modShift = isMac ? '⇧' : 'Shift';
+  const wheelKey = tr('shortcuts.cheat.key.wheel');
+  const arrowsKey = tr('shortcuts.cheat.key.arrows');
+  const orSep = tr('shortcuts.cheat.or');
 
-  // 1열: 어디서나 (최대 8줄, 비운 칸 제외)
+  // 1열: 언제든 (최대 8줄, 비운 칸 제외)
   const globalRows = [];
   for (const item of GLOBAL_ORDER) {
     const row = byId.get(item.id);
     if (!row || !row.combo) continue;
+    if (isMac && row.windowsOnly) continue;
     globalRows.push({
-      label: item.label,
+      label: tr(item.key),
       keys: keycaps(row.combo, platform),
     });
     if (globalRows.length >= 8) break;
   }
 
   // 2열: 지금 화면 (주황 강조) + 3열: 보조/도형 조작
-  let modeTitle = '판서 화면 — 지금';
+  let modeTitle = tr('shortcuts.cheat.col.drawNow');
   let modeRows = [];
-  let extraTitle = '끌어서 도형';
+  let extraTitle = tr('shortcuts.cheat.col.dragDraw');
   let extraRows = [];
 
   if (mode === 'capture') {
-    modeTitle = '캡처 화면 — 지금';
+    modeTitle = tr('shortcuts.cheat.col.captureNow');
     modeRows = [
-      buildGroupedRow(byId, [{ id: 'c-detect', shortLabel: '창 ↔ 요소 전환' }], platform),
-      buildGroupedRow(byId, [{ id: 'c-copy', shortLabel: '복사하고 끝내기' }], platform),
+      buildGroupedRow(byId, [{ id: 'c-detect', key: 'shortcuts.slot.cDetect' }], platform, { tr }),
+      buildGroupedRow(byId, [{ id: 'c-copy', key: 'shortcuts.slot.cCopy' }], platform, { tr }),
       buildGroupedRow(
         byId,
         [
-          { id: 'c-save', shortLabel: '저장' },
-          { id: 'c-quick', shortLabel: '빠른 저장' },
+          { id: 'c-save', key: 'shortcuts.slot.cSave' },
+          { id: 'c-quick', key: 'shortcuts.slot.cQuick' },
         ],
         platform,
+        { fixedLabel: tr('shortcuts.cheat.row.saveQuick'), separator: orSep, tr },
       ),
-      buildGroupedRow(byId, [{ id: 'c-last', shortLabel: '직전 범위' }], platform),
+      buildGroupedRow(byId, [{ id: 'c-last', key: 'shortcuts.slot.cLast' }], platform, { tr }),
       buildGroupedRow(
         byId,
-        [
-          { id: 'c-prev', shortLabel: '이전' },
-          { id: 'c-next', shortLabel: '다음' },
-        ],
+        [{ id: 'c-prev' }, { id: 'c-next' }],
         platform,
-        { fixedLabel: '지난 범위' },
+        { fixedLabel: tr('shortcuts.cheat.row.prevRange'), tr },
       ),
-      buildGroupedRow(byId, [{ id: 'c-full', shortLabel: '모니터 전체' }], platform),
+      buildGroupedRow(byId, [{ id: 'c-full', key: 'shortcuts.slot.cFull' }], platform, { tr }),
       buildGroupedRow(
         byId,
-        [
-          { id: 'c-cursor', shortLabel: '커서' },
-          { id: 'c-color', shortLabel: '색 복사' },
-        ],
+        [{ id: 'c-cursor' }, { id: 'c-color' }],
         platform,
+        { fixedLabel: tr('shortcuts.cheat.row.cursorColor'), tr },
       ),
-      buildGroupedRow(byId, [{ id: 'c-cancel', shortLabel: '취소' }], platform),
+      buildGroupedRow(byId, [{ id: 'c-cancel', key: 'shortcuts.slot.cCancel' }], platform, { tr }),
     ].filter(Boolean);
 
-    extraTitle = '범위 미세 조작';
+    extraTitle = tr('shortcuts.cheat.col.fineCapture');
     extraRows = [
-      { label: '넓히기·좁히기', keys: ['휠'] },
-      { label: '1px 이동', keys: ['방향키'] },
-      { label: '1px 늘리기', keys: [modCtrl, '방향키'] },
-      { label: '1px 줄이기', keys: [modShift, '방향키'] },
-      { label: '자석 잠시 끄기', keys: [modAlt] },
-      { label: '확정 · 복사', note: '더블클릭' },
-      { label: '다시 고르기', note: '오른쪽 클릭' },
+      { label: tr('shortcuts.cheat.gesture.resize'), keys: [wheelKey] },
+      { label: tr('shortcuts.cheat.gesture.move1px'), keys: [arrowsKey] },
+      { label: tr('shortcuts.cheat.gesture.grow1px'), keys: [modCtrl, arrowsKey] },
+      { label: tr('shortcuts.cheat.gesture.shrink1px'), keys: [modShift, arrowsKey] },
+      { label: tr('shortcuts.cheat.gesture.pauseSnap'), keys: [modAlt] },
+      { label: tr('shortcuts.cheat.gesture.confirmCopy'), note: tr('shortcuts.cheat.note.doubleClick') },
+      { label: tr('shortcuts.cheat.gesture.reselect'), note: tr('shortcuts.cheat.note.rightClick') },
     ];
   } else if (mode === 'zoom') {
-    modeTitle = '실시간 확대 — 지금';
-    // 배율은 휠로만, 확대 중 잡는 키는 끝내기(Esc) 하나 — 방향키·클릭은 아래 앱으로(2026-11-26 결정)
+    modeTitle = tr('shortcuts.cheat.col.zoomNow');
+    // 확대 크기는 휠로만, 확대 중 잡는 키는 끝내기(Esc) 하나 — 방향키·클릭은 아래 앱으로
     modeRows = [
-      { label: '배율 조절', keys: ['휠'] },
-      buildGroupedRow(byId, [{ id: 'draw', shortLabel: '멈추고 판서' }], platform),
-      buildGroupedRow(byId, [{ id: 'z-exit', shortLabel: '끝내기' }], platform),
+      { label: tr('shortcuts.cheat.gesture.zoomLevel'), keys: [wheelKey] },
+      buildGroupedRow(byId, [{ id: 'draw' }], platform, {
+        fixedLabel: tr('shortcuts.cheat.row.stopAndDraw'),
+        tr,
+      }),
+      buildGroupedRow(byId, [{ id: 'z-exit' }], platform, {
+        fixedLabel: tr('shortcuts.cheat.row.exit'),
+        tr,
+      }),
     ].filter(Boolean);
 
-    extraTitle = '확대 조작';
+    extraTitle = tr('shortcuts.cheat.col.zoomControls');
     extraRows = [
-      { label: '아래 앱 스크롤', keys: [modShift, '휠'] },
-      { label: '화면 따라가기', note: '커서 이동' },
-      { label: '방향키·클릭', note: '아래 앱으로' },
+      { label: tr('shortcuts.cheat.gesture.scrollBelow'), keys: [modShift, wheelKey] },
+      { label: tr('shortcuts.cheat.gesture.followCursor'), note: tr('shortcuts.cheat.note.cursorMove') },
+      { label: tr('shortcuts.cheat.gesture.arrowsClick'), note: tr('shortcuts.cheat.note.passThrough') },
     ];
   } else {
-    // 기본: 판서 화면(F17)
-    modeTitle = '판서 화면 — 지금';
+    // 기본: 그리는 중(F17)
+    modeTitle = tr('shortcuts.cheat.col.drawNow');
     modeRows = [
       buildGroupedRow(
         byId,
         [
-          { id: 'd-pen', shortLabel: '펜' },
-          { id: 'd-marker', shortLabel: '형광펜' },
-          { id: 'd-text', shortLabel: '글자' },
+          { id: 'd-pen', key: 'shortcuts.slot.dPen' },
+          { id: 'd-marker', key: 'shortcuts.slot.dMarker' },
+          { id: 'd-text', key: 'shortcuts.slot.dText' },
         ],
         platform,
+        { fixedLabel: tr('shortcuts.cheat.row.toolsBasic'), tr },
       ),
       buildGroupedRow(
         byId,
-        [
-          { id: 'd-select', shortLabel: '고르기' },
-          { id: 'd-eraser', shortLabel: '지우개' },
-        ],
+        [{ id: 'd-select' }, { id: 'd-eraser' }],
         platform,
+        { fixedLabel: tr('shortcuts.cheat.row.toolsEdit'), tr },
       ),
-      buildGroupedRow(byId, [{ id: 'd-clear', shortLabel: '모두 지우기' }], platform),
+      buildGroupedRow(byId, [{ id: 'd-clear', key: 'shortcuts.slot.dClear' }], platform, { tr }),
       buildGroupedRow(
         byId,
         [
@@ -179,44 +218,57 @@ export function buildCheatSheetColumns(shortcuts = [], { platform = 'windows', m
           { id: 'd-lime' },
         ],
         platform,
-        { fixedLabel: '색' },
+        { fixedLabel: tr('shortcuts.cheat.row.colors'), tr },
+      ),
+      buildGroupedRow(
+        byId,
+        [{ id: 'd-white' }, { id: 'd-black' }],
+        platform,
+        { fixedLabel: tr('shortcuts.cheat.row.boards'), tr },
       ),
       buildGroupedRow(
         byId,
         [
-          { id: 'd-white', shortLabel: '흰' },
-          { id: 'd-black', shortLabel: '검은 칠판' },
+          { id: 'd-undo', key: 'shortcuts.slot.dUndo' },
+          { id: 'd-redo', key: 'shortcuts.slot.dRedo' },
         ],
         platform,
+        { fixedLabel: tr('shortcuts.cheat.row.undoRedo'), separator: orSep, tr },
       ),
-      buildGroupedRow(
-        byId,
-        [
-          { id: 'd-undo', shortLabel: '되돌리기' },
-          { id: 'd-redo', shortLabel: '다시' },
-        ],
-        platform,
-      ),
-      { label: '확대 · 굵기', keys: ['휠', `${modCtrl} 휠`] },
-      buildGroupedRow(byId, [{ id: 'd-exit', shortLabel: '끝내기 · 보관' }], platform),
+      {
+        label: tr('shortcuts.cheat.row.zoomWidth'),
+        keyGroups: [[wheelKey], [modCtrl, wheelKey]],
+        separator: orSep,
+      },
+      buildGroupedRow(byId, [{ id: 'd-exit' }], platform, {
+        fixedLabel: tr('shortcuts.cheat.row.exitKeep'),
+        tr,
+      }),
     ].filter(Boolean);
 
-    extraTitle = '끌어서 도형';
-    const centerRow = buildGroupedRow(byId, [{ id: 'd-center', shortLabel: '커서 가운데로' }], platform);
+    extraTitle = tr('shortcuts.cheat.col.dragDraw');
+    const centerRow = buildGroupedRow(byId, [{ id: 'd-center' }], platform, {
+      fixedLabel: tr('shortcuts.cheat.row.centerCursor'),
+      tr,
+    });
     extraRows = [
-      { label: '직선', keys: [modShift] },
-      { label: '사각형', keys: [modCtrl] },
-      { label: '화살표', keys: [modCtrl, modShift] },
-      { label: '원', keys: ['Tab'] },
-      { label: '점선으로', keys: [`+ ${modAlt}`] },
-      { label: '멈추면 도형', note: '0.5초', noteMono: true },
-      { label: '확대 중 이동', note: '오른쪽 클릭' },
+      { label: tr('shortcuts.cheat.gesture.straightLine'), keys: [modShift] },
+      { label: tr('shortcuts.cheat.gesture.rectangle'), keys: [modCtrl] },
+      { label: tr('shortcuts.cheat.gesture.arrow'), keys: [modCtrl, modShift] },
+      { label: tr('shortcuts.cheat.gesture.circle'), keys: ['Tab'] },
+      { label: tr('shortcuts.cheat.gesture.dashed'), keyPrefix: '+', keys: [modAlt] },
+      {
+        label: tr('shortcuts.cheat.gesture.holdShape'),
+        note: tr('shortcuts.cheat.gesture.holdTime'),
+        noteMono: true,
+      },
+      { label: tr('shortcuts.cheat.gesture.panZoom'), note: tr('shortcuts.cheat.note.rightClick') },
       ...(centerRow ? [centerRow] : []),
     ];
   }
 
   return [
-    { id: 'global', title: '어디서나', active: false, rows: globalRows },
+    { id: 'global', title: tr('shortcuts.cheat.col.global'), active: false, rows: globalRows },
     { id: `mode-${mode}`, title: modeTitle, active: true, rows: modeRows },
     { id: `extra-${mode}`, title: extraTitle, active: false, rows: extraRows },
   ];

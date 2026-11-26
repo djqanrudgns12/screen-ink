@@ -1,0 +1,57 @@
+{
+  "schema": "screen-ink.pdf-fonts.manifest",
+  "version": 1,
+  "totalBytes": 1093788,
+  "files": [
+    {
+      "file": "Paperlogy-6SemiBold.ttf",
+      "family": "Paperlogy",
+      "weight": 600,
+      "bytes": 345580,
+      "sha256": "6d98ebc5023a25269743c93b3f22430a879940bc0798228754e2d1b298e3440e",
+      "glyphCount": 2480,
+      "codepointCount": 2480,
+      "emptyHangulCount": 0
+    },
+    {
+      "file": "Freesentation-4Regular.ttf",
+      "family": "Freesentation",
+      "weight": 400,
+      "bytes": 353212,
+      "sha256": "b2c4b2292b20d16476c341f4ad3e4ff6960a52c5da66bbca54960ffeb25d8efb",
+      "glyphCount": 2485,
+      "codepointCount": 2484,
+      "emptyHangulCount": 0
+    },
+    {
+      "file": "Freesentation-6SemiBold.ttf",
+      "family": "Freesentation",
+      "weight": 600,
+      "bytes": 350284,
+      "sha256": "4184b50bef80366337a292a242c27942834eae1d494f45468beb21c0b8e0bee6",
+      "glyphCount": 2485,
+      "codepointCount": 2484,
+      "emptyHangulCount": 0
+    },
+    {
+      "file": "IBMPlexMono-Medium.ttf",
+      "family": "IBM Plex Mono",
+      "weight": 500,
+      "bytes": 23348,
+      "sha256": "41f70628fbc5c754d3a7959b321cd9b7b92729a309e06af0f724f629b76590f9",
+      "glyphCount": 142,
+      "codepointCount": 103,
+      "emptyHangulCount": 0
+    },
+    {
+      "file": "Pretendard-Symbols.ttf",
+      "family": "Pretendard",
+      "weight": 600,
+      "bytes": 21364,
+      "sha256": "a1ce23b00eebb4cd823e559861d5f7c4e642470484d5231e65f93ea33a0b1ab6",
+      "glyphCount": 196,
+      "codepointCount": 54,
+      "emptyHangulCount": 0
+    }
+  ]
+}

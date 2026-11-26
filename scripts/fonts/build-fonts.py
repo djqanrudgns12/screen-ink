@@ -34,6 +34,11 @@ FONT_SPECS = [
     {"file": "Paperlogy-6SemiBold.woff2", "family": "Paperlogy", "weight": 600, "drop_empty": True},
 ]
 
+PDF_SYMBOLS = "⌥⌘⇧⌃⌫⏎↩⇥⎋←↑→↓↔↕↖↗↘↙·×÷–—‘’“”•…‹›−∞✓●○▾▸+-.,:/0123456789"
+DEFAULT_SYMBOLS_FONT = pathlib.Path(
+    "/Users/bodyking/Desktop/Architecture/writeessay/node_modules/pretendard/dist/public/static/alternative/Pretendard-SemiBold.ttf"
+)
+
 
 def get_ksx1001_hangul() -> set[str]:
     """KS X 1001 완성형 한글 2,350음절(EUC-KR 0xB0A1~0xC8FE) 집합."""
@@ -102,8 +107,9 @@ def subset_font(
     dst_path: pathlib.Path,
     target_cps: set[int],
     drop_empty: bool,
+    flavor: str | None = "woff2",
 ) -> dict[str, Any]:
-    """단일 폰트를 부분 집합화해 woff2로 저장하고 검증 결과를 반환한다."""
+    """단일 폰트를 부분 집합화해 woff2 또는 TTF로 저장하고 검증 결과를 반환한다."""
     tt = TTFont(src_path)
     meta = read_name_metadata(tt)
     cmap = tt.getBestCmap() or {}
@@ -126,7 +132,7 @@ def subset_font(
         final_cps = target_cps & set(cmap.keys())
 
     opts = Options()
-    opts.flavor = "woff2"
+    opts.flavor = flavor
     opts.layout_features = ["*"]
     opts.name_IDs = [0, 1, 2, 4, 6, 13, 14, 16, 17]
     opts.desubroutinize = False
@@ -134,12 +140,22 @@ def subset_font(
     subsetter = Subsetter(options=opts)
     subsetter.populate(unicodes=final_cps)
     subsetter.subset(tt)
+    tt.flavor = flavor
+    if flavor is None and "glyf" in tt:
+        # @pdf-lib/fontkit의 TTFSubset은 short loca(2바이트 배수)를 쓸 때 패딩을 추가하지 않으므로
+        # 원본 TTF의 모든 글리프 오프셋을 2바이트 경계로 정렬해 글리프 경계 어긋남을 막는다.
+        tt["glyf"].padding = 2
 
     dst_path.parent.mkdir(parents=True, exist_ok=True)
     tt.save(dst_path)
 
-    # 저장된 파일을 다시 열어 cmap과 빈 한글 글리프가 없는지 검증
+    # 저장된 파일을 다시 열어 형식(flavor)·테이블·빈 한글 글리프를 검증
     verify_tt = TTFont(dst_path)
+    assert verify_tt.flavor == flavor, f"{dst_path.name}: flavor 불일치 ({verify_tt.flavor!r} != {flavor!r})"
+    if flavor is None:
+        assert "glyf" in verify_tt and "loca" in verify_tt, f"{dst_path.name}: TrueType glyf/loca 테이블 없음"
+        odd_locs = [loc for loc in verify_tt["loca"].locations if loc % 2 != 0]
+        assert not odd_locs, f"{dst_path.name}: 2바이트 정렬되지 않은 loca 오프셋 발견 ({len(odd_locs)}개)"
     verify_cmap = verify_tt.getBestCmap() or {}
     verify_gs = verify_tt.getGlyphSet()
     empty_hangul = 0
@@ -178,6 +194,9 @@ def main() -> int:
     parser.add_argument("--i18n-csv", type=pathlib.Path, default=repo_root / "docs" / "plans" / "2026-11-27" / "research" / "i18n-strings.csv")
     parser.add_argument("--out-dir", type=pathlib.Path, default=repo_root / "packages" / "ink-ui" / "src" / "lib" / "fonts")
     parser.add_argument("--app-name", type=str, default=DEFAULT_APP_NAME)
+    parser.add_argument("--symbols-font", type=pathlib.Path, default=DEFAULT_SYMBOLS_FONT)
+    parser.add_argument("--skip-pdf", action="store_true", help="PDF용 TTF 부분 집합 생성을 건너뛴다")
+    parser.add_argument("--pdf-only", action="store_true", help="UI woff2/manifest를 건드리지 않고 PDF용 TTF만 생성한다")
     args = parser.parse_args()
 
     fonts_dir = args.fonts_dir.expanduser().resolve()
@@ -189,54 +208,104 @@ def main() -> int:
         args.app_name,
     )
 
-    files_meta: list[dict[str, Any]] = []
-    family_chars: dict[str, set[str]] = {}
-    copyrights: dict[str, dict[int, str]] = {}
+    if not args.pdf_only:
+        files_meta: list[dict[str, Any]] = []
+        family_chars: dict[str, set[str]] = {}
+        copyrights: dict[str, dict[int, str]] = {}
 
-    for spec in FONT_SPECS:
-        src = fonts_dir / spec["file"]
-        if not src.exists():
-            print(f"오류: 원본 글꼴 파일 없음: {src}", file=sys.stderr)
-            return 1
-        dst = out_dir / spec["file"]
-        res = subset_font(src, dst, target_cps, spec["drop_empty"])
-        files_meta.append(
-            {
-                "file": res["file"],
-                "family": spec["family"],
-                "weight": spec["weight"],
-                "bytes": res["bytes"],
-                "sha256": res["sha256"],
-                "glyphCount": res["glyphCount"],
-                "codepointCount": res["codepointCount"],
-                "emptyHangulCount": res["emptyHangulCount"],
-            }
+        for spec in FONT_SPECS:
+            src = fonts_dir / spec["file"]
+            if not src.exists():
+                print(f"오류: 원본 글꼴 파일 없음: {src}", file=sys.stderr)
+                return 1
+            dst = out_dir / spec["file"]
+            res = subset_font(src, dst, target_cps, spec["drop_empty"])
+            files_meta.append(
+                {
+                    "file": res["file"],
+                    "family": spec["family"],
+                    "weight": spec["weight"],
+                    "bytes": res["bytes"],
+                    "sha256": res["sha256"],
+                    "glyphCount": res["glyphCount"],
+                    "codepointCount": res["codepointCount"],
+                    "emptyHangulCount": res["emptyHangulCount"],
+                }
+            )
+            chars_set = set(res["nonSpaceChars"])
+            if spec["family"] not in family_chars:
+                family_chars[spec["family"]] = chars_set
+            else:
+                family_chars[spec["family"]] &= chars_set
+            if spec["family"] not in copyrights and res["nameMeta"]:
+                copyrights[spec["family"]] = res["nameMeta"]
+
+        total_bytes = sum(f["bytes"] for f in files_meta)
+        manifest = {
+            "schema": "screen-ink.fonts.manifest",
+            "version": 1,
+            "targetCodepointCount": len(target_cps),
+            "totalBytes": total_bytes,
+            "files": files_meta,
+            "codepointsByFamily": {
+                fam: "".join(sorted(chars)) for fam, chars in family_chars.items()
+            },
+        }
+        manifest_path = out_dir / "manifest.json"
+        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+        print(f"글꼴 부분 집합 완료: {len(files_meta)}개 파일, 총 {total_bytes:,} B ({total_bytes / 1024:.1f} KiB)")
+        for fam, meta in copyrights.items():
+            print(f"[{fam}] nameMeta:", json.dumps(meta, ensure_ascii=False))
+
+    if not args.skip_pdf:
+        pdf_out_dir = out_dir / "pdf"
+        mono_src = repo_root / "node_modules" / "@fontsource" / "ibm-plex-mono" / "files" / "ibm-plex-mono-latin-500-normal.woff2"
+        sym_src = args.symbols_font.expanduser().resolve()
+        mono_cps = set(range(0x0020, 0x007F)) | {0x00A0} | {ord(ch) for ch in "↑↓·×÷–—"}
+        sym_cps = {0x0020} | {ord(ch) for ch in PDF_SYMBOLS}
+
+        pdf_specs = [
+            {"file": "Paperlogy-6SemiBold.ttf", "src": fonts_dir / "Paperlogy-6SemiBold.woff2", "family": "Paperlogy", "weight": 600, "drop_empty": True, "cps": target_cps},
+            {"file": "Freesentation-4Regular.ttf", "src": fonts_dir / "Freesentation-4Regular.woff2", "family": "Freesentation", "weight": 400, "drop_empty": False, "cps": target_cps},
+            {"file": "Freesentation-6SemiBold.ttf", "src": fonts_dir / "Freesentation-6SemiBold.woff2", "family": "Freesentation", "weight": 600, "drop_empty": False, "cps": target_cps},
+            {"file": "IBMPlexMono-Medium.ttf", "src": mono_src, "family": "IBM Plex Mono", "weight": 500, "drop_empty": False, "cps": mono_cps},
+            {"file": "Pretendard-Symbols.ttf", "src": sym_src, "family": "Pretendard", "weight": 600, "drop_empty": False, "cps": sym_cps},
+        ]
+
+        pdf_files_meta: list[dict[str, Any]] = []
+        for pspec in pdf_specs:
+            src_p = pspec["src"]
+            if not src_p.exists():
+                print(f"오류: PDF용 원본 글꼴 파일 없음: {src_p}", file=sys.stderr)
+                return 1
+            dst_p = pdf_out_dir / pspec["file"]
+            pres = subset_font(src_p, dst_p, pspec["cps"], pspec["drop_empty"], flavor=None)
+            pdf_files_meta.append(
+                {
+                    "file": pres["file"],
+                    "family": pspec["family"],
+                    "weight": pspec["weight"],
+                    "bytes": pres["bytes"],
+                    "sha256": pres["sha256"],
+                    "glyphCount": pres["glyphCount"],
+                    "codepointCount": pres["codepointCount"],
+                    "emptyHangulCount": pres["emptyHangulCount"],
+                }
+            )
+
+        pdf_total = sum(f["bytes"] for f in pdf_files_meta)
+        pdf_manifest = {
+            "schema": "screen-ink.pdf-fonts.manifest",
+            "version": 1,
+            "totalBytes": pdf_total,
+            "files": pdf_files_meta,
+        }
+        (pdf_out_dir / "manifest.json").write_text(
+            json.dumps(pdf_manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
-        chars_set = set(res["nonSpaceChars"])
-        if spec["family"] not in family_chars:
-            family_chars[spec["family"]] = chars_set
-        else:
-            family_chars[spec["family"]] &= chars_set
-        if spec["family"] not in copyrights and res["nameMeta"]:
-            copyrights[spec["family"]] = res["nameMeta"]
+        print(f"PDF용 TTF 부분 집합 완료: {len(pdf_files_meta)}개 파일, 총 {pdf_total:,} B ({pdf_total / 1024:.1f} KiB)")
 
-    total_bytes = sum(f["bytes"] for f in files_meta)
-    manifest = {
-        "schema": "screen-ink.fonts.manifest",
-        "version": 1,
-        "targetCodepointCount": len(target_cps),
-        "totalBytes": total_bytes,
-        "files": files_meta,
-        "codepointsByFamily": {
-            fam: "".join(sorted(chars)) for fam, chars in family_chars.items()
-        },
-    }
-    manifest_path = out_dir / "manifest.json"
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-    print(f"글꼴 부분 집합 완료: {len(files_meta)}개 파일, 총 {total_bytes:,} B ({total_bytes / 1024:.1f} KiB)")
-    for fam, meta in copyrights.items():
-        print(f"[{fam}] nameMeta:", json.dumps(meta, ensure_ascii=False))
     return 0
 
 

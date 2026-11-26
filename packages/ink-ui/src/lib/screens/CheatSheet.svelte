@@ -2,10 +2,12 @@
   import Icon from '../icons/Icon.svelte';
   import Keycap from '../components/Keycap.svelte';
   import { buildCheatSheetColumns } from '../models/cheatSheet.js';
+  import { locale, syncLang, t } from '../i18n/index.svelte.js';
+  import { exportShortcutSheetPdf } from '../pdf/download.js';
 
   /**
    * S16 단축키 한 장(F17) — state.shortcuts의 현재 값으로 3열 구성.
-   * 아무 키나 누르면 닫힌다.
+   * 아무 키나 누르면 닫히고, [PDF로 받기]·[×] 단추를 제공한다.
    * @type {{
    *   client: import('@screen-ink/client').InkClient,
    *   mode?: 'draw' | 'capture' | 'zoom',
@@ -25,14 +27,20 @@
   const MODIFIER_ONLY = new Set(['Shift', 'Control', 'Alt', 'Meta', 'OS']);
 
   let state = $state(null);
+  let exportingPdf = $state(false);
 
   $effect(() => {
     let alive = true;
     client.getState().then((s) => {
-      if (alive) state = s;
+      if (!alive) return;
+      state = s;
+      syncLang(s);
     });
     const off = client.subscribe((e) => {
-      if (e.type === 'state') state = e.state;
+      if (e.type === 'state') {
+        state = e.state;
+        syncLang(e.state);
+      }
     });
     return () => {
       alive = false;
@@ -42,12 +50,28 @@
 
   let platform = $derived(state?.platform ?? 'windows');
   let columns = $derived(
-    buildCheatSheetColumns(state?.shortcuts ?? [], { platform, mode }),
+    buildCheatSheetColumns(state?.shortcuts ?? [], { platform, mode, lang: locale.lang }),
   );
 
   function closeSheet() {
     open = false;
     onClose?.();
+  }
+
+  async function handleExportPdf(e) {
+    e?.stopPropagation?.();
+    if (exportingPdf) return;
+    exportingPdf = true;
+    try {
+      await exportShortcutSheetPdf(client, {
+        shortcuts: state?.shortcuts ?? [],
+        lang: locale.lang,
+        os: platform,
+        version: state?.version,
+      });
+    } finally {
+      exportingPdf = false;
+    }
   }
 
   function handleWindowKeydown(e) {
@@ -74,13 +98,32 @@
     role="presentation"
     onclick={handleBackdropClick}
   >
-    <div role="dialog" aria-modal="true" aria-label="단축키 한 장" class="ink-cheat-card">
+    <div role="dialog" aria-modal="true" aria-label={t('shortcuts.cheat.aria')} class="ink-cheat-card">
       <header class="ink-cheat-head">
         <span class="ink-cheat-head-icon">
           <Icon name="shortcuts" size={20} />
         </span>
-        <h1 class="ink-cheat-title">단축키 한 장</h1>
-        <span class="ink-cheat-hint">아무 키나 누르면 닫혀요</span>
+        <h1 class="ink-cheat-title">{t('shortcuts.cheat.title')}</h1>
+        <span class="ink-cheat-hint">{t('shortcuts.cheat.hint')}</span>
+        <button
+          type="button"
+          class="ink-cheat-pdf-btn ink-focus"
+          data-cheat-ignore
+          disabled={exportingPdf}
+          onclick={handleExportPdf}
+        >
+          <Icon name="save" size={14} />
+          <span>{exportingPdf ? t('pdf.action.generating') : t('pdf.action.download')}</span>
+        </button>
+        <button
+          type="button"
+          class="ink-cheat-close ink-focus"
+          data-cheat-ignore
+          aria-label={t('shortcuts.cheat.close')}
+          onclick={closeSheet}
+        >
+          <Icon name="close" size={16} />
+        </button>
       </header>
 
       <div class="ink-cheat-grid">
@@ -95,8 +138,22 @@
             {#each col.rows as row (row.label)}
               <div class="ink-cheat-row">
                 <span class="ink-cheat-label">{row.label}</span>
-                {#if row.keys && row.keys.length > 0}
-                  <Keycap keys={row.keys} variant="island" />
+                {#if row.keyGroups && row.keyGroups.length > 0}
+                  <span class="ink-cheat-groups">
+                    {#each row.keyGroups as grp, gi (gi)}
+                      {#if gi > 0}
+                        <span class="ink-cheat-sep">{row.separator}</span>
+                      {/if}
+                      <Keycap keys={grp} variant="island" />
+                    {/each}
+                  </span>
+                {:else if row.keys && row.keys.length > 0}
+                  <span class="ink-cheat-groups">
+                    {#if row.keyPrefix}
+                      <span class="ink-cheat-prefix ink-mono">{row.keyPrefix}</span>
+                    {/if}
+                    <Keycap keys={row.keys} variant="island" />
+                  </span>
                 {:else if row.note}
                   <span class="ink-cheat-note {row.noteMono ? 'ink-mono' : ''}">{row.note}</span>
                 {/if}
@@ -122,7 +179,7 @@
   }
 
   .ink-cheat-card {
-    width: min(820px, calc(100vw - 32px));
+    width: min(920px, calc(100vw - 32px));
     box-sizing: border-box;
     padding: 18px 18px 16px;
     border-radius: var(--ink-r-modal);
@@ -160,6 +217,52 @@
     font-size: 11.5px;
     color: var(--ink-sub);
     white-space: nowrap;
+  }
+
+  .ink-cheat-pdf-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 26px;
+    padding: 0 10px;
+    border: 1px solid var(--ink-line-strong);
+    border-radius: var(--ink-r-btn);
+    background: var(--ink-raised);
+    color: var(--ink-text);
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .ink-cheat-pdf-btn:hover:not(:disabled) {
+    background: var(--ink-hover);
+  }
+
+  .ink-cheat-pdf-btn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+
+  .ink-cheat-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--ink-close-r);
+    background: var(--ink-close-bg);
+    color: var(--ink-sub);
+    cursor: pointer;
+    flex: none;
+  }
+
+  .ink-cheat-close:hover {
+    color: var(--ink-text);
+    background: var(--ink-hover);
   }
 
   .ink-cheat-grid {
@@ -210,9 +313,9 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    height: 26px;
-    padding: 0 6px;
-    font-size: 12.5px;
+    min-height: 26px;
+    padding: 2px 6px;
+    font-size: 12px;
     color: var(--ink-text);
   }
 
@@ -222,6 +325,20 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .ink-cheat-groups {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+  }
+
+  .ink-cheat-sep,
+  .ink-cheat-prefix {
+    font-size: 10.5px;
+    color: var(--ink-sub);
+    white-space: nowrap;
   }
 
   .ink-cheat-note {
