@@ -73,13 +73,13 @@ screen-ink/
 
 | 포트 | 책임 | Windows 어댑터 | 가짜 | Tidy 안에서 |
 |---|---|---|---|---|
-| `ScreenSource` | 모니터별 정지 프레임, 창 한 장 | xcap(GDI 기본·`wgc` 기능) · windows-capture | PNG 고정 자료 | 같은 어댑터 |
+| `ScreenSource` | 모니터별 정지 프레임, 창 한 장 | 정지 = GDI `BitBlt` · 창 = WGC `CreateForWindow`(`windows` 0.62 직접, 첫 프레임 150 ms → 스냅숏 자르기, spikes §1) | PNG 고정 자료 | 같은 어댑터 |
 | `WindowCatalog` | Z 순서 창 목록(DWM 경계·숨김·응답 없음·cloaked) | windows-rs | 장면 JSON | 같음 |
 | `ElementLocator` | 점 → 요소 사슬(시간 제한) | uiautomation-rs + MSAA | 장면 JSON 트리 | 같음 |
 | `MonitorProbe` | 배치·배율·변경 이벤트 | `QueryDisplayConfig`·`GetDpiForMonitor` | 고정 배치 | 같음 |
 | `OverlayHost` | 모니터별 오버레이 창 만들기·보이기·숨기기·투명도 재지정·캡처 제외 | Tauri 창 + `SetWindowDisplayAffinity` | 기록만 | **Tidy 창 라벨 규칙**(`ink-overlay-<n>`)으로 만듦 |
 | `Magnifier` | 실시간 확대 창·원본 사각형·필터 목록 | Magnification API | 기록만 | 같음 |
-| `Recorder` | 범위·창 녹화 시작·중지·상태 | windows-capture `VideoEncoder`(MediaTranscoder) | 가짜 파일 | 같음 |
+| `Recorder` | 범위·창 녹화 시작·중지·상태, 임시 파일 옮기기·남은 녹화 | WGC(모니터·창 추적) → 텍스처 링 → Media Foundation `IMFSinkWriter`(D3D 관리자·하드웨어 H.264, spikes §2 — windows-capture는 쓰지 않음) | 메모리 파일 | 같음 (맥 1차 = `NoRecorder`) |
 | `HotkeyRegistry` | 등록·해제·실패 원인 | tauri global-shortcut(global-hotkey) | 메모리 표 | **Tidy가 이미 쓰는 키와 함께 판정** |
 | `ProcessProbe` | 실행 중인 알려진 앱(프로세스 이름만) | `CreateToolhelp32Snapshot` | 고정 목록 | 같음 |
 | `WindowPinner` | 창 항상 위 고정·풀기·표시 확인·남은 표시 정리·테두리(R-TOP) | windows-rs `SetWindowPos`·`SetProp`·`SetWinEventHook` | 메모리 표 | 같음 (맥 = `Unsupported`) |
