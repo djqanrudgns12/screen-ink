@@ -454,12 +454,14 @@ fn 판서와_실시간_확대는_서로_끝내고_전환() {
     let mut s = InkService::new(w.ports(), Platform::Win, "test");
     s.set_magnifier(w.magnifier_port());
     s.start();
-    // 확대 중 Alt+1 = 확대를 끝내고 판서(5.3 배율 이어받기는 아직 — 1×로 시작)
+    // 확대 중 Alt+1 = 확대를 끝내고 그 배율 그대로 판서(5.3 — 자세한 값은 tests/handoff.rs)
     s.on_hotkey("zoom");
     assert!(matches!(s.mode(), Mode::LiveZoom { .. }));
+    let h = s.zoom_handoff().unwrap();
     assert_eq!(s.on_hotkey("draw"), HotkeyOutcome::Draw);
     assert!(matches!(s.mode(), Mode::Draw { board: false, .. }));
     assert!(w.magnifier.0.lock().unwrap().running.is_none(), "돋보기를 끈다");
+    assert_eq!(s.draw_session().unwrap().initial_view.s, h.s);
     let drawing = session_of(&s);
     // 판서 중 Alt+2 = 판서를 끝내고(늦은 끝으로 보관) 확대
     s.on_hotkey("zoom");

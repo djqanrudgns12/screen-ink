@@ -29,9 +29,18 @@ pub const ZOOM_SLOT: &str = "zoom";
 pub const ZOOM_EXIT_SLOT: &str = "z-exit";
 pub const ZOOM_KEYS: [&str; 1] = [ZOOM_EXIT_SLOT];
 
+/// 판서 칸(Alt+1). 확대 중이면 끝내지 않고 그 순간 확대 화면·배율 그대로 정지 판서로 이어받는다(5.3, R-ZOOM-3).
+pub const DRAW_SLOT: &str = "draw";
+
 /// 확대 중 누르면 확대를 끝내고 그 키를 원래대로 처리하는 칸(다른 모드를 여는 키, 03 §3).
-/// 핀·타이머·창 항상 위처럼 화면을 바꾸지 않는 키는 확대를 그대로 둔다.
-const ENDS_ZOOM: [&str; 10] = ["region", "window", "record", "draw", "board", "last", "full", "active", "delay", "restore"];
+/// 핀·타이머·창 항상 위처럼 화면을 바꾸지 않는 키는 확대를 그대로 둔다. 판서(Alt+1)는 이어받기(`ToDraw`).
+const ENDS_ZOOM: [&str; 9] = ["region", "window", "record", "board", "last", "full", "active", "delay", "restore"];
+
+/// [판서로](3e-handoff) 초기 확대 여백: 고른 범위가 화면의 88% 안에 꽉 차게(B §2.3).
+pub const FIT_MARGIN: f64 = 0.88;
+/// 판서 확대 범위(A §2.1 `view.s` 1~8, 판서 엔진 `clampView`와 같음).
+pub const DRAW_MIN_ZOOM: f64 = 1.0;
+pub const DRAW_MAX_ZOOM: f64 = 8.0;
 
 /// `zoom.follow` 설정(05 §1).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -224,6 +233,34 @@ pub fn to_draw_transform(view: &LiveZoomView, monitor_scale: f64) -> (f64, f64, 
     (s, -((view.source.x - m.x) as f64) / ms * s, -((view.source.y - m.y) as f64) / ms * s)
 }
 
+/// 판서 엔진 `clampAxis`와 같은 가두기: 내용이 화면보다 크면 `[화면 − 내용, 0]`, 작으면 `[0, 남는 폭]`.
+fn clamp_axis(t: f64, view_len: f64, content_len: f64) -> f64 {
+    let free = view_len - content_len;
+    if free <= 0.0 {
+        t.clamp(free, 0.0)
+    } else {
+        t.clamp(0.0, free)
+    }
+}
+
+/// 3e-handoff `[판서로]`: 방금 고른 범위(가상 화면 물리 px)가 그 모니터 판서 화면에 꽉 차게 하는 초기 변환 `(s, tx, ty)`.
+/// 판서 문서·화면 = 그 모니터 논리 px(`화면 CSS = 문서 × s + t`). 범위는 모니터 안으로 자른다(여러 모니터에 걸치면
+/// 이 모니터 몫만). 배율 = 화면 88%에 맞춤을 0.01 단위로 내림(범위가 여백 밖으로 나가지 않게) → 1~8로 가둠.
+/// 범위 가운데를 화면 가운데에 놓은 뒤 문서 밖이 보이지 않게 가둔다. 범위가 모니터와 안 겹치면 1×.
+pub fn fit_rect_view(monitor_bounds: PhysRect, monitor_scale: f64, rect: PhysRect) -> (f64, f64, f64) {
+    let ms = if monitor_scale.is_finite() && monitor_scale > 0.0 { monitor_scale } else { 1.0 };
+    let m = monitor_bounds;
+    let Some(r) = rect.intersect(&m).filter(|r| r.w > 0 && r.h > 0) else { return (DRAW_MIN_ZOOM, 0.0, 0.0) };
+    let (doc_w, doc_h) = (m.w.max(1) as f64 / ms, m.h.max(1) as f64 / ms);
+    let (sel_w, sel_h) = (r.w as f64 / ms, r.h as f64 / ms);
+    let fit = (FIT_MARGIN * doc_w / sel_w).min(FIT_MARGIN * doc_h / sel_h);
+    let s = ((fit * 100.0 + EPS).floor() / 100.0).clamp(DRAW_MIN_ZOOM, DRAW_MAX_ZOOM);
+    let (cx, cy) = ((r.x - m.x) as f64 / ms + sel_w / 2.0, (r.y - m.y) as f64 / ms + sel_h / 2.0);
+    let tx = clamp_axis(doc_w / 2.0 - cx * s, doc_w, doc_w * s);
+    let ty = clamp_axis(doc_h / 2.0 - cy * s, doc_h, doc_h * s);
+    (s, tx, ty)
+}
+
 /// 섬·배지 글자: `×2.0`, `×1.25`.
 pub fn format_scale(s: f64) -> String {
     let hundredths = (s * 100.0).round() as i64;
@@ -248,8 +285,10 @@ pub enum ZoomCommand {
     SwitchFromCapture,
     /// 확대 중 Alt+2 · `z-exit`
     End,
-    /// 확대 중 다른 모드 키 — 확대를 끝내고 그 키를 원래대로 처리(5.3 전까지는 Alt+1도 여기)
+    /// 확대 중 다른 모드 키 — 확대를 끝내고 그 키를 원래대로 처리
     EndThenPass,
+    /// 확대 중 Alt+1 — 그 순간 확대 화면·배율 그대로 정지 판서로 이어받기(5.3, R-ZOOM-3)
+    ToDraw,
 }
 
 /// 모드를 빠짐없이 나열하지 않는다(다른 흐름이 모드를 더해도 이 판정은 그대로 — 모르는 모드에서는 `None`).
@@ -271,6 +310,7 @@ pub fn on_hotkey(mode: &Mode, slot: &str) -> Option<ZoomCommand> {
     }
     match slot {
         ZOOM_EXIT_SLOT => Some(ZoomCommand::End),
+        DRAW_SLOT => Some(ZoomCommand::ToDraw),
         s if ENDS_ZOOM.contains(&s) => Some(ZoomCommand::EndThenPass),
         _ => None,
     }
@@ -483,12 +523,71 @@ mod tests {
         assert_eq!(on_hotkey(&zoom, "z-in"), None);
         assert_eq!(on_hotkey(&zoom, "z-out"), None);
         // 다른 모드 키는 확대를 끝내고 넘긴다, 핀·타이머는 확대를 그대로 둔다
-        for s in ["region", "window", "record", "draw", "board", "last", "full", "active", "delay", "restore"] {
+        for s in ["region", "window", "record", "board", "last", "full", "active", "delay", "restore"] {
             assert_eq!(on_hotkey(&zoom, s), Some(ZoomCommand::EndThenPass), "{s}");
             assert_eq!(on_hotkey(&idle, s), None, "{s}");
         }
         for s in ["pin", "pinToggle", "timer", "topmost", "pause"] {
             assert_eq!(on_hotkey(&zoom, s), None, "{s}");
         }
+        // 5.3: 확대 중 Alt+1은 끝내지 않고 이어받기, 확대 밖에서는 판서 흐름이 맡는다
+        assert_eq!(on_hotkey(&zoom, DRAW_SLOT), Some(ZoomCommand::ToDraw));
+        assert_eq!(on_hotkey(&idle, DRAW_SLOT), None);
+        assert_eq!(on_hotkey(&cap, DRAW_SLOT), None);
+    }
+
+    /// 판서 화면 좌표(CSS) → 문서(모니터 논리 px).
+    fn view_to_doc(x: f64, y: f64, (s, tx, ty): (f64, f64, f64)) -> (f64, f64) {
+        ((x - tx) / s, (y - ty) / s)
+    }
+
+    #[test]
+    fn 범위_이어받기_초기확대_계산() {
+        // 400×200 범위를 1920×1080 가운데에: 화면 88%에 맞춤 = min(4.224, 4.752) → 4.22(0.01 내림)
+        let (s, tx, ty) = fit_rect_view(FHD, 1.0, PhysRect::new(760, 440, 400, 200));
+        assert_eq!(s, 4.22);
+        // 범위 가운데가 화면 가운데
+        let c = view_to_doc(960.0, 540.0, (s, tx, ty));
+        assert!((c.0 - 960.0).abs() < 1e-9 && (c.1 - 540.0).abs() < 1e-9, "{c:?}");
+        // 범위 전체가 화면 88% 안(가로가 꽉 참)
+        let left = 760.0 * s + tx;
+        let right = 1160.0 * s + tx;
+        assert!(left >= 1920.0 * 0.06 - 1e-6 && right <= 1920.0 * 0.94 + 1e-6, "{left}..{right}");
+        assert!(right - left >= 1920.0 * 0.87, "꽉 차게: {}", right - left);
+
+        // 아주 작은 범위는 8배에서 멈추고, 모니터 대부분이면 1×(이동 없음)
+        assert_eq!(fit_rect_view(FHD, 1.0, PhysRect::new(100, 100, 20, 10)).0, DRAW_MAX_ZOOM);
+        assert_eq!(fit_rect_view(FHD, 1.0, PhysRect::new(0, 0, 1900, 1000)), (1.0, 0.0, 0.0));
+        // 안 겹치거나 빈 범위 = 1×
+        assert_eq!(fit_rect_view(FHD, 1.0, PhysRect::new(5000, 0, 100, 100)), (1.0, 0.0, 0.0));
+        assert_eq!(fit_rect_view(FHD, 1.0, PhysRect::new(10, 10, 0, 50)), (1.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn 범위_이어받기는_모니터_가장자리와_배율_모니터에서도_문서_안() {
+        // 왼쪽 위 구석 범위 — 가운데로 못 옮기면 가둔다(문서 밖이 보이지 않음)
+        let v = fit_rect_view(FHD, 1.0, PhysRect::new(0, 0, 300, 200));
+        assert!(v.0 > 1.0);
+        assert_eq!((v.1, v.2), (0.0, 0.0), "왼쪽 위에 붙는다");
+        let tl = view_to_doc(0.0, 0.0, v);
+        assert!(tl.0.abs() < 1e-9 && tl.1.abs() < 1e-9);
+
+        // 150% 모니터(가상 화면 오른쪽, 물리 2880×1800 = 논리 1920×1200)의 오른쪽 아래 범위
+        let m = PhysRect::new(1920, 0, 2880, 1800);
+        let r = PhysRect::new(1920 + 2400, 1500, 480, 300);
+        let v = fit_rect_view(m, 1.5, r);
+        // 문서 크기 1920×1200, 범위 논리 320×200 → min(5.28, 5.28) = 5.28
+        assert_eq!(v.0, 5.28);
+        assert!(v.1 <= 0.0 && v.1 >= 1920.0 - 1920.0 * v.0 - 1e-9, "{v:?}");
+        assert!(v.2 <= 0.0 && v.2 >= 1200.0 - 1200.0 * v.0 - 1e-9, "{v:?}");
+        // 범위가 화면 안에 다 보인다(오른쪽 아래로 가둠)
+        let (l, t) = ((2400.0 / 1.5) * v.0 + v.1, (1500.0 / 1.5) * v.0 + v.2);
+        let (rr, b) = ((2880.0 / 1.5) * v.0 + v.1, (1800.0 / 1.5) * v.0 + v.2);
+        assert!(l >= -1e-6 && t >= -1e-6 && rr <= 1920.0 + 1e-6 && b <= 1200.0 + 1e-6, "{l},{t} → {rr},{b}");
+
+        // 두 모니터에 걸친 범위는 이 모니터 몫만으로 맞춘다
+        let across = fit_rect_view(FHD, 1.0, PhysRect::new(1720, 440, 400, 200));
+        let only = fit_rect_view(FHD, 1.0, PhysRect::new(1720, 440, 200, 200));
+        assert_eq!(across, only);
     }
 }

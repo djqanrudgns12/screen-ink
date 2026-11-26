@@ -665,7 +665,8 @@ impl InkService {
 
     /// 트레이 메뉴·명령에서 시작(단축키가 꺼져 있어도). 이미 캡처 중이면 새로 시작.
     pub fn start_capture(&mut self, kind: CaptureKind) {
-        self.end_zoom();
+        // 확대 중이면 돋보기가 화면에서 사라진 뒤에 찍는다(확대 화면이 찍히지 않게)
+        self.end_zoom_settled();
         self.end_capture();
         self.begin_capture(kind, Instant::now());
     }
@@ -679,6 +680,8 @@ impl InkService {
             }
             return;
         }
+        // 새 캡처가 지난 결과 섬([판서로])을 덮는다 — 쥐어 둔 프레임을 놓는다
+        self.cap.handoff = None;
         let t = Instant::now();
         self.prepare_overlays();
         let layout = self.prepared.clone().unwrap_or_default();
@@ -830,6 +833,10 @@ impl InkService {
     pub fn on_system_event(&mut self, ev: SystemEvent) {
         self.draw_on_system_event(ev);
         self.zoom_system_event(ev);
+        // 잠금·절전·화면 구성 변경 뒤의 [판서로]는 쓸 수 없다 — 쥐어 둔 범위·프레임을 놓는다
+        if matches!(ev, SystemEvent::Lock | SystemEvent::Suspend | SystemEvent::DisplayChange) {
+            self.cap.handoff = None;
+        }
         match ev {
             SystemEvent::Lock | SystemEvent::Suspend => self.end_capture(),
             SystemEvent::DisplayChange => {

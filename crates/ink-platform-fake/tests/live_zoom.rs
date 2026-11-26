@@ -307,9 +307,10 @@ fn 확대_중_alt1은_확대를_끝내고_넘기고_핀_키는_확대를_둔다(
     s.on_hotkey("zoom");
     s.on_hotkey("pin");
     assert!(zooming(&s), "핀·타이머 같은 키는 확대를 그대로 둔다");
-    // 5.3 전: Alt+1은 확대를 끝내고 판서 처리(지금은 어댑터의 "준비 중")로 넘긴다
-    assert_ne!(s.on_hotkey("draw"), HotkeyOutcome::Zoom);
+    // 5.3: Alt+1은 확대를 끝내고 그 순간 확대 화면 그대로 판서로 이어받는다(값은 tests/handoff.rs)
+    assert_eq!(s.on_hotkey("draw"), HotkeyOutcome::Draw);
     assert!(!zooming(&s));
+    assert!(matches!(s.mode(), Mode::Draw { board: false, .. }));
     assert_eq!(running(&w), None);
 }
 

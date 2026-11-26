@@ -74,6 +74,23 @@ pub(crate) struct LastCapture {
     pub hex: Option<String>,
 }
 
+/// 결과 섬 [판서로]가 정지 프레임을 쥐고 있는 시간(B §2.3·§5 — M3 대기 메모리). 지나면 프레임만 놓고,
+/// 그 뒤 [판서로]는 지금 화면을 새로 찍어 같은 배율 공식으로 연다.
+pub const CAPTURE_FRAME_TTL: std::time::Duration = std::time::Duration::from_secs(30);
+
+/// 결과 섬 [판서로](3e-handoff): 방금 고른 범위와 그 모니터 전체 정지 프레임(Arc — 복사 없음, 4K ≈ 33 MB 한 장).
+/// 다음 모드 진입·잠금·화면 구성 변경이면 통째로 버리고, 30초가 지나면 프레임만 놓는다.
+#[derive(Clone)]
+pub(crate) struct CaptureHandoff {
+    /// 고른 범위(가상 화면 물리 px)
+    pub rect: PhysRect,
+    /// 범위 가운데가 속한 모니터
+    pub monitor_id: u32,
+    pub layout_fingerprint: String,
+    pub frame: Option<Frame>,
+    pub at: Instant,
+}
+
 #[derive(Default)]
 pub struct CaptureState {
     pub(crate) selector: Option<Selector>,
@@ -81,6 +98,8 @@ pub struct CaptureState {
     pub(crate) children: HashMap<u64, Vec<PhysRect>>,
     pub(crate) ranges: History,
     pub(crate) last: Option<LastCapture>,
+    /// 결과 섬 [판서로]가 쓸 범위·정지 프레임(3e-handoff)
+    pub(crate) handoff: Option<CaptureHandoff>,
     /// 오늘 저장한 순번({n})
     pub(crate) save_seq: u32,
     pub(crate) save_day: (u16, u8, u8),
@@ -464,11 +483,17 @@ impl InkService {
         let (tw, th, tpx) = image::thumbnail(w, h, &px, 160, 96);
         let thumb = self.ports.overlay.thumbnail(tw, th, tpx);
         self.cap.last = Some(LastCapture { w, h, bgra: Arc::new(px), app, hex: hex.clone() });
+        // [판서로]용 범위·그 모니터 정지 프레임 — 모드가 끝나면 프레임 목록을 비우므로 그 전에 쥔다
+        let handoff = self.handoff_of(rect);
         // 화면을 먼저 돌려준다(클립보드·파일은 그 뒤)
         self.end_capture();
         if let Some((session, layout)) = afterimage {
             self.ports.overlay.flash_afterimage(session, rect, &layout);
         }
+        let to_draw = handoff.is_some();
+        self.cap.handoff = handoff;
+        let draw_key = self.settings.shortcut("draw").to_string();
+        let with_to_draw = |ev: IslandEvent| if to_draw && ev.kind == IslandKind::Result { ev.secondary("판서로", "capture.toDraw", Some(&draw_key)) } else { ev };
 
         let result = self.settings.str("capture.result").to_string();
         let do_copy = !save && result != "save";
@@ -492,7 +517,7 @@ impl InkService {
                     ev.text = "복사하고 저장했어요".into();
                 }
                 ev.thumb_url = thumb;
-                self.island(ev);
+                self.island(with_to_draw(ev));
             }
             return;
         }
@@ -503,7 +528,38 @@ impl InkService {
         if let Some(h) = hex {
             ev.chip = Some(IslandButton { label: format!("{h} 복사"), action: "capture.copyHex".into() });
         }
-        self.island(ev);
+        self.island(with_to_draw(ev));
+    }
+
+    /// [판서로]에 넘길 것: 범위 가운데가 속한 모니터(없으면 가까운 모니터)와 그 모니터 정지 프레임(Arc 복제 — 픽셀 복사 없음).
+    fn handoff_of(&self, rect: PhysRect) -> Option<CaptureHandoff> {
+        let snap = self.snapshot.as_ref()?;
+        let center = PhysPoint { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
+        let mon = snap.layout.monitor_at(center).or_else(|| snap.layout.nearest(center))?;
+        let frame = self.cap.frames.iter().find(|f| f.monitor_id == mon.id).cloned();
+        Some(CaptureHandoff { rect, monitor_id: mon.id, layout_fingerprint: snap.layout.fingerprint(), frame, at: Instant::now() })
+    }
+
+    /// [판서로] 프레임을 30초 넘게 쥐고 있으면 놓는다(어댑터가 결과 섬을 띄운 뒤 그만큼 지나 부른다). 놓았으면 true.
+    /// 범위는 남겨 둔다 — 그 뒤 [판서로]는 지금 화면을 새로 찍는다.
+    pub fn expire_capture_frame(&mut self) -> bool {
+        self.expire_capture_frame_at(Instant::now())
+    }
+
+    /// `now` = 지금 시각(시험은 30초 뒤를 준다).
+    pub fn expire_capture_frame_at(&mut self, now: Instant) -> bool {
+        match self.cap.handoff.as_mut() {
+            Some(h) if h.frame.is_some() && now.saturating_duration_since(h.at) >= CAPTURE_FRAME_TTL => {
+                h.frame = None;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// [판서로]가 정지 프레임을 쥐고 있는지(시험·진단).
+    pub fn capture_frame_held(&self) -> bool {
+        self.cap.handoff.as_ref().is_some_and(|h| h.frame.is_some())
     }
 
     /// 확정한 범위의 결과 그림(정지 이미지 자르기 + 커서 합성)과 그 자리 앱 이름(파일 이름 {app}).
