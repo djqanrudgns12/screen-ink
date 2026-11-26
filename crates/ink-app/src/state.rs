@@ -47,6 +47,19 @@ pub struct ConflictSummary {
 pub struct Recording {
     pub active: bool,
     pub elapsed_ms: u64,
+    // ── 단계 6(05 §8) ──
+    pub phase: ink_domain::recording::RecPhase,
+    pub bytes: u64,
+    pub width: u32,
+    pub height: u32,
+    pub fps: u32,
+    pub mic_on: bool,
+    /// 녹화 범위(물리 px, 시작 순간) — 빨간 꺾쇠 창 자리
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rect: Option<ink_domain::geometry::PhysRect>,
+    /// "monitor" | "region" | "window"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target: Option<&'static str>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -165,11 +178,17 @@ pub struct IslandEvent {
     /// 추천 칩 하나(02 §1.6 — 지금 할 수 있을 때만)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub chip: Option<IslandButton>,
+    /// 지연 캡처 섬의 남은 초(`variant: "delay"`)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub countdown: Option<u32>,
+    /// 녹화 섬의 마이크 꺼짐 아이콘
+    #[serde(rename = "micOff", skip_serializing_if = "std::ops::Not::not")]
+    pub mic_off: bool,
 }
 
 impl IslandEvent {
     pub fn new(kind: IslandKind, text: impl Into<String>) -> Self {
-        Self { kind, text: text.into(), detail: None, button: None, variant: None, mode: None, value: None, hints: Vec::new(), thumb_url: None, button_key: None, chip: None }
+        Self { kind, text: text.into(), detail: None, button: None, variant: None, mode: None, value: None, hints: Vec::new(), thumb_url: None, button_key: None, chip: None, countdown: None, mic_off: false }
     }
 
     pub fn button(mut self, label: &str, action: &str, key: Option<&str>) -> Self {

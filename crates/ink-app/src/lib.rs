@@ -4,14 +4,19 @@
 pub mod capture;
 pub mod case;
 pub mod ports;
+mod quick;
+pub mod record;
 pub mod service;
 pub mod state;
 pub mod vision;
+mod window_capture;
 
 pub use ports::{
     Clipboard, Clock, ElementSource, FileSink, Frame, HotkeyError, HotkeyRegistry, Loaded, MonitorProbe, NoPins, NoVision, Notifier, OverlayHost, PinHost, Ports, SavedFile, ScreenSource, NO_SCREEN_PERMISSION,
     SettingsStore, StoreError, StoreLocation, SystemEvent, SystemProbe, VisionSource, WindowCatalog,
 };
+pub use ports::{NoRecorder, RecStartOpts, RecStats, Recorder, WindowShot, REC_UNSUPPORTED, REC_WINDOW_CLOSED, WINDOW_PROTECTED};
+pub use quick::Delay;
 pub use capture::CaptureInput;
 pub use vision::VisionEngine;
 pub use service::{HotkeyOutcome, ImportPreview, InkService, PAUSE_SLOT};

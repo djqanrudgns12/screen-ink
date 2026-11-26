@@ -37,6 +37,10 @@ pub trait SystemProbe: Send {
     fn secure_desktop(&self) -> bool {
         false
     }
+    /// 지금 활성(전경) 창 핸들 — `Shift+F2`·F2 두 번(R-WIN-2).
+    fn foreground_window(&self) -> Option<u64> {
+        None
+    }
 }
 
 /// 모니터별 정지 이미지 한 장. `bgra` = 헤더 없는 BGRA(위→아래, 물리 px). 여러 곳(정지 화면 창·
@@ -59,6 +63,13 @@ pub trait ScreenSource: Send {
     /// 같은 순간의 커서 모양(` 키·"커서도 찍기"로 결과에 합성).
     fn cursor_sprite(&mut self) -> Option<ink_domain::image::CursorSprite> {
         None
+    }
+    /// F2 고르기 중 커서 아래 창이 정해졌다 — 창 캡처 준비(item·pool·session)를 미리 해 둔다. `None` = 준비한 것 버리기.
+    fn prepare_window(&mut self, _window: Option<u64>) {}
+    /// F2 창 단독 캡처(가려진 부분 포함). 첫 프레임 시간 제한·보호 화면 판정(`windowshot::after_primary`)은 어댑터가 한다.
+    /// 보호 화면이면 `WINDOW_PROTECTED`로 시작하는 오류. 그 밖의 실패·검정은 서비스가 정지 스냅숏 자르기로 대체한다.
+    fn capture_window(&mut self, _window: u64, _bounds: ink_domain::geometry::PhysRect) -> Result<WindowShot, String> {
+        Err("window capture not supported".into())
     }
 }
 
@@ -265,4 +276,111 @@ pub enum SystemEvent {
     DisplayChange,
     /// 작업 표시줄 밝기 등 테마
     ThemeChange,
+}
+
+// ───────────── F2 창 캡처 · F3 녹화(단계 6) ─────────────
+
+/// `ScreenSource::capture_window` 오류가 이 말로 시작하면 보호 화면(표시 선호도·DRM) — "이 창은 가져올 수 없어요".
+pub const WINDOW_PROTECTED: &str = "window:protected";
+
+/// 창 한 장(BGRA, 위→아래, 물리 px).
+#[derive(Clone, Debug)]
+pub struct WindowShot {
+    pub width: u32,
+    pub height: u32,
+    pub bgra: Vec<u8>,
+    /// 디버그 로그용 방식 이름("wgc" …) — 창 제목은 담지 않는다
+    pub method: &'static str,
+    /// Win11 둥근 모서리 반지름(물리 px, 0 = 각짐) — 서비스가 알파로 깎는다
+    pub corner_radius: u32,
+}
+
+/// `Recorder::start` 오류가 이 말로 시작하면 이 플랫폼에는 아직 녹화가 없다.
+pub const REC_UNSUPPORTED: &str = "recording not supported";
+/// 녹화하던 창이 닫혀 스스로 멈춤(`Recorder::take_failure`).
+pub const REC_WINDOW_CLOSED: &str = "rec:window-closed";
+
+#[derive(Clone, Debug)]
+pub struct RecStartOpts {
+    pub target: ink_domain::recording::RecTarget,
+    /// `%TEMP%\shookshok\rec-<id>.mp4` — 마무리가 끝나야 저장 폴더로 옮긴다
+    pub temp_path: std::path::PathBuf,
+    /// 30 | 60
+    pub fps: u32,
+    /// 목표 비트레이트(bps, `recording::bitrate`)
+    pub bitrate: u32,
+    /// `None` = 마이크 끔, `Some("")` = 기본 장치
+    pub mic_device: Option<String>,
+    pub capture_cursor: bool,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct RecStats {
+    pub elapsed_ms: u64,
+    pub bytes: u64,
+    pub frames: u64,
+    /// 영상 크기(짝수). 시작 전이면 0
+    pub width: u32,
+    pub height: u32,
+}
+
+/// 화면 녹화(03 §3 `Recorder`, 05 §8). 파일 옮기기·남은 녹화 찾기도 여기 — 임시 폴더는 어댑터가 안다.
+pub trait Recorder: Send {
+    /// F3 고르기에 들어갈 때 — 시간이 드는 준비(MF 시작·장치)를 녹화 시작 전에 끝낸다.
+    fn prepare(&mut self) {}
+    fn start(&mut self, opts: RecStartOpts) -> Result<(), String>;
+    fn stats(&self) -> RecStats;
+    /// 정상 마무리(인코더 비우기 + moov). 시작 1초 안이어도 최소 1프레임을 넣어 손상 0(R-REC-1).
+    /// 실패하면 임시 파일은 남겨 둔다(다음 시작 때 복구 제안).
+    fn stop(&mut self) -> Result<RecStats, String>;
+    /// 버리기 — 인코더를 멈추고 임시 파일을 지운다.
+    fn abort(&mut self);
+    /// 녹화가 스스로 멈춘 이유(창 닫힘 `REC_WINDOW_CLOSED`·장치 오류). 한 번만 돌려준다.
+    fn take_failure(&mut self) -> Option<String> {
+        None
+    }
+    /// 마이크를 함께 녹음할 수 있는지(R-REC-3). 아니면 서비스가 마이크를 끄고 한 번 알린다.
+    fn mic_supported(&self) -> bool {
+        false
+    }
+    /// 마이크 장치 목록 `[(id, 이름)]`(설정 창).
+    fn audio_inputs(&self) -> Vec<(String, String)> {
+        Vec::new()
+    }
+    /// 임시 녹화 폴더(`%TEMP%\shookshok`). 없으면 녹화를 시작하지 않는다.
+    fn temp_dir(&self) -> Option<std::path::PathBuf> {
+        None
+    }
+    /// 끝나지 않은 녹화(임시 폴더의 `rec-*.mp4`, 지금 녹화 중인 것 빼고).
+    fn leftovers(&self) -> Vec<ink_domain::recording::Leftover> {
+        Vec::new()
+    }
+    /// 저장 폴더(빈 값 = 기본 폴더)의 남은 바이트.
+    fn free_bytes(&self, _folder: &str) -> Option<u64> {
+        None
+    }
+    /// 임시 파일을 저장 폴더로(이름 규칙 `stem` + `.mp4`, 같은 이름이면 ` (2)`, 다른 드라이브면 복사 → 확인 → 지움).
+    fn keep_file(&mut self, _temp: &std::path::Path, _folder: &str, _stem: &str) -> Result<SavedFile, String> {
+        Err(REC_UNSUPPORTED.into())
+    }
+    /// 남은 녹화 지우기(복구 섬 [지우기]).
+    fn delete_file(&mut self, _temp: &std::path::Path) -> Result<(), String> {
+        Err(REC_UNSUPPORTED.into())
+    }
+}
+
+/// 녹화가 없는 곳(맥 1차·시험 기본).
+pub struct NoRecorder;
+
+impl Recorder for NoRecorder {
+    fn start(&mut self, _opts: RecStartOpts) -> Result<(), String> {
+        Err(REC_UNSUPPORTED.into())
+    }
+    fn stats(&self) -> RecStats {
+        RecStats::default()
+    }
+    fn stop(&mut self) -> Result<RecStats, String> {
+        Err(REC_UNSUPPORTED.into())
+    }
+    fn abort(&mut self) {}
 }

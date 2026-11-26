@@ -104,6 +104,8 @@ pub struct InkService {
     pub(crate) secure_notified: bool,
     // ── 고르기·결과(단계 3) ──
     pub(crate) cap: crate::capture::CaptureState,
+    // ── 창 캡처·바로 캡처·녹화(단계 6) ──
+    pub(crate) rec: crate::record::RecordState,
 }
 
 /// 모드 섬 둘째 줄(처음 3번과 `?`일 때만 보임 — 섬 호스트가 정함).
@@ -188,6 +190,7 @@ impl InkService {
             ready_samples: VecDeque::new(),
             secure_notified: false,
             cap: crate::capture::CaptureState::with_ranges(ranges),
+            rec: Default::default(),
         };
         svc.refresh_environment();
         svc.prepare_overlays();
@@ -230,7 +233,7 @@ impl InkService {
             hotkeys_enabled: self.hotkeys_enabled,
             pinned_count: self.pinned_count,
             pins: self.cap.pins.len() as u32,
-            recording: Recording::default(),
+            recording: self.recording_view(),
             settings: self.settings.values.clone(),
             conflicts: ConflictSummary { count: bad.len(), app, combos: bad.iter().map(|r| r.combo.clone()).collect() },
             shortcuts,
@@ -585,6 +588,10 @@ impl InkService {
         if !self.hotkeys_enabled || !self.registered.contains_key(slot) {
             return HotkeyOutcome::Ignored;
         }
+        // 단계 6: 녹화 중 F3 = 중지, 바로 캡처 키 4종(R-CAP-13)
+        if let Some(outcome) = self.stage6_hotkey(slot) {
+            return outcome;
+        }
         match mode::on_hotkey(&self.mode, slot, self.now_ms()) {
             ModeCommand::Start(kind) => {
                 self.begin_capture(kind, pressed);
@@ -600,9 +607,10 @@ impl InkService {
                 HotkeyOutcome::Captured
             }
             ModeCommand::ActiveWindow => {
-                // 단계 3(F2)에서 활성 창 캡처로 — 지금은 모드만 끝낸다
+                // F2 두 번(400 ms 안) = 지금 활성 창(R-WIN-2)
                 self.end_capture();
-                HotkeyOutcome::Start("active".into())
+                self.capture_active_window();
+                HotkeyOutcome::Captured
             }
             ModeCommand::Ignore => HotkeyOutcome::Start(slot.to_string()),
         }
@@ -756,6 +764,8 @@ impl InkService {
         self.emit_state();
         // 고르기 시작: 상태 기계(근거는 위에서 이미 준비 중)
         self.start_selection(kept, cursor);
+        // 단계 6: F2 = 커서 아래 창 강조 + 창 캡처 준비, F3 = 녹화기 미리 준비
+        self.after_entry(kind, cursor);
     }
 
     /// UI가 정지 화면을 그렸다(첫 모니터만 센다) → 계측 한 줄(M1).
@@ -793,9 +803,11 @@ impl InkService {
     pub fn end_capture(&mut self) {
         let Mode::Capture { session, .. } = self.mode else { return };
         self.ports.overlay.hide(session);
-        self.mode = Mode::Idle;
+        // 녹화 중이면 녹화 상태로 돌아간다(녹화는 캡처와 겹칠 수 있음)
+        self.mode = self.rest_mode();
         self.snapshot = None;
         self.end_selection();
+        self.after_capture_end();
         // UI가 알리기 전에 끝났어도 네이티브 정지 화면 시간은 남긴다
         if let Some((_, timing)) = self.pending.take() {
             if timing.frame_ms.is_some() {
@@ -808,10 +820,12 @@ impl InkService {
 
     /// 잠금·절전이면 모드를 끝내고, 배치가 바뀌었거나 깨어나면 오버레이를 다시 맞춘다(R-SYS-3, 02 §7).
     pub fn on_system_event(&mut self, ev: SystemEvent) {
+        // 단계 6: 잠금·절전·모니터 해제 → 녹화 자동 중지·저장(05 §8). 배치를 다시 맞추기 전에 본다
+        self.record_on_system_event(ev);
         match ev {
             SystemEvent::Lock | SystemEvent::Suspend => self.end_capture(),
             SystemEvent::DisplayChange => {
-                if self.mode != Mode::Idle {
+                if matches!(self.mode, Mode::Capture { .. }) {
                     self.end_capture();
                     self.island(IslandEvent::new(IslandKind::Info, "화면 구성이 바뀌어 캡처를 닫았어요"));
                 }
