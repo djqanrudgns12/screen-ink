@@ -68,15 +68,15 @@
           "items": [
             { "id": "3a-filter", "title": "W·H 근거: 창 거르기·자식 창", "platform": "win", "days": 0.4, "status": "done" },
             { "id": "3a-replay", "title": "스냅숏 재생 시험 틀·사람 정답 도구", "platform": "common", "days": 0.3, "status": "done" },
-            { "id": "3a-rb1516", "title": "RB-15·16 자동 통과(최대화·투명 덮개 시험 창)", "platform": "win", "days": 0.2, "status": "todo", "level": "mid" },
+            { "id": "3a-rb1516", "title": "RB-15·16 자동 통과(최대화·투명 덮개 시험 창)", "platform": "win", "days": 0.2, "status": "verify", "note": "rb15_16 순수 시험 통과, real:: 실제 창 시험은 메인이 실행", "level": "mid" },
             { "id": "3a-ci", "title": "재생 시험 CI 상시 실행", "platform": "common", "days": 0.1, "status": "done", "note": "푸시마다 ubuntu·Windows·맥·UI(75dd40f 첫 실행 통과)" },
             { "id": "3b-index", "title": "A 근거: 미리 깨우기·UIA 색인·느린 앱 강등", "platform": "win", "days": 0.7, "status": "done" },
-            { "id": "3b-msaa", "title": "MSAA 대체 경로", "platform": "win", "days": 0.3, "status": "todo", "level": "hard" },
-            { "id": "3b-dpi", "title": "DPI 모르는 창 좌표 보정(D12)", "platform": "win", "days": 0.2, "status": "todo", "level": "hard" },
+            { "id": "3b-msaa", "title": "MSAA 대체 경로", "platform": "win", "days": 0.3, "status": "verify", "note": "msaa.rs 대체 사슬(UIA 빈 창만) + 순수 시험, 실제 창 확인 남음", "level": "hard" },
+            { "id": "3b-dpi", "title": "DPI 모르는 창 좌표 보정(D12)", "platform": "win", "days": 0.2, "status": "verify", "note": "dpi.rs 판정·보정 + 순수 시험, 125%/150% PC 실측 남음(RUNBOOK-windows §2)", "level": "hard" },
             { "id": "3b-measure", "title": "Chrome 첫 강조 ≤ 진입+30 ms·이동 질의 ≤ 5 ms 측정", "platform": "win", "days": 0.3, "status": "done", "note": "릴리스: V 첫 근거 43~54 ms(진입 56~70), 이동 p95 1.5~4.6 ms. selection probe 로그" },
             { "id": "3b-uia-budget", "title": "UIA 색인 예산(60 ms) 초과·느린 앱 강등 문턱(150 ms×2) 재검토", "platform": "win", "days": 0.3, "status": "done", "note": "문턱 500 ms×2(adef3d3). 색인 자체 80~210 ms는 V가 먼저 강조하고 A는 도착하면 갱신(08 §4.7)" },
             { "id": "3c-engine", "title": "V 엔진(전처리·상자 사다리·평탄·지지율)", "platform": "common", "days": 1.2, "status": "done", "note": "4K 17 ms" },
-            { "id": "3c-g3", "title": "G3: V 혼자 RB-01·03 Top-1 ≥ 80%", "platform": "win", "days": 0.3, "status": "todo", "level": "mid" },
+            { "id": "3c-g3", "title": "G3: V 혼자 RB-01·03 Top-1 ≥ 80%", "platform": "win", "days": 0.3, "status": "partial", "note": "recog-replay --vision-only 판정 준비, 사례 뒤 실행", "level": "mid" },
             { "id": "3d-fusion", "title": "융합·첫 강조·깊이 기억·제목 표시줄 규칙", "platform": "common", "days": 0.8, "status": "done" },
             { "id": "3d-evidence", "title": "숨은 \"인식 근거 보기\"", "platform": "common", "days": 0.2, "status": "done", "note": "capture.evidence(설정 파일), 미리보기 ?evidence=1로 확인" },
             { "id": "3e-overlay", "title": "CaptureOverlay·SelectionFrame·확대경·자석·키", "platform": "common", "days": 1, "status": "done" },
@@ -87,10 +87,10 @@
             { "id": "3g-toolbar", "title": "선택 툴바(R-CAP-27): 위치 규칙·여러 모니터·취소/저장/복사·툴팁 키", "platform": "common", "days": 0.5, "status": "done", "note": "Windows 실제 앱 확인(2026-11-26: 확정 → 오른쪽 아래 툴바, [취소] 클릭으로 끝남). 위·안쪽 배치는 단위 시험, 맥은 인수인계 §2.6" },
             { "id": "3h-pin", "title": "캡처 핀(R-CAP-29): 툴바 [고정] → 늘 위 이미지 창·끌기·휠 확대·투명도·우클릭 메뉴·트레이 모두 닫기", "platform": "common", "days": 1, "status": "done", "note": "Windows 실제 앱 확인(2026-11-26): 원래 자리 생성·휠 125%·오른쪽 클릭 메뉴·끌기·두 번 클릭 닫기. Ctrl+휠 투명도·메뉴 복사/저장은 시험만, 맥 혼합 배율 자리는 인수인계 §2.6" },
             { "id": "3g-keys", "title": "화면 안 키 설정 반영(R-KEY-6): c-* 키로 판정, 맥 Cmd", "platform": "common", "days": 0.25, "status": "done", "note": "Space로 바꾸면 Space = 복사(서비스 시험)" },
-            { "id": "3f-docs", "title": "시험 문서·자동 정답(RB-01·14) + Win32 시험 앱(RB-04)", "platform": "common", "days": 0.5, "status": "partial", "note": "RB-01 문서·표지 자동 정답(recog-truth) 완료, RB-14·RB-04 남음", "level": "mid" },
-            { "id": "3f-frozen", "title": "멈춘 시험 앱 RB-20", "platform": "win", "days": 0.2, "status": "todo", "level": "mid" },
+            { "id": "3f-docs", "title": "시험 문서·자동 정답(RB-01·14) + Win32 시험 앱(RB-04)", "platform": "common", "days": 0.5, "status": "partial", "note": "rb14.html·rb04 Win32 시험 앱 준비, 사례 뜨기 남음", "level": "mid" },
+            { "id": "3f-frozen", "title": "멈춘 시험 앱 RB-20", "platform": "win", "days": 0.2, "status": "partial", "note": "rb20 멈춘 시험 앱·rb20-watch.ps1 준비, 실행 남음", "level": "mid" },
             { "id": "3f-win-cases", "title": "Windows 사례 뜨기(RB 17종)·기준선", "platform": "win", "days": 0.4, "status": "todo", "level": "mid" },
-            { "id": "3f-snipaste", "title": "Snipaste 대조 하네스·측정·G4 보고서", "platform": "win", "days": 0.4, "status": "todo", "level": "mid" }
+            { "id": "3f-snipaste", "title": "Snipaste 대조 하네스·측정·G4 보고서", "platform": "win", "days": 0.4, "status": "partial", "note": "compare-snipaste.ps1·snipaste-diff 준비, 실행 남음", "level": "mid" }
           ]
         },
         {
@@ -112,11 +112,11 @@
           "id": "s5",
           "name": "단계 5 — 실시간 확대",
           "items": [
-            { "id": "5.1", "title": "Magnifier(Magnification API)·M6", "platform": "win", "days": 0.4, "status": "todo", "level": "hard" },
-            { "id": "5.2", "title": "커서 따라가기·휠 단계·배지", "platform": "common", "days": 0.4, "status": "todo", "level": "mid" },
+            { "id": "5.1", "title": "Magnifier(Magnification API)·M6", "platform": "win", "days": 0.4, "status": "verify", "note": "magnifier.rs(전용 스레드·미리 만들기·EXCLUDE 필터)·포트·유스케이스·가짜 시험, 실제 화면 확인 남음", "level": "hard" },
+            { "id": "5.2", "title": "커서 따라가기·휠 단계·배지", "platform": "common", "days": 0.4, "status": "verify", "note": "zoom.rs 추적·휠 단계·배지 + 시험, 화면 확인 남음", "level": "mid" },
             { "id": "5.3", "title": "Alt+1 전환", "platform": "common", "days": 0.4, "status": "todo", "level": "mid" },
-            { "id": "5.4", "title": "4K 30 fps 미달 시 2안 판단", "platform": "win", "days": 0.4, "status": "todo", "level": "mid" },
-            { "id": "5.5", "title": "확대 섬·후광·MiniMap(원본 제외)", "platform": "common", "days": 0.4, "status": "todo", "level": "mid" }
+            { "id": "5.4", "title": "4K 30 fps 미달 시 2안 판단", "platform": "win", "days": 0.4, "status": "partial", "note": "bench/m6-zoom.ps1·판단 기준 준비, 1080p·4K 측정 남음", "level": "mid" },
+            { "id": "5.5", "title": "확대 섬·후광·MiniMap(원본 제외)", "platform": "common", "days": 0.4, "status": "verify", "note": "ZoomHud·후광·MiniMap(원본 제외) 구현, 화면 확인 남음", "level": "mid" }
           ]
         },
         {
