@@ -198,7 +198,7 @@
           "id": "store",
           "name": "Microsoft Store(MSIX, 무료·무경고)",
           "items": [
-            { "id": "D1", "title": "개발자 계정(개인, 무료: 신분증·셀카)", "platform": "common", "days": 0.25, "status": "partial", "note": "사용자 등록 중(2026-11-26)" },
+            { "id": "D1", "title": "개발자 계정(개인, 무료: 신분증·셀카)", "platform": "common", "days": 0.25, "status": "partial", "note": "게시자 표시 이름 찰떡쌤. 신분증 인증 때문에 등록 보류(사용자가 신분증 지참 후 진행)" },
             { "id": "D2", "title": "MSIX 포장 파이프라인(Tauri 빌드 → 매니페스트·아이콘·makeappx)", "platform": "win", "days": 1.0, "status": "todo" },
             { "id": "D3", "title": "패키지 모드 대응: 자동 실행 StartupTask·포터블 표시 무시·저장 위치", "platform": "win", "days": 0.5, "status": "todo" },
             { "id": "D4", "title": "스토어 등록 자료(설명·스크린숏·개인정보 처리방침 URL·연령 등급)", "platform": "common", "days": 0.5, "status": "partial", "note": "초안 docs/store/microsoft-store-listing.md. 남은 것: 스크린숏(실제 화면)·로고·게시자 표시 이름" },

@@ -373,6 +373,7 @@ $env:CARGO_HTTP_CHECK_REVOKE='false'
 | 2026-11-26 | **저장소를 공개한다**(SignPath 무료 서명용), 라이선스 **MIT**. 공개 전 점검: 비밀값 없음, 작성자 이메일은 이력에 남음 | 무료 서명 조건(사용자). 11 §10 |
 | 2026-11-26 | 개인정보 처리방침·지원·`.appinstaller`는 저장소 GitHub Pages, 주소 **`ink.ssamuniverse.com`**(Cloudflare CNAME, DNS 전용, 본 사이트는 건드리지 않음). 처리방침 `https://ink.ssamuniverse.com/privacy/` | `.appinstaller` 주소는 바꿀 수 없음. 11 §10.2 |
 | 2026-11-26 | 업데이트 안내는 배너가 아니라 **팝업**. 클릭 한 번에 몇 초 안 설치·자동 재시작, 모드·전체 화면 발표 중엔 미룸. PRD R-NET-1 문장 수정 필요(원래 세션) | Tidy 배너는 사용자가 못 알아챔(사용자 경험). 11 §7.2 |
+| 2026-11-26 | 스토어 게시자 표시 이름 **`찰떡쌤`**. 앱 이름은 아이콘과 함께 다른 세션에서 정함. 개발자 계정은 신분증 인증으로 보류 | 게시자 이름은 등록 뒤 못 바꿀 수 있음. `docs/store/microsoft-store-listing.md` |
 
 ---
 
