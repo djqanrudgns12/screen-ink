@@ -166,7 +166,7 @@ pub fn to_elements(found: &[AccInfo], window: Option<PhysRect>) -> Vec<ink_domai
         .iter()
         .filter(|i| keep(i))
         .filter(|i| window.map_or(true, |w| i.rect.intersect(&w).is_some()))
-        .map(|i| ink_domain::recog::ElementCand { rect: i.rect, control: control_from_role(i.role) })
+        .map(|i| ink_domain::recog::ElementCand { rect: i.rect, control: control_from_role(i.role), from_msaa: true })
         .filter(|e| seen.insert((e.rect, e.control)))
         .collect()
 }
@@ -440,6 +440,7 @@ mod tests {
         assert_eq!(els.len(), 2, "{els:?}");
         assert_eq!(els[0].control, Control::Button);
         assert_eq!(els[1].control, Control::Pane);
+        assert!(els.iter().all(|e| e.from_msaa), "MSAA 요소는 근거 M으로 표시");
     }
 
     #[test]

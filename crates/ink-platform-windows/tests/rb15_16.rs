@@ -119,13 +119,12 @@ fn rb15_판정_바탕_화면은_셸_바탕_창이_받는다() {
     // 둘째 모니터 빈 곳 = 바탕 화면(셸 바탕 창)
     let w = s.window_at(PhysPoint { x: 2500, y: 700 }, true).expect("바탕 화면 창");
     assert_eq!(w.class, "Progman");
+    assert_eq!(w.rect, l.monitors[1].work, "바탕 화면 = 그 모니터 작업 영역");
 }
 
-/// 08 §4.2 W "바탕 화면 = 모니터 작업 영역"을 사슬까지 본다. 지금은 셸 바탕 창(Progman)이 가상 화면 전체라
-/// 여러 모니터에서 첫 강조가 가상 화면 전체가 되고 휠로 모니터에 못 간다 — `ink-domain::snapshot::filter_windows`에서
-/// 셸 바탕 창(Progman·WorkerW)을 커서 모니터 작업 영역으로 바꾸는 수정이 필요하다(메인에 보고). 고친 뒤 ignore를 뺀다.
+/// 08 §4.2 W "바탕 화면 = 모니터 작업 영역"을 사슬까지 본다. 셸 바탕 창(Progman)은 가상 화면 전체라,
+/// `filter_windows`가 모니터마다 작업 영역 후보로 나누지 않으면 여러 모니터에서 첫 강조가 가상 화면 전체가 된다.
 #[test]
-#[ignore = "도메인 수정 대기: 바탕 화면 = 모니터 작업 영역(08 §4.2 W) — 고친 뒤 ignore를 뺀다"]
 fn rb15_바탕_화면_첫_강조는_그_모니터_작업_영역() {
     let l = two_monitors();
     let raw = vec![RawWindow { exe: "explorer.exe".into(), ..win(5, "Progman", l.virtual_bounds()) }];
@@ -329,11 +328,10 @@ mod real {
         assert_eq!(got, Some(m.bounds), "전체 화면 창 = 모니터 전체(D4)");
         drop(full);
 
-        // ③ 바탕 화면: 셸 바탕 창이 후보에 있고 모니터를 덮는다(첫 강조를 작업 영역으로 바꾸는 것은 도메인 몫 — 순수 시험 참고)
+        // ③ 바탕 화면: 셸 바탕 창(Progman·WorkerW)이 모니터마다 그 작업 영역 후보로 들어간다
         let s = snapshot(&layout);
-        let desk = s.windows.iter().find(|w| w.class == "Progman" || w.class == "WorkerW").map(|w| w.rect);
-        let desk = desk.expect("셸 바탕 창(Progman·WorkerW)");
-        assert!(desk.intersect(&m.bounds) == Some(m.bounds), "바탕 창이 주 모니터를 덮는다: {desk:?}");
-        eprintln!("바탕 창 사각형 {desk:?}, 가상 화면 {:?}", layout.virtual_bounds());
+        let desks: Vec<PhysRect> = s.windows.iter().filter(|w| w.class == "Progman" || w.class == "WorkerW").map(|w| w.rect).collect();
+        assert!(desks.contains(&m.work), "주 모니터 바탕 화면 후보 = 작업 영역 {:?}: {desks:?}", m.work);
+        assert!(desks.iter().all(|d| layout.monitors.iter().any(|x| x.work == *d)), "바탕 화면 후보는 모두 어느 모니터의 작업 영역: {desks:?}");
     }
 }

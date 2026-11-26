@@ -205,6 +205,28 @@ mod tests {
     }
 
     #[test]
+    fn rb14_캔버스_문서의_배치를_읽고_정답이_화면_좌표로() {
+        let page = include_str!("../../../bench/recog/pages/rb14.html");
+        let l = extract_layout(page).unwrap();
+        assert_eq!(l.page, "rb14");
+        assert_eq!(l.marker, MarkerSpec { x: 8.0, y: 8.0, size: 16.0 });
+        assert_eq!(l.elements.len(), 33);
+        for want in ["2D 캔버스", "WebGL 판", "GL 사각 1", "영상 틀", "도표 캔버스"] {
+            assert!(l.elements.iter().any(|e| e.label == want && e.truth), "{want}");
+        }
+        // 배율 1, 문서 원점 = 모니터 (0, 0): 정답 = CSS 사각형, 점은 모두 자기 정답 안
+        let f = frame_with_marker(0, 1280, 800, (8, 8), 8);
+        let (_, scale, pts) = points(&case(&[(0, PhysRect::new(0, 0, 1280, 800))]), &[f], &l).unwrap();
+        assert_eq!(scale, 1.0);
+        assert_eq!(pts.len(), 33);
+        let gl = pts.iter().find(|p| p.label == "rb14 · GL 사각 1").unwrap();
+        assert_eq!(gl.truth, PhysRect::new(840, 72, 180, 120));
+        let video = pts.iter().find(|p| p.label == "rb14 · 영상 틀").unwrap();
+        assert_eq!((video.truth.w, video.truth.h), (368, 207), "16:9");
+        assert!(pts.iter().all(|p| p.truth.contains(p.at)), "점은 정답 안");
+    }
+
+    #[test]
     fn 표지가_없으면_알려_준다() {
         let blank = Frame { monitor_id: 0, width: 50, height: 50, bgra: Arc::new(vec![255; 50 * 50 * 4]) };
         let c = case(&[(0, PhysRect::new(0, 0, 50, 50))]);
