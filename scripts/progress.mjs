@@ -26,6 +26,9 @@ export function validate(data) {
         if (!statuses.includes(it.status)) errors.push(`${it.id}: 모르는 상태 ${it.status}`);
         if (!platforms.includes(it.platform)) errors.push(`${it.id}: 모르는 플랫폼 ${it.platform}`);
         if (!(typeof it.days === 'number' && it.days > 0)) errors.push(`${it.id}: days는 양수`);
+        if (data.levels && it.status !== 'done' && !(it.level in data.levels)) {
+          errors.push(`${it.id}: 남은 일은 난이도(level: ${Object.keys(data.levels).join('|')}) 필요`);
+        }
       }
     }
   }
@@ -50,6 +53,43 @@ const bar = (/** @type {number} */ p) => {
   return '█'.repeat(n) + '░'.repeat(20 - n);
 };
 const days = (/** @type {number} */ d) => (Math.round(d * 100) / 100).toString();
+
+/** 작업량 칸: 항목 작업일 기준 */
+const SIZES = /** @type {const} */ ([
+  ['S', '작음(≤0.3일)', (/** @type {number} */ d) => d <= 0.3],
+  ['M', '보통(≤0.6일)', (/** @type {number} */ d) => d > 0.3 && d <= 0.6],
+  ['L', '큼(>0.6일)', (/** @type {number} */ d) => d > 0.6],
+]);
+
+/**
+ * 남은 일 — 난이도 × 작업량 표와 난이도별 목록(남은 환산 작업일이 큰 순).
+ * @param {any} data
+ * @param {string[]} L
+ * @param {(p: string) => string} plat
+ * @param {(s: string) => string} label
+ */
+function renderLevels(data, L, plat, label) {
+  const left = data.tracks.flatMap(all).filter((/** @type {any} */ it) => it.status !== 'done');
+  const remain = (/** @type {any} */ it) => it.days * (1 - data.scale[it.status].value);
+  const cell = (/** @type {any[]} */ xs) => (xs.length ? `${xs.length}개 · ${days(xs.reduce((a, it) => a + remain(it), 0))}일` : '—');
+  L.push('## 남은 일 — 난이도 × 작업량', '');
+  L.push(
+    '난이도: ' + Object.entries(data.levels).map(([k, v]) => `**${v}** = ${data.levelMeaning?.[k] ?? ''}`).join(' · ') + '. 작업량 칸 = 항목 작업일, 숫자 = 남은 환산 작업일.',
+    '',
+  );
+  L.push(`| 난이도 | ${SIZES.map((s) => s[1]).join(' | ')} | 합계 |`, `|---|${SIZES.map(() => '---:').join('|')}|---:|`);
+  for (const [lv, name] of Object.entries(data.levels)) {
+    const row = left.filter((/** @type {any} */ it) => it.level === lv);
+    L.push(`| ${name} | ${SIZES.map((s) => cell(row.filter((/** @type {any} */ it) => s[2](it.days)))).join(' | ')} | ${cell(row)} |`);
+  }
+  L.push(`| **합계** | ${SIZES.map((s) => cell(left.filter((/** @type {any} */ it) => s[2](it.days)))).join(' | ')} | ${cell(left)} |`, '');
+  for (const [lv, name] of Object.entries(data.levels)) {
+    const row = left.filter((/** @type {any} */ it) => it.level === lv).sort((/** @type {any} */ a, /** @type {any} */ b) => remain(b) - remain(a));
+    L.push(`### 난이도 ${name} (${row.length}개, 남은 ${days(row.reduce((/** @type {number} */ a, /** @type {any} */ it) => a + remain(it), 0))}일)`, '');
+    for (const it of row) L.push(`- \`${it.id}\` ${it.title} — ${plat(it.platform)} · ${days(it.days)}일 · ${label(it.status)}`);
+    L.push('');
+  }
+}
 
 /** @param {any} data */
 export function render(data) {
@@ -89,6 +129,8 @@ export function render(data) {
     L.push(`- **${plat(p)}**: ${list.map((/** @type {string} */ id, /** @type {number} */ i) => `${i + 1}) ${byId.get(id).title} \`${id}\``).join(' → ')}`);
   }
   L.push('');
+
+  if (data.levels) renderLevels(data, L, plat, label);
 
   for (const { t, s } of tracks) {
     L.push(`## ${t.name} — ${fmtPct(s.pct)}`, '');
