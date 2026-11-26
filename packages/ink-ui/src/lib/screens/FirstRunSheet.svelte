@@ -143,6 +143,11 @@
         </div>
       {/if}
 
+      <!-- 맥 키보드의 F 키는 밝기·음량이 먼저다(사용자 결정 9: 짧은 보조 한 줄로 늘 함께) -->
+      {#if platform === 'macos'}
+        <p class="ink-first-fkey">F 키는 fn과 함께 눌러요 · fn 없이 쓰려면 키보드 설정에서 ‘표준 기능 키’를 켜요</p>
+      {/if}
+
       <div class="ink-first-footer">
         <p class="ink-first-help">
           <Keycap label="?" />
@@ -274,6 +279,13 @@
   .ink-first-row-hint {
     margin-left: 6px;
     font-size: 12px;
+    color: var(--ink-sub);
+  }
+
+  .ink-first-fkey {
+    margin: -4px 2px 0;
+    font-size: 11.5px;
+    line-height: 1.4;
     color: var(--ink-sub);
   }
 
