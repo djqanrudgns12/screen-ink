@@ -116,6 +116,14 @@
 - 실측(이 셸, `cargo test -p ink-platform-macos window_shot::tests -- --ignored --nocapture`): FHD 창 1920×1050 **48 ms**, 4K 창 3840×2100 **114~161 ms**(준비 뒤). 그림은 저장하지 않는다.
 - **[확인 필요]** 둥근 창 귀 투명: Chromium 계열 창(Claude·Aside, 화면을 채운 창)은 SCK가 네모 그대로 줬다(모서리 알파 255). 네이티브 창(Finder·메모)에서 귀가 투명으로 오는지, 아니면 Windows처럼 반지름으로 깎아야 하는지(macOS 판마다 반지름이 다름) 확인. 실제 앱 F2 흐름(가려진 창·보호 화면 안내)도 확인 남음.
 
+**M15 결과(2026-11-26 밤)** — `crates/ink-platform-macos/src/recorder.rs`(`MacRecorder`, 포트 그대로), 플러그인 `set_recorder` 맥 분기, 새 의존성 `objc2-av-foundation`·`objc2-core-media`·`dispatch2`(+ SCK 기능 `dispatch2`·`objc2-core-media`).
+- `SCStream`(모니터 = 디스플레이 필터, 범위 = 같은 필터 + `sourceRect`, 창 추적 = `desktopIndependentWindow`) → 표본 출력 객체(`define_class!` `ShookshokRecOutput`, 직렬 큐) → 완전한 프레임(`SCFrameStatus::Complete`)만 `AVAssetWriterInput`(H.264 High, 서비스가 준 비트레이트·fps, 키프레임 2초) → mp4. 픽셀 '420v', 커서는 설정대로.
+- 마무리: 스트림 정지 완료 → `markAsFinished` → `finishWriting`(moov). 프레임 0개·실패면 오류 + 임시 파일 남김(복구). 창 추적 중 창이 닫히면 `stream:didStopWithError:` → `REC_WINDOW_CLOSED`.
+- 파일 처리(남은 녹화 `rec-*.mp4` 찾기·저장 폴더로 옮기기·같은 이름 ` (2)`)는 Windows와 같은 규칙, 남은 공간은 `statvfs`. 마이크는 아직 없음(`mic_supported` false).
+- 우리 섬·빨간 꺾쇠·정지 패널은 창 공유 끔이라 영상에 안 찍히고, 판서·확대 오버레이는 찍힌다. 빨간 꺾쇠 창도 맥에서는 포인트로 그 모니터를 덮게 고침(혼합 배율 어긋남 방지).
+- 실측(이 셸, `cargo test -p ink-platform-macos recorder::tests -- --include-ignored --nocapture`): 4K 주 모니터 2초 = 3840×2160 **프레임 47개 · 361 KB · 상자 ftyp/mdat/moov**(재생 가능). 영상은 바로 지웠다.
+- **[확인 남음]** 실제 앱 F3(범위·모니터·창 추적), 10분 녹화, 0.3초 즉시 중지 재생, 영상에 섬·꺾쇠 0 px, 녹화 중 판서가 영상에 남는지, 잠금·모니터 분리 자동 중지와 복구 섬.
+
 ### 2.2 맥 트랙 원래 순서 — M9·M10·M17·M-sign
 - **M9 AX 요소 색인**(P0, 1.5일): 시안 [I-mac.md](../plans/2026-11-26/I-mac.md) §2.1. Windows UIA 일꾼(`ink-platform-windows/src/uia.rs`)과 MSAA 대체(`msaa.rs`)의 구조·시간 예산을 본보기로.
 - **M10 권한 스마트 흐름**(1일): I-mac.md §2.2. 권한 허용은 사용자에게 부탁(직접 바꾸지 않음).

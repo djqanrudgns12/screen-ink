@@ -130,6 +130,16 @@ fn capture_one(display: &SCDisplay, me: Option<&Retained<SCRunningApplication>>,
     rx
 }
 
+/// 녹화(M15)용 공유 가능한 디스플레이 — 받아 둔 내용 목록에서(없으면 새로 받는다).
+pub(crate) fn shareable_display(display: u32) -> Result<Retained<SCDisplay>, String> {
+    let mut cache = CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    if !cache.as_ref().is_some_and(|c| c.0.displays.iter().any(|(id, _)| *id == display)) {
+        *cache = Some(Shared(fetch_content()?));
+    }
+    let content = &cache.as_ref().expect("filled above").0;
+    content.displays.iter().find(|(id, _)| *id == display).map(|(_, d)| d.clone()).ok_or_else(|| "display not shareable".to_string())
+}
+
 /// 모니터마다 정지 이미지. 크기가 어긋나면(배율이 그 사이 바뀜) 실패로 알린다.
 pub fn capture(layout: &MonitorLayout, space: &Space) -> Result<Vec<Frame>, String> {
     if !has_permission() {

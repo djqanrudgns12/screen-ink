@@ -49,7 +49,7 @@ fn ms(d: Duration) -> f64 {
 }
 
 /// 화면에 보이는 창 목록에서 그 창 번호를 찾는다(수십 ms — 부른 스레드는 채널로 기다린다).
-fn find(window: u32) -> Result<Retained<SCWindow>, String> {
+pub(crate) fn find(window: u32) -> Result<Retained<SCWindow>, String> {
     let (tx, rx) = mpsc::channel::<Result<Shared<Retained<SCWindow>>, String>>();
     let block = RcBlock::new(move |content: *mut SCShareableContent, err: *mut NSError| {
         // SAFETY: SCK가 넘긴 포인터는 이 호출 동안 유효하다. 찾은 창은 retain으로 붙잡는다.

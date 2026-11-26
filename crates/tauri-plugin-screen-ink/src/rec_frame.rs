@@ -40,6 +40,11 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .build()?;
     // 아래 앱을 그대로 쓸 수 있게(판서·클릭은 녹화 대상 앱으로)
     let _ = w.set_ignore_cursor_events(true);
+    // 맥: 활성화하지 않는 패널 · 모든 Space · 앱 창 위(팝오버 층)
+    #[cfg(target_os = "macos")]
+    if let Ok(ns) = w.ns_window() {
+        ink_platform_macos::window::configure(ns, ink_platform_macos::window::Role::Popover);
+    }
     Ok(())
 }
 
@@ -58,6 +63,23 @@ pub fn sync<R: Runtime>(app: &AppHandle<R>, rec: &ink_app::state::Recording) {
         let _ = w.hide();
         return;
     };
+    // 맥: 혼합 배율에서 Tauri 물리 좌표는 옆 화면으로 어긋난다 → 그 모니터를 포인트로 직접 덮는다(오버레이와 같음)
+    #[cfg(target_os = "macos")]
+    {
+        let space = ink_platform_macos::space();
+        let center = ink_domain::geometry::PhysPoint { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+        let layout = space.layout();
+        if let (Some(m), Ok(ns)) = (layout.monitors.iter().find(|m| m.bounds.contains(center)), w.ns_window()) {
+            if ink_platform_macos::window::place(ns, &space, m.bounds) {
+                let s = m.scale.max(0.5);
+                let place = FramePlace { x: (r.x - m.bounds.x) as f64 / s, y: (r.y - m.bounds.y) as f64 / s, width: r.w as f64 / s, height: r.h as f64 / s };
+                let _ = app.emit_to(REC_FRAME, EVT_REC_FRAME, place);
+                ink_platform_macos::window::order_front(ns);
+                let _ = w.show();
+                return;
+            }
+        }
+    }
     let (cx, cy) = ((r.x + r.w / 2) as f64, (r.y + r.h / 2) as f64);
     let Some(m) = w.monitor_from_point(cx, cy).ok().flatten() else { return };
     let (pos, size, scale) = (*m.position(), *m.size(), m.scale_factor().max(0.5));

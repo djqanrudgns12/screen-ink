@@ -76,4 +76,10 @@ objc2-screen-capture-kit = { version = "0.3", default-features = false, features
   "SCScreenshotManager",
   "SCStream",
   "SCError",
+  "dispatch2",
+  "objc2-core-media",
 ] }
+# 녹화(M15): SCStream 프레임 → AVAssetWriter(H.264 mp4)
+objc2-av-foundation = { version = "0.3", default-features = false, features = ["std", "block2", "objc2-core-media", "AVAssetWriter", "AVAssetWriterInput", "AVMediaFormat", "AVVideoSettings"] }
+objc2-core-media = { version = "0.3", default-features = false, features = ["std", "CMSampleBuffer", "CMTime", "CMBase", "CMSync"] }
+dispatch2 = { version = "0.3", default-features = false, features = ["std", "objc2"] }

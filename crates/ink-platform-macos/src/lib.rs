@@ -22,6 +22,8 @@ pub mod permissions;
 #[cfg(target_os = "macos")]
 mod pixels;
 #[cfg(target_os = "macos")]
+pub mod recorder;
+#[cfg(target_os = "macos")]
 pub mod window;
 #[cfg(target_os = "macos")]
 pub mod window_shot;

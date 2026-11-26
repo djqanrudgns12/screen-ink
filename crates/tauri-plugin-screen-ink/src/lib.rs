@@ -1219,6 +1219,12 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         let pictures = app.path().picture_dir().unwrap_or_else(|_| std::env::temp_dir()).join(APP_DIR);
         service.set_recorder(Box::new(ink_platform_windows::recorder::WinRecorder::new(std::env::temp_dir().join(APP_DIR), pictures)));
     }
+    // 맥 녹화(M15): SCStream → AVAssetWriter(H.264). 임시 폴더 = $TMPDIR/Shookshok, 기본 저장 = 사진/Shookshok
+    #[cfg(target_os = "macos")]
+    {
+        let pictures = app.path().picture_dir().unwrap_or_else(|_| std::env::temp_dir()).join(APP_DIR);
+        service.set_recorder(Box::new(ink_platform_macos::recorder::MacRecorder::new(std::env::temp_dir().join(APP_DIR), pictures)));
+    }
     // 개발용 사람 정답 도구: 확정할 때마다 인식 시험 사례를 쓴다(시험 문서 화면에서만, 08 §5.2)
     if let Ok(dir) = std::env::var("SCREEN_INK_CASE_DIR") {
         log::warn!("recognition cases will be written on every confirm");
