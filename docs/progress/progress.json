@@ -69,7 +69,7 @@
             { "id": "3a-filter", "title": "W·H 근거: 창 거르기·자식 창", "platform": "win", "days": 0.4, "status": "done" },
             { "id": "3a-replay", "title": "스냅숏 재생 시험 틀·사람 정답 도구", "platform": "common", "days": 0.3, "status": "done" },
             { "id": "3a-rb1516", "title": "RB-15·16 자동 통과(최대화·투명 덮개 시험 창)", "platform": "win", "days": 0.2, "status": "todo", "level": "mid" },
-            { "id": "3a-ci", "title": "재생 시험 CI 상시 실행", "platform": "common", "days": 0.1, "status": "partial", "note": "워크플로는 PR·수동만", "level": "easy" },
+            { "id": "3a-ci", "title": "재생 시험 CI 상시 실행", "platform": "common", "days": 0.1, "status": "done", "note": "푸시마다 ubuntu·Windows·맥·UI(75dd40f 첫 실행 통과)" },
             { "id": "3b-index", "title": "A 근거: 미리 깨우기·UIA 색인·느린 앱 강등", "platform": "win", "days": 0.7, "status": "done" },
             { "id": "3b-msaa", "title": "MSAA 대체 경로", "platform": "win", "days": 0.3, "status": "todo", "level": "hard" },
             { "id": "3b-dpi", "title": "DPI 모르는 창 좌표 보정(D12)", "platform": "win", "days": 0.2, "status": "todo", "level": "hard" },
