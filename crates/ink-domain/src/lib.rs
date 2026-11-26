@@ -9,6 +9,7 @@ pub mod magnet;
 pub mod modekeys;
 pub mod mode;
 pub mod naming;
+pub mod package;
 pub mod pin;
 pub mod recog;
 pub mod selection;

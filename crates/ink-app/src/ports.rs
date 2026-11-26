@@ -263,3 +263,89 @@ pub enum SystemEvent {
     /// 작업 표시줄 밝기 등 테마
     ThemeChange,
 }
+
+/// 패키지 모드(MSIX) 런타임 사실 읽기(D3 · 11-distribution §5).
+/// 어댑터는 OS 사실만 돌려주고, 정책 판정은 `ink_domain::package`가 한다.
+pub trait PackageRuntime: Send + Sync {
+    fn channel(&self) -> ink_domain::package::InstallChannel {
+        ink_domain::package::InstallChannel::Unpackaged
+    }
+
+    /// 패키지 모드일 때만 `Some(PackageFullName)`.
+    fn package_full_name(&self) -> Option<String> {
+        None
+    }
+
+    /// `.appinstaller`로 설치된 직접 배포판일 때만 `Some(uri)`.
+    fn app_installer_uri(&self) -> Option<String> {
+        None
+    }
+
+    /// 발표·전체 화면 앱이 앞에 있는지(`SHQueryUserNotificationState`).
+    fn fullscreen_app_active(&self) -> bool {
+        false
+    }
+
+    /// 업데이트 적용 직후 자동 재시작 등록(`RegisterApplicationRestart`).
+    fn register_restart(&self, _args: &str) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+/// 비패키지(NSIS·포터블)·맥·시험용 기본 패키지 런타임.
+pub struct UnpackagedRuntime;
+
+impl PackageRuntime for UnpackagedRuntime {}
+
+/// 로그인 자동 실행 제어 포트(D3: 비패키지 Run 키 / MSIX StartupTask 분기).
+pub trait AutostartControl: Send {
+    fn backend(&self) -> ink_domain::package::AutostartBackend {
+        ink_domain::package::AutostartBackend::RegistryRun
+    }
+
+    fn is_enabled(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn set_enabled(&mut self, enabled: bool) -> Result<ink_domain::package::AutostartNotice, String> {
+        Ok(ink_domain::package::AutostartNotice {
+            effective_enabled: enabled,
+            blocked_by_user: false,
+            blocked_by_policy: false,
+            guidance_ko: None,
+        })
+    }
+}
+
+/// 개발 빌드·미지원 환경·시험용 기본 자동 실행 제어.
+pub struct NoopAutostart;
+
+impl AutostartControl for NoopAutostart {}
+
+/// 사전 다운로드까지 끝난 업데이트 정보(D10 · H-distribution §2.5).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReadyUpdate {
+    pub version: String,
+    /// `"store"` | `"direct"`
+    pub channel: &'static str,
+}
+
+/// 운영체제 API 기반 업데이터 포트(D3·D10: 앱 프로세스 네트워크 0 원칙 유지).
+pub trait Updater: Send {
+    /// OS API로 업데이트 확인 + 백그라운드 사전 다운로드 완료 여부 확인.
+    /// 이미 준비 완료된 새 버전이 있으면 `Some(ReadyUpdate)`. 실패 시 `Err`(무시, 앱 동작 영향 0).
+    fn check_and_stage(&mut self) -> Result<Option<ReadyUpdate>, String> {
+        Ok(None)
+    }
+
+    /// 클릭 한 번 설치 + `RegisterApplicationRestart` 자동 재시작.
+    fn install_and_restart(&mut self) -> Result<(), String> {
+        Err("updater not available".into())
+    }
+}
+
+/// 1차 비패키지 빌드(NSIS·포터블)·맥·시험용 기본 업데이터.
+pub struct NoopUpdater;
+
+impl Updater for NoopUpdater {}
