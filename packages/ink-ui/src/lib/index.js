@@ -140,3 +140,19 @@ export {
   visibleDocFraction,
 } from './ink/coords.js';
 export { DRAW_KEY_IDS, LATER_DRAW_KEYS, buildDrawKeymap, matchDrawKey, normalizeCombo } from './ink/drawKeys.js';
+
+// 판서 렌더러(4.2) — DrawCanvas + 2D 그리기 순수 함수 + M5 펜 지연 계측
+export { default as DrawCanvas } from './components/DrawCanvas.svelte';
+export { SUGGEST_TIMEOUT_MS, DEFAULT_MOSAIC_BLOCK } from './ink/inkEngine.js';
+export {
+  BOARD_COLORS,
+  resolveInkColor,
+  drawBackground,
+  drawItem,
+  renderItems,
+  bakeItem,
+  renderActive,
+  renderDocument,
+  createCanvasTextMeasurer,
+} from './ink/canvasRender.js';
+export { createPenLatencyMeter, summarizeLatency } from './ink/penMetrics.js';
