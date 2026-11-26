@@ -1,0 +1,19 @@
+{
+  "$comment": "MSIX 포장 기본 메타데이터(D2). 앱 표시 이름이 확정되면 displayName 또는 tauri.conf.json의 productName 한 곳만 바꾼다.",
+  "displayName": null,
+  "description": "발표자를 위한 화면 캡처·판서·확대 도구",
+  "publisherDisplayName": "찰떡쌤",
+  "executable": "screen-ink.exe",
+  "appInstallerUri": "https://ink.ssamuniverse.com/screen-ink.appinstaller",
+  "releaseBaseUrl": "https://github.com/djqanrudgns12/screen-ink/releases/download",
+  "channels": {
+    "store": {
+      "packageName": "kr.screenink.desktop",
+      "publisher": "CN=REPLACE_WITH_PARTNER_CENTER_PUBLISHER"
+    },
+    "direct": {
+      "packageName": "kr.screenink.desktop",
+      "publisher": "CN=REPLACE_WITH_SIGNPATH_SUBJECT"
+    }
+  }
+}

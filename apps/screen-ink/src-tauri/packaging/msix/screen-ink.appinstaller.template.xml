@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  screen-ink 직접 배포판 .appinstaller 템플릿 (2021 스키마 · 11-distribution §7.1).
+  고정 주소: https://ink.ssamuniverse.com/screen-ink.appinstaller
+  리디렉션 미지원 위험을 피하기 위해 MainPackage Uri는 매 버전 정확한 GitHub Release 자산 주소를 쓴다.
+-->
+<AppInstaller
+  xmlns="http://schemas.microsoft.com/appx/appinstaller/2021"
+  Uri="{{APPINSTALLER_URI}}"
+  Version="{{VERSION}}">
+  <MainPackage
+    Name="{{PACKAGE_NAME}}"
+    Publisher="{{PUBLISHER}}"
+    Version="{{VERSION}}"
+    ProcessorArchitecture="{{ARCH}}"
+    Uri="{{PACKAGE_URI}}" />
+  <UpdateSettings>
+    <OnLaunch
+      HoursBetweenUpdateChecks="0"
+      ShowPrompt="false"
+      UpdateBlocksActivation="false" />
+    <AutomaticBackgroundTask />
+  </UpdateSettings>
+</AppInstaller>
