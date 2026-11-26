@@ -412,6 +412,20 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
         let m = &session.monitor;
         // 창은 prepare(배치가 바뀌면 다시 맞춤)가 미리 만들어 둔다 — 아직이면 다음 진입부터
         let w = self.app.get_webview_window(&label(m.id)).ok_or("overlay window not ready")?;
+        // 확정 직후 0.4초 잔상 중에 판서가 열릴 수 있다([판서로]·Alt+1을 바로 누름) — 잔상 타이머가 이 창을 숨기지 않게
+        // 취소하고, 잔상을 지우고(#app 숨김 풀기), 클릭 통과를 푼다. 다른 모니터의 잔상 창은 여기서 바로 숨긴다.
+        self.bump_afterimage_gen();
+        let target = label(m.id);
+        for (l, other) in self.app.webview_windows() {
+            if !l.starts_with(PREFIX) {
+                continue;
+            }
+            let _ = other.eval(CLEAR_AFTERIMAGE_SCRIPT);
+            let _ = other.set_ignore_cursor_events(false);
+            if l != target {
+                let _ = show_raw(&other, false);
+            }
+        }
         // 판서는 네이티브 정지 창·강조를 쓰지 않는다(배경도 확대·이동과 같은 변환으로 웹뷰가 그림, A §2.5)
         self.layout = None;
         let url = match &frame {

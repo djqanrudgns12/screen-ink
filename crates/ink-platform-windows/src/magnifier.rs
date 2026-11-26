@@ -11,6 +11,9 @@
 //!   저수준 *키보드* 훅은 쓰지 않는다(R-KEY-1).
 //! - 자기 창(호스트는 자동, HUD·섬·팝오버는 명시)을 `MagSetWindowFilterList(EXCLUDE)`로 원본에서 뺀다(무한 거울 0).
 //! - 서비스가 3초 넘게 갱신하지 않으면(멈춤·교착) 스스로 숨기고 커서를 되돌린다 → 다음 `update`가 `Err`.
+//! - **`stop`은 숨긴 창이 화면 합성에서 빠질 때까지(`DwmFlush`, 한 프레임) 기다린 뒤 돌아온다** — 곧바로 GDI로
+//!   정지 캡처를 하는 5.3(Alt+1 판서 이어받기)·확대 중 캡처 키에서 확대 화면이 찍히지 않게. 그래서
+//!   `Magnifier::wait_hidden`은 기본(할 일 없음) 그대로 둔다(HUD 묶음 `zoom_hud::HudMagnifier`도 그대로 맞다).
 
 use ink_domain::geometry::{PhysPoint, PhysRect};
 use std::cell::RefCell;
@@ -21,6 +24,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 use windows_sys::core::{w, PCWSTR};
 use windows_sys::Win32::Foundation::{GetLastError, HINSTANCE, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
+use windows_sys::Win32::Graphics::Dwm::DwmFlush;
 use windows_sys::Win32::Graphics::Gdi::{InvalidateRect, UpdateWindow};
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::System::Threading::GetCurrentThreadId;
@@ -282,9 +286,27 @@ impl ink_app::Magnifier for WinMagnifier {
         }
         let Some((shared, hwnd)) = self.host.as_ref().and_then(|h| h.hwnd.map(|w| (h.shared.clone(), w))) else { return };
         let (tx, rx) = mpsc::channel();
-        if Self::send(&shared, hwnd, Cmd::Hide { reply: tx }) && rx.recv_timeout(CMD_TIMEOUT).is_err() {
-            log::warn!("magnifier hide timed out");
+        if !Self::send(&shared, hwnd, Cmd::Hide { reply: tx }) {
+            return;
         }
+        if rx.recv_timeout(CMD_TIMEOUT).is_err() {
+            log::warn!("magnifier hide timed out");
+            return;
+        }
+        wait_composed();
+    }
+}
+
+/// 숨긴 돋보기가 빠진 화면이 한 번 합성될 때까지(다음 DWM present) 기다린다 — 그 뒤의 GDI 캡처에는 돋보기가 없다.
+/// 60 Hz에서 0~16.7 ms. [실기 확인 필요] 학교 PC에서 Alt+2 → Alt+1 판서 배경에 확대 화면이 겹쳐 찍히지 않는지.
+fn wait_composed() {
+    let t = Instant::now();
+    // SAFETY: 인자 없는 동기 호출. 실패(합성 꺼짐 등)는 기다리지 않은 것과 같다.
+    let hr = unsafe { DwmFlush() };
+    if hr < 0 {
+        log::debug!("DwmFlush failed (0x{hr:08X})");
+    } else {
+        log::debug!("magnifier hidden, composed in {} ms", t.elapsed().as_millis());
     }
 }
 
