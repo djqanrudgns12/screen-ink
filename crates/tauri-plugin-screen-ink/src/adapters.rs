@@ -75,14 +75,14 @@ impl<R: Runtime> Clipboard for TauriClipboard<R> {
     }
 }
 
-/// 저장 폴더. 빈 값 = 사진 폴더\screen-ink. 폴더를 만들 수 없으면 사진 폴더로(R-OUT-2).
+/// 저장 폴더. 빈 값 = 사진 폴더\shookshok. 폴더를 만들 수 없으면 사진 폴더로(R-OUT-2).
 pub struct TauriFiles<R: Runtime> {
     pub app: AppHandle<R>,
 }
 
 impl<R: Runtime> TauriFiles<R> {
     fn pictures(&self) -> PathBuf {
-        self.app.path().picture_dir().unwrap_or_else(|_| std::env::temp_dir()).join("screen-ink")
+        self.app.path().picture_dir().unwrap_or_else(|_| std::env::temp_dir()).join(crate::APP_DIR)
     }
 }
 

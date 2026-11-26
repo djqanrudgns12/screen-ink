@@ -52,7 +52,7 @@
  * @property {string[]} [suggestions]  줄마다 다른 추천 3개
  *
  * @typedef {'capture.region'|'capture.window'|'record.toggle'|'draw'|'zoom'|'board'|'pin.toggle'|'pin.releaseAll'|'draw.restore'|'folder.open'|'settings.open'|'firstRun.open'|'app.quit'|'snipaste.howto'
- *   |'folder.pick'|'logs.open'|'settings.export'|'capture.history.clear'
+ *   |'folder.pick'|'logs.open'|'settings.export'|'capture.history.clear'|'capture.saveLast'|'capture.copyHex'|'pins.closeAll'
  *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'|'draw.acceptSuggestion'|'draw.undo'} InkAction
  *   draw.acceptSuggestion·draw.undo = 판서 섬 단추([바꾸기]·[되돌리기]) → Rust가 'drawCommand' 이벤트로 오버레이 엔진에
  *   capture.cancel = 오버레이에서 Esc·우클릭(모드 끝, 정지 이미지 버림)
@@ -68,7 +68,7 @@
  * @property {boolean} cancelled
  * @property {string} [path]
  * @property {boolean} [ok]
- * @property {string} [error]   "이 파일은 screen-ink 설정이 아니에요"
+ * @property {string} [error]   "이 파일은 슉쇽 설정이 아니에요"
  * @property {SettingChange[]} [changes]
  * @property {string[]} [warnings]
  *
@@ -85,8 +85,14 @@
  * @property {string} [buttonKey]   단추 옆 키캡(예: 'Ctrl+S')
  * @property {'R'|'Y'|'G'|'O'|'B'|'L'|'W'|'K'} [penColor]  판서 섬(variant 'draw')의 지금 색 점
  * @property {string} [penWidth]    판서 섬의 굵기('4px')
+ * @property {{label: string, action: InkAction}} [chip]  추천 칩 하나(예: '#RRGGBB 복사' → 'capture.copyHex')
  *
  * @typedef {{x: number, y: number, w: number, h: number}} PhysRect  물리 px, 가상 화면 좌표
+ *
+ * @typedef {Object} AfterimageEvent  확정 직후 고른 자리 주황 잔상 0.4초(R-CAP-26)
+ * @property {number} session
+ * @property {PhysRect} rect
+ * @property {number} durationMs
  *
  * @typedef {Object} OverlayMonitor
  * @property {number} id
@@ -125,6 +131,21 @@
  *   command = 선택 툴바 단추(R-CAP-27) — 키와 같은 결과(Rust가 판단). meta = 맥 Cmd.
  *   좌표는 물리 px(가상 화면) = monitor.bounds + client × scale. wheel dy = -1 위(넓히기·부모) / 1 아래(좁히기·자식).
  *   key는 e.key와 e.code를 같이(한글 입력 중에도 code로 판단). Esc·우클릭·Enter 등 판단은 모두 Rust가 한다.
+ *
+ * @typedef {Object} LiveZoomState  실시간 확대 HUD(Alt+2, 04 S13 · R-ZOOM-6) — 'zoom' 이벤트, 끝나면 null.
+ *   InkState.mode = {mode:'liveZoom', session, monitorId, startedMs}. 좌표는 모두 Rust가 정한다.
+ * @property {number} session
+ * @property {number} monitorId
+ * @property {string} monitorLabel   위치 지도 이름('모니터 1', 배치 순서 — 창 제목 없음)
+ * @property {number} scale          1.25 · 1.5 · 2 · 2.5 · 3 · 4 · 6 · 8
+ * @property {string} scaleLabel     섬·배지 글자('×2.0', '×1.25')
+ * @property {{x: number, y: number, w: number, h: number}} viewport  위치 지도 0..1(원본 사각형 / 모니터)
+ * @property {{x: number, y: number}} [cursorCss]  확대 화면 위 커서(HUD 창 안 CSS px) — 44px 주황 후광 중심. 확대 화면 밖이면 없음
+ * @property {boolean} showMinimap   설정 zoom.minimap
+ *
+ * @typedef {{type:'wheel', dy:-1|1} | {type:'key', slot:'z-in'|'z-out'|'z-exit'} | {type:'exit'}} ZoomInput
+ *   실시간 확대 입력(미리보기·HUD). wheel dy = -1 위(더 확대) / 1 아래(덜 확대).
+ *   실제 앱의 휠은 Rust 돋보기 훅이 받는다(확대 모니터 안 세로 휠, Shift+휠은 아래 앱으로).
  */
 
 // ───────────── 판서·칠판(A §2.5) ─────────────
@@ -213,7 +234,8 @@
  *   합성 결과(배경 + 판서) 원본 바이트를 base64 없이(원본 바이트 IPC). bytes 길이 = w × h × 4
  * @property {(patch: DrawIslandPatch) => Promise<void>} drawIsland
  * @property {(sample: PenSample) => Promise<void>} drawPenMetrics  로그 한 줄 `pen latency n=.. p50=.. p95=.. max=.. ms`
- * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView} | {type: 'draw', draw: DrawSession} | ({type: 'drawCommand'} & DrawCommand)) => void) => () => void} subscribe
+ * @property {(input: ZoomInput) => Promise<void>} zoomInput  실시간 확대 입력(휠·확대 안 키·끝). 결과는 'zoom'·'island' 이벤트로
+ * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView} | {type: 'afterimage', afterimage: AfterimageEvent} | {type: 'zoom', zoom: LiveZoomState | null} | {type: 'draw', draw: DrawSession} | ({type: 'drawCommand'} & DrawCommand)) => void) => () => void} subscribe
  */
 
 export const SHORTCUT_GROUPS = [

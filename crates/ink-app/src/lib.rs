@@ -4,6 +4,7 @@
 pub mod capture;
 pub mod case;
 pub mod draw;
+pub mod live_zoom;
 pub mod ports;
 pub mod service;
 pub mod state;
@@ -22,3 +23,6 @@ pub use state::{
     CaptureView, ConflictSummary, DrawSession, DrawViewTransform, InkState, IslandButton, IslandEvent, IslandHint, IslandKind, KeptCompat, OverlayMonitor, OverlaySession,
     PreviewResult, RowStatus, SetShortcutResult, ShortcutRow, UpdateResult,
 };
+pub use live_zoom::{ZoomHandoff, ZoomInput};
+pub use ports::{Magnifier, NoMagnifier, ZOOM_UNSUPPORTED};
+pub use state::LiveZoomState;

@@ -13,6 +13,8 @@ pub enum Mode {
     Capture { session: u64, kind: CaptureKind, started_ms: u64 },
     /// 판서(Alt+1, 정지 화면 위)·칠판(Alt+3, `board`) — 커서 모니터 하나(A §2.5)
     Draw { session: u64, board: bool, monitor_id: u32, started_ms: u64 },
+    /// 실시간 확대(Alt+2, 단계 5) — 커서 모니터 하나. 판정은 `zoom::on_hotkey`가 먼저 한다.
+    LiveZoom { session: u64, monitor_id: u32, started_ms: u64 },
 }
 
 /// 판서 전역 칸: `draw` = Alt+1 · `board` = Alt+3 · `restore` = Alt+Shift+1(직전 판서 바로 열기, R-DRAW-2).
@@ -81,7 +83,7 @@ pub fn on_hotkey(mode: &Mode, slot: &str, now_ms: u64) -> ModeCommand {
                 ModeCommand::End
             }
         }
-        Mode::Capture { .. } | Mode::Draw { .. } => ModeCommand::Switch(k),
+        Mode::Capture { .. } | Mode::Draw { .. } | Mode::LiveZoom { .. } => ModeCommand::Switch(k),
     }
 }
 
@@ -98,6 +100,14 @@ mod tests {
         // 캡처 중 판서 키 = 캡처를 끝내고 판서로(03 §3)
         assert_eq!(on_hotkey(&m, "draw", 100), ModeCommand::SwitchDraw(DrawKind::Draw));
         assert_eq!(on_hotkey(&m, "zoom", 100), ModeCommand::Ignore);
+    }
+
+    #[test]
+    fn 확대_중_캡처_키는_전환이고_모양은_live_zoom() {
+        let m = Mode::LiveZoom { session: 3, monitor_id: 1, started_ms: 0 };
+        assert_eq!(on_hotkey(&m, "region", 100), ModeCommand::Switch(CaptureKind::Region));
+        let v = serde_json::to_value(m).unwrap();
+        assert_eq!(v, serde_json::json!({ "mode": "liveZoom", "session": 3, "monitorId": 1, "startedMs": 0 }));
     }
 
     #[test]

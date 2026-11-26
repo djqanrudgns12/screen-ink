@@ -1,7 +1,7 @@
 <script>
   import { keycaps } from '@screen-ink/client';
   import Icon from '../icons/Icon.svelte';
-  import { formatCapturePath } from '../models/islandQueue.js';
+  import { extractHexColor, formatCapturePath, shouldOmitButtonKeys } from '../models/islandQueue.js';
   import Keycap from './Keycap.svelte';
 
   /**
@@ -27,6 +27,7 @@
    *   micOff?: boolean,
    *   button?: { label: string, key?: string, stop?: boolean, onClick?: () => void } | null,
    *   secondaryButton?: { label: string, key?: string, onClick?: () => void } | null,
+   *   chip?: { label: string, hex?: string, onClick?: () => void } | null,
    *   hints?: { key: string, label: string }[],
    *   showHints?: boolean,
    *   progressDurationMs?: number | null,
@@ -58,6 +59,7 @@
     micOff = false,
     button = null,
     secondaryButton = null,
+    chip = null,
     hints = [],
     showHints = false,
     progressDurationMs = null,
@@ -69,9 +71,36 @@
   } = $props();
 
   let thumbFailed = $state(false);
+  /** @type {HTMLDivElement | null} */
+  let islandEl = $state(null);
+  let overflowDetected = $state(false);
   $effect(() => {
     void thumbUrl;
     thumbFailed = false;
+  });
+  $effect(() => {
+    void text;
+    void detail;
+    void value;
+    void thumbUrl;
+    void button;
+    void secondaryButton;
+    void chip;
+    overflowDetected = false;
+  });
+  $effect(() => {
+    const el = islandEl;
+    if (!el) return;
+    const checkOverflow = () => {
+      if (!overflowDetected && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1) {
+        overflowDetected = true;
+      }
+    };
+    checkOverflow();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(checkOverflow);
+    ro.observe(el);
+    return () => ro.disconnect();
   });
 
   let mutedSurface = $derived(variant === 'off' || variant === 'security');
@@ -80,6 +109,10 @@
   let pathItems = $derived(formatCapturePath(path, level));
   let isResultCard = $derived(variant === 'result' && Boolean(detail));
   let resultMeta = $derived([value, detail].filter(Boolean).join(' · '));
+  let chipHex = $derived(chip ? (extractHexColor(chip.hex) ?? extractHexColor(chip.label)) : null);
+  let omitButtonKeys = $derived(
+    shouldOmitButtonKeys({ button, secondaryButton, chip, overflow: overflowDetected }),
+  );
   let iconName = $derived.by(() => {
     if (variant === 'region') return 'region';
     if (variant === 'window') return 'window';
@@ -101,6 +134,7 @@
 </script>
 
 <div
+  bind:this={islandEl}
   role="status"
   aria-live={variant === 'problem' ? 'assertive' : 'polite'}
   class="ink-island {className}"
@@ -109,6 +143,7 @@
   data-twoline={hasSecondLine ? 'true' : undefined}
   data-thumb={hasThumb ? 'true' : undefined}
   data-result-card={isResultCard ? 'true' : undefined}
+  data-compact-keys={omitButtonKeys ? 'true' : undefined}
   {onmouseenter}
   {onmouseleave}
 >
@@ -225,7 +260,7 @@
           <span class="ink-island-stop-sq" aria-hidden="true"></span>
         {/if}
         <span>{button.label}</span>
-        {#if button.key}
+        {#if button.key && !omitButtonKeys}
           <kbd class="ink-island-btn-key ink-mono">{formatButtonKey(button.key)}</kbd>
         {/if}
       </button>
@@ -238,9 +273,26 @@
         onclick={secondaryButton.onClick}
       >
         <span>{secondaryButton.label}</span>
-        {#if secondaryButton.key}
+        {#if secondaryButton.key && !omitButtonKeys}
           <kbd class="ink-island-btn-key ink-mono">{formatButtonKey(secondaryButton.key)}</kbd>
         {/if}
+      </button>
+    {/if}
+
+    {#if chip}
+      <button
+        type="button"
+        class="ink-island-btn ink-island-chip ink-focus"
+        onclick={chip.onClick}
+      >
+        {#if chipHex}
+          <span
+            class="ink-island-chip-swatch"
+            style:background={chipHex}
+            aria-hidden="true"
+          ></span>
+        {/if}
+        <span class="ink-island-chip-label ink-mono">{chip.label}</span>
       </button>
     {/if}
   </div>
@@ -513,6 +565,27 @@
   .ink-island-btn-sec {
     background: var(--ink-island-key-bg);
     color: var(--ink-island-text);
+  }
+
+  .ink-island-chip {
+    background: var(--ink-island-key-bg);
+    color: var(--ink-island-text);
+    box-shadow: var(--ink-island-ring);
+    padding: 0 10px 0 8px;
+    gap: 6px;
+  }
+
+  .ink-island-chip-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-sizing: border-box;
+    flex: none;
+  }
+
+  .ink-island-chip-label {
+    font-size: 11.5px;
   }
 
   .ink-island-btn:active {

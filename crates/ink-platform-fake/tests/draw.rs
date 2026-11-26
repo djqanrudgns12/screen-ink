@@ -276,8 +276,12 @@ fn 내보내기_복사와_저장은_원본_바이트를_포트로() {
 
     // 저장: 캡처 저장과 같은 이름 규칙(설정 템플릿·오늘 순번)
     let r = s.draw_export(export(ExportAction::Save, 4, 2, None), px(4, 2));
-    assert_eq!((r.ok, r.name.as_deref()), (true, Some("screen-ink_20260304_090507.png")));
-    assert_eq!(w.desk.0.lock().unwrap().saved, vec![(String::new(), "screen-ink_20260304_090507".to_string(), 4, 2)]);
+    // 이름 = 설정 템플릿(기본값은 브랜드 이름 접두) + 고정 시계 2026-03-04 09:05:07
+    let template = ink_domain::settings::Settings::defaults(Platform::Win).str("output.template").to_string();
+    let stem = template.replace("{yyyy}{MM}{dd}_{HH}{mm}{ss}", "20260304_090507");
+    assert!(!stem.contains('{'), "기본 템플릿 모양이 바뀌면 이 시험도 고친다: {template}");
+    assert_eq!((r.ok, r.name.clone()), (true, Some(format!("{stem}.png"))));
+    assert_eq!(w.desk.0.lock().unwrap().saved, vec![(String::new(), stem.clone(), 4, 2)]);
     assert_eq!(last_text(&w), "사진 폴더에 저장했어요", "저장 폴더 설정이 비면 사진 폴더");
 
     // 바이트 수가 틀리거나 지난 세션이거나 모니터 전체 크기가 아니면(확대 중 보이는 부분 등) 아무것도 쓰지 않는다
@@ -442,4 +446,27 @@ fn 처음_상태로_되돌리면_보관_판서도_지운다() {
     assert!(s.kept_ink().is_some());
     s.reset_all();
     assert!(s.kept_ink().is_none());
+}
+
+#[test]
+fn 판서와_실시간_확대는_서로_끝내고_전환() {
+    let w = FakeWorld::new();
+    let mut s = InkService::new(w.ports(), Platform::Win, "test");
+    s.set_magnifier(w.magnifier_port());
+    s.start();
+    // 확대 중 Alt+1 = 확대를 끝내고 판서(5.3 배율 이어받기는 아직 — 1×로 시작)
+    s.on_hotkey("zoom");
+    assert!(matches!(s.mode(), Mode::LiveZoom { .. }));
+    assert_eq!(s.on_hotkey("draw"), HotkeyOutcome::Draw);
+    assert!(matches!(s.mode(), Mode::Draw { board: false, .. }));
+    assert!(w.magnifier.0.lock().unwrap().running.is_none(), "돋보기를 끈다");
+    let drawing = session_of(&s);
+    // 판서 중 Alt+2 = 판서를 끝내고(늦은 끝으로 보관) 확대
+    s.on_hotkey("zoom");
+    assert!(matches!(s.mode(), Mode::LiveZoom { .. }));
+    s.draw_finish(finish(drawing, 1));
+    assert_eq!(s.kept_ink().unwrap().document, doc(1));
+    // 트레이 판서도 확대를 끝내고 연다
+    s.start_draw(DrawKind::Board);
+    assert!(matches!(s.mode(), Mode::Draw { board: true, .. }));
 }

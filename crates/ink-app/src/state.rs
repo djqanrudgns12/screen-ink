@@ -302,3 +302,24 @@ pub struct UpdateResult {
     pub error: Option<String>,
     pub state: InkState,
 }
+
+/// 실시간 확대 상태(`screen-ink://zoom`, R-ZOOM-6 · 04 S13) — 확대 HUD(커서 주황 후광 + 위치 지도)가 그린다.
+/// 확대가 끝나면 이벤트 값은 `null`.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LiveZoomState {
+    pub session: u64,
+    pub monitor_id: u32,
+    /// "모니터 1"(배치 순서) — 창 제목·장치 이름은 쓰지 않는다
+    pub monitor_label: String,
+    pub scale: f64,
+    /// 섬·배지 글자(`×2.0`)
+    pub scale_label: String,
+    /// 위치 지도용 0..1 사각형(원본 / 모니터)
+    pub viewport: ink_domain::zoom::NormRect,
+    /// 확대 화면 위 커서(그 모니터 HUD 창 안 CSS px) — 44 px 주황 후광 자리. 커서가 확대 화면 밖이면 없음
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cursor_css: Option<ink_domain::geometry::LogicalPoint>,
+    /// 설정 `zoom.minimap`
+    pub show_minimap: bool,
+}

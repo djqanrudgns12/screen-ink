@@ -21,6 +21,7 @@ const COMMANDS: &[&str] = &[
     "draw_export",
     "draw_island",
     "draw_pen_metrics",
+    "zoom_input",
 ];
 
 fn main() {

@@ -3,8 +3,9 @@
   import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
   import { listen } from '@tauri-apps/api/event';
   import { CaptureOverlay, DrawOverlay, IslandHost, PinView, SettingsWindow, TrayPopoverScreen, applyTheme, watchSystemTheme } from '@screen-ink/ui';
+  import { ZoomHud } from '@screen-ink/ui';
 
-  /** @type {{ client: import('@screen-ink/client').InkClient, view: 'popover'|'settings'|'island'|'overlay'|'pin', firstRun?: boolean, monitorId?: number, pinId?: number }} */
+  /** @type {{ client: import('@screen-ink/client').InkClient, view: 'popover'|'settings'|'island'|'overlay'|'pin'|'zoom-hud', firstRun?: boolean, monitorId?: number, pinId?: number }} */
   let { client, view, firstRun = false, monitorId = 0, pinId = 0 } = $props();
 
   let pref = $state('system');
@@ -103,6 +104,8 @@
   {/if}
 {:else if view === 'pin'}
   <PinView {client} {pinId} />
+{:else if view === 'zoom-hud'}
+  <ZoomHud {client} />
 {:else}
   {#key firstRunKey}
     <SettingsWindow {client} firstRun={showFirstRun} onClose={() => client.run('settings.close')} />

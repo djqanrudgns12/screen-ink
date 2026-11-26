@@ -442,6 +442,11 @@ impl InkService {
     /// 판서 중 캡처 키 = 판서를 끝내고(보관은 늦은 끝으로) `None` — 캡처 흐름이 쉬는 상태에서 시작한다.
     pub(crate) fn on_draw_hotkey(&mut self, slot: &str, pressed: Instant) -> Option<HotkeyOutcome> {
         let drawing = matches!(self.mode, Mode::Draw { .. });
+        // 판서 중 실시간 확대 키 = 판서를 끝내고(보관은 늦은 끝으로) 확대로 — 확대 판정은 쉬는 상태에서 다시
+        if drawing && slot == ink_domain::zoom::ZOOM_SLOT {
+            self.end_draw(EndWhy::Switch);
+            return Some(self.zoom_hotkey(slot, pressed).unwrap_or(HotkeyOutcome::Ignored));
+        }
         let now = self.epoch.elapsed().as_millis() as u64;
         match mode::on_hotkey(&self.mode, slot, now) {
             ModeCommand::StartDraw(kind) => {
@@ -484,6 +489,7 @@ impl InkService {
         match self.mode {
             Mode::Capture { .. } => self.end_capture(),
             Mode::Draw { .. } => self.end_draw(EndWhy::Switch),
+            Mode::LiveZoom { .. } => self.end_zoom(),
             Mode::Idle => {}
         }
     }

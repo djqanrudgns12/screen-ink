@@ -3,6 +3,7 @@
   import AppIcon from '../icons/AppIcon.svelte';
   import Icon from '../icons/Icon.svelte';
   import Keycap from '../components/Keycap.svelte';
+  import MakerCredit from '../components/MakerCredit.svelte';
   import { formatFirstRunConflict } from '../models/settingsMeta.js';
 
   /**
@@ -80,12 +81,13 @@
     <Dialog.Overlay class="ink-first-overlay" />
     <Dialog.Content class="ink-first-dialog" aria-label="첫 실행 안내">
       <div class="ink-first-head">
-        <AppIcon size={56} label="screen-ink" />
+        <AppIcon size={56} label="슉쇽" />
         <div class="ink-first-titles">
-          <Dialog.Title class="ink-first-title">screen-ink가 준비됐어요</Dialog.Title>
+          <Dialog.Title class="ink-first-title">슉쇽이 준비됐어요</Dialog.Title>
           <Dialog.Description class="ink-first-sub">
             트레이에 있다가 단축키를 누르면 나타나요
           </Dialog.Description>
+          <MakerCredit variant="maker" class="ink-first-maker" />
         </div>
       </div>
 
@@ -216,6 +218,10 @@
     margin: 4px 0 0;
     font-size: 13px;
     color: var(--ink-sub);
+  }
+
+  :global(.ink-first-maker) {
+    margin-top: 6px;
   }
 
   .ink-first-section {

@@ -25,4 +25,5 @@ permissions = [
   "allow-draw-export",
   "allow-draw-island",
   "allow-draw-pen-metrics",
+  "allow-zoom-input",
 ]

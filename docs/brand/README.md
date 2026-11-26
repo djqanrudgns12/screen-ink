@@ -5,10 +5,11 @@
 | 항목 | 값 | 상태 |
 |---|---|---|
 | 공식 앱 아이콘 | 최종 시안 **22번 검은 조리개** | **반영 끝**(이 문서 1장) |
-| 영문 앱 이름 | **`shookshok`** | 반영 전(3장) |
-| 한글 앱 이름 | **`슉쇽`** | 반영 전(3장) |
-| 개발자 | **`찰떡쌤`** | 반영 전(2·3장) |
-| 라이선스 | **MIT 유지** | 저작권 줄만 반영 전(4장) |
+| 영문 앱 이름 | **`shookshok`** | **반영 끝**(3장) |
+| 한글 앱 이름 | **`슉쇽`** | **반영 끝**(3장) |
+| 앱 고유 ID | **`com.ssamuniverse.shookshok`** (가진 도메인 `ssamuniverse.com`을 거꾸로) | **반영 끝**(3장). 배포 뒤에는 바꾸지 않는다 |
+| 개발자 | **`찰떡쌤`** | **반영 끝**(2장) |
+| 라이선스 | **MIT 유지** | **반영 끝**(4장) |
 
 ## 1. 공식 앱 아이콘
 
@@ -84,34 +85,42 @@
 
 마스코트 크기: 줄 안에서는 14~20px(롤린썬더 14px, 글쓰기 길잡이 20px 1x/2x webp). 첫 화면은 32px. 큰 원본(98KB) 대신 작은 1x/2x webp를 만들어 쓴다(`writingguidance/apps/web/src/ui/art/chaltteok@1x.webp`, `@2x.webp`가 이미 있음).
 
-## 3. 앱 이름 — 바꿀 자리(반영 전)
+## 3. 앱 이름 — 바꾼 자리(2026-11-26)
 
-| 파일 | 지금 | 바꿀 값 |
+이름 상수: `crates/tauri-plugin-screen-ink/src/lib.rs`의 `APP_NAME = "슉쇽"`(화면 문구), `APP_DIR = "shookshok"`(폴더·파일 이름). Rust 화면 문구는 이 둘을 쓴다.
+
+| 자리 | 전 | 후 |
 |---|---|---|
-| `apps/screen-ink/src-tauri/tauri.conf.json` `productName` | `screen-ink` | `shookshok` (설치 폴더·시작 메뉴·exe 이름. 한글 이름은 스토어 표시 이름으로) |
-| 같은 파일 `identifier` | `kr.screenink.desktop` | 결정 필요 — 예 `kr.chaltteok.shookshok`. 아직 배포 전이라 지금 바꾸는 게 안전 |
-| `apps/screen-ink/index.html` `<title>` | `screen-ink` | `슉쇽` |
-| `packages/ink-ui/.../TrayPopoverScreen.svelte` 브랜드·`label` | `screen-ink`, `screen-ink 메뉴` | `슉쇽`, `슉쇽 메뉴` |
-| `packages/ink-ui/.../SettingsWindow.svelte` 사이드바 브랜드·`aria-label` | `screen-ink`, `screen-ink 설정` | `슉쇽`, `슉쇽 설정` |
-| 같은 파일 정보 페이지 | 버전·오픈소스 고지만 | `만든 이: [마스코트] 찰떡쌤` 줄 + 맨 아래 저작권 줄(2장 표기) |
-| `packages/ink-ui/.../FirstRunSheet.svelte` | `screen-ink가 준비됐어요`, `AppIcon label="screen-ink"` | `슉쇽이 준비됐어요` + `Made by. 찰떡쌤` |
-| `crates/tauri-plugin-screen-ink/src/lib.rs` 트레이 풍선말·창 제목·파일 대화상자 필터 | `screen-ink`, `screen-ink 설정` | `슉쇽`, `슉쇽 설정` |
-| 같은 파일·`adapters.rs` 기본 저장 폴더 | `사진\screen-ink` | `사진\shookshok` |
-| 같은 파일 설정 폴더 | `AppData\Roaming\screen-ink` | `AppData\Roaming\shookshok` |
-| `crates/ink-domain/src/settings.rs` 파일 이름 기본 틀 | `screen-ink_{yyyy}…` | `shookshok_{yyyy}…` |
-| 같은 파일 설정 내보내기 `"app"` | `screen-ink` | `shookshok` (가져오기는 옛 `screen-ink`도 받기) |
-| 오류 문구 `이 파일은 screen-ink 설정이 아니에요` (Rust·JS 4곳) | | `이 파일은 슉쇽 설정이 아니에요` |
-| `crates/ink-store` 포터블 표시 파일 | `screen-ink.portable` | `shookshok.portable` |
-| `docs/store/microsoft-store-listing.md` | 앱 이름 미정, 저작권 `screen-ink contributors. MIT` | 한국어 `슉쇽`·영어 `shookshok`, 저작권은 4장 |
+| `tauri.conf.json` `productName` | `screen-ink` | `shookshok` (설치 폴더·시작 메뉴·exe 이름 `shookshok.exe`) |
+| 같은 파일 `identifier` | `kr.screenink.desktop` | `com.ssamuniverse.shookshok` |
+| `apps/screen-ink/index.html` 제목 · 로그 파일 이름 · 시작 실패 문구 | `screen-ink` | `슉쇽` · `shookshok` · `슉쇽을 시작하지 못했어요` |
+| 트레이 풍선말 · 팝오버 창 제목 · 트레이 메뉴 머리 · `aria-label` | `screen-ink`, `screen-ink 메뉴` | `슉쇽`, `슉쇽 메뉴` |
+| 설정 창 제목 · 사이드바 브랜드 · 파일 대화상자 필터 | `screen-ink 설정`, `screen-ink` | `슉쇽 설정`, `슉쇽` |
+| 설정 › 정보 | 버전 · 오픈소스 고지 | + `만든 이 찰떡쌤` · `라이선스 MIT` 줄, 맨 아래 `슉쇽 · v버전` + `© 2026 [마스코트] 찰떡쌤. MIT License.` |
+| 첫 실행 안내 | `screen-ink가 준비됐어요` | `슉쇽이 준비됐어요` + `[마스코트] Made by. 찰떡쌤` |
+| 기본 저장 폴더 | `사진\screen-ink` | `사진\shookshok` |
+| 설정 폴더 | `%APPDATA%\screen-ink` | `%APPDATA%\shookshok`. **새 폴더가 없고 옛 폴더가 있으면 시작할 때 한 번 옮긴다** |
+| 포터블 표시 파일 | `screen-ink.portable` | `shookshok.portable`. 옛 이름도 포터블로 본다 |
+| 파일 이름 기본 틀 · 이름이 비면 쓰는 이름 | `screen-ink_{yyyy}…`, `screen-ink` | `shookshok_{yyyy}…`, `shookshok` |
+| 설정 내보내기 파일 · `"app"` 칸 | `screen-ink-settings-날짜.json`, `screen-ink` | `shookshok-settings-날짜.json`, `shookshok` (가져오기는 `"app"`을 보지 않아 옛 파일도 그대로 읽힌다) |
+| 오류 문구 | `이 파일은 screen-ink 설정이 아니에요` | `이 파일은 슉쇽 설정이 아니에요` |
+| 섬·오버레이·핀 창 제목(안 보임) | `screen-ink island` 등 | `shookshok island` 등 |
+| 안내 사이트(`site/`) | `screen-ink`, 주황 점 | `슉쇽`(한국어)·`shookshok`(영어), 앱 아이콘(`site/icon.png`, 파비콘 겸), 바닥 `슉쇽 shookshok · © 2026 찰떡쌤 · MIT License` |
+| 스토어 등록 자료 | 앱 이름 미정, `© 2026 screen-ink contributors` | 한국어 `슉쇽`·영어 `shookshok`, `© 2026 찰떡쌤. MIT License.` |
+| `LICENSE` · `README.md` 제목 | `djqanrudgns12`, `screen-ink (가칭)` | `찰떡쌤`, `슉쇽 (shookshok)` |
 
-그대로 둘 것(사용자에게 안 보임): 저장소·폴더 이름 `screen-ink`, 크레이트 `tauri-plugin-screen-ink`·`ink-*`, npm `@screen-ink/*`, 플러그인 이름 `screen-ink`(권한 식별자가 바뀌어 손이 많이 감), 스레드 이름·로그 파일 이름. 바꾸려면 따로 정한다.
+그대로 둔 것(사용자에게 안 보임): 저장소·폴더 이름 `screen-ink`, 크레이트 `tauri-plugin-screen-ink`·`ink-*`, npm `@screen-ink/*`, 플러그인 이름과 명령 `plugin:screen-ink|…`, 이벤트 `screen-ink://…`, 트레이 ID, 스레드 이름. GitHub 주소(`djqanrudgns12/screen-ink`)도 그대로.
+
+ID를 바꾸면서 달라지는 것: Tauri가 ID로 정하는 폴더(로그 `%LOCALAPPDATA%\com.ssamuniverse.shookshok\logs`, WebView2 데이터)가 새로 생긴다. 예전 폴더의 웹뷰 데이터는 쓰지 않는다(설정은 위처럼 옮김).
 
 ## 4. 라이선스 — MIT 유지
 
 - MIT를 고른 이유는 SignPath 무료 서명(공개 저장소 + 공인 오픈소스 라이선스가 조건)이다(`docs/prd/11-distribution.md` §1.1·§10). 스토어 등록은 라이선스와 관계없다.
 - 그래서 Tidy Task·롤린썬더의 `All rights reserved.` 대신 **`© 2026 [마스코트] 찰떡쌤. MIT License.`** 로 쓴다. 스토어 저작권 칸도 `© 2026 찰떡쌤. MIT License.`
-- 이름을 바꿀 때 `LICENSE`의 `Copyright (c) 2026 djqanrudgns12`도 `찰떡쌤`으로 맞춘다.
+- `LICENSE`의 저작권자도 `찰떡쌤`으로 맞췄다.
 
-## 5. 정해야 할 것
+## 5. 남은 일
 
-- `identifier` 새 값(3장).
+- 실제 앱에서 이름·아이콘·정보 페이지 확인(트레이 풍선말, 설치 폴더 이름).
+- 맥판: 둥근 사각 아이콘 원본, 트레이 단색 템플릿.
+- Partner Center 앱 이름 예약(계정 승인 뒤): `슉쇽`, 영어 `shookshok`.

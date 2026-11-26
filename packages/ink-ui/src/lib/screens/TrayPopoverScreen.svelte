@@ -56,10 +56,10 @@
   }
 </script>
 
-<TrayPopover label="screen-ink 메뉴" {onClose} class={className}>
+<TrayPopover label="슉쇽 메뉴" {onClose} class={className}>
   {#snippet header()}
     <AppIcon size={24} />
-    <span class="ink-tray-brand">screen-ink</span>
+    <span class="ink-tray-brand">슉쇽</span>
     {#if recording}
       <span class="ink-tray-status" data-tone="danger">
         <i class="ink-tray-dot" data-tone="danger"></i>

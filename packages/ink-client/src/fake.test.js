@@ -268,3 +268,31 @@ test('판서 섬 조각과 안내, 펜 지연 기록', async () => {
   assert.equal(seen.at(-1).island.button.action, 'draw.undo');
   assert.equal(seen.at(-2).island.button, undefined, '제안 없이 오면 걷힌다');
 });
+
+test('결과 섬 HEX 칩과 주황 잔상 0.4초 이벤트를 흉내 낸다', async () => {
+  const c = createFakeClient();
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+
+  await c.run('capture.region');
+  await c.captureInput({ type: 'move', x: 800, y: 500 });
+  await c.captureInput({ type: 'command', name: 'copy' });
+
+  const afterimage = seen.find((e) => e.type === 'afterimage')?.afterimage;
+  assert.ok(afterimage, '복사 확정 직후 주황 잔상 이벤트가 온다');
+  assert.equal(afterimage.durationMs, 400);
+  assert.equal(afterimage.rect.w, 720);
+
+  const resultIsland = seen.at(-1).island;
+  assert.deepEqual(resultIsland.chip, { label: '#FFFFFF 복사', action: 'capture.copyHex' });
+
+  await c.run(resultIsland.chip.action);
+  assert.equal(seen.at(-1).island.kind, 'result');
+  assert.equal(seen.at(-1).island.text, '#FFFFFF 복사했어요');
+
+  // 취소에는 잔상이 뜨지 않는다
+  seen.length = 0;
+  await c.run('capture.region');
+  await c.captureInput({ type: 'command', name: 'cancel' });
+  assert.equal(seen.some((e) => e.type === 'afterimage'), false);
+});

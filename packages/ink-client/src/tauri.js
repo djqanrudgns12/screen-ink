@@ -48,6 +48,7 @@ export function createTauriClient() {
     },
     drawIsland: (patch) => cmd('draw_island', { patch }),
     drawPenMetrics: (sample) => cmd('draw_pen_metrics', { sample }),
+    zoomInput: (input) => cmd('zoom_input', { input }),
     subscribe(handler) {
       const offs = [
         listen('screen-ink://state', (e) => handler({ type: 'state', state: e.payload })),
@@ -56,6 +57,8 @@ export function createTauriClient() {
         listen('screen-ink://capture', (e) => handler({ type: 'capture', view: e.payload })),
         listen('screen-ink://draw', (e) => handler({ type: 'draw', draw: e.payload })),
         listen('screen-ink://draw-command', (e) => handler({ type: 'drawCommand', ...e.payload })),
+        listen('screen-ink://afterimage', (e) => handler({ type: 'afterimage', afterimage: e.payload })),
+        listen('screen-ink://zoom', (e) => handler({ type: 'zoom', zoom: e.payload ?? null })),
       ];
       return () => offs.forEach((p) => p.then((off) => off()));
     },

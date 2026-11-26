@@ -9,7 +9,7 @@ const SUGGEST = ['Ctrl+Alt+1', 'Ctrl+Alt+2', 'Ctrl+Alt+3', 'Alt+Shift+2', 'Alt+S
 const DEFAULT_SETTINGS = {
   'capture.result': 'copy', 'capture.evidence': false, 'capture.cursor': false, 'capture.sound': false, 'capture.element': true, 'capture.magnet': true,
   'capture.historyMax': 20, 'capture.excluded': [{ exe: 'licecap.exe', mode: 'exclude', auto: false }],
-  'output.folder': 'C:\\Users\\…\\Pictures\\screen-ink', 'output.template': '수업_{yyyy}{MM}{dd}_{n}',
+  'output.folder': 'C:\\Users\\…\\Pictures\\shookshok', 'output.template': '수업_{yyyy}{MM}{dd}_{n}',
   'record.fps': 30, 'record.mic': false, 'record.micDevice': '',
   'draw.color': 'R', 'draw.width': 4, 'draw.smoothing': 'light', 'draw.straighten': true, 'draw.shapeOnHold': true, 'draw.shapeApply': 'suggest',
   'draw.startZoom': 1.75, 'draw.keep': true, 'draw.esc': 'step', 'draw.rightClickPan': true,
@@ -51,6 +51,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   let sessionSeq = 0;
   /** @type {any} 가짜 고르기 상태(세션마다 새로) */
   let capture = null;
+  /** @type {string | null} 마지막 단색 HEX 결과(칩 클릭 흉내) */
+  let lastHex = null;
   const readyLog = [];
   // 판서 흉내: 지금 세션·보관 한 장·먼저 끝낸 세션(늦은 끝 대기)·섬 값·명령 기록
   /** @type {any} */
@@ -64,11 +66,13 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   /** @type {any[]} */
   const drawLog = [];
   let saveSeq = 0;
+  /** 실시간 확대 흉내(Alt+2): 배율만 쥐고 1920×1080 가운데를 비춘다 */
+  let zoomScale = 0;
 
   const judge = (slot, combo) => {
     if (!combo) return { status: 'off' };
     const dup = catalog.slots.find((o) => o.id !== slot.id && combos[o.id] === combo && (o.scope === slot.scope || o.scope === 'global' || slot.scope === 'global'));
-    if (dup) return { status: 'conflict', reason: `‘${dup.label}’과 겹쳐요`, owner: 'screen-ink' };
+    if (dup) return { status: 'conflict', reason: `‘${dup.label}’과 겹쳐요`, owner: '슉쇽' };
     if (slot.scope === 'global' && snipasteRunning && SNIPASTE.has(combo)) return { status: 'conflict', reason: 'Snipaste가 먼저 쓰고 있어요', owner: 'Snipaste' };
     if (slot.scope === 'global' && /^[A-Z0-9]$/.test(combo)) return { status: 'conflict', reason: '글자 하나는 전역 키로 쓸 수 없어요' };
     return { status: 'ok' };
@@ -83,9 +87,9 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     return {
       platform, theme: settings['general.theme'], hotkeysEnabled, pinnedCount: 2, pins: pins.size, recording: { active: false, elapsedMs: 0 },
       settings: { ...settings }, shortcuts: r, version: '0.1.0',
-      conflicts: { count: bad.length, app: owners.length === 1 && owners[0] !== 'screen-ink' ? owners[0] : undefined, combos: bad.map((x) => x.combo) },
+      conflicts: { count: bad.length, app: owners.length === 1 && owners[0] !== '슉쇽' ? owners[0] : undefined, combos: bad.map((x) => x.combo) },
       readonly: false,
-      location: { path: 'C:\\Users\\…\\AppData\\Roaming\\screen-ink\\settings.json', portable: false, readOnly: false },
+      location: { path: 'C:\\Users\\…\\AppData\\Roaming\\shookshok\\settings.json', portable: false, readOnly: false },
       notices: [],
       mode,
     };
@@ -135,6 +139,47 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     changed();
     island({ kind: 'end', text: '' });
   };
+  // ── 실시간 확대 흉내(진짜 계산은 Rust ink-domain::zoom) ──
+  const ZOOM_STEPS = [1.25, 1.5, 2, 2.5, 3, 4, 6, 8];
+  const scaleLabel = (s) => {
+    const r = Math.round(s * 100);
+    return r % 10 === 0 ? `×${(r / 100).toFixed(1)}` : `×${(r / 100).toFixed(2)}`;
+  };
+  const zoomView = () => ({
+    session: mode.session, monitorId: 0, monitorLabel: '모니터 1', scale: zoomScale, scaleLabel: scaleLabel(zoomScale),
+    viewport: { x: (1 - 1 / zoomScale) / 2, y: (1 - 1 / zoomScale) / 2, w: 1 / zoomScale, h: 1 / zoomScale },
+    cursorCss: { x: 960, y: 540 }, showMinimap: Boolean(settings['zoom.minimap']),
+  });
+  const zoomIsland = () => island({
+    kind: 'mode', mode: 'zoom', variant: 'zoom', text: '실시간 확대', detail: '움직이는 화면 그대로', value: scaleLabel(zoomScale),
+    hints: [{ key: '휠', label: '배율' }, { key: 'Alt 1', label: '멈추고 쓰기' }, { key: 'Esc', label: '끝' }],
+  });
+  const endZoom = () => {
+    if (mode.mode !== 'liveZoom') return;
+    mode = { mode: 'idle' };
+    zoomScale = 0;
+    emit({ type: 'zoom', zoom: null });
+    island({ kind: 'end', text: '' });
+    changed();
+  };
+  const startZoom = () => {
+    endZoom();
+    if (mode.mode === 'capture') { mode = { mode: 'idle' }; capture = null; island({ kind: 'end', text: '' }); }
+    sessionSeq += 1;
+    mode = { mode: 'liveZoom', session: sessionSeq, monitorId: 0, startedMs: Date.now() };
+    zoomScale = 2;
+    changed();
+    zoomIsland();
+    emit({ type: 'zoom', zoom: zoomView() });
+  };
+  const stepZoom = (dy) => {
+    const i = ZOOM_STEPS.indexOf(zoomScale);
+    const next = ZOOM_STEPS[Math.max(0, Math.min(ZOOM_STEPS.length - 1, i - Math.sign(dy)))];
+    if (next === zoomScale) return;
+    zoomScale = next;
+    zoomIsland();
+    emit({ type: 'zoom', zoom: zoomView() });
+  };
 
   return {
     async getState() { return state(); },
@@ -176,7 +221,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       const changes = Object.entries(IMPORT_FILE)
         .filter(([path, after]) => valueOf(path) !== after)
         .map(([path, after]) => ({ path, before: valueOf(path), after }));
-      return { cancelled: false, path: 'C:\\Users\\…\\Desktop\\screen-ink-settings-2026-11-25.json', ok: true, changes, warnings: [] };
+      return { cancelled: false, path: 'C:\\Users\\…\\Desktop\\shookshok-settings-2026-11-25.json', ok: true, changes, warnings: [] };
     },
     async applyImport() {
       history.push({ kind: 'whole', settings: { ...settings }, combos: { ...combos } });
@@ -242,14 +287,19 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       }
       if (input.type === 'command' && (input.name === 'save' || input.name === 'quickSave')) {
         const r = s.rect ?? chainAt(s.p)[s.level].r;
+        const finishedSession = mode.session;
         await this.run('capture.cancel');
+        emit({ type: 'afterimage', afterimage: { session: finishedSession, rect: r, durationMs: 400 } });
         island({ kind: 'result', variant: 'result', text: '저장했어요', value: `${r.w}×${r.h}`, detail: '수업_2026-03-04_090507.png', thumbUrl: frameUrl, button: { label: '폴더 열기', action: 'folder.open' } });
         return;
       }
       if ((input.type === 'key' && input.key === 'Enter') || input.type === 'dblclick' || (input.type === 'command' && input.name === 'copy')) {
         const r = s.rect ?? chainAt(s.p)[s.level].r;
+        const finishedSession = mode.session;
+        lastHex = '#FFFFFF';
         await this.run('capture.cancel');
-        island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${r.w}×${r.h}`, detail: '한글·PPT에 Ctrl+V', thumbUrl: frameUrl, button: { label: '저장', action: 'capture.saveLast' }, buttonKey: 'Ctrl+S', chip: { label: '#FFFFFF 복사', action: 'capture.copyHex' } });
+        emit({ type: 'afterimage', afterimage: { session: finishedSession, rect: r, durationMs: 400 } });
+        island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${r.w}×${r.h}`, detail: '한글·PPT에 Ctrl+V', thumbUrl: frameUrl, button: { label: '저장', action: 'capture.saveLast' }, buttonKey: 'Ctrl+S', chip: { label: `${lastHex} 복사`, action: 'capture.copyHex' } });
         return;
       }
       const chain = chainAt(s.p);
@@ -282,6 +332,13 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       const i = levels.indexOf(p.zoom);
       p.zoom = levels[Math.max(0, Math.min(levels.length - 1, i - Math.sign(dy)))];
       return p.zoom;
+    },
+    async zoomInput(input) {
+      if (mode.mode !== 'liveZoom' || !input) return;
+      if (input.type === 'wheel') stepZoom(input.dy);
+      else if (input.type === 'key' && input.slot === 'z-in') stepZoom(-1);
+      else if (input.type === 'key' && input.slot === 'z-out') stepZoom(1);
+      else if ((input.type === 'key' && input.slot === 'z-exit') || input.type === 'exit') endZoom();
     },
     async overlayReady(session) {
       if (mode.mode === 'capture' && mode.session === session) readyLog.push(session);
@@ -356,6 +413,11 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         if (mode.mode === 'draw') emit({ type: 'drawCommand', session: mode.session, command: action.slice('draw.'.length) });
         return;
       }
+      if (action === 'zoom') {
+        if (mode.mode === 'draw') endDraw(true);
+        startZoom();
+        return;
+      }
       if (DRAW_ACTION[action]) {
         const kind = DRAW_ACTION[action];
         // 판서 중 직전 판서 열기 = 같은 세션을 복원 표시로 한 번 더
@@ -366,6 +428,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         }
         if (mode.mode === 'capture') await this.run('capture.cancel');
         if (mode.mode === 'draw') endDraw(true);
+        endZoom();
         if (!settings['draw.keep']) kept = null;
         const board = kind === 'board' || (kind === 'restore' && Boolean(kept?.board));
         sessionSeq += 1;
@@ -386,6 +449,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       }
       if (CAPTURE_ACTION[action]) {
         if (mode.mode === 'draw') endDraw(true);
+        endZoom();
         const kind = CAPTURE_ACTION[action];
         sessionSeq += 1;
         mode = { mode: 'capture', session: sessionSeq, kind, startedMs: Date.now() };
@@ -419,6 +483,15 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       }
       if (action === 'settings.export') { island({ kind: 'result', text: '설정을 내보냈어요' }); return; }
       if (action === 'capture.history.clear') { island({ kind: 'info', text: '지울 기록이 없어요' }); return; }
+      if (action === 'capture.saveLast') {
+        island({ kind: 'result', variant: 'result', text: '저장했어요', detail: '수업_2026-03-04_090507.png', button: { label: '폴더 열기', action: 'folder.open' } });
+        return;
+      }
+      if (action === 'capture.copyHex') {
+        const hex = lastHex ?? '#FF9F0A';
+        island({ kind: 'result', variant: 'result', text: `${hex} 복사했어요` });
+        return;
+      }
       island({ kind: 'info', text: `미리보기: ${action}` });
     },
     subscribe(handler) { subs.add(handler); return () => subs.delete(handler); },

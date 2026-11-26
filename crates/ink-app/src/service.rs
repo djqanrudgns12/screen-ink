@@ -65,6 +65,8 @@ pub enum HotkeyOutcome {
     Start(String),
     /// 캡처 모드를 시작·전환·끝냄
     Captured,
+    /// 실시간 확대를 시작·끝냄·배율 바꿈(live_zoom.rs)
+    Zoom,
     /// 단축키 잠시 끄기·켜기를 처리함
     Toggled(bool),
     Ignored,
@@ -108,6 +110,8 @@ pub struct InkService {
     pub(crate) cap: crate::capture::CaptureState,
     // ── 판서·칠판(단계 4) ──
     pub(crate) draw: crate::draw::DrawState,
+    // ── 실시간 확대(단계 5) ──
+    pub(crate) zoom: crate::live_zoom::ZoomState,
 }
 
 /// 모드 섬 둘째 줄(처음 3번과 `?`일 때만 보임 — 섬 호스트가 정함).
@@ -193,6 +197,7 @@ impl InkService {
             secure_notified: false,
             cap: crate::capture::CaptureState::with_ranges(ranges),
             draw: Default::default(),
+            zoom: Default::default(),
         };
         svc.refresh_environment();
         svc.prepare_overlays();
@@ -587,6 +592,10 @@ impl InkService {
             self.set_hotkeys_enabled(next);
             return HotkeyOutcome::Toggled(next);
         }
+        // 실시간 확대(Alt+2)·확대 안 키·확대 중 다른 모드 키(live_zoom.rs)
+        if let Some(out) = self.zoom_hotkey(slot, pressed) {
+            return out;
+        }
         if !self.hotkeys_enabled || !self.registered.contains_key(slot) {
             return HotkeyOutcome::Ignored;
         }
@@ -656,6 +665,7 @@ impl InkService {
 
     /// 트레이 메뉴·명령에서 시작(단축키가 꺼져 있어도). 이미 캡처 중이면 새로 시작.
     pub fn start_capture(&mut self, kind: CaptureKind) {
+        self.end_zoom();
         self.end_capture();
         self.begin_capture(kind, Instant::now());
     }
@@ -819,6 +829,7 @@ impl InkService {
     /// 잠금·절전이면 모드를 끝내고, 배치가 바뀌었거나 깨어나면 오버레이를 다시 맞춘다(R-SYS-3, 02 §7).
     pub fn on_system_event(&mut self, ev: SystemEvent) {
         self.draw_on_system_event(ev);
+        self.zoom_system_event(ev);
         match ev {
             SystemEvent::Lock | SystemEvent::Suspend => self.end_capture(),
             SystemEvent::DisplayChange => {

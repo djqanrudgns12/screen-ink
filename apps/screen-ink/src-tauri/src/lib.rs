@@ -11,7 +11,7 @@ pub fn run() {
         // 로그: 사건마다 한 줄, 창 제목·파일 이름·사용자 이름은 쓰지 않는다(05 §9). 파일당 2MB.
         .plugin(
             tauri_plugin_log::Builder::new()
-                .targets([Target::new(TargetKind::LogDir { file_name: Some("screen-ink".into()) }), Target::new(TargetKind::Stdout)])
+                .targets([Target::new(TargetKind::LogDir { file_name: Some("shookshok".into()) }), Target::new(TargetKind::Stdout)])
                 .level(log::LevelFilter::Info)
                 .level_for("ink_app", ours)
                 .level_for("tauri_plugin_screen_ink", ours)
@@ -23,5 +23,5 @@ pub fn run() {
         );
     tauri_plugin_screen_ink::install(builder)
         .run(tauri::generate_context!())
-        .expect("screen-ink를 시작하지 못했어요");
+        .expect("슉쇽을 시작하지 못했어요");
 }
