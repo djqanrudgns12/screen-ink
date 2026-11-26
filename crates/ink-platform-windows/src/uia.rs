@@ -63,7 +63,7 @@ fn index_window(auto: &UIAutomation, hwnd: u64) -> uiautomation::Result<Vec<Elem
             continue;
         }
         let control = e.get_cached_control_type().map(|c| Control::from_uia(c as i32)).unwrap_or(Control::Other);
-        out.push(ElementCand { rect, control });
+        out.push(ElementCand { rect, control, from_msaa: false });
         if out.len() >= KEEP_ELEMENTS {
             break;
         }
