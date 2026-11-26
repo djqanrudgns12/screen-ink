@@ -3,17 +3,17 @@ import assert from 'node:assert/strict';
 import { createFakeClient } from './fake.js';
 import { keycaps } from './index.js';
 
-test('확정본 59칸이 행으로 나오고 Snipaste 겹침 4개를 요약한다', async () => {
+test('확정본 57칸이 행으로 나오고 Snipaste 겹침 4개를 요약한다', async () => {
   const c = createFakeClient();
   const s = await c.getState();
-  assert.equal(s.shortcuts.length, 59);
+  assert.equal(s.shortcuts.length, 57);
   assert.equal(s.conflicts.count, 4);
   assert.equal(s.conflicts.app, 'Snipaste');
 });
 
 test('맥에서는 창 항상 위 칸이 빠진다', async () => {
   const s = await createFakeClient({ platform: 'macos' }).getState();
-  assert.equal(s.shortcuts.length, 58);
+  assert.equal(s.shortcuts.length, 56);
   assert.ok(!s.shortcuts.some((r) => r.id === 'topmost'));
 });
 

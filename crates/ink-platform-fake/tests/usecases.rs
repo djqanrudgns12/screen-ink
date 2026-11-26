@@ -24,7 +24,7 @@ fn 첫_실행은_전역_16개를_등록하고_기본값을_저장한다() {
     let file = w.saved().expect("기본값 저장");
     assert_eq!(file["schemaVersion"], 3);
     let st = s.state();
-    assert_eq!(st.shortcuts.len(), 59);
+    assert_eq!(st.shortcuts.len(), 57);
     assert_eq!(st.conflicts.count, 0);
     assert!(s.is_first_run());
 }
@@ -267,7 +267,7 @@ fn 맥은_58칸이고_창_항상_위가_없다() {
     s.start();
     let st = s.state();
     assert_eq!(st.platform, "macos");
-    assert_eq!(st.shortcuts.len(), 58);
+    assert_eq!(st.shortcuts.len(), 56);
     assert!(st.shortcuts.iter().all(|r| r.id != "topmost"));
     assert_eq!(w.registered_count(), 15);
 }

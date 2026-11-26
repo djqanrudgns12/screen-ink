@@ -1,7 +1,8 @@
 //! 실시간 확대(Alt+2, 단계 5): 진입 → 60 Hz 틱(커서 따라가기) → 휠·키 배율 → 끝.
 //!
 //! 판단은 `ink_domain::zoom`(순수), 창은 `Magnifier` 포트. 틱은 어댑터가 메인 스레드에서 부른다(`tick_zoom`).
-//! 확대 안 키(`z-in`·`z-out`·`z-exit`)는 확대 중에만 전역 키로 잠시 잡고 끝나면 바로 푼다(R-KEY-6).
+//! 배율은 휠로만 바꾼다(어댑터 훅 — Shift+휠은 아래 앱으로). 확대 중 잠시 잡는 전역 키는 끝내기(`z-exit`, Esc) 하나뿐이고
+//! 끝나면 바로 푼다(R-KEY-6). 방향키는 잡지 않는다 — 아래 앱(PPT 넘기기 등)이 받아야 한다(2026-11-26 사용자 결정).
 //! 5.3(Alt+1 → 정지 판서 이어받기)은 판서 흐름 뒤 — 넘길 값은 `zoom_handoff`.
 
 use crate::ports::{Magnifier, NoMagnifier, SystemEvent, ZOOM_UNSUPPORTED};
@@ -24,7 +25,7 @@ const FRAME_SEC: f64 = 1.0 / 60.0;
 pub enum ZoomInput {
     /// 휠 한 칸: -1 위(더 확대) / 1 아래(덜 확대)
     Wheel { dy: i32 },
-    /// 확대 화면 안 키 칸: "z-in" | "z-out" | "z-exit"
+    /// 확대 화면 안 키 칸: "z-exit"(끝). 다른 칸은 무시
     Key { slot: String },
     Exit,
 }
@@ -124,8 +125,6 @@ impl InkService {
                 self.begin_zoom(pressed);
             }
             ZoomCommand::End => self.end_zoom(),
-            ZoomCommand::StepIn => self.zoom_step(-1),
-            ZoomCommand::StepOut => self.zoom_step(1),
             ZoomCommand::EndThenPass => {
                 self.end_zoom();
                 return None;
@@ -243,12 +242,11 @@ impl InkService {
         }
         match input {
             ZoomInput::Wheel { dy } => self.zoom_step(dy.signum()),
-            ZoomInput::Key { slot } => match slot.as_str() {
-                zoom::ZOOM_IN_SLOT => self.zoom_step(-1),
-                zoom::ZOOM_OUT_SLOT => self.zoom_step(1),
-                zoom::ZOOM_EXIT_SLOT => self.end_zoom(),
-                _ => {}
-            },
+            ZoomInput::Key { slot } => {
+                if slot == zoom::ZOOM_EXIT_SLOT {
+                    self.end_zoom();
+                }
+            }
             ZoomInput::Exit => self.end_zoom(),
         }
     }
@@ -337,7 +335,7 @@ impl InkService {
         self.zoom.last_sent = Some(state);
     }
 
-    /// 확대 안 키를 잠시 잡는다. 비운 칸·전역 칸과 같은 키·운영체제가 거절한 키는 건너뛴다(로그만).
+    /// 확대 안 키(Esc 하나)를 잠시 잡는다. 비운 칸·전역 칸과 같은 키·운영체제가 거절한 키는 건너뛴다(로그만).
     fn register_zoom_keys(&mut self) {
         for id in ZOOM_KEYS {
             let combo = self.settings.shortcut(id).to_string();

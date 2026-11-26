@@ -24,11 +24,10 @@ const EPS: f64 = 1e-9;
 
 /// 전역 칸(Alt+2).
 pub const ZOOM_SLOT: &str = "zoom";
-/// 확대 화면 안 키(R-KEY-6) — 확대 중에만 잠시 잡는다.
-pub const ZOOM_IN_SLOT: &str = "z-in";
-pub const ZOOM_OUT_SLOT: &str = "z-out";
+/// 확대 화면 안 키(R-KEY-6) — 확대 중에만 잠시 전역으로 잡는다. **끝내기(Esc) 하나뿐**:
+/// 배율은 휠로만 바꾸고, 방향키는 아래 앱(PPT 넘기기 등)으로 가야 한다(2026-11-26 사용자 결정 — z-in·z-out 칸 삭제).
 pub const ZOOM_EXIT_SLOT: &str = "z-exit";
-pub const ZOOM_KEYS: [&str; 3] = [ZOOM_IN_SLOT, ZOOM_OUT_SLOT, ZOOM_EXIT_SLOT];
+pub const ZOOM_KEYS: [&str; 1] = [ZOOM_EXIT_SLOT];
 
 /// 확대 중 누르면 확대를 끝내고 그 키를 원래대로 처리하는 칸(다른 모드를 여는 키, 03 §3).
 /// 핀·타이머·창 항상 위처럼 화면을 바꾸지 않는 키는 확대를 그대로 둔다.
@@ -242,10 +241,6 @@ pub enum ZoomCommand {
     SwitchFromCapture,
     /// 확대 중 Alt+2 · `z-exit`
     End,
-    /// `z-in`
-    StepIn,
-    /// `z-out`
-    StepOut,
     /// 확대 중 다른 모드 키 — 확대를 끝내고 그 키를 원래대로 처리(5.3 전까지는 Alt+1도 여기)
     EndThenPass,
 }
@@ -268,8 +263,6 @@ pub fn on_hotkey(mode: &Mode, slot: &str) -> Option<ZoomCommand> {
         return None;
     }
     match slot {
-        ZOOM_IN_SLOT => Some(ZoomCommand::StepIn),
-        ZOOM_OUT_SLOT => Some(ZoomCommand::StepOut),
         ZOOM_EXIT_SLOT => Some(ZoomCommand::End),
         s if ENDS_ZOOM.contains(&s) => Some(ZoomCommand::EndThenPass),
         _ => None,
@@ -458,12 +451,12 @@ mod tests {
         assert_eq!(on_hotkey(&idle, "zoom"), Some(ZoomCommand::Start));
         assert_eq!(on_hotkey(&cap, "zoom"), Some(ZoomCommand::SwitchFromCapture));
         assert_eq!(on_hotkey(&zoom, "zoom"), Some(ZoomCommand::End));
-        assert_eq!(on_hotkey(&zoom, "z-in"), Some(ZoomCommand::StepIn));
-        assert_eq!(on_hotkey(&zoom, "z-out"), Some(ZoomCommand::StepOut));
         assert_eq!(on_hotkey(&zoom, "z-exit"), Some(ZoomCommand::End));
-        // 확대 밖에서는 확대 안 키가 아무 일도 안 한다
+        assert_eq!(ZOOM_KEYS, ["z-exit"], "확대 중 잡는 키는 Esc(끝) 하나 — 방향키는 아래 앱으로");
+        // 확대 밖에서는 확대 안 키가 아무 일도 안 한다, 없어진 칸(z-in·z-out)은 언제나 무관
         assert_eq!(on_hotkey(&idle, "z-exit"), None);
-        assert_eq!(on_hotkey(&cap, "z-in"), None);
+        assert_eq!(on_hotkey(&zoom, "z-in"), None);
+        assert_eq!(on_hotkey(&zoom, "z-out"), None);
         // 다른 모드 키는 확대를 끝내고 넘긴다, 핀·타이머는 확대를 그대로 둔다
         for s in ["region", "window", "record", "draw", "board", "last", "full", "active", "delay", "restore"] {
             assert_eq!(on_hotkey(&zoom, s), Some(ZoomCommand::EndThenPass), "{s}");

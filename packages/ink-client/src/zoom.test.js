@@ -28,20 +28,20 @@ test('실시간 확대: 시작하면 liveZoom 모드·확대 섬·HUD 상태, �
   assert.equal(ev.filter((e) => e.type === 'zoom').at(-1).zoom, null);
 });
 
-test('실시간 확대: 휠·확대 키는 단계를 오르내리고 끝 단계에서 멈춘다', async () => {
+test('실시간 확대: 휠은 단계를 오르내리고 끝 단계에서 멈춘다', async () => {
   const c = createFakeClient();
   const ev = record(c);
   const scale = () => ev.filter((e) => e.type === 'zoom').at(-1).zoom.scale;
   await c.run('zoom');
   await c.zoomInput({ type: 'wheel', dy: -1 });
   assert.equal(scale(), 2.5);
-  await c.zoomInput({ type: 'key', slot: 'z-out' });
-  await c.zoomInput({ type: 'key', slot: 'z-out' });
+  await c.zoomInput({ type: 'wheel', dy: 1 });
+  await c.zoomInput({ type: 'wheel', dy: 1 });
   assert.equal(scale(), 1.5);
   for (let i = 0; i < 5; i++) await c.zoomInput({ type: 'wheel', dy: 1 });
   assert.equal(scale(), 1.25);
   assert.equal(ev.filter((e) => e.type === 'island').at(-1).island.value, '×1.25');
-  for (let i = 0; i < 9; i++) await c.zoomInput({ type: 'key', slot: 'z-in' });
+  for (let i = 0; i < 9; i++) await c.zoomInput({ type: 'wheel', dy: -1 });
   assert.equal(scale(), 8);
   await c.zoomInput({ type: 'exit' });
   // 끝난 뒤 입력은 무시

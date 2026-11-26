@@ -547,24 +547,6 @@
       "windowsOnly": false
     },
     {
-      "id": "z-in",
-      "scope": "zoom",
-      "group": "zoom-mode",
-      "label": "더 확대",
-      "required": false,
-      "later": false,
-      "windowsOnly": false
-    },
-    {
-      "id": "z-out",
-      "scope": "zoom",
-      "group": "zoom-mode",
-      "label": "덜 확대",
-      "required": false,
-      "later": false,
-      "windowsOnly": false
-    },
-    {
       "id": "z-exit",
       "scope": "zoom",
       "group": "zoom-mode",
