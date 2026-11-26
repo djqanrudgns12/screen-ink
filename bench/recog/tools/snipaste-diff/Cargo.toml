@@ -1,0 +1,15 @@
+[package]
+name = "snipaste-diff"
+description = "Snipaste F1 전·후 PNG에서 강조 사각형을 판독(ink-vision::diff_rect) — compare-snipaste.ps1이 부른다(08 §5.4)"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+license = "MIT"
+publish = false
+
+# 저장소 작업 공간에 넣지 않는 시험 도구
+[workspace]
+
+[dependencies]
+ink-vision = { path = "../../../../crates/ink-vision" }
+png = "0.18"
