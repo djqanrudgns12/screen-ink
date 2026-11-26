@@ -1,0 +1,7 @@
+{
+  "naming.error.empty": "File name pattern is empty",
+  "naming.error.forbiddenChar": "Character not allowed in file name: {ch}",
+  "naming.error.tooLong": "File name is too long (max 200 chars)",
+  "naming.error.unclosed": "Missing closing '}'",
+  "naming.error.unknownToken": "Unsupported token: {{token}}"
+}

@@ -1,0 +1,8 @@
+{
+  "store.notice.recoveredBackup": "설정이 깨져 백업으로 복구했어요(원본 보관)",
+  "store.notice.reset": "설정이 깨져 기본값으로 시작했어요",
+  "store.notice.resetKeptBroken": "설정이 깨져 기본값으로 시작했어요(원본 보관)",
+  "store.storage.installed": "설치판",
+  "store.storage.msix": "스토어 앱",
+  "store.storage.portable": "무설치판"
+}

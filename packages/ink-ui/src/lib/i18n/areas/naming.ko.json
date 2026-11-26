@@ -1,0 +1,7 @@
+{
+  "naming.error.empty": "이름 규칙이 비어 있어요",
+  "naming.error.forbiddenChar": "파일 이름에 쓸 수 없는 글자예요: {ch}",
+  "naming.error.tooLong": "이름이 너무 길어요(200자까지)",
+  "naming.error.unclosed": "‘{’를 닫지 않았어요",
+  "naming.error.unknownToken": "지원하지 않는 항목이에요: {{token}}"
+}

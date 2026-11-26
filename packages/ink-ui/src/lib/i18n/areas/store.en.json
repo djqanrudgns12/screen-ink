@@ -1,0 +1,8 @@
+{
+  "store.notice.recoveredBackup": "Settings corrupted · restored backup",
+  "store.notice.reset": "Settings corrupted · reset to defaults",
+  "store.notice.resetKeptBroken": "Settings corrupted · reset to defaults",
+  "store.storage.installed": "Installed",
+  "store.storage.msix": "Store app",
+  "store.storage.portable": "Portable"
+}
