@@ -100,3 +100,43 @@ export {
   getShortcutRowDisplay,
 } from './models/shortcutDisplay.js';
 export { buildCheatSheetColumns } from './models/cheatSheet.js';
+
+// 판서 엔진(순수 JS — A §2, 4.1)
+export {
+  INK_SCHEMA_VERSION,
+  MAX_UNDO,
+  INK_COLORS,
+  INK_COLOR_CODES,
+  INK_NOTICES,
+  MARKER_OPACITY,
+  InkEngine,
+  createInkEngine,
+  createInkDocument,
+  documentOptionsFromSession,
+  applyCommand,
+  invertCommand,
+  rescaleDocument,
+  itemCount,
+} from './ink/inkEngine.js';
+export {
+  ZOOM_STEPS,
+  START_ZOOM_CHOICES,
+  IDENTITY_VIEW,
+  docToView,
+  viewToDoc,
+  docToCanvasPx,
+  docRectToView,
+  docSizeOf,
+  physToDoc,
+  docToPhys,
+  docRectToPhys,
+  clampView,
+  zoomAt,
+  nextZoomStep,
+  panBy,
+  centerOn,
+  edgePushDelta,
+  screenWidthToDoc,
+  visibleDocFraction,
+} from './ink/coords.js';
+export { DRAW_KEY_IDS, LATER_DRAW_KEYS, buildDrawKeymap, matchDrawKey, normalizeCombo } from './ink/drawKeys.js';
