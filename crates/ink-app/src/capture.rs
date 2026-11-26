@@ -17,8 +17,8 @@ use ink_domain::modekeys::CaptureKeys;
 use ink_domain::selection::{Button, Command, Context, Effect, Input, Key, Selector};
 use ink_domain::settings::ExcludedApp;
 use ink_domain::snapshot::{RawWindow, Snapshot};
-use serde::Deserialize;
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -118,6 +118,8 @@ pub struct CaptureState {
     /// 캡처 핀(R-CAP-29): id → 그림(복사·저장용). 앱을 끄면 사라진다.
     pub(crate) pins: std::collections::BTreeMap<u64, LastCapture>,
     pub(crate) pin_seq: u64,
+    /// 캡처 주석(4.9): 오버레이가 알린 주석 개수·결과 부탁·지금 합칠 층
+    pub(crate) annot: AnnotState,
 }
 
 /// 한 번의 고르기 동안 잰 것(08 §4.7 "첫 강조 ≤ 진입 + 30 ms", "커서 이동 질의 ≤ 5 ms").
@@ -405,9 +407,10 @@ impl InkService {
             }
             Effect::Notice(text) => self.island(IslandEvent::new(IslandKind::Info, text)),
             Effect::Cancel => self.end_capture(),
-            Effect::Copy(rect) => self.finish(rect, false, false),
-            Effect::Save { rect, quick } => self.finish(rect, true, quick),
-            Effect::Pin(rect) => self.pin_rect(rect),
+            // 주석이 없으면 commit = 지금 경로 그대로(finish·pin_rect), 있으면 오버레이에 주석 층을 부탁
+            Effect::Copy(rect) => self.commit(CommitAction::Copy, rect),
+            Effect::Save { rect, quick } => self.commit(if quick { CommitAction::QuickSave } else { CommitAction::Save }, rect),
+            Effect::Pin(rect) => self.commit(CommitAction::Pin, rect),
         }
     }
 
@@ -579,6 +582,10 @@ impl InkService {
                 image::composite_cursor(&mut px, w, h, (rect.x, rect.y), c);
             }
         }
+        // 캡처 주석(4.9): 모자이크(원본 화소) → 주석 층 알파 합성. 결과·핀·저장 모두 이 그림을 쓴다
+        if let Some(layer) = self.cap.annot.layer.as_ref() {
+            layer.apply(&mut px, w, h);
+        }
         let center = PhysPoint { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
         let app = snap.window_at(center, true).map(|w| w.exe.trim_end_matches(".exe").to_string()).filter(|s| !s.is_empty());
         Some((w, h, px, app))
@@ -729,6 +736,189 @@ impl InkService {
     }
 }
 
+// ─────────────── 캡처 주석 결과(4.9, R-CAP-28 · B §2.1 "합성 결과 전달 계약") ───────────────
+//
+// 주석이 0개 = 지금 경로 그대로(`finish`·`pin_rect`). 1개 이상이면:
+//   ① 오버레이가 개수를 알린다(`capture_annotations`, 0 ↔ n이 바뀔 때)
+//   ② 고르기 상태 기계가 복사·저장·핀을 내면(키·단추·더블클릭 — 판정은 늘 Rust, R-KEY-6)
+//      서비스가 오버레이에 주석 층을 부탁한다(`OverlayHost::request_commit` → `screen-ink://capture-commit`)
+//   ③ 오버레이가 투명 주석 층 RGBA + 모자이크 사각형을 원본 바이트로 보낸다(`capture_commit_annotated`)
+//   ④ `render_rect`가 자른 원본에 모자이크(원본 화소) → 주석 층 알파 합성 → 복사·저장·핀(R-CAP-29)
+
+/// 주석 결과로 낼 동작.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum CommitAction {
+    Copy,
+    Save,
+    QuickSave,
+    Pin,
+}
+
+/// 서비스 → 오버레이: "이 범위(물리 px)의 주석 층을 보내 줘". `seq`가 같은 답만 받는다.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitRequest {
+    pub session: u64,
+    pub seq: u64,
+    pub action: CommitAction,
+    pub rect: PhysRect,
+}
+
+/// 오버레이 → 서비스 머리 JSON. `w`·`h` = 주석 층 크기(= 범위 물리 크기), 층이 없으면 0.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitMeta {
+    pub session: u64,
+    pub seq: u64,
+    pub action: CommitAction,
+    #[serde(default)]
+    pub w: u32,
+    #[serde(default)]
+    pub h: u32,
+    /// 결과 그림 기준 물리 px(왼쪽 위 = 범위 왼쪽 위)
+    #[serde(default)]
+    pub mosaics: Vec<image::MosaicRect>,
+}
+
+/// 원본 바이트 IPC 본문을 푼 것.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AnnotatedCommit {
+    pub meta: CommitMeta,
+    /// 곧은 알파 RGBA(`getImageData` 그대로) w×h×4, 또는 빈 것(모자이크만)
+    pub overlay: Vec<u8>,
+}
+
+/// 머리 JSON 한도(모자이크 4096개도 넉넉) · 모자이크 개수 한도.
+pub const MAX_COMMIT_META: usize = 1 << 20;
+pub const MAX_COMMIT_MOSAICS: usize = 4096;
+
+impl AnnotatedCommit {
+    /// 본문 = `[머리 길이 u32 LE][머리 JSON(UTF-8)][주석 층 RGBA]` (packages/ink-client `encodeAnnotatedCommit`과 1:1).
+    pub fn decode(body: &[u8]) -> Result<Self, String> {
+        let len: [u8; 4] = body.get(..4).and_then(|b| b.try_into().ok()).ok_or("annotation body too short")?;
+        let n = u32::from_le_bytes(len) as usize;
+        if n > MAX_COMMIT_META {
+            return Err("annotation meta too large".into());
+        }
+        let head = body.get(4..4 + n).ok_or("annotation meta cut short")?;
+        let meta: CommitMeta = serde_json::from_slice(head).map_err(|e| format!("annotation meta: {e}"))?;
+        Ok(Self { meta, overlay: body[4 + n..].to_vec() })
+    }
+}
+
+/// 지금 결과에 합칠 주석(서비스가 `render_rect` 동안만 쥔다).
+#[derive(Clone, Debug, Default)]
+pub(crate) struct AnnotLayer {
+    mosaics: Vec<image::MosaicRect>,
+    overlay: Vec<u8>,
+}
+
+impl AnnotLayer {
+    fn apply(&self, px: &mut [u8], w: u32, h: u32) {
+        image::apply_mosaic(px, w, h, &self.mosaics);
+        if !self.overlay.is_empty() {
+            image::composite_rgba_over_bgra(px, &self.overlay, w, h);
+        }
+    }
+}
+
+/// 세션 하나의 주석 사정. 다른 세션 값은 쓰지 않는다(모드가 끝나도 지울 필요 없음).
+#[derive(Debug, Default)]
+pub(crate) struct AnnotState {
+    session: u64,
+    /// 모니터(오버레이 창) → 그 창 주석 개수
+    items: BTreeMap<u32, u32>,
+    seq: u64,
+    pending: Option<CommitRequest>,
+    layer: Option<AnnotLayer>,
+}
+
+impl InkService {
+    /// 오버레이가 주석 개수를 알린다(0 ↔ n이 바뀔 때). 지금 세션이 아니면 무시.
+    /// 부탁해 둔 결과가 있는데 주석이 모두 사라졌으면(창이 주석을 버림) 기다리지 않고 지금 경로로 끝낸다.
+    pub fn capture_annotations(&mut self, session: u64, monitor: u32, items: u32) {
+        if self.session() != Some(session) {
+            return;
+        }
+        let a = &mut self.cap.annot;
+        if a.session != session {
+            *a = AnnotState { session, ..Default::default() };
+        }
+        if items == 0 {
+            a.items.remove(&monitor);
+        } else {
+            a.items.insert(monitor, items);
+        }
+        if !self.annotated() {
+            if let Some(req) = self.cap.annot.pending.take() {
+                self.commit_plain(req.action, req.rect);
+            }
+        }
+    }
+
+    /// 지금 세션에 주석이 하나라도 있는지.
+    pub fn capture_annotated(&self) -> bool {
+        self.annotated()
+    }
+
+    fn annotated(&self) -> bool {
+        self.session().is_some_and(|s| self.cap.annot.session == s && self.cap.annot.items.values().any(|&n| n > 0))
+    }
+
+    /// 고르기 상태 기계가 낸 결과. 주석이 없으면 지금 경로, 있으면 오버레이에 주석 층을 부탁한다.
+    fn commit(&mut self, action: CommitAction, rect: PhysRect) {
+        let Some(session) = self.session() else { return };
+        if !self.annotated() {
+            self.commit_plain(action, rect);
+            return;
+        }
+        self.cap.annot.seq += 1;
+        let req = CommitRequest { session, seq: self.cap.annot.seq, action, rect };
+        if self.ports.overlay.request_commit(&req) {
+            self.cap.annot.pending = Some(req);
+        } else {
+            // 부탁할 길이 없음(미지원 어댑터) — 주석 없이라도 결과는 낸다
+            self.cap.annot.pending = None;
+            log::warn!("annotation request not delivered; result without annotations");
+            self.commit_plain(action, rect);
+        }
+    }
+
+    fn commit_plain(&mut self, action: CommitAction, rect: PhysRect) {
+        match action {
+            CommitAction::Copy => self.finish(rect, false, false),
+            CommitAction::Save => self.finish(rect, true, false),
+            CommitAction::QuickSave => self.finish(rect, true, true),
+            CommitAction::Pin => self.pin_rect(rect),
+        }
+    }
+
+    /// 오버레이가 보낸 주석 층으로 부탁해 둔 결과를 낸다. 세션·순번이 다르면(늦은 답·두 번 답) 무시.
+    /// 층 크기가 범위와 다르면 주석 없이 낸다(잘못 겹치지 않게).
+    pub fn capture_commit_annotated(&mut self, commit: AnnotatedCommit) {
+        let Some(session) = self.session() else { return };
+        let AnnotatedCommit { meta, overlay } = commit;
+        let Some(req) = self.cap.annot.pending.filter(|r| r.session == session && meta.session == session && r.seq == meta.seq) else {
+            log::debug!("annotation answer ignored (session {} seq {})", meta.session, meta.seq);
+            return;
+        };
+        self.cap.annot.pending = None;
+        let (w, h) = (req.rect.w.max(0) as u32, req.rect.h.max(0) as u32);
+        let sized = overlay.is_empty() || (meta.w == w && meta.h == h && overlay.len() as u64 == u64::from(w) * u64::from(h) * 4);
+        if !sized {
+            log::warn!("annotation layer {}x{} ({} bytes) does not match range {w}x{h}", meta.w, meta.h, overlay.len());
+            self.commit_plain(req.action, req.rect);
+            return;
+        }
+        let mut mosaics = meta.mosaics;
+        mosaics.truncate(MAX_COMMIT_MOSAICS);
+        self.cap.annot.layer = Some(AnnotLayer { mosaics, overlay });
+        self.commit_plain(req.action, req.rect);
+        self.cap.annot.layer = None;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -848,5 +1038,39 @@ mod tests {
         svc.start_capture(CaptureKind::Region);
         svc.capture_input(CaptureInput::Command { name: "cancel".into() });
         assert_eq!(log.0.lock().unwrap().as_slice(), ["hide:2"]);
+    }
+
+    /// `[머리 길이 u32 LE][머리 JSON][RGBA]` 본문 만들기(ink-client encodeAnnotatedCommit과 같은 모양).
+    fn body(meta: &str, rgba: &[u8]) -> Vec<u8> {
+        let mut b = (meta.len() as u32).to_le_bytes().to_vec();
+        b.extend_from_slice(meta.as_bytes());
+        b.extend_from_slice(rgba);
+        b
+    }
+
+    #[test]
+    fn 주석_본문은_머리_길이_json_rgba로_푼다() {
+        let c = AnnotatedCommit::decode(&body(
+            r#"{"session":3,"seq":2,"action":"quickSave","w":1,"h":1,"mosaics":[{"x":0,"y":0,"w":4,"h":4,"block":2}]}"#,
+            &[255, 0, 0, 255],
+        ))
+        .unwrap();
+        assert_eq!(c.meta.session, 3);
+        assert_eq!(c.meta.seq, 2);
+        assert_eq!(c.meta.action, CommitAction::QuickSave);
+        assert_eq!(c.meta.mosaics, vec![image::MosaicRect { x: 0, y: 0, w: 4, h: 4, block: 2 }]);
+        assert_eq!(c.overlay, vec![255, 0, 0, 255]);
+        // 층 없이 모자이크만·w/h 생략
+        let only = AnnotatedCommit::decode(&body(r#"{"session":1,"seq":1,"action":"pin"}"#, &[])).unwrap();
+        assert!(only.overlay.is_empty() && only.meta.mosaics.is_empty() && only.meta.w == 0);
+        // 망가진 본문
+        assert!(AnnotatedCommit::decode(&[1, 0]).is_err(), "길이 4바이트도 없음");
+        assert!(AnnotatedCommit::decode(&body("{", &[])).is_err(), "JSON 아님");
+        let mut cut = body(r#"{"session":1,"seq":1,"action":"copy"}"#, &[]);
+        cut.truncate(10);
+        assert!(AnnotatedCommit::decode(&cut).is_err(), "머리가 잘림");
+        assert!(AnnotatedCommit::decode(&body(r#"{"session":1,"seq":1,"action":"print"}"#, &[])).is_err(), "모르는 동작");
+        let huge = ((MAX_COMMIT_META + 1) as u32).to_le_bytes();
+        assert!(AnnotatedCommit::decode(&huge).is_err(), "머리 한도");
     }
 }

@@ -27,6 +27,8 @@ screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있
 - `allow-draw-island`
 - `allow-draw-pen-metrics`
 - `allow-zoom-input`
+- `allow-capture-annotations`
+- `allow-capture-commit-annotated`
 
 ## Permission Table
 
@@ -59,6 +61,58 @@ Enables the apply_import command without any pre-configured scope.
 <td>
 
 Denies the apply_import command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-capture-annotations`
+
+</td>
+<td>
+
+Enables the capture_annotations command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-capture-annotations`
+
+</td>
+<td>
+
+Denies the capture_annotations command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-capture-commit-annotated`
+
+</td>
+<td>
+
+Enables the capture_commit_annotated command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-capture-commit-annotated`
+
+</td>
+<td>
+
+Denies the capture_commit_annotated command without any pre-configured scope.
 
 </td>
 </tr>
