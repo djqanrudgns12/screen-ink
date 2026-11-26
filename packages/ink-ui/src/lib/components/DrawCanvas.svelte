@@ -113,7 +113,8 @@
   /** @param {number} now */
   function frame(now) {
     raf = 0;
-    engine.tick(now);
+    // tick이 내는 효과(제안 4초 만료 → suggestEnd, 멈춤 판정 등)를 버리지 않는다
+    emit(engine.tick(now));
     paint();
     if (meter.pendingCount) meter.painted(performance.now());
     if (engine.needsTick()) schedule();
