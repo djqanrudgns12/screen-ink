@@ -43,6 +43,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   /** @type {any} 가짜 고르기 상태(세션마다 새로) */
   let capture = null;
   const readyLog = [];
+  /** 실시간 확대 흉내(Alt+2): 배율만 쥐고 1920×1080 가운데를 비춘다 */
+  let zoomScale = 0;
 
   const judge = (slot, combo) => {
     if (!combo) return { status: 'off' };
@@ -75,6 +77,48 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   const emit = (e) => subs.forEach((h) => h(e));
   const island = (island) => emit({ type: 'island', island });
   const changed = () => emit({ type: 'state', state: state() });
+
+  // ── 실시간 확대 흉내(진짜 계산은 Rust ink-domain::zoom) ──
+  const ZOOM_STEPS = [1.25, 1.5, 2, 2.5, 3, 4, 6, 8];
+  const scaleLabel = (s) => {
+    const r = Math.round(s * 100);
+    return r % 10 === 0 ? `×${(r / 100).toFixed(1)}` : `×${(r / 100).toFixed(2)}`;
+  };
+  const zoomView = () => ({
+    session: mode.session, monitorId: 0, monitorLabel: '모니터 1', scale: zoomScale, scaleLabel: scaleLabel(zoomScale),
+    viewport: { x: (1 - 1 / zoomScale) / 2, y: (1 - 1 / zoomScale) / 2, w: 1 / zoomScale, h: 1 / zoomScale },
+    cursorCss: { x: 960, y: 540 }, showMinimap: Boolean(settings['zoom.minimap']),
+  });
+  const zoomIsland = () => island({
+    kind: 'mode', mode: 'zoom', variant: 'zoom', text: '실시간 확대', detail: '움직이는 화면 그대로', value: scaleLabel(zoomScale),
+    hints: [{ key: '휠', label: '배율' }, { key: 'Alt 1', label: '멈추고 쓰기' }, { key: 'Esc', label: '끝' }],
+  });
+  const endZoom = () => {
+    if (mode.mode !== 'liveZoom') return;
+    mode = { mode: 'idle' };
+    zoomScale = 0;
+    emit({ type: 'zoom', zoom: null });
+    island({ kind: 'end', text: '' });
+    changed();
+  };
+  const startZoom = () => {
+    endZoom();
+    if (mode.mode === 'capture') { mode = { mode: 'idle' }; capture = null; island({ kind: 'end', text: '' }); }
+    sessionSeq += 1;
+    mode = { mode: 'liveZoom', session: sessionSeq, monitorId: 0, startedMs: Date.now() };
+    zoomScale = 2;
+    changed();
+    zoomIsland();
+    emit({ type: 'zoom', zoom: zoomView() });
+  };
+  const stepZoom = (dy) => {
+    const i = ZOOM_STEPS.indexOf(zoomScale);
+    const next = ZOOM_STEPS[Math.max(0, Math.min(ZOOM_STEPS.length - 1, i - Math.sign(dy)))];
+    if (next === zoomScale) return;
+    zoomScale = next;
+    zoomIsland();
+    emit({ type: 'zoom', zoom: zoomView() });
+  };
 
   return {
     async getState() { return state(); },
@@ -223,6 +267,13 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       p.zoom = levels[Math.max(0, Math.min(levels.length - 1, i - Math.sign(dy)))];
       return p.zoom;
     },
+    async zoomInput(input) {
+      if (mode.mode !== 'liveZoom' || !input) return;
+      if (input.type === 'wheel') stepZoom(input.dy);
+      else if (input.type === 'key' && input.slot === 'z-in') stepZoom(-1);
+      else if (input.type === 'key' && input.slot === 'z-out') stepZoom(1);
+      else if ((input.type === 'key' && input.slot === 'z-exit') || input.type === 'exit') endZoom();
+    },
     async overlayReady(session) {
       if (mode.mode === 'capture' && mode.session === session) readyLog.push(session);
     },
@@ -230,7 +281,9 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     get readyLog() { return [...readyLog]; },
     async run(action) {
       if (action === 'pins.closeAll') { pins.clear(); changed(); return; }
+      if (action === 'zoom') { startZoom(); return; }
       if (CAPTURE_ACTION[action]) {
+        endZoom();
         const kind = CAPTURE_ACTION[action];
         sessionSeq += 1;
         mode = { mode: 'capture', session: sessionSeq, kind, startedMs: Date.now() };

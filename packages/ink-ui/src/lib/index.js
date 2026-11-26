@@ -34,6 +34,7 @@ export { default as CheatSheet } from './screens/CheatSheet.svelte';
 export { default as IslandHost } from './screens/IslandHost.svelte';
 export { default as CaptureOverlay } from './screens/CaptureOverlay.svelte';
 export { default as PinView } from './screens/PinView.svelte';
+export { default as ZoomHud } from './screens/ZoomHud.svelte';
 
 // 순수 모델
 export { eventToCombo, isEscapeOnly, isClearOnly } from './models/keyCombo.js';
@@ -100,3 +101,4 @@ export {
   getShortcutRowDisplay,
 } from './models/shortcutDisplay.js';
 export { buildCheatSheetColumns } from './models/cheatSheet.js';
+export { HALO_SIZE, MINIMAP_MARGIN, isLiveZoomMode, applyZoomEvent, haloBox, showMinimap } from './models/zoomHud.js';

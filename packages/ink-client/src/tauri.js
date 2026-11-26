@@ -23,12 +23,14 @@ export function createTauriClient() {
     pinInfo: (id) => cmd('pin_info', { id }),
     pinAction: (id, action) => cmd('pin_action', { id, action }),
     pinZoom: (id, dy, fx, fy) => cmd('pin_zoom', { id, dy, fx, fy }),
+    zoomInput: (input) => cmd('zoom_input', { input }),
     subscribe(handler) {
       const offs = [
         listen('screen-ink://state', (e) => handler({ type: 'state', state: e.payload })),
         listen('screen-ink://island', (e) => handler({ type: 'island', island: e.payload })),
         listen('screen-ink://overlay', (e) => handler({ type: 'overlay', overlay: e.payload })),
         listen('screen-ink://capture', (e) => handler({ type: 'capture', view: e.payload })),
+        listen('screen-ink://zoom', (e) => handler({ type: 'zoom', zoom: e.payload ?? null })),
       ];
       return () => offs.forEach((p) => p.then((off) => off()));
     },
