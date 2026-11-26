@@ -1,0 +1,8 @@
+{
+  "update.available": "Version {v} is ready",
+  "update.detail": "Click to update and restart",
+  "update.install": "Update now",
+  "update.latest": "You're up to date",
+  "update.failed": "Couldn't check for updates",
+  "update.installFailed": "Couldn't update · please download the new version"
+}

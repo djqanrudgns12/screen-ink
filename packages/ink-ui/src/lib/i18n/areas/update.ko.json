@@ -1,0 +1,8 @@
+{
+  "update.available": "새 판 {v}이 나왔어요",
+  "update.detail": "누르면 바로 바꾸고 다시 켜요",
+  "update.install": "지금 업데이트",
+  "update.latest": "지금이 최신이에요",
+  "update.failed": "업데이트를 확인하지 못했어요",
+  "update.installFailed": "업데이트하지 못했어요 · 새 판을 직접 받아 주세요"
+}
