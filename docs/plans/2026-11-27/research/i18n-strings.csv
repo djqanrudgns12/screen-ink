@@ -1,0 +1,1271 @@
+파일:줄,층,원문,동적 값 여부,제안 키
+packages/ink-ui/src/lib/components/AnnotateLayer.svelte:394,ui,캡처 주석,정적,capture.annotate.aria
+packages/ink-ui/src/lib/components/AnnotateLayer.svelte:415,ui,주석 글자,정적,capture.annotate.textAria
+packages/ink-ui/src/lib/components/AnnotateOptions.svelte:46,ui,빨강,정적,color.red
+packages/ink-ui/src/lib/components/AnnotateOptions.svelte:46,ui,노랑,정적,color.yellow
+packages/ink-ui/src/lib/components/AnnotateOptions.svelte:46,ui,초록,정적,color.green
+packages/ink-ui/src/lib/components/AnnotateOptions.svelte:46,ui,주황,정적,color.orange
+packages/ink-ui/src/lib/components/AnnotateOptions.svelte:46,ui,파랑,정적,color.blue
+packages/ink-ui/src/lib/components/AnnotateOptions.svelte:46,ui,연두,정적,color.lime
+packages/ink-ui/src/lib/components/AnnotateOptions.svelte:58,ui,모자이크 칸 크기,정적,capture.annotate.mosaicSizeAria
+packages/ink-ui/src/lib/components/AnnotateOptions.svelte:58,ui,색과 굵기,정적,capture.annotate.colorWidthAria
+packages/ink-ui/src/lib/components/AnnotateOptions.svelte:99,ui,{label} {px}px · Ctrl+휠,"동적 ({label}, {px}, OS별 휠 수식키)",capture.annotate.widthTitle
+packages/ink-ui/src/lib/components/AnnotateOptions.svelte:117,ui,{label} {px}px · Ctrl+휠,"동적 ({label}, {px}, OS별 휠 수식키)",capture.annotate.mosaicTitle
+packages/ink-ui/src/lib/components/CaptureToolbar.svelte:58,ui,캡처 도구,정적,capture.toolbar.aria
+packages/ink-ui/src/lib/components/DrawCanvas.svelte:513,ui,판서 화면,정적,draw.canvas.aria
+packages/ink-ui/src/lib/components/DrawCanvas.svelte:531,ui,판서 글자,정적,draw.text.aria
+packages/ink-ui/src/lib/components/Island.svelte:255,ui,펜 색,정적,island.draw.penColorAria
+packages/ink-ui/src/lib/components/Island.svelte:312,ui,칠판 펜 색,정적,island.board.penColorAria
+packages/ink-ui/src/lib/components/Island.svelte:406,ui,마이크 꺼짐,정적,island.record.micOffAria
+packages/ink-ui/src/lib/components/Magnifier.svelte:69,ui,확대경,정적,capture.magnifier.aria
+packages/ink-ui/src/lib/components/Magnifier.svelte:94,ui,C 복사,정적,capture.magnifier.copyHex
+packages/ink-ui/src/lib/components/MakerCredit.svelte:28,ui,Made by. 찰떡쌤,정적,app.credit.madeBy
+packages/ink-ui/src/lib/components/MakerCredit.svelte:30,ui,© 2026 찰떡쌤. MIT License.,정적,app.credit.copyright
+packages/ink-ui/src/lib/components/MiniMap.svelte:18,ui,모니터 1,"동적 (기본값, 모니터 {n})",zoom.monitor
+packages/ink-ui/src/lib/components/MiniMap.svelte:20,ui,위치 지도,정적,zoom.minimap.aria
+packages/ink-ui/src/lib/components/PinFrame.svelte:23,ui,고정한 창,정적,pin.frame.aria
+packages/ink-ui/src/lib/components/Row.svelte:71,ui,후속,정적,common.later
+packages/ink-ui/src/lib/components/Row.svelte:93,ui,후속,정적,common.later
+packages/ink-ui/src/lib/components/Row.svelte:123,ui,추천,정적,common.recommended
+packages/ink-ui/src/lib/components/SelectionFrame.svelte:25,ui,고른 범위,정적,capture.selection.aria
+packages/ink-ui/src/lib/components/Sheet.svelte:26,ui,확인,정적,common.confirm
+packages/ink-ui/src/lib/components/Sheet.svelte:27,ui,취소,정적,common.cancel
+packages/ink-ui/src/lib/components/TrayPopover.svelte:22,ui,슉쇽 메뉴,정적,tray.menu.aria
+packages/ink-ui/src/lib/icons/icons.js:41,ui,범위 캡처,정적,icon.region
+packages/ink-ui/src/lib/icons/icons.js:49,ui,창 캡처,정적,icon.window
+packages/ink-ui/src/lib/icons/icons.js:58,ui,화면 녹화,정적,icon.record
+packages/ink-ui/src/lib/icons/icons.js:66,ui,판서,정적,icon.draw
+packages/ink-ui/src/lib/icons/icons.js:75,ui,실시간 확대,정적,icon.zoom
+packages/ink-ui/src/lib/icons/icons.js:84,ui,칠판,정적,icon.board
+packages/ink-ui/src/lib/icons/icons.js:95,ui,창 항상 위,정적,icon.pin
+packages/ink-ui/src/lib/icons/icons.js:102,ui,직전 판서,정적,icon.restore
+packages/ink-ui/src/lib/icons/icons.js:109,ui,저장 폴더,정적,icon.folder
+packages/ink-ui/src/lib/icons/icons.js:115,ui,단축키,정적,icon.shortcuts
+packages/ink-ui/src/lib/icons/icons.js:126,ui,설정,정적,icon.settings
+packages/ink-ui/src/lib/icons/icons.js:134,ui,정보,정적,icon.info
+packages/ink-ui/src/lib/icons/icons.js:142,ui,복사,정적,icon.copy
+packages/ink-ui/src/lib/icons/icons.js:149,ui,저장,정적,icon.save
+packages/ink-ui/src/lib/icons/icons.js:155,ui,모니터,정적,icon.monitor
+packages/ink-ui/src/lib/icons/icons.js:162,ui,마이크,정적,icon.mic
+packages/ink-ui/src/lib/icons/icons.js:169,ui,모서리 자석,정적,icon.magnet
+packages/ink-ui/src/lib/icons/icons.js:176,ui,다크 모드,정적,icon.moon
+packages/ink-ui/src/lib/icons/icons.js:182,ui,지연 캡처,정적,icon.clock
+packages/ink-ui/src/lib/icons/icons.js:189,ui,지우개,정적,icon.eraser
+packages/ink-ui/src/lib/icons/icons.js:196,ui,되돌리기,정적,icon.undo
+packages/ink-ui/src/lib/icons/icons.js:203,ui,확인,정적,icon.check
+packages/ink-ui/src/lib/icons/icons.js:209,ui,주의,정적,icon.alert
+packages/ink-ui/src/lib/icons/icons.js:217,ui,끝내기,정적,icon.power
+packages/ink-ui/src/lib/icons/icons.js:226,ui,보안 화면,정적,icon.lock
+packages/ink-ui/src/lib/icons/icons.js:233,ui,마이크 꺼짐,정적,icon.micOff
+packages/ink-ui/src/lib/icons/icons.js:240,ui,닫기,정적,icon.close
+packages/ink-ui/src/lib/ink/inkEngine.js:213,ui,직선으로,정적 (조사 결합 문장 조각),draw.shape.suggest.line
+packages/ink-ui/src/lib/ink/inkEngine.js:214,ui,원으로,정적 (조사 결합 문장 조각),draw.shape.suggest.circle
+packages/ink-ui/src/lib/ink/inkEngine.js:215,ui,타원으로,정적 (조사 결합 문장 조각),draw.shape.suggest.ellipse
+packages/ink-ui/src/lib/ink/inkEngine.js:216,ui,사각형으로,정적 (조사 결합 문장 조각),draw.shape.suggest.rect
+packages/ink-ui/src/lib/ink/inkEngine.js:217,ui,화살표로,정적 (조사 결합 문장 조각),draw.shape.suggest.arrow
+packages/ink-ui/src/lib/ink/inkEngine.js:222,ui,수평으로 맞췄어요,정적,draw.notice.horizontal
+packages/ink-ui/src/lib/ink/inkEngine.js:223,ui,수직으로 맞췄어요,정적,draw.notice.vertical
+packages/ink-ui/src/lib/ink/inkEngine.js:224,ui,직선으로 바꿨어요,정적,draw.notice.line
+packages/ink-ui/src/lib/ink/inkEngine.js:225,ui,원으로 바꿨어요,정적,draw.notice.circle
+packages/ink-ui/src/lib/ink/inkEngine.js:226,ui,타원으로 바꿨어요,정적,draw.notice.ellipse
+packages/ink-ui/src/lib/ink/inkEngine.js:227,ui,사각형으로 바꿨어요,정적,draw.notice.rect
+packages/ink-ui/src/lib/ink/inkEngine.js:228,ui,화살표로 바꿨어요,정적,draw.notice.arrow
+packages/ink-ui/src/lib/ink/inkEngine.js:229,ui,판서를 모두 지웠어요,정적,draw.notice.cleared
+packages/ink-ui/src/lib/ink/inkEngine.js:230,ui,이전 판서를 불러왔어요,정적,draw.notice.restored
+packages/ink-ui/src/lib/ink/inkEngine.js:231,ui,배율이 바뀌어 크기를 맞췄어요,정적,draw.notice.rescaled
+packages/ink-ui/src/lib/ink/inkEngine.js:232,ui,다른 모니터라 불러올 수 없어요,정적,draw.notice.differentMonitor
+packages/ink-ui/src/lib/ink/inkEngine.js:866,ui,{notice} · {undo}로 원래 획,"동적 ({notice}, {undo})",draw.notice.withUndo
+packages/ink-ui/src/lib/ink/inkEngine.js:1579,ui,{notice} · {undo}로 원래 획,"동적 ({notice}, {undo})",draw.notice.withUndo
+packages/ink-ui/src/lib/ink/inkEngine.js:1582,ui,{shapeTo} 바꿀까요? · Enter,동적 ({shapeTo}),draw.shape.suggestPrompt
+packages/ink-ui/src/lib/models/captureToolbar.js:17,ui,취소,정적,common.cancel
+packages/ink-ui/src/lib/models/captureToolbar.js:19,ui,화면에 고정,정적,capture.toolbar.pin
+packages/ink-ui/src/lib/models/captureToolbar.js:20,ui,저장,정적,common.save
+packages/ink-ui/src/lib/models/captureToolbar.js:21,ui,복사,정적,common.copy
+packages/ink-ui/src/lib/models/captureToolbar.js:125,ui,사각형,정적,capture.annotate.tool.rect
+packages/ink-ui/src/lib/models/captureToolbar.js:126,ui,타원,정적,capture.annotate.tool.ellipse
+packages/ink-ui/src/lib/models/captureToolbar.js:127,ui,화살표,정적,capture.annotate.tool.arrow
+packages/ink-ui/src/lib/models/captureToolbar.js:128,ui,펜,정적,draw.tool.pen
+packages/ink-ui/src/lib/models/captureToolbar.js:129,ui,형광펜,정적,draw.tool.marker
+packages/ink-ui/src/lib/models/captureToolbar.js:130,ui,모자이크,정적,capture.annotate.tool.mosaic
+packages/ink-ui/src/lib/models/captureToolbar.js:131,ui,글자,정적,draw.tool.text
+packages/ink-ui/src/lib/models/captureToolbar.js:132,ui,지우개,정적,draw.tool.eraser
+packages/ink-ui/src/lib/models/captureToolbar.js:140,ui,실행 취소,정적,common.undo
+packages/ink-ui/src/lib/models/captureToolbar.js:141,ui,다시 실행,정적,common.redo
+packages/ink-ui/src/lib/models/captureToolbar.js:147,ui,가는,정적,capture.annotate.width.thin
+packages/ink-ui/src/lib/models/captureToolbar.js:148,ui,보통,정적,capture.annotate.width.medium
+packages/ink-ui/src/lib/models/captureToolbar.js:149,ui,굵은,정적,capture.annotate.width.thick
+packages/ink-ui/src/lib/models/captureToolbar.js:152,ui,작게,정적,capture.annotate.mosaic.small
+packages/ink-ui/src/lib/models/captureToolbar.js:153,ui,보통,정적,capture.annotate.mosaic.medium
+packages/ink-ui/src/lib/models/captureToolbar.js:154,ui,크게,정적,capture.annotate.mosaic.large
+packages/ink-ui/src/lib/models/cheatSheet.js:5,ui,범위 캡처,정적,shortcut.slot.region
+packages/ink-ui/src/lib/models/cheatSheet.js:6,ui,창 캡처,정적,shortcut.slot.window
+packages/ink-ui/src/lib/models/cheatSheet.js:7,ui,화면 녹화,정적,tray.item.record
+packages/ink-ui/src/lib/models/cheatSheet.js:8,ui,판서,정적,shortcut.slot.draw
+packages/ink-ui/src/lib/models/cheatSheet.js:9,ui,실시간 확대,정적,shortcut.slot.zoom
+packages/ink-ui/src/lib/models/cheatSheet.js:10,ui,칠판,정적,shortcut.slot.board
+packages/ink-ui/src/lib/models/cheatSheet.js:11,ui,창 항상 위,정적,shortcut.slot.topmost
+packages/ink-ui/src/lib/models/cheatSheet.js:12,ui,단축키 켜기·끄기,정적,shortcut.slot.pause
+packages/ink-ui/src/lib/models/cheatSheet.js:13,ui,직전 판서 열기,정적,shortcut.slot.restore
+packages/ink-ui/src/lib/models/cheatSheet.js:84,ui,판서 화면 — 지금,정적,cheatSheet.section.drawNow
+packages/ink-ui/src/lib/models/cheatSheet.js:86,ui,끌어서 도형,정적,cheatSheet.section.drawShapes
+packages/ink-ui/src/lib/models/cheatSheet.js:90,ui,캡처 화면 — 지금,정적,cheatSheet.section.captureNow
+packages/ink-ui/src/lib/models/cheatSheet.js:92,ui,창 ↔ 요소 전환,정적,cheatSheet.row.captureDetect
+packages/ink-ui/src/lib/models/cheatSheet.js:93,ui,복사하고 끝내기,정적,cheatSheet.row.captureCopyExit
+packages/ink-ui/src/lib/models/cheatSheet.js:97,ui,저장,정적,common.save
+packages/ink-ui/src/lib/models/cheatSheet.js:98,ui,빠른 저장,정적,cheatSheet.row.quickSave
+packages/ink-ui/src/lib/models/cheatSheet.js:102,ui,직전 범위,정적,cheatSheet.row.lastArea
+packages/ink-ui/src/lib/models/cheatSheet.js:106,ui,이전,정적,cheatSheet.row.prev
+packages/ink-ui/src/lib/models/cheatSheet.js:107,ui,다음,정적,cheatSheet.row.next
+packages/ink-ui/src/lib/models/cheatSheet.js:110,ui,지난 범위,정적,cheatSheet.row.recentArea
+packages/ink-ui/src/lib/models/cheatSheet.js:112,ui,모니터 전체,정적,cheatSheet.row.fullMonitor
+packages/ink-ui/src/lib/models/cheatSheet.js:116,ui,커서,정적,cheatSheet.row.cursor
+packages/ink-ui/src/lib/models/cheatSheet.js:117,ui,색 복사,정적,cheatSheet.row.copyColor
+packages/ink-ui/src/lib/models/cheatSheet.js:121,ui,취소,정적,common.cancel
+packages/ink-ui/src/lib/models/cheatSheet.js:124,ui,범위 미세 조작,정적,cheatSheet.section.captureFine
+packages/ink-ui/src/lib/models/cheatSheet.js:126,ui,넓히기·좁히기,정적,cheatSheet.row.expandShrink
+packages/ink-ui/src/lib/models/cheatSheet.js:126,ui,휠,정적,cheatSheet.key.wheel
+packages/ink-ui/src/lib/models/cheatSheet.js:127,ui,1px 이동,정적,cheatSheet.row.nudgeMove
+packages/ink-ui/src/lib/models/cheatSheet.js:127,ui,방향키,정적,cheatSheet.key.arrows
+packages/ink-ui/src/lib/models/cheatSheet.js:128,ui,1px 늘리기,정적,cheatSheet.row.nudgeGrow
+packages/ink-ui/src/lib/models/cheatSheet.js:129,ui,1px 줄이기,정적,cheatSheet.row.nudgeShrink
+packages/ink-ui/src/lib/models/cheatSheet.js:130,ui,자석 잠시 끄기,정적,cheatSheet.row.magnetPause
+packages/ink-ui/src/lib/models/cheatSheet.js:131,ui,확정 · 복사,정적,cheatSheet.row.confirmCopy
+packages/ink-ui/src/lib/models/cheatSheet.js:131,ui,더블클릭,정적,cheatSheet.note.doubleClick
+packages/ink-ui/src/lib/models/cheatSheet.js:132,ui,다시 고르기,정적,cheatSheet.row.reselect
+packages/ink-ui/src/lib/models/cheatSheet.js:132,ui,오른쪽 클릭,정적,cheatSheet.note.rightClick
+packages/ink-ui/src/lib/models/cheatSheet.js:135,ui,실시간 확대 — 지금,정적,cheatSheet.section.zoomNow
+packages/ink-ui/src/lib/models/cheatSheet.js:138,ui,배율 조절,정적,cheatSheet.row.zoomScale
+packages/ink-ui/src/lib/models/cheatSheet.js:139,ui,멈추고 판서,정적,cheatSheet.row.freezeAndDraw
+packages/ink-ui/src/lib/models/cheatSheet.js:140,ui,끝내기,정적,cheatSheet.row.exit
+packages/ink-ui/src/lib/models/cheatSheet.js:143,ui,확대 조작,정적,cheatSheet.section.zoomControls
+packages/ink-ui/src/lib/models/cheatSheet.js:145,ui,아래 앱 스크롤,정적,cheatSheet.row.scrollUnder
+packages/ink-ui/src/lib/models/cheatSheet.js:146,ui,화면 따라가기,정적,cheatSheet.row.followScreen
+packages/ink-ui/src/lib/models/cheatSheet.js:146,ui,커서 이동,정적,cheatSheet.note.moveCursor
+packages/ink-ui/src/lib/models/cheatSheet.js:147,ui,방향키·클릭,정적,cheatSheet.row.arrowsClick
+packages/ink-ui/src/lib/models/cheatSheet.js:147,ui,아래 앱으로,정적,cheatSheet.note.passThrough
+packages/ink-ui/src/lib/models/cheatSheet.js:151,ui,판서 화면 — 지금,정적,cheatSheet.section.drawNow
+packages/ink-ui/src/lib/models/cheatSheet.js:156,ui,펜,정적,draw.tool.pen
+packages/ink-ui/src/lib/models/cheatSheet.js:157,ui,형광펜,정적,draw.tool.marker
+packages/ink-ui/src/lib/models/cheatSheet.js:158,ui,글자,정적,draw.tool.text
+packages/ink-ui/src/lib/models/cheatSheet.js:165,ui,고르기,정적,draw.tool.select
+packages/ink-ui/src/lib/models/cheatSheet.js:166,ui,지우개,정적,draw.tool.eraser
+packages/ink-ui/src/lib/models/cheatSheet.js:170,ui,모두 지우기,정적,cheatSheet.row.clearAll
+packages/ink-ui/src/lib/models/cheatSheet.js:182,ui,색,정적,cheatSheet.row.color
+packages/ink-ui/src/lib/models/cheatSheet.js:187,ui,흰,정적,cheatSheet.row.whiteShort
+packages/ink-ui/src/lib/models/cheatSheet.js:188,ui,검은 칠판,정적,draw.board.black
+packages/ink-ui/src/lib/models/cheatSheet.js:195,ui,되돌리기,정적,common.undo
+packages/ink-ui/src/lib/models/cheatSheet.js:196,ui,다시,정적,cheatSheet.row.redoShort
+packages/ink-ui/src/lib/models/cheatSheet.js:200,ui,확대 · 굵기,정적,cheatSheet.row.zoomAndWidth
+packages/ink-ui/src/lib/models/cheatSheet.js:200,ui,{modCtrl} 휠,동적 ({modCtrl}),cheatSheet.key.modWheel
+packages/ink-ui/src/lib/models/cheatSheet.js:201,ui,끝내기 · 보관,정적,cheatSheet.row.exitKeep
+packages/ink-ui/src/lib/models/cheatSheet.js:204,ui,끌어서 도형,정적,cheatSheet.section.drawShapes
+packages/ink-ui/src/lib/models/cheatSheet.js:205,ui,커서 가운데로,정적,cheatSheet.row.centerCursor
+packages/ink-ui/src/lib/models/cheatSheet.js:207,ui,직선,정적,cheatSheet.row.shapeLine
+packages/ink-ui/src/lib/models/cheatSheet.js:208,ui,사각형,정적,capture.annotate.tool.rect
+packages/ink-ui/src/lib/models/cheatSheet.js:209,ui,화살표,정적,capture.annotate.tool.arrow
+packages/ink-ui/src/lib/models/cheatSheet.js:210,ui,원,정적,cheatSheet.row.shapeCircle
+packages/ink-ui/src/lib/models/cheatSheet.js:211,ui,점선으로,정적,cheatSheet.row.dashed
+packages/ink-ui/src/lib/models/cheatSheet.js:212,ui,멈추면 도형,정적,cheatSheet.row.holdShape
+packages/ink-ui/src/lib/models/cheatSheet.js:212,ui,0.5초,정적,cheatSheet.note.halfSec
+packages/ink-ui/src/lib/models/cheatSheet.js:213,ui,확대 중 이동,정적,cheatSheet.row.panWhileZoomed
+packages/ink-ui/src/lib/models/cheatSheet.js:213,ui,오른쪽 클릭,정적,cheatSheet.note.rightClick
+packages/ink-ui/src/lib/models/cheatSheet.js:219,ui,어디서나,정적,cheatSheet.section.global
+packages/ink-ui/src/lib/models/drawUi.js:32,ui,빨강,정적,color.red
+packages/ink-ui/src/lib/models/drawUi.js:33,ui,노랑,정적,color.yellow
+packages/ink-ui/src/lib/models/drawUi.js:34,ui,초록,정적,color.green
+packages/ink-ui/src/lib/models/drawUi.js:35,ui,주황,정적,color.orange
+packages/ink-ui/src/lib/models/drawUi.js:36,ui,파랑,정적,color.blue
+packages/ink-ui/src/lib/models/drawUi.js:37,ui,연두,정적,color.lime
+packages/ink-ui/src/lib/models/drawUi.js:42,ui,흰색,정적,color.white
+packages/ink-ui/src/lib/models/drawUi.js:43,ui,검정,정적,color.black
+packages/ink-ui/src/lib/models/drawUi.js:161,ui,검은색,정적,draw.board.bgBlack
+packages/ink-ui/src/lib/models/drawUi.js:161,ui,흰색,정적,draw.board.bgWhite
+packages/ink-ui/src/lib/models/drawUi.js:164,ui,칠판 · {bg},동적 ({bg}),island.board.title
+packages/ink-ui/src/lib/models/drawUi.js:290,ui,흰 칠판,정적,draw.board.white
+packages/ink-ui/src/lib/models/drawUi.js:299,ui,검은 칠판,정적,draw.board.black
+packages/ink-ui/src/lib/models/islandQueue.js:283,ui,자석 끔,정적,island.tag.magnetOff
+packages/ink-ui/src/lib/models/islandQueue.js:284,ui,커서 포함,정적,island.tag.cursorIncluded
+packages/ink-ui/src/lib/models/settingsMeta.js:7,ui,Enter · 더블클릭 하면,정적,settings.capture.result
+packages/ink-ui/src/lib/models/settingsMeta.js:8,ui,마우스 커서도 찍기,정적,settings.capture.cursor
+packages/ink-ui/src/lib/models/settingsMeta.js:9,ui,찰칵 소리,정적,settings.capture.sound
+packages/ink-ui/src/lib/models/settingsMeta.js:10,ui,UI 요소까지 찾기,정적,settings.capture.element
+packages/ink-ui/src/lib/models/settingsMeta.js:11,ui,모서리 자석,정적,settings.capture.magnet
+packages/ink-ui/src/lib/models/settingsMeta.js:12,ui,캡처 기록,정적,settings.capture.historyMax
+packages/ink-ui/src/lib/models/settingsMeta.js:13,ui,찾지 않을 앱,정적,settings.capture.excluded
+packages/ink-ui/src/lib/models/settingsMeta.js:14,ui,저장 폴더,정적,settings.output.folder
+packages/ink-ui/src/lib/models/settingsMeta.js:15,ui,파일 이름,정적,settings.output.template
+packages/ink-ui/src/lib/models/settingsMeta.js:16,ui,부드러움,정적,settings.record.fps
+packages/ink-ui/src/lib/models/settingsMeta.js:17,ui,마이크 소리,정적,settings.record.mic
+packages/ink-ui/src/lib/models/settingsMeta.js:18,ui,마이크 장치,정적,settings.record.micDevice
+packages/ink-ui/src/lib/models/settingsMeta.js:19,ui,처음 색,정적,settings.draw.color
+packages/ink-ui/src/lib/models/settingsMeta.js:20,ui,굵기,정적,settings.draw.width
+packages/ink-ui/src/lib/models/settingsMeta.js:21,ui,떨림 보정,정적,settings.draw.smoothing
+packages/ink-ui/src/lib/models/settingsMeta.js:22,ui,거의 곧은 선은 곧게,정적,settings.draw.straighten
+packages/ink-ui/src/lib/models/settingsMeta.js:23,ui,멈추면 도형으로,정적,settings.draw.shapeOnHold
+packages/ink-ui/src/lib/models/settingsMeta.js:24,ui,도형 보정,정적,settings.draw.shapeApply
+packages/ink-ui/src/lib/models/settingsMeta.js:25,ui,첫 휠 배율,정적,settings.draw.startZoom
+packages/ink-ui/src/lib/models/settingsMeta.js:26,ui,나갈 때 보관,정적,settings.draw.keep
+packages/ink-ui/src/lib/models/settingsMeta.js:27,ui,Esc 키,정적,settings.draw.esc
+packages/ink-ui/src/lib/models/settingsMeta.js:28,ui,확대 중 오른쪽 클릭,정적,settings.draw.rightClickPan
+packages/ink-ui/src/lib/models/settingsMeta.js:29,ui,커서 따라가기,정적,settings.zoom.follow
+packages/ink-ui/src/lib/models/settingsMeta.js:30,ui,위치 지도 보이기,정적,settings.zoom.minimap
+packages/ink-ui/src/lib/models/settingsMeta.js:31,ui,테마,정적,settings.general.theme
+packages/ink-ui/src/lib/models/settingsMeta.js:32,ui,언어,정적,settings.general.lang
+packages/ink-ui/src/lib/models/settingsMeta.js:33,ui,로그인하면 실행,정적,settings.general.autostart
+packages/ink-ui/src/lib/models/settingsMeta.js:34,ui,고정한 창 테두리,정적,settings.topmost.border
+packages/ink-ui/src/lib/models/settingsMeta.js:35,ui,고정할 때 소리,정적,settings.topmost.sound
+packages/ink-ui/src/lib/models/settingsMeta.js:39,ui,복사,정적,common.copy
+packages/ink-ui/src/lib/models/settingsMeta.js:39,ui,저장,정적,common.save
+packages/ink-ui/src/lib/models/settingsMeta.js:39,ui,둘 다,정적,settings.capture.result.both
+packages/ink-ui/src/lib/models/settingsMeta.js:40,ui,빨강,정적,color.red
+packages/ink-ui/src/lib/models/settingsMeta.js:40,ui,노랑,정적,color.yellow
+packages/ink-ui/src/lib/models/settingsMeta.js:40,ui,초록,정적,color.green
+packages/ink-ui/src/lib/models/settingsMeta.js:40,ui,주황,정적,color.orange
+packages/ink-ui/src/lib/models/settingsMeta.js:40,ui,파랑,정적,color.blue
+packages/ink-ui/src/lib/models/settingsMeta.js:40,ui,연두,정적,color.lime
+packages/ink-ui/src/lib/models/settingsMeta.js:41,ui,끔,정적,common.off
+packages/ink-ui/src/lib/models/settingsMeta.js:41,ui,약,정적,settings.draw.smoothing.light
+packages/ink-ui/src/lib/models/settingsMeta.js:41,ui,강,정적,settings.draw.smoothing.strong
+packages/ink-ui/src/lib/models/settingsMeta.js:42,ui,물어보고 바꾸기,정적,settings.draw.shapeApply.suggest
+packages/ink-ui/src/lib/models/settingsMeta.js:42,ui,바로 바꾸기,정적,settings.draw.shapeApply.auto
+packages/ink-ui/src/lib/models/settingsMeta.js:43,ui,한 단계씩,정적,settings.draw.esc.step
+packages/ink-ui/src/lib/models/settingsMeta.js:43,ui,바로 나가기,정적,settings.draw.esc.exit
+packages/ink-ui/src/lib/models/settingsMeta.js:44,ui,마우스 위치대로,정적,settings.zoom.follow.pointer
+packages/ink-ui/src/lib/models/settingsMeta.js:44,ui,가운데로 부드럽게,정적,settings.zoom.follow.smoothFull
+packages/ink-ui/src/lib/models/settingsMeta.js:44,ui,가운데로 바로,정적,settings.zoom.follow.instantFull
+packages/ink-ui/src/lib/models/settingsMeta.js:45,ui,시스템 따라,정적,settings.general.theme.system
+packages/ink-ui/src/lib/models/settingsMeta.js:45,ui,라이트,정적,settings.general.theme.light
+packages/ink-ui/src/lib/models/settingsMeta.js:45,ui,다크,정적,settings.general.theme.dark
+packages/ink-ui/src/lib/models/settingsMeta.js:46,ui,한국어,정적 (고유 언어명),settings.general.lang.ko
+packages/ink-ui/src/lib/models/settingsMeta.js:46,ui,English,정적 (고유 언어명),settings.general.lang.en
+packages/ink-ui/src/lib/models/settingsMeta.js:56,ui,켬,정적,common.on
+packages/ink-ui/src/lib/models/settingsMeta.js:56,ui,끔,정적,common.off
+packages/ink-ui/src/lib/models/settingsMeta.js:57,ui,기본 장치,정적,settings.record.micDevice.default
+packages/ink-ui/src/lib/models/settingsMeta.js:62,ui,{n}개,"동적 ({n}개, 복수형)",settings.meta.countItems
+packages/ink-ui/src/lib/models/settingsMeta.js:63,ui,끔,정적,common.off
+packages/ink-ui/src/lib/models/settingsMeta.js:64,ui,{n}개,"동적 ({n}개, 복수형)",settings.meta.countItems
+packages/ink-ui/src/lib/models/settingsMeta.js:67,ui,비움,정적,common.empty
+packages/ink-ui/src/lib/models/settingsMeta.js:85,ui,비움,정적,common.empty
+packages/ink-ui/src/lib/models/settingsMeta.js:86,ui,비움,정적,common.empty
+packages/ink-ui/src/lib/models/settingsMeta.js:106,ui,0.5초 · Ctrl+Z = 원래 획,동적 (OS별 Undo 키 필요),settings.draw.shapeOnHold.subAuto
+packages/ink-ui/src/lib/models/settingsMeta.js:106,ui,0.5초 멈추면 바꿀지 물어봐요,정적,settings.draw.shapeOnHold.subSuggest
+packages/ink-ui/src/lib/models/settingsMeta.js:121,ui,MSIX 패키지,정적,notice.storage.msix
+packages/ink-ui/src/lib/models/settingsMeta.js:121,ui,포터블,정적,notice.storage.portable
+packages/ink-ui/src/lib/models/settingsMeta.js:121,ui,설치,정적,notice.storage.installed
+packages/ink-ui/src/lib/models/settingsMeta.js:138,ui,{app}에서 '항상 위'를 끄면 Alt+Shift+D를 써요,"동적 ({app}, Windows 전용)",firstRun.conflict.powertoysAot
+packages/ink-ui/src/lib/models/settingsMeta.js:149,ui,{keys} 키 {n}개는 {app}{이/가} 쓰고 있어요,"동적 ({keys}, {n}개, {app}, 조사/복수형)",firstRun.conflict.appMulti
+packages/ink-ui/src/lib/models/settingsMeta.js:149,ui,{key} 키는 {app}{이/가} 쓰고 있어요,"동적 ({key}, {app}, 조사)",firstRun.conflict.appSingle
+packages/ink-ui/src/lib/models/settingsMeta.js:154,ui,{keys} 외 {extra}개는 {app}{이/가} 쓰고 있어요,"동적 ({keys}, {extra}개, {app}, 조사/복수형)",firstRun.conflict.appOverflow
+packages/ink-ui/src/lib/models/settingsMeta.js:156,ui,키 {n}개는 {app}{이/가} 쓰고 있어요,"동적 ({n}개, {app}, 조사/복수형)",firstRun.conflict.appCountOnly
+packages/ink-ui/src/lib/models/settingsMeta.js:163,ui,{이/가} 쓰고 있어요 (접미 조립),"동적 ({app}, 조사)",firstRun.conflict.appSuffix
+packages/ink-ui/src/lib/models/settingsMeta.js:170,ui,단축키 {n}개가 겹치고 있어요,"동적 ({n}개, 복수형)",firstRun.conflict.generic
+packages/ink-ui/src/lib/models/shortcutDisplay.js:19,ui,이/가 (조사 분기 함수 subjectParticle),동적 (한국어 받침 조사 전용),settings.shortcuts.conflict.particle
+packages/ink-ui/src/lib/models/shortcutDisplay.js:53,ui,단축키 {n}개가 겹치고 있어요,"동적 ({n}개, 복수형)",settings.shortcuts.conflict.generic
+packages/ink-ui/src/lib/models/shortcutDisplay.js:65,ui,{app}{이/가} {keys} 키 {n}개를 먼저 쓰고 있어요,"동적 ({app}, {keys}, {n}개, 조사/복수형)",settings.shortcuts.conflict.appMulti
+packages/ink-ui/src/lib/models/shortcutDisplay.js:68,ui,{app}{이/가} {key} 키를 먼저 쓰고 있어요,"동적 ({app}, {key}, 조사)",settings.shortcuts.conflict.appSingle
+packages/ink-ui/src/lib/models/shortcutDisplay.js:79,ui,{app}{이/가} {keys} 외 {extra}개를 먼저 쓰고 있어요,"동적 ({app}, {keys}, {extra}개, 조사/복수형)",settings.shortcuts.conflict.appOverflow
+packages/ink-ui/src/lib/models/shortcutDisplay.js:88,ui,{app}{이/가} 키 {n}개를 먼저 쓰고 있어요,"동적 ({app}, {n}개, 조사/복수형)",settings.shortcuts.conflict.appCountOnly
+packages/ink-ui/src/lib/models/shortcutDisplay.js:111,ui,키를 누르세요 · Esc 취소,정적,settings.shortcuts.recordingHint
+packages/ink-ui/src/lib/models/template.js:11,ui,파일 이름을 입력하세요,정적,settings.output.template.errEmpty
+packages/ink-ui/src/lib/models/template.js:12,ui,"\ / : * ? "" < > | 는 쓸 수 없어요",정적,settings.output.template.errForbidden
+packages/ink-ui/src/lib/screens/CaptureOverlay.svelte:1092,ui,캡처 화면,정적,capture.overlay.aria
+packages/ink-ui/src/lib/screens/CaptureOverlay.svelte:1257,ui,방금 고른 범위,정적,capture.selection.pickedAria
+packages/ink-ui/src/lib/screens/CapturePage.svelte:21,ui,기본 장치,정적,settings.record.micDevice.default
+packages/ink-ui/src/lib/screens/CapturePage.svelte:22,ui,내장 마이크(Realtek),정적 (목록 예시),settings.record.micDevice.builtIn
+packages/ink-ui/src/lib/screens/CapturePage.svelte:23,ui,USB 마이크,정적 (목록 예시),settings.record.micDevice.usb
+packages/ink-ui/src/lib/screens/CapturePage.svelte:66,ui,기본 장치,정적,settings.record.micDevice.default
+packages/ink-ui/src/lib/screens/CapturePage.svelte:123,ui,캡처·녹화,정적,settings.tab.capture
+packages/ink-ui/src/lib/screens/CapturePage.svelte:128,ui,결과,정적,settings.capture.section.result
+packages/ink-ui/src/lib/screens/CapturePage.svelte:130,ui,Enter · 더블클릭 하면,정적,settings.capture.result
+packages/ink-ui/src/lib/screens/CapturePage.svelte:132,ui,Enter · 더블클릭 결과,정적,settings.capture.result.aria
+packages/ink-ui/src/lib/screens/CapturePage.svelte:135,ui,복사,정적,common.copy
+packages/ink-ui/src/lib/screens/CapturePage.svelte:136,ui,저장,정적,common.save
+packages/ink-ui/src/lib/screens/CapturePage.svelte:137,ui,둘 다,정적,settings.capture.result.both
+packages/ink-ui/src/lib/screens/CapturePage.svelte:142,ui,마우스 커서도 찍기,정적,settings.capture.cursor
+packages/ink-ui/src/lib/screens/CapturePage.svelte:142,ui,캡처 중 ` 키,정적,settings.capture.cursor.sub
+packages/ink-ui/src/lib/screens/CapturePage.svelte:145,ui,마우스 커서도 찍기,정적 (Switch aria-label),settings.capture.cursor
+packages/ink-ui/src/lib/screens/CapturePage.svelte:149,ui,찰칵 소리,정적,settings.capture.sound
+packages/ink-ui/src/lib/screens/CapturePage.svelte:152,ui,찰칵 소리,정적 (Switch aria-label),settings.capture.sound
+packages/ink-ui/src/lib/screens/CapturePage.svelte:160,ui,저장,정적,settings.capture.section.save
+packages/ink-ui/src/lib/screens/CapturePage.svelte:163,ui,저장 폴더,정적,settings.output.folder
+packages/ink-ui/src/lib/screens/CapturePage.svelte:173,ui,열기,정적,common.open
+packages/ink-ui/src/lib/screens/CapturePage.svelte:180,ui,바꾸기,정적,common.change
+packages/ink-ui/src/lib/screens/CapturePage.svelte:184,ui,파일 이름,정적,settings.output.template
+packages/ink-ui/src/lib/screens/CapturePage.svelte:188,ui,파일 이름 규칙,정적,settings.output.template.aria
+packages/ink-ui/src/lib/screens/CapturePage.svelte:203,ui,스마트 인식,정적,settings.capture.section.smart
+packages/ink-ui/src/lib/screens/CapturePage.svelte:205,ui,UI 요소까지 찾기,정적,settings.capture.element
+packages/ink-ui/src/lib/screens/CapturePage.svelte:205,ui,끄면 창 단위만,정적,settings.capture.element.sub
+packages/ink-ui/src/lib/screens/CapturePage.svelte:208,ui,UI 요소까지 찾기,정적 (Switch aria-label),settings.capture.element
+packages/ink-ui/src/lib/screens/CapturePage.svelte:212,ui,모서리 자석,정적,settings.capture.magnet
+packages/ink-ui/src/lib/screens/CapturePage.svelte:212,ui,Alt를 누르는 동안 끔,동적 (OS별 Alt/Option 키 필요),settings.capture.magnet.sub
+packages/ink-ui/src/lib/screens/CapturePage.svelte:215,ui,모서리 자석,정적 (Switch aria-label),settings.capture.magnet
+packages/ink-ui/src/lib/screens/CapturePage.svelte:219,ui,찾지 않을 앱,정적,settings.capture.excluded
+packages/ink-ui/src/lib/screens/CapturePage.svelte:226,ui,{exe} 빼기,동적 ({exe}),settings.capture.excluded.removeAria
+packages/ink-ui/src/lib/screens/CapturePage.svelte:231,ui,느림 · 창 단위 자동,정적,settings.capture.excluded.autoChip
+packages/ink-ui/src/lib/screens/CapturePage.svelte:235,ui,제외할 실행 파일 이름,정적,settings.capture.excluded.inputAria
+packages/ink-ui/src/lib/screens/CapturePage.svelte:236,ui,app.exe,동적 (OS별 예시 필요: Win app.exe / Mac 앱),settings.capture.excluded.placeholder
+packages/ink-ui/src/lib/screens/CapturePage.svelte:250,ui,추가,정적,common.add
+packages/ink-ui/src/lib/screens/CapturePage.svelte:259,ui,녹화,정적,settings.capture.section.record
+packages/ink-ui/src/lib/screens/CapturePage.svelte:261,ui,부드러움,정적,settings.record.fps
+packages/ink-ui/src/lib/screens/CapturePage.svelte:263,ui,녹화 초당 프레임,정적,settings.record.fps.aria
+packages/ink-ui/src/lib/screens/CapturePage.svelte:273,ui,마이크 소리,정적,settings.record.mic
+packages/ink-ui/src/lib/screens/CapturePage.svelte:274,ui,처음 켤 때 장치 고르기,정적,settings.record.mic.pickOnFirst
+packages/ink-ui/src/lib/screens/CapturePage.svelte:278,ui,마이크 소리,정적 (Switch aria-label),settings.record.mic
+packages/ink-ui/src/lib/screens/CapturePage.svelte:286,ui,기록,정적,settings.capture.section.history
+packages/ink-ui/src/lib/screens/CapturePage.svelte:288,ui,캡처 기록,정적,settings.capture.historyMax
+packages/ink-ui/src/lib/screens/CapturePage.svelte:288,ui,{n}개 보관,"동적 ({n}개, 복수형)",settings.capture.historyMax.sub
+packages/ink-ui/src/lib/screens/CapturePage.svelte:295,ui,기록 지우기,정적,settings.capture.history.clear
+packages/ink-ui/src/lib/screens/CapturePage.svelte:305,ui,마이크 고르기,정적,settings.record.micSheet.title
+packages/ink-ui/src/lib/screens/CapturePage.svelte:306,ui,녹화에 함께 담을 마이크 장치를 고르세요.,정적,settings.record.micSheet.desc
+packages/ink-ui/src/lib/screens/CapturePage.svelte:307,ui,켜기,정적,settings.record.micSheet.confirm
+packages/ink-ui/src/lib/screens/CapturePage.svelte:308,ui,취소,정적,common.cancel
+packages/ink-ui/src/lib/screens/CheatSheet.svelte:77,ui,단축키 한 장,정적,cheatSheet.title
+packages/ink-ui/src/lib/screens/CheatSheet.svelte:82,ui,단축키 한 장,정적,cheatSheet.title
+packages/ink-ui/src/lib/screens/CheatSheet.svelte:83,ui,아무 키나 누르면 닫혀요,정적,cheatSheet.closeHint
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:18,ui,빨강,정적,color.red
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:19,ui,노랑,정적,color.yellow
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:20,ui,초록,정적,color.green
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:21,ui,주황,정적,color.orange
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:22,ui,파랑,정적,color.blue
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:23,ui,연두,정적,color.lime
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:59,ui,판서·확대,정적,settings.tab.draw
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:64,ui,펜,정적,settings.draw.section.pen
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:66,ui,처음 색,정적,settings.draw.color
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:67,ui,처음 펜 색,정적,settings.draw.color.aria
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:73,ui,펜 색 {color} ({key}),"동적 ({color}, {key})",settings.draw.color.itemAria
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:85,ui,굵기,정적,settings.draw.width
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:85,ui,Ctrl+휠,동적 (OS별 Ctrl/⌘ + 휠 필요),settings.draw.width.sub
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:94,ui,펜 굵기,정적,settings.draw.width.aria
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:109,ui,보정,정적,settings.draw.section.assist
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:111,ui,떨림 보정,정적,settings.draw.smoothing
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:113,ui,떨림 보정,정적 (Segmented aria-label),settings.draw.smoothing
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:116,ui,끔,정적,common.off
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:117,ui,약,정적,settings.draw.smoothing.light
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:118,ui,강,정적,settings.draw.smoothing.strong
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:123,ui,거의 곧은 선은 곧게,정적,settings.draw.straighten
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:126,ui,거의 곧은 선은 곧게,정적 (Switch aria-label),settings.draw.straighten
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:130,ui,멈추면 도형으로,정적,settings.draw.shapeOnHold
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:133,ui,멈추면 도형으로,정적 (Switch aria-label),settings.draw.shapeOnHold
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:137,ui,도형 보정,정적,settings.draw.shapeApply
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:139,ui,도형 보정,정적 (Segmented aria-label),settings.draw.shapeApply
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:143,ui,물어보고 바꾸기,정적,settings.draw.shapeApply.suggest
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:144,ui,바로 바꾸기,정적,settings.draw.shapeApply.auto
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:153,ui,판서,정적,settings.draw.section.draw
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:155,ui,첫 휠 배율,정적,settings.draw.startZoom
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:157,ui,첫 휠 배율,정적 (Segmented aria-label),settings.draw.startZoom
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:170,ui,나갈 때 보관,정적,settings.draw.keep
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:170,ui,Alt+Shift+1로 다시 열기,동적 (OS별·사용자 단축키 연동 필요),settings.draw.keep.sub
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:173,ui,나갈 때 보관,정적 (Switch aria-label),settings.draw.keep
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:177,ui,Esc 키,정적,settings.draw.esc
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:179,ui,Esc 키 동작,정적,settings.draw.esc.aria
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:182,ui,한 단계씩,정적,settings.draw.esc.step
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:183,ui,바로 나가기,정적,settings.draw.esc.exit
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:188,ui,확대 중 오른쪽 클릭,정적,settings.draw.rightClickPan
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:188,ui,손 모드 · 아니면 끝내기,정적,settings.draw.rightClickPan.sub
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:191,ui,확대 중 오른쪽 클릭,정적 (Switch aria-label),settings.draw.rightClickPan
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:195,ui,칠판 미리 보기,정적,settings.draw.boardPreview
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:195,ui,{shortcut} · W 흰색 · K 검은색,동적 ({shortcut}),settings.draw.boardPreview.sub
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:196,ui,흰 칠판과 검은 칠판 미리 보기,정적,settings.draw.boardPreview.aria
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:202,ui,{label} (검정 펜은 흰색으로),동적 ({label}),settings.draw.boardPreview.substituted
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:215,ui,흰색,정적,draw.board.bgWhite
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:215,ui,검은색,정적,draw.board.bgBlack
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:225,ui,실시간 확대,정적,settings.zoom.section
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:227,ui,커서 따라가기,정적,settings.zoom.follow
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:229,ui,커서 따라가기,정적 (Segmented aria-label),settings.zoom.follow
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:232,ui,마우스 위치대로,정적,settings.zoom.follow.pointer
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:233,ui,가운데로,정적,settings.zoom.follow.smooth
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:234,ui,바로,정적,settings.zoom.follow.instant
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:239,ui,위치 지도 보이기,정적,settings.zoom.minimap
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:239,ui,모서리에 작게,정적,settings.zoom.minimap.sub
+packages/ink-ui/src/lib/screens/DrawZoomPage.svelte:242,ui,위치 지도 보이기,정적 (Switch aria-label),settings.zoom.minimap
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:59,ui,범위 캡처,정적,shortcut.slot.region
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:59,ui,알아서 찾아요,정적,firstRun.card.regionHint
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:60,ui,판서,정적,shortcut.slot.draw
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:60,ui,멈추고 쓰기,정적,firstRun.card.drawHint
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:61,ui,실시간 확대,정적,shortcut.slot.zoom
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:61,ui,움직이는 그대로,정적,firstRun.card.zoomHint
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:94,ui,첫 실행 안내,정적,firstRun.aria
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:96,ui,슉쇽,정적,app.name
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:98,ui,슉쇽이 준비됐어요,정적,firstRun.title
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:100,ui,트레이에 있다가 단축키를 누르면 나타나요,정적,firstRun.subtitle
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:107,ui,먼저 이 셋만,정적,firstRun.section.three
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:122,ui,비움,정적,common.empty
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:136,ui,업데이트 뒤 화면 기록 권한을 다시 켜야 해요,정적 (macOS 전용),firstRun.perm.screenRevoked
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:136,ui,캡처하려면 화면 기록 권한이 필요해요,정적 (macOS 전용),firstRun.perm.screenNeeded
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:139,ui,켰으면 다시 시작,정적 (macOS 전용),firstRun.perm.relaunch
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:139,ui,화면 기록 켜기,정적 (macOS 전용),firstRun.perm.openScreen
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:158,ui,끄는 법,정적,settings.shortcuts.howToDisable
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:168,ui,F1·F2·F3을 쓰는 동안 다른 앱의 도움말·이름 바꾸기·찾기가 막혀요,정적,firstRun.fkey.conflictHint
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:175,ui,F 키는 fn과 함께 눌러요 · fn 없이 쓰려면 키보드 설정에서 ‘표준 기능 키’를 켜요,정적 (macOS 전용),firstRun.fkey.macFnHint
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:181,ui,모드 안에서 언제든 단축키 한 장,정적,firstRun.cheatHint
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:189,ui,단축키 바꾸기,정적,firstRun.btn.changeShortcuts
+packages/ink-ui/src/lib/screens/FirstRunSheet.svelte:196,ui,시작하기,정적,firstRun.btn.start
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:60,ui,이 파일은 슉쇽 설정이 아니에요,정적,error.settings.invalidFile
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:73,ui,설정을 가져오지 못했어요,정적,settings.general.importFailed
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:84,ui,일반,정적,settings.tab.general
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:89,ui,모양,정적,settings.general.section.appearance
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:91,ui,테마,정적,settings.general.theme
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:93,ui,테마,정적 (Segmented aria-label),settings.general.theme
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:96,ui,시스템 따라,정적,settings.general.theme.system
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:97,ui,라이트,정적,settings.general.theme.light
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:98,ui,다크,정적,settings.general.theme.dark
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:103,ui,언어,정적,settings.general.lang
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:105,ui,언어,정적 (Segmented aria-label),settings.general.lang
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:108,ui,한국어,정적 (고유 언어명),settings.general.lang.ko
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:109,ui,English,정적 (고유 언어명),settings.general.lang.en
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:118,ui,시작,정적,settings.general.section.startup
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:120,ui,로그인하면 실행,정적,settings.general.autostart
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:120,ui,트레이에만 조용히,정적,settings.general.autostart.sub
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:123,ui,로그인하면 실행,정적 (Switch aria-label),settings.general.autostart
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:127,ui,첫 실행 안내,정적,firstRun.aria
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:133,ui,다시 보기,정적,settings.general.firstRun.reopen
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:141,ui,창 항상 위,정적 (Windows 전용),settings.general.section.topmost
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:143,ui,고정한 창 테두리,정적 (Windows 전용),settings.topmost.border
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:145,ui,고정한 창 테두리 두께,정적 (Windows 전용),settings.topmost.border.aria
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:149,ui,끔,정적,common.off
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:157,ui,고정할 때 소리,정적 (Windows 전용),settings.topmost.sound
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:160,ui,고정할 때 소리,"정적 (Switch aria-label, Windows 전용)",settings.topmost.sound
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:164,ui,고정한 창,정적 (Windows 전용),settings.general.topmost.pinned
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:164,ui,{n}개,"동적 ({n}개, 복수형)",settings.meta.countItems
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:171,ui,모두 풀기,정적 (Windows 전용),settings.general.topmost.releaseAll
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:179,ui,데이터,정적,settings.general.section.data
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:181,ui,설정 위치,정적,settings.general.data.location
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:187,ui,열기,정적,common.open
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:190,ui,설정 옮기기,정적,settings.general.data.transfer
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:197,ui,내보내기,정적,settings.general.data.export
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:204,ui,가져오기,정적,settings.general.data.import
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:208,ui,로그,정적,settings.general.data.log
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:208,ui,7일 보관 · 창 제목은 남기지 않아요,정적,settings.general.data.log.sub
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:214,ui,폴더 열기,정적,settings.general.data.openFolder
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:218,ui,모두 처음으로,정적,settings.general.reset
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:219,ui,확인을 한 번 더 받아요,정적,settings.general.reset.sub
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:232,ui,{n}개 항목이 바뀌어요,"동적 ({n}개, 복수형)",settings.general.importSheet.titleChanges
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:232,ui,바뀌는 항목이 없어요,정적,settings.general.importSheet.titleEmpty
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:233,ui,지금 설정과 다른 항목만 아래에 모았어요.,정적,settings.general.importSheet.descChanges
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:233,ui,지금 설정과 내용이 같아요.,정적,settings.general.importSheet.descEmpty
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:234,ui,가져오기,정적,settings.general.data.import
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:235,ui,취소,정적,common.cancel
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:250,ui,비움,정적,common.empty
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:256,ui,비움,정적,common.empty
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:279,ui,설정을 모두 처음으로 되돌릴까요?,정적,settings.general.resetSheet.title
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:280,ui,바꾼 단축키와 설정이 모두 기본값으로 돌아가요.,정적,settings.general.resetSheet.desc
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:281,ui,되돌리기,정적,common.reset
+packages/ink-ui/src/lib/screens/GeneralPage.svelte:282,ui,취소,정적,common.cancel
+packages/ink-ui/src/lib/screens/PinView.svelte:48,ui,투명도 {opacity}%,동적 ({opacity}%),pin.opacity
+packages/ink-ui/src/lib/screens/PinView.svelte:104,ui,화면에 고정한 캡처,정적,pin.aria
+packages/ink-ui/src/lib/screens/RecordFrame.svelte:14,ui,녹화 범위,정적,record.frame.label
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:39,ui,단축키,정적 (이미 i18n 연결됨),settings.tab.shortcuts
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:40,ui,캡처·녹화,정적 (이미 i18n 연결됨),settings.tab.capture
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:41,ui,판서·확대,정적 (이미 i18n 연결됨),settings.tab.draw
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:42,ui,일반,정적 (이미 i18n 연결됨),settings.tab.general
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:133,ui,슉쇽 설정,정적,settings.window.aria
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:134,ui,설정 묶음,정적,settings.window.navAria
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:140,ui,슉쇽,정적,app.name
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:175,ui,정보,정적,settings.tab.info
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:182,ui,닫기,정적,common.close
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:194,ui,다른 버전이 만든 설정이라 바꿔도 저장하지 않아요,정적,settings.banner.readonly
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:201,ui,닫기,정적,common.close
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:219,ui,정보,정적,settings.tab.info
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:223,ui,앱,정적,settings.info.section.app
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:225,ui,버전,정적,settings.info.version
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:226,ui,만든 이,정적,settings.info.maker
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:226,ui,찰떡쌤,정적,app.maker.name
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:227,ui,라이선스,정적,settings.info.license
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:228,ui,오픈소스 고지,정적,settings.info.oss
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:232,ui,연결,정적,settings.info.section.network
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:232,ui,2차,정적,settings.info.tag.v2
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:234,ui,통계·자동 업데이트,정적,settings.info.telemetry
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:234,ui,1차 버전에서는 꺼져 있어요,정적,settings.info.telemetry.sub
+packages/ink-ui/src/lib/screens/SettingsWindow.svelte:238,ui,슉쇽 · v{version},동적 ({version}),settings.info.creditApp
+packages/ink-ui/src/lib/i18n/ko.json:6,ui,사용 설명서,정적 (선반영 카탈로그 키),settings.tab.help
+packages/ink-ui/src/lib/screens/ShortcutsPage.svelte:92,ui,이 키는 등록할 수 없어요,정적,error.hotkey.cannotRegister
+packages/ink-ui/src/lib/screens/ShortcutsPage.svelte:137,ui,단축키,정적,settings.tab.shortcuts
+packages/ink-ui/src/lib/screens/ShortcutsPage.svelte:139,ui,단축키 범위,정적,settings.shortcuts.scopeAria
+packages/ink-ui/src/lib/screens/ShortcutsPage.svelte:141,ui,어디서나,정적,settings.shortcuts.scopeGlobal
+packages/ink-ui/src/lib/screens/ShortcutsPage.svelte:145,ui,화면 안,정적,settings.shortcuts.scopeInMode
+packages/ink-ui/src/lib/screens/ShortcutsPage.svelte:158,ui,끄는 법,정적,settings.shortcuts.howToDisable
+packages/ink-ui/src/lib/screens/ShortcutsPage.svelte:158,ui,키 바꾸기,정적,settings.shortcuts.changeKey
+packages/ink-ui/src/lib/screens/ShortcutsPage.svelte:160,ui,키 바꾸기,정적,settings.shortcuts.changeKey
+packages/ink-ui/src/lib/screens/ShortcutsPage.svelte:171,ui,기본값,정적,common.default
+packages/ink-ui/src/lib/screens/ShortcutsPage.svelte:205,ui,입력 중,정적,common.recording
+packages/ink-ui/src/lib/screens/ShortcutsPage.svelte:205,ui,비움,정적,common.empty
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:59,ui,슉쇽 메뉴,정적,tray.menu.aria
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:62,ui,슉쇽,정적,app.name
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:66,ui,녹화 중 {elapsed},동적 ({elapsed}),tray.status.recording
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:71,ui,단축키 꺼짐,정적,tray.status.paused
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:81,ui,키 {n}개 겹침,"동적 ({n}개, 복수형)",tray.status.conflicts
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:86,ui,준비됨,정적,tray.status.ready
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:91,ui,캡처·녹화,정적,shortcut.group.capture
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:94,ui,범위 캡처,정적,shortcut.slot.region
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:102,ui,창 캡처,정적,shortcut.slot.window
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:110,ui,녹화 중지,정적,tray.item.stopRecord
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:110,ui,화면 녹화,정적,tray.item.record
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:117,ui,화면 도구,정적,shortcut.group.tools
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:120,ui,판서,정적,shortcut.slot.draw
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:128,ui,실시간 확대,정적,shortcut.slot.zoom
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:136,ui,칠판,정적,shortcut.slot.board
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:146,ui,창 항상 위,정적 (Windows 전용),shortcut.slot.topmost
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:164,ui,모두 풀기,정적 (Windows 전용),settings.general.topmost.releaseAll
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:172,ui,고정한 캡처,정적,tray.item.pins
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:177,ui,모두 닫기,정적,tray.pinMenu.closeAll
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:181,ui,빠른 동작,정적,shortcut.group.quick
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:184,ui,직전 판서 열기,정적,shortcut.slot.restore
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:192,ui,저장 폴더 열기,정적,tray.item.openFolder
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:198,ui,단축키,정적,settings.tab.shortcuts
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:202,ui,단축키 켜기·끄기,정적,shortcut.slot.pause
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:208,ui,설정…,정적,tray.item.settings
+packages/ink-ui/src/lib/screens/TrayPopoverScreen.svelte:215,ui,끝내기,정적,tray.item.quit
+packages/ink-client/src/index.js:330,ui,캡처·녹화,정적,shortcut.group.capture
+packages/ink-client/src/index.js:331,ui,화면 도구,정적,shortcut.group.tools
+packages/ink-client/src/index.js:332,ui,빠른 동작,정적,shortcut.group.quick
+packages/ink-client/src/index.js:333,ui,캡처 화면 안,정적,shortcut.group.captureMode
+packages/ink-client/src/index.js:334,ui,판서 화면 안,정적,shortcut.group.drawMode
+packages/ink-client/src/index.js:335,ui,실시간 확대 안,정적,shortcut.group.zoomMode
+packages/ink-client/src/fake.js:12,ui,수업_{yyyy}{MM}{dd}_{n},"동적 ({yyyy},{MM},{dd},{n})",fake.defaultTemplate
+packages/ink-client/src/fake.js:22,ui,범위 캡처,정적,shortcut.slot.region
+packages/ink-client/src/fake.js:22,ui,휠,정적,island.hint.key.wheel
+packages/ink-client/src/fake.js:22,ui,넓히기·좁히기,정적,island.hint.expandShrink
+packages/ink-client/src/fake.js:22,ui,창,정적,recog.node.window
+packages/ink-client/src/fake.js:22,ui,복사,정적,common.copy
+packages/ink-client/src/fake.js:22,ui,취소,정적,common.cancel
+packages/ink-client/src/fake.js:23,ui,창 캡처,정적,shortcut.slot.window
+packages/ink-client/src/fake.js:23,ui,클릭,정적,island.hint.key.click
+packages/ink-client/src/fake.js:23,ui,찍기,정적,island.hint.shoot
+packages/ink-client/src/fake.js:23,ui,활성 창,정적,island.hint.activeWindow
+packages/ink-client/src/fake.js:24,ui,녹화 범위,정적,island.record.rangeTitle
+packages/ink-client/src/fake.js:24,ui,드래그,정적,island.hint.key.drag
+packages/ink-client/src/fake.js:24,ui,범위,정적,island.hint.range
+packages/ink-client/src/fake.js:24,ui,모니터,정적,island.hint.monitor
+packages/ink-client/src/fake.js:28,ui,펜,정적,draw.tool.pen
+packages/ink-client/src/fake.js:28,ui,형광펜,정적,draw.tool.marker
+packages/ink-client/src/fake.js:28,ui,글자,정적,draw.tool.text
+packages/ink-client/src/fake.js:28,ui,고르기,정적,draw.tool.select
+packages/ink-client/src/fake.js:28,ui,지우개,정적,draw.tool.eraser
+packages/ink-client/src/fake.js:28,ui,손,정적,draw.tool.pan
+packages/ink-client/src/fake.js:29,ui,이전 판서를 불러왔어요,정적,draw.notice.restored
+packages/ink-client/src/fake.js:29,ui,배율이 바뀌어 크기를 맞췄어요,정적,draw.notice.rescaled
+packages/ink-client/src/fake.js:29,ui,다른 모니터라 불러올 수 없어요,정적,draw.notice.differentMonitor
+packages/ink-client/src/fake.js:29,ui,불러올 판서가 없어요,정적,island.draw.noKept
+packages/ink-client/src/fake.js:96,ui,‘{label}’과 겹쳐요,"동적 ({label}, 조사)",fake.conflict.self
+packages/ink-client/src/fake.js:97,ui,Snipaste가 먼저 쓰고 있어요,정적 (예시 앱),fake.conflict.snipaste
+packages/ink-client/src/fake.js:98,ui,글자 하나는 전역 키로 쓸 수 없어요,정적,shortcut.rule.plainKeyGlobal
+packages/ink-client/src/fake.js:111,ui,슉쇽,정적 (내부 owner 판별 비교값),app.name
+packages/ink-client/src/fake.js:139,ui,칠판 · {bg},동적 ({bg}),island.board.title
+packages/ink-client/src/fake.js:140,ui,바탕,정적,island.hint.background
+packages/ink-client/src/fake.js:140,ui,보관,정적,island.hint.keep
+packages/ink-client/src/fake.js:140,ui,단축키,정적,settings.tab.shortcuts
+packages/ink-client/src/fake.js:144,ui,바꾸기,정적,island.draw.acceptShape
+packages/ink-client/src/fake.js:147,ui,{key} 이전 판서,동적 ({key}),island.draw.restoreHint
+packages/ink-client/src/fake.js:149,ui,판서 · {tool},동적 ({tool}),island.draw.title
+packages/ink-client/src/fake.js:152,ui,보관,정적,island.hint.keep
+packages/ink-client/src/fake.js:152,ui,단축키,정적,settings.tab.shortcuts
+packages/ink-client/src/fake.js:155,ui,판서를 보관했어요 · {key},동적 ({key}),island.draw.keptWithKey
+packages/ink-client/src/fake.js:155,ui,판서를 보관했어요,정적,island.draw.kept
+packages/ink-client/src/fake.js:177,ui,모니터 1,동적 (모니터 {n}),zoom.monitor
+packages/ink-client/src/fake.js:182,ui,실시간 확대,정적,island.zoom.title
+packages/ink-client/src/fake.js:182,ui,움직이는 화면 그대로,정적,island.zoom.detail
+packages/ink-client/src/fake.js:183,ui,배율,정적,island.hint.zoomScale
+packages/ink-client/src/fake.js:183,ui,멈추고 쓰기,정적,island.hint.freezeAndDraw
+packages/ink-client/src/fake.js:183,ui,끝,정적,island.hint.exit
+packages/ink-client/src/fake.js:226,ui,판서로,정적,island.capture.toDraw
+packages/ink-client/src/fake.js:231,ui,모르는 설정: {path},동적 ({path}),error.settings.unknown
+packages/ink-client/src/fake.js:249,ui,{combo}로 바꿨어요,"동적 ({combo}, 조사)",island.settings.shortcutChanged
+packages/ink-client/src/fake.js:249,ui,비웠어요 · 트레이 메뉴로 시작할 수 있어요,정적,island.settings.shortcutCleared
+packages/ink-client/src/fake.js:249,ui,되돌리기,정적,common.undo
+packages/ink-client/src/fake.js:276,ui,설정을 가져왔어요,정적,island.settings.imported
+packages/ink-client/src/fake.js:284,ui,처음 상태로 되돌렸어요,정적,island.settings.reset
+packages/ink-client/src/fake.js:294,ui,단축키를 다시 켰어요,정적,island.hotkeys.on
+packages/ink-client/src/fake.js:294,ui,단축키를 잠시 껐어요,정적,island.hotkeys.off
+packages/ink-client/src/fake.js:302,ui,화면,정적,recog.node.monitor
+packages/ink-client/src/fake.js:303,ui,창,정적,recog.node.window
+packages/ink-client/src/fake.js:304,ui,표,정적,recog.control.table
+packages/ink-client/src/fake.js:305,ui,2행,정적 (예시 경로),fake.capture.sampleRow
+packages/ink-client/src/fake.js:356,ui,저장했어요,정적,island.capture.saved
+packages/ink-client/src/fake.js:356,ui,폴더 열기,정적,settings.general.data.openFolder
+packages/ink-client/src/fake.js:366,ui,복사했어요,정적,island.capture.copied
+packages/ink-client/src/fake.js:366,ui,한글·PPT에 Ctrl+V,동적 (OS별 붙여넣기 키·문화권 표현),island.capture.pasteHint
+packages/ink-client/src/fake.js:366,ui,저장,정적,common.save
+packages/ink-client/src/fake.js:389,ui,복사했어요,정적,island.capture.copied
+packages/ink-client/src/fake.js:390,ui,저장했어요,정적,island.capture.saved
+packages/ink-client/src/fake.js:472,ui,복사했어요,정적,island.capture.copied
+packages/ink-client/src/fake.js:472,ui,한글·PPT에 Ctrl+V,동적 (OS별 붙여넣기 키·문화권 표현),island.capture.pasteHint
+packages/ink-client/src/fake.js:476,ui,수업_20260304_{n}.png,"동적 ({n}, 예시 파일명)",fake.sampleFilename
+packages/ink-client/src/fake.js:477,ui,저장했어요,정적,island.capture.saved
+packages/ink-client/src/fake.js:486,ui,되돌리기,정적,common.undo
+packages/ink-client/src/fake.js:510,ui,판서로 넘길 캡처가 없어요,정적,island.draw.noCapture
+packages/ink-client/src/fake.js:580,ui,D:\수업자료\캡처,정적 (미리보기 예시 경로),fake.sampleFolder
+packages/ink-client/src/fake.js:582,ui,설정을 내보냈어요,정적,island.settings.exported
+packages/ink-client/src/fake.js:583,ui,지울 기록이 없어요,정적,island.history.empty
+packages/ink-client/src/fake.js:585,ui,저장했어요,정적,island.capture.saved
+packages/ink-client/src/fake.js:590,ui,{hex} 복사했어요,동적 ({hex}),island.capture.hexCopied
+packages/ink-client/src/fake.js:593,ui,미리보기: {action},동적 ({action}),fake.previewAction
+crates/ink-app/src/capture.rs:405,rust-island,‘{exe}’는 창 단위로만 찾을게요,"동적 ({exe}, 조사)",island.capture.excludedAuto
+crates/ink-app/src/capture.rs:508,rust-island,판서로,정적,island.capture.toDraw
+crates/ink-app/src/capture.rs:521,rust-island,클립보드를 쓸 수 없어요,정적,island.capture.clipboardError
+crates/ink-app/src/capture.rs:529,rust-island,복사하고 저장했어요,정적,island.capture.copiedAndSaved
+crates/ink-app/src/capture.rs:537,rust-island,복사했어요,정적,island.capture.copied
+crates/ink-app/src/capture.rs:537,rust-island,저장,정적,common.save
+crates/ink-app/src/capture.rs:539,rust-island,한글·PPT에 {paste},"동적 ({paste}, 문화권 표현)",island.capture.pasteHint
+crates/ink-app/src/capture.rs:542,rust-island,{hex} 복사,동적 ({hex}),island.capture.copyHexChip
+crates/ink-app/src/capture.rs:633,rust-island,화면에 고정하지 못했어요,정적,island.capture.pinError
+crates/ink-app/src/capture.rs:664,rust-island,복사했어요,정적,island.capture.copied
+crates/ink-app/src/capture.rs:670,rust-island,클립보드를 쓸 수 없어요,정적,island.capture.clipboardError
+crates/ink-app/src/capture.rs:691,rust-island,저장할 캡처가 없어요,정적,island.capture.nothingToSave
+crates/ink-app/src/capture.rs:716,rust-island,사진 폴더에 저장했어요,정적,island.capture.savedPictures
+crates/ink-app/src/capture.rs:716,rust-island,저장했어요,정적,island.capture.saved
+crates/ink-app/src/capture.rs:718,rust-island,폴더 열기,정적,settings.general.data.openFolder
+crates/ink-app/src/capture.rs:724,rust-island,저장하지 못했어요,정적,island.capture.saveError
+crates/ink-app/src/capture.rs:733,rust-island,{hex} 복사했어요,동적 ({hex}),island.capture.hexCopied
+crates/ink-app/src/capture.rs:734,rust-island,클립보드를 쓸 수 없어요,정적,island.capture.clipboardError
+crates/ink-app/src/draw.rs:254,rust-island,형광펜,정적,draw.tool.marker
+crates/ink-app/src/draw.rs:255,rust-island,글자,정적,draw.tool.text
+crates/ink-app/src/draw.rs:256,rust-island,고르기,정적,draw.tool.select
+crates/ink-app/src/draw.rs:257,rust-island,지우개,정적,draw.tool.eraser
+crates/ink-app/src/draw.rs:258,rust-island,손,정적,draw.tool.pan
+crates/ink-app/src/draw.rs:259,rust-island,펜,정적,draw.tool.pen
+crates/ink-app/src/draw.rs:378,rust-island,검은색,정적,draw.board.bgBlack
+crates/ink-app/src/draw.rs:378,rust-island,흰색,정적,draw.board.bgWhite
+crates/ink-app/src/draw.rs:379,rust-island,칠판 · {bg},동적 ({bg}),island.board.title
+crates/ink-app/src/draw.rs:379,rust-island,바탕,정적,island.hint.background
+crates/ink-app/src/draw.rs:379,rust-island,보관,정적,island.hint.keep
+crates/ink-app/src/draw.rs:379,rust-island,단축키,정적,settings.tab.shortcuts
+crates/ink-app/src/draw.rs:385,rust-island,판서 · {tool},동적 ({tool}),island.draw.title
+crates/ink-app/src/draw.rs:403,rust-island,바꾸기,정적,island.draw.acceptShape
+crates/ink-app/src/draw.rs:600,rust-island,판서로 넘길 캡처가 없어요,정적,island.draw.noCapture
+crates/ink-app/src/draw.rs:636,rust-island,보안 화면에서는 쓸 수 없어요,정적,island.security
+crates/ink-app/src/draw.rs:654,rust-island,화면을 가져오지 못했어요,정적,island.screenCaptureError
+crates/ink-app/src/draw.rs:680,rust-island,화면을 가져오지 못했어요,정적,island.screenCaptureError
+crates/ink-app/src/draw.rs:691,rust-island,화면을 가져오지 못했어요,정적,island.screenCaptureError
+crates/ink-app/src/draw.rs:722,rust-island,판서 화면을 띄우지 못했어요,정적,island.draw.openError
+crates/ink-app/src/draw.rs:782,rust-island,화면 구성이 바뀌어 판서를 닫았어요,정적,island.draw.displayChanged
+crates/ink-app/src/draw.rs:831,rust-island,판서를 보관했어요 · {key},동적 ({key}),island.draw.keptWithKey
+crates/ink-app/src/draw.rs:832,rust-island,판서를 보관했어요,정적,island.draw.kept
+crates/ink-app/src/draw.rs:884,rust-island,불러올 판서가 없어요,정적,island.draw.noKept
+crates/ink-app/src/draw.rs:916,rust-island,복사했어요,정적,island.capture.copied
+crates/ink-app/src/draw.rs:916,rust-island,한글·PPT에 {paste},"동적 ({paste}, 문화권 표현)",island.capture.pasteHint
+crates/ink-app/src/draw.rs:924,rust-island,클립보드를 쓸 수 없어요,정적,island.capture.clipboardError
+crates/ink-app/src/draw.rs:949,rust-island,{key} 이전 판서,동적 ({key}),island.draw.restoreHint
+crates/ink-app/src/draw.rs:969,rust-island,되돌리기,정적,common.undo
+crates/ink-app/src/live_zoom.rs:180,rust-island,보안 화면에서는 쓸 수 없어요,정적,island.security
+crates/ink-app/src/live_zoom.rs:188,rust-island,화면을 찾지 못했어요,정적,island.zoom.noScreen
+crates/ink-app/src/live_zoom.rs:199,rust-island,이 컴퓨터에서는 실시간 확대를 아직 쓸 수 없어요,정적,island.zoom.unsupported
+crates/ink-app/src/live_zoom.rs:199,rust-island,실시간 확대를 시작하지 못했어요,정적,island.zoom.startError
+crates/ink-app/src/live_zoom.rs:309,rust-island,화면 구성이 바뀌어 확대를 끝냈어요,정적,island.zoom.displayChanged
+crates/ink-app/src/live_zoom.rs:338,rust-island,실시간 확대를 끝냈어요,정적,island.zoom.ended
+crates/ink-app/src/live_zoom.rs:338,rust-island,확대 화면이 멈췄어요,정적,island.zoom.stalledDetail
+crates/ink-app/src/live_zoom.rs:348,rust-island,휠,정적,island.hint.key.wheel
+crates/ink-app/src/live_zoom.rs:348,rust-island,배율,정적,island.hint.zoomScale
+crates/ink-app/src/live_zoom.rs:350,rust-island,멈추고 쓰기,정적,island.hint.freezeAndDraw
+crates/ink-app/src/live_zoom.rs:353,rust-island,끝,정적,island.hint.exit
+crates/ink-app/src/live_zoom.rs:356,rust-island,실시간 확대,정적,island.zoom.title
+crates/ink-app/src/live_zoom.rs:356,rust-island,움직이는 화면 그대로,정적,island.zoom.detail
+crates/ink-app/src/quick.rs:41,rust-island,보안 화면에서는 쓸 수 없어요,정적,island.security
+crates/ink-app/src/quick.rs:54,rust-island,지난 범위가 없어요,정적,island.capture.noRecent
+crates/ink-app/src/quick.rs:69,rust-island,화면을 가져오지 못했어요,정적,island.screenCaptureError
+crates/ink-app/src/quick.rs:86,rust-island,화면을 가져오지 못했어요,정적,island.screenCaptureError
+crates/ink-app/src/quick.rs:110,rust-island,지연 캡처를 취소했어요,정적,island.delay.cancelled
+crates/ink-app/src/quick.rs:149,rust-island,초 뒤 범위 캡처,동적 (countdown 배지와 어순 결합),island.delay.countdown
+crates/ink-app/src/quick.rs:154,rust-island,취소,정적,common.cancel
+crates/ink-app/src/record.rs:193,rust-island,녹화할 범위를 찾지 못했어요,정적,island.record.noArea
+crates/ink-app/src/record.rs:208,rust-island,이 컴퓨터에서는 아직 녹화할 수 없어요,정적,island.record.unsupported
+crates/ink-app/src/record.rs:228,rust-island,이 컴퓨터에서는 아직 녹화할 수 없어요,정적,island.record.unsupported
+crates/ink-app/src/record.rs:228,rust-island,녹화를 시작할 수 없어요(코덱),정적,island.record.codecError
+crates/ink-app/src/record.rs:252,rust-island,판서는 영상에 함께 · 이 알약은 안 찍혀요,정적,island.record.firstHint
+crates/ink-app/src/record.rs:264,rust-island,마이크 녹음은 아직 준비 중이에요,정적,island.record.micPending
+crates/ink-app/src/record.rs:264,rust-island,영상만 녹화해요,정적,island.record.videoOnly
+crates/ink-app/src/record.rs:268,rust-island,남은 공간이 {m}분 정도예요,"동적 ({m}분, 복수형)",island.record.lowDisk
+crates/ink-app/src/record.rs:278,rust-island,녹화 중,정적,island.record.active
+crates/ink-app/src/record.rs:278,rust-island,중지,정적,island.record.stopBtn
+crates/ink-app/src/record.rs:338,rust-island,{prefix}녹화를 마무리하지 못했어요,동적 ({prefix} 접두 문장 결합),island.record.finalizeError
+crates/ink-app/src/record.rs:338,rust-island,다음에 켤 때 다시 저장해 볼게요,정적,island.record.retryNextLaunch
+crates/ink-app/src/record.rs:349,rust-island,사진 폴더에 ,동적 (접두 조각 결합),island.record.savedPictures
+crates/ink-app/src/record.rs:350,rust-island,{prefix}{place}녹화를 저장했어요,"동적 ({prefix}, {place} 어순 결합)",island.record.saved
+crates/ink-app/src/record.rs:350,rust-island,폴더 열기,정적,settings.general.data.openFolder
+crates/ink-app/src/record.rs:357,rust-island,{prefix}녹화를 옮기지 못했어요,동적 ({prefix} 접두 문장 결합),island.record.moveError
+crates/ink-app/src/record.rs:371,rust-island,녹화를 버렸어요,정적,island.record.discarded
+crates/ink-app/src/record.rs:405,rust-island,화면이 잠겨,동적 (접두 사유 조각),island.record.reason.lock
+crates/ink-app/src/record.rs:406,rust-island,절전에 들어가,동적 (접두 사유 조각),island.record.reason.suspend
+crates/ink-app/src/record.rs:411,rust-island,화면 구성이 바뀌어,동적 (접두 사유 조각),island.record.reason.display
+crates/ink-app/src/record.rs:442,rust-island,녹화를 시작할 수 없어요(코덱),정적,island.record.codecError
+crates/ink-app/src/record.rs:445,rust-island,창이 닫혀,동적 (접두 사유 조각),island.record.reason.windowClosed
+crates/ink-app/src/record.rs:445,rust-island,녹화가 멈춰,동적 (접두 사유 조각),island.record.reason.stalled
+crates/ink-app/src/record.rs:464,rust-island,끝나지 않은 녹화가 있어요,동적 (단수 n=1),island.record.unfinished.one
+crates/ink-app/src/record.rs:464,rust-island,끝나지 않은 녹화가 {n}개 있어요,"동적 ({n}개, 복수형)",island.record.unfinished.other
+crates/ink-app/src/record.rs:465,rust-island,저장 시도,정적,island.record.recoverSaveBtn
+crates/ink-app/src/record.rs:466,rust-island,지우기,정적,common.delete
+crates/ink-app/src/record.rs:468,rust-island,재생되지 않을 수도 있어요,정적,island.record.mayNotPlay
+crates/ink-app/src/record.rs:499,rust-island,녹화를 옮기지 못했어요,정적,island.record.moveError
+crates/ink-app/src/record.rs:499,rust-island,녹화를 지우지 못했어요,정적,island.record.deleteError
+crates/ink-app/src/record.rs:501,rust-island,녹화를 저장했어요,동적 (단수 done=1),island.record.recovered.one
+crates/ink-app/src/record.rs:501,rust-island,녹화 {n}개를 저장했어요,"동적 ({n}개, 복수형)",island.record.recovered.other
+crates/ink-app/src/record.rs:502,rust-island,폴더 열기,정적,settings.general.data.openFolder
+crates/ink-app/src/record.rs:504,rust-island,{n}개는 옮기지 못했어요,"동적 ({n}개, 복수형)",island.record.movePartialFailed
+crates/ink-app/src/record.rs:508,rust-island,끝나지 않은 녹화를 지웠어요,정적,island.record.unfinishedDeleted
+crates/ink-app/src/service.rs:138,rust-island,범위 캡처,정적,shortcut.slot.region
+crates/ink-app/src/service.rs:138,rust-island,휠,정적,island.hint.key.wheel
+crates/ink-app/src/service.rs:138,rust-island,넓히기·좁히기,정적,island.hint.expandShrink
+crates/ink-app/src/service.rs:138,rust-island,창,정적,recog.node.window
+crates/ink-app/src/service.rs:138,rust-island,복사,정적,common.copy
+crates/ink-app/src/service.rs:138,rust-island,취소,정적,common.cancel
+crates/ink-app/src/service.rs:139,rust-island,창 캡처,정적,shortcut.slot.window
+crates/ink-app/src/service.rs:139,rust-island,클릭,정적,island.hint.key.click
+crates/ink-app/src/service.rs:139,rust-island,찍기,정적,island.hint.shoot
+crates/ink-app/src/service.rs:139,rust-island,활성 창,정적,island.hint.activeWindow
+crates/ink-app/src/service.rs:140,rust-island,녹화 범위,정적,island.record.rangeTitle
+crates/ink-app/src/service.rs:140,rust-island,드래그,정적,island.hint.key.drag
+crates/ink-app/src/service.rs:140,rust-island,범위,정적,island.hint.range
+crates/ink-app/src/service.rs:140,rust-island,모니터,정적,island.hint.monitor
+crates/ink-app/src/service.rs:376,rust-island,업데이트 뒤 화면 기록 권한을 다시 켜야 해요,정적 (macOS 전용),firstRun.perm.screenRevoked
+crates/ink-app/src/service.rs:376,rust-island,화면 기록 켜기,정적 (macOS 전용),firstRun.perm.openScreen
+crates/ink-app/src/service.rs:383,rust-island,화면 기록 권한이 필요해요,정적 (macOS 전용),island.perm.screenNeeded
+crates/ink-app/src/service.rs:383,rust-island,누르면 켜는 칸을 바로 열어 드려요,정적 (macOS 전용),island.perm.screenDetail
+crates/ink-app/src/service.rs:560,rust-island,저장하지 못했어요,정적,island.capture.saveError
+crates/ink-app/src/service.rs:564,rust-island,비웠어요 · 트레이 메뉴로 시작할 수 있어요,정적,island.settings.shortcutCleared
+crates/ink-app/src/service.rs:564,rust-island,{combo}로 바꿨어요,"동적 ({combo}, 조사)",island.settings.shortcutChanged
+crates/ink-app/src/service.rs:619,rust-island,저장하지 못했어요,정적,island.capture.saveError
+crates/ink-app/src/service.rs:624,rust-island,기본값으로 되돌렸어요,정적,island.settings.shortcutsRestored
+crates/ink-app/src/service.rs:624,rust-island,기본값으로 되돌렸어요 · {n}개는 겹쳐서 그대로예요,"동적 ({n}개, 복수형)",island.settings.shortcutsRestoredPartial
+crates/ink-app/src/service.rs:660,rust-island,단축키를 다시 켰어요,정적 (이미 i18n 연결됨),island.hotkeys.on
+crates/ink-app/src/service.rs:660,rust-island,단축키를 켰어요 · {n}개는 다른 앱이 쓰고 있어요,"동적 ({n}개, 복수형, 이미 i18n 연결됨)",island.hotkeys.onSome
+crates/ink-app/src/service.rs:671,rust-island,단축키를 잠시 껐어요,정적 (이미 i18n 연결됨),island.hotkeys.off
+crates/ink-app/src/service.rs:815,rust-island,보안 화면에서는 쓸 수 없어요,정적,island.security
+crates/ink-app/src/service.rs:853,rust-island,화면을 가져오지 못했어요,정적,island.screenCaptureError
+crates/ink-app/src/service.rs:895,rust-island,캡처 화면을 띄우지 못했어요,정적,island.capture.openError
+crates/ink-app/src/service.rs:918,rust-island,요소까지 잡기 · 손쉬운 사용 켜기,정적 (macOS 전용),island.perm.axChip
+crates/ink-app/src/service.rs:993,rust-island,화면 구성이 바뀌어 캡처를 닫았어요,정적,island.capture.displayChanged
+crates/ink-app/src/service.rs:1020,rust-island,저장하지 못했어요,정적,island.capture.saveError
+crates/ink-app/src/service.rs:1118,rust-island,저장하지 못했어요,정적,island.capture.saveError
+crates/ink-app/src/service.rs:1124,rust-island,설정을 가져왔어요,정적,island.settings.imported
+crates/ink-app/src/service.rs:1124,rust-island,설정을 가져왔어요 · 단축키 {n}개는 겹쳐요,"동적 ({n}개, 복수형)",island.settings.importedWithConflicts
+crates/ink-app/src/service.rs:1139,rust-island,저장하지 못했어요,정적,island.capture.saveError
+crates/ink-app/src/service.rs:1145,rust-island,처음 상태로 되돌렸어요,정적,island.settings.reset
+crates/ink-app/src/state.rs:289,rust-island,되돌리기,정적,common.undo
+crates/ink-app/src/window_capture.rs:66,rust-island,창,정적,recog.node.window
+crates/ink-app/src/window_capture.rs:73,rust-island,찍을 창이 없어요,정적,island.window.none
+crates/ink-app/src/window_capture.rs:85,rust-island,활성 창이 없어요,정적,island.window.noActive
+crates/ink-app/src/window_capture.rs:93,rust-island,활성 창이 없어요,정적,island.window.noActive
+crates/ink-app/src/window_capture.rs:111,rust-island,이 창은 가져올 수 없어요,정적,island.window.protected
+crates/ink-app/src/window_capture.rs:111,rust-island,보호된 화면이라 복사하지 않았어요,정적,island.window.protectedDetail
+crates/ink-app/src/window_capture.rs:178,rust-island,클립보드를 쓸 수 없어요,정적,island.capture.clipboardError
+crates/ink-app/src/window_capture.rs:186,rust-island,복사하고 저장했어요,정적,island.capture.copiedAndSaved
+crates/ink-app/src/window_capture.rs:194,rust-island,창을 복사했어요,정적,island.window.copied
+crates/ink-app/src/window_capture.rs:194,rust-island,저장,정적,common.save
+crates/ink-app/src/window_capture.rs:198,rust-island,한글·PPT에 {paste},"동적 ({paste}, 문화권 표현)",island.capture.pasteHint
+crates/ink-app/src/window_capture.rs:198,rust-island,가려진 부분까지 · {paste},동적 ({paste}),island.window.occludedPasteHint
+crates/ink-domain/src/recog.rs:103,rust-island,단추,정적,recog.control.button
+crates/ink-domain/src/recog.rs:104,rust-island,입력 칸,정적,recog.control.edit
+crates/ink-domain/src/recog.rs:105,rust-island,글자,정적,recog.control.text
+crates/ink-domain/src/recog.rs:106,rust-island,그림,정적,recog.control.image
+crates/ink-domain/src/recog.rs:107,rust-island,목록,정적,recog.control.list
+crates/ink-domain/src/recog.rs:108,rust-island,항목,정적,recog.control.listItem
+crates/ink-domain/src/recog.rs:109,rust-island,표,정적,recog.control.table
+crates/ink-domain/src/recog.rs:110,rust-island,행,정적,recog.control.dataItem
+crates/ink-domain/src/recog.rs:111,rust-island,머리,정적,recog.control.header
+crates/ink-domain/src/recog.rs:112,rust-island,탭,정적,recog.control.tabItem
+crates/ink-domain/src/recog.rs:113,rust-island,탭 묶음,정적,recog.control.tab
+crates/ink-domain/src/recog.rs:114,rust-island,메뉴,정적,recog.control.menu
+crates/ink-domain/src/recog.rs:115,rust-island,메뉴 항목,정적,recog.control.menuItem
+crates/ink-domain/src/recog.rs:116,rust-island,도구 모음,정적,recog.control.toolBar
+crates/ink-domain/src/recog.rs:117,rust-island,문서,정적,recog.control.document
+crates/ink-domain/src/recog.rs:118,rust-island,링크,정적,recog.control.hyperlink
+crates/ink-domain/src/recog.rs:119,rust-island,확인란,정적,recog.control.checkBox
+crates/ink-domain/src/recog.rs:120,rust-island,고르기 칸,정적,recog.control.comboBox
+crates/ink-domain/src/recog.rs:121,rust-island,트리,정적,recog.control.tree
+crates/ink-domain/src/recog.rs:122,rust-island,트리 항목,정적,recog.control.treeItem
+crates/ink-domain/src/recog.rs:123,rust-island,영역,정적,recog.control.pane
+crates/ink-domain/src/recog.rs:124,rust-island,묶음,정적,recog.control.group
+crates/ink-domain/src/recog.rs:125,rust-island,제목 표시줄,정적,recog.control.titleBar
+crates/ink-domain/src/recog.rs:126,rust-island,요소,정적,recog.control.other
+crates/ink-domain/src/recog.rs:169,rust-island,칸,정적,recog.node.child
+crates/ink-domain/src/recog.rs:170,rust-island,상자,정적,recog.node.visionBox
+crates/ink-domain/src/recog.rs:171,rust-island,영역,정적,recog.node.visionFlat
+crates/ink-domain/src/recog.rs:172,rust-island,창,정적,recog.node.window
+crates/ink-domain/src/recog.rs:173,rust-island,화면,정적,recog.node.monitor
+crates/ink-domain/src/recog.rs:174,rust-island,전체 화면,정적,recog.node.virtual
+crates/ink-domain/src/selection.rs:465,rust-island,지난 범위가 없어요,정적,island.capture.noRecent
+crates/ink-domain/src/selection.rs:472,rust-island,지난 범위가 없어요,정적,island.capture.noRecent
+crates/ink-domain/src/zoom.rs:360,rust-island,모니터 {n},동적 ({n}),zoom.monitor
+crates/tauri-plugin-screen-ink/src/lib.rs:625,rust-island,준비 중이에요,정적,island.notReady
+crates/tauri-plugin-screen-ink/src/lib.rs:976,rust-island,설정을 내보냈어요,정적,island.settings.exported
+crates/tauri-plugin-screen-ink/src/lib.rs:976,rust-island,내보내지 못했어요,정적,island.settings.exportError
+crates/tauri-plugin-screen-ink/src/lib.rs:1041,rust-island,지울 기록이 없어요,정적,island.history.empty
+crates/tauri-plugin-screen-ink/src/lib.rs:1041,rust-island,캡처 기록 {n}개를 지웠어요,"동적 ({n}개, 복수형)",island.history.cleared
+crates/tauri-plugin-screen-ink/src/lib.rs:1149,rust-island,화면 기록에서 {app}을 켜 주세요,"동적 ({app}, macOS 전용, 조사)",island.perm.screenGuide
+crates/tauri-plugin-screen-ink/src/lib.rs:1150,rust-island,켰으면 다시 시작해요,정적 (macOS 전용),island.perm.relaunchDetail
+crates/tauri-plugin-screen-ink/src/lib.rs:1151,rust-island,다시 시작,정적 (macOS 전용),island.perm.relaunchBtn
+crates/tauri-plugin-screen-ink/src/lib.rs:1167,rust-island,손쉬운 사용에서 {app}을 켜 주세요,"동적 ({app}, macOS 전용, 조사)",island.perm.axGuide
+crates/tauri-plugin-screen-ink/src/lib.rs:1168,rust-island,켜는 순간 알아서 이어져요,정적 (macOS 전용),island.perm.axDetail
+crates/tauri-plugin-screen-ink/src/lib.rs:1185,rust-island,손쉬운 사용을 켰어요 · 이제 요소까지 잡아요,정적 (macOS 전용),island.perm.axGranted
+crates/ink-domain/src/naming.rs:7,rust-error,{앱} (파일 이름 토큰 — {app} 별칭 지원),정적 (로캘별 토큰 표시),settings.output.token.app
+crates/ink-domain/src/naming.rs:16,rust-error,이름 규칙이 비어 있어요,정적,error.naming.empty
+crates/ink-domain/src/naming.rs:18,rust-error,모르는 칸이에요: {{{token}}},동적 ({token}),error.naming.unknownToken
+crates/ink-domain/src/naming.rs:20,rust-error,‘{{’를 닫지 않았어요,정적,error.naming.unclosedBrace
+crates/ink-domain/src/naming.rs:22,rust-error,파일 이름에 쓸 수 없는 글자예요: {ch},동적 ({ch}),error.naming.forbiddenChar
+crates/ink-domain/src/naming.rs:24,rust-error,이름이 너무 길어요(200자까지),정적,error.naming.tooLong
+crates/ink-domain/src/package.rs:135,rust-error,MSIX 패키지,정적 (Windows 전용),notice.storage.msix
+crates/ink-domain/src/package.rs:145,rust-error,포터블,정적,notice.storage.portable
+crates/ink-domain/src/package.rs:155,rust-error,설치,정적,notice.storage.installed
+crates/ink-domain/src/package.rs:270,rust-error,Windows 시작 앱 설정에서 켜 주세요,정적 (Windows MSIX 전용),notice.autostart.disabledByUser
+crates/ink-domain/src/package.rs:276,rust-error,학교·조직 정책으로 자동 실행이 막혀 있어요,정적 (Windows MSIX 전용),notice.autostart.disabledByPolicy
+crates/ink-domain/src/package.rs:282,rust-error,학교·조직 정책으로 자동 실행이 고정되어 있어요,정적 (Windows MSIX 전용),notice.autostart.enabledByPolicy
+crates/ink-domain/src/package.rs:383,rust-error,버전은 X.Y.Z 또는 X.Y.Z.0 형식이어야 해요,정적,error.package.versionFormat
+crates/ink-domain/src/package.rs:387,rust-error,버전 각 자리는 0~65535 정수여야 해요,정적,error.package.versionRange
+crates/ink-domain/src/package.rs:390,rust-error,Microsoft Store MSIX 버전의 네 번째 자리는 0이어야 해요,정적,error.package.storeRevisionZero
+crates/ink-domain/src/settings.rs:108,rust-error,모르는 설정이에요: {path},동적 ({path}),error.settings.unknown
+crates/ink-domain/src/settings.rs:112,rust-error,모르는 단축키 칸이에요: {id},동적 ({id}),error.settings.unknownSlot
+crates/ink-domain/src/settings.rs:114,rust-error,이 키는 읽을 수 없어요: {combo},동적 ({combo}),error.settings.invalidCombo
+crates/ink-domain/src/settings.rs:120,rust-error,이 파일은 슉쇽 설정이 아니에요,정적,error.settings.invalidFile
+crates/ink-domain/src/settings.rs:122,rust-error,더 새 버전(v{version})이 만든 설정이라 읽기만 해요,동적 ({version}),error.settings.newerVersion
+crates/ink-domain/src/settings.rs:134,rust-error,켜기·끄기 값이어야 해요,정적,error.settings.expectBool
+crates/ink-domain/src/settings.rs:137,rust-error,{list} 중 하나여야 해요,동적 ({list}),error.settings.expectOneOf
+crates/ink-domain/src/settings.rs:141,rust-error,{lo}~{hi} 사이로 정해 주세요,"동적 ({lo}, {hi})",error.settings.expectRange
+crates/ink-domain/src/settings.rs:145,rust-error,{list} 중 하나여야 해요,동적 ({list}),error.settings.expectOneOf
+crates/ink-domain/src/settings.rs:149,rust-error,{list} 중 하나여야 해요,동적 ({list}),error.settings.expectOneOf
+crates/ink-domain/src/settings.rs:153,rust-error,폴더 경로가 올바르지 않아요,정적,error.settings.invalidPath
+crates/ink-domain/src/settings.rs:156,rust-error,글자여야 해요,정적,error.settings.expectString
+crates/ink-domain/src/settings.rs:163,rust-error,{max}자 안의 글이어야 해요,동적 ({max}자),error.settings.maxLen
+crates/ink-domain/src/settings.rs:189,rust-error,목록 형식이 올바르지 않아요,정적,error.settings.invalidList
+crates/ink-domain/src/settings.rs:191,rust-error,{max}개까지 넣을 수 있어요,동적 ({max}개),error.settings.excludedMax
+crates/ink-domain/src/settings.rs:199,rust-error,‘{exe}’는 실행 파일 이름이 아니에요(예: hwp.exe),"동적 ({exe}, 조사, OS별 예시)",error.settings.invalidExe
+crates/ink-domain/src/settings.rs:202,rust-error,찾지 않음·창 단위 중 하나여야 해요,정적,error.settings.invalidExcludedMode
+crates/ink-domain/src/settings.rs:205,rust-error,‘{exe}’는 이미 있어요,"동적 ({exe}, 조사)",error.settings.excludedDuplicate
+crates/ink-domain/src/settings.rs:283,rust-error,설정 형식이 올바르지 않아 처음 값으로 시작해요,정적,notice.settings.invalidFormat
+crates/ink-domain/src/settings.rs:304,rust-error,{path}: {err} — 처음 값으로 둘게요,"동적 ({path}, {err})",notice.settings.fieldFallback
+crates/ink-domain/src/settings.rs:315,rust-error,단축키 {id}: ‘{combo}’를 읽을 수 없어 기본 키로 둘게요,"동적 ({id}, {combo}, 조사)",notice.settings.shortcutFallback
+crates/ink-domain/src/shortcuts.rs:144,rust-error,한/영,정적 (한국어 키 이름),shortcut.key.hangul
+crates/ink-domain/src/shortcuts.rs:145,rust-error,한자,정적 (한국어 키 이름),shortcut.key.hanja
+crates/ink-domain/src/shortcuts.rs:283,rust-error,한/영,정적 (VK 매핑 키 이름),shortcut.key.hangul
+crates/ink-domain/src/shortcuts.rs:284,rust-error,한자,정적 (VK 매핑 키 이름),shortcut.key.hanja
+crates/ink-domain/src/shortcuts.rs:479,rust-error,{owner}에서 먼저 쓰고 있어요,동적 ({owner}),shortcut.rule.ownerBlocking
+crates/ink-domain/src/shortcuts.rs:493,rust-error,전역 단축키,정적,shortcut.scope.global
+crates/ink-domain/src/shortcuts.rs:494,rust-error,캡처 화면 안,정적,shortcut.scope.capture
+crates/ink-domain/src/shortcuts.rs:495,rust-error,판서·칠판 화면 안,정적,shortcut.scope.draw
+crates/ink-domain/src/shortcuts.rs:496,rust-error,실시간 확대 화면 안,정적,shortcut.scope.zoom
+crates/ink-domain/src/shortcuts.rs:497,rust-error,다른 화면,정적,shortcut.scope.other
+crates/ink-domain/src/shortcuts.rs:572,rust-error,필수,정적,shortcut.issueSource.required
+crates/ink-domain/src/shortcuts.rs:572,rust-error,아직 정하지 않았어요,정적,shortcut.rule.requiredEmpty
+crates/ink-domain/src/shortcuts.rs:581,rust-error,규칙,정적,shortcut.issueSource.rule
+crates/ink-domain/src/shortcuts.rs:581,rust-error,한/영 전환 키라 쓸 수 없어요,정적,shortcut.rule.imeKey
+crates/ink-domain/src/shortcuts.rs:585,rust-error,수정 키(Ctrl·Alt 등) 없이 일반 키 하나는 전역으로 못 써요 — 타자를 막아요,정적 (OS별 수식키 표기),shortcut.rule.plainKeyGlobal
+crates/ink-domain/src/shortcuts.rs:587,rust-error,Shift + 글자는 대문자·기호 입력이라 전역으로 못 써요,정적,shortcut.rule.shiftPlainGlobal
+crates/ink-domain/src/shortcuts.rs:590,rust-error,맥 키보드는 F키에 fn을 함께 눌러야 해요,정적 (macOS 전용),shortcut.rule.macFkeyFn
+crates/ink-domain/src/shortcuts.rs:623,rust-error,"⌥ + 글자·기호는 특수 문자 입력이라, 가로채면 그 글자를 못 쳐요",정적 (macOS 전용),shortcut.rule.macOptionChar
+crates/ink-domain/src/shortcuts.rs:636,rust-error,이 표,정적,shortcut.issueSource.self
+crates/ink-domain/src/shortcuts.rs:636,rust-error,{name}{과/와} 같은 키예요,"동적 ({name}, 조사 josa)",shortcut.rule.sameScopeDup
+crates/ink-domain/src/shortcuts.rs:638,rust-error,{scope}의 {name} 키를 전역 키가 먼저 가져가요,"동적 ({scope}, {name})",shortcut.rule.globalShadowsMode
+crates/ink-domain/src/shortcuts.rs:640,rust-error,전역 {name} 키라 이 화면에서도 전역이 먼저 받아요,동적 ({name}),shortcut.rule.shadowedByGlobal
+crates/ink-app/src/ports.rs:14,rust-error,다른 앱이 먼저 쓰고 있어요,정적,error.hotkey.inUse
+crates/ink-app/src/ports.rs:16,rust-error,이 키는 등록할 수 없어요,정적,error.hotkey.cannotRegister
+crates/ink-app/src/ports.rs:231,rust-error,설정을 저장하지 못했어요,정적,error.store.saveFailed
+crates/ink-app/src/service.rs:150,rust-error,쓸 수 없는 키예요,정적,error.hotkey.unusable
+crates/ink-app/src/service.rs:186,rust-error,{err} — 처음 값으로 시작해요,동적 ({err}),notice.settings.loadFailedReset
+crates/ink-app/src/service.rs:192,rust-error,설정 폴더에 쓸 수 없어 이번에는 저장하지 않아요,정적,notice.settings.readOnlyDir
+crates/ink-app/src/service.rs:320,rust-error,트레이 메뉴로 시작할 수 있어요,정적,shortcut.emptyHint
+crates/ink-app/src/service.rs:468,rust-error,이 키는 등록할 수 없어요,정적,error.hotkey.cannotRegister
+crates/ink-app/src/service.rs:475,rust-error,{owner}에서 먼저 쓰고 있어요,동적 ({owner}),shortcut.rule.ownerBlocking
+crates/ink-app/src/service.rs:475,rust-error,다른 앱이 먼저 쓰고 있어요,정적,error.hotkey.inUse
+crates/ink-app/src/service.rs:546,rust-error,모르는 칸이에요,정적,error.hotkey.unknownSlot
+crates/ink-app/src/service.rs:549,rust-error,이 키는 읽을 수 없어요,정적,error.hotkey.unparseable
+crates/ink-app/src/service.rs:581,rust-error,모르는 칸이에요,정적,error.hotkey.unknownSlot
+crates/ink-app/src/service.rs:584,rust-error,이 키는 읽을 수 없어요,정적,error.hotkey.unparseable
+crates/ink-store/src/lib.rs:140,rust-error,설정 파일이 손상돼 백업으로 되살렸어요(원본은 보관했어요),정적,notice.store.recoveredBackup
+crates/ink-store/src/lib.rs:144,rust-error,설정 파일이 손상돼 처음 값으로 시작했어요(원본은 보관했어요),정적,notice.store.resetKeptBroken
+crates/ink-store/src/lib.rs:144,rust-error,설정 파일이 손상돼 처음 값으로 시작했어요,정적,notice.store.reset
+crates/ink-platform-windows/src/powertoys.rs:11,rust-error,항상 위,정적 (Windows 전용),powertoys.module.alwaysOnTop
+crates/ink-platform-windows/src/powertoys.rs:12,rust-error,색 선택,정적 (Windows 전용),powertoys.module.colorPicker
+crates/ink-platform-windows/src/powertoys.rs:13,rust-error,자르기·잠그기,정적 (Windows 전용),powertoys.module.cropAndLock
+crates/ink-platform-windows/src/powertoys.rs:14,rust-error,화면 자,정적 (Windows 전용),powertoys.module.measureTool
+crates/ink-platform-windows/src/powertoys.rs:15,rust-error,텍스트 추출,정적 (Windows 전용),powertoys.module.textExtractor
+crates/ink-platform-windows/src/powertoys.rs:16,rust-error,고급 붙여넣기,정적 (Windows 전용),powertoys.module.advancedPaste
+crates/ink-platform-windows/src/powertoys.rs:17,rust-error,작업 공간,정적 (Windows 전용),powertoys.module.workspaces
+crates/ink-platform-windows/src/powertoys.rs:18,rust-error,명령 팔레트,정적 (Windows 전용),powertoys.module.cmdPal
+crates/ink-platform-windows/src/powertoys.rs:19,rust-error,단축키 안내,정적 (Windows 전용),powertoys.module.shortcutGuide
+crates/ink-platform-windows/src/powertoys.rs:20,rust-error,마우스 점프,정적 (Windows 전용),powertoys.module.mouseJump
+crates/ink-platform-windows/src/powertoys.rs:21,rust-error,마우스 강조,정적 (Windows 전용),powertoys.module.mouseHighlighter
+crates/ink-platform-windows/src/powertoys.rs:22,rust-error,마우스 십자선,정적 (Windows 전용),powertoys.module.mouseCrosshairs
+crates/ink-platform-windows/src/powertoys.rs:25,rust-error,PowerToys {module},"동적 ({module}, Windows 전용)",powertoys.ownerFormat
+crates/ink-platform-windows/src/powertoys.rs:65,rust-error,단축키,정적 (Windows 전용),powertoys.bindingWhat
+crates/tauri-plugin-screen-ink/src/lib.rs:921,rust-error,파일을 읽을 수 없어요,정적,error.file.readFailed
+crates/tauri-plugin-screen-ink/src/lib.rs:923,rust-error,이 파일은 {app} 설정이 아니에요,동적 ({app}),error.settings.invalidFile
+apps/screen-ink/src-tauri/src/lib.rs:26,rust-error,슉쇽을 시작하지 못했어요,정적 (치명적 시작 실패 패닉),error.app.launchFailed
+crates/tauri-plugin-screen-ink/src/lib.rs:46,tray,슉쇽,정적,app.name
+crates/tauri-plugin-screen-ink/src/lib.rs:367,tray, · 단축키 꺼짐,정적 (툴팁 조합 조각),tray.tooltip.paused
+crates/tauri-plugin-screen-ink/src/lib.rs:369,tray, · 키 {n}개 겹침,"동적 ({n}개, 복수형)",tray.tooltip.conflicts
+crates/tauri-plugin-screen-ink/src/lib.rs:372,tray, · 고정한 창 {n},"동적 ({n}, 복수형, Windows 전용)",tray.tooltip.pinned
+crates/tauri-plugin-screen-ink/src/pins.rs:189,tray,복사,정적,common.copy
+crates/tauri-plugin-screen-ink/src/pins.rs:189,tray,저장,정적,common.save
+crates/tauri-plugin-screen-ink/src/pins.rs:189,tray,닫기,정적,common.close
+crates/tauri-plugin-screen-ink/src/pins.rs:189,tray,모두 닫기,정적,tray.pinMenu.closeAll
+apps/screen-ink/src-tauri/Info.plist:7,os,슉쇽,정적 (macOS CFBundleDisplayName · lproj 분리 필요),os.bundle.displayName
+apps/screen-ink/src-tauri/tauri.conf.json:3,os,Shookshok,정적 (OS 번들/설치 productName),os.bundle.productName
+apps/screen-ink/index.html:2,os,"lang=""ko""",동적 (언어 전환 시 html[lang] 동기화 필요),os.html.lang
+apps/screen-ink/index.html:6,os,슉쇽,정적 (창/문서 제목),app.name
+crates/tauri-plugin-screen-ink/src/lib.rs:424,os,{app},"동적 ({app}, 팝오버 창 제목)",app.name
+crates/tauri-plugin-screen-ink/src/lib.rs:450,os,ShookShok island,정적 (섬 보조 창 제목),os.window.island
+crates/tauri-plugin-screen-ink/src/lib.rs:552,os,{app} 설정,"동적 ({app}, 설정 창 제목)",os.window.settings
+crates/tauri-plugin-screen-ink/src/lib.rs:930,os,{app} 설정,"동적 ({app}, OS 파일 열기 필터)",os.dialog.settingsFilter
+crates/tauri-plugin-screen-ink/src/lib.rs:968,os,{app} 설정,"동적 ({app}, OS 파일 저장 필터)",os.dialog.settingsFilter
+crates/tauri-plugin-screen-ink/src/overlay.rs:192,os,ShookShok overlay,정적 (캡처/판서 오버레이 창 제목),os.window.overlay
+crates/tauri-plugin-screen-ink/src/pins.rs:99,os,ShookShok pin,정적 (고정 캡처 창 제목),os.window.pin
+crates/tauri-plugin-screen-ink/src/rec_frame.rs:29,os,shookshok record frame,정적 (녹화 틀 창 제목 · 표기 통일 필요),os.window.recFrame
+crates/tauri-plugin-screen-ink/src/zoom_hud.rs:27,os,screen-ink zoom,정적 (확대 HUD 창 제목 · 옛 이름 잔재),os.window.zoomHud
+crates/tauri-plugin-screen-ink/src/zoom_hud.rs:53,os,screen-ink zoom,정적 (확대 HUD 창 제목 · 옛 이름 잔재),os.window.zoomHud
+docs/shortcuts/catalog-v1.json:21,data,한/영,정적 (한국어 IME 키),shortcut.key.hangul
+docs/shortcuts/catalog-v1.json:22,data,한자,정적 (한국어 IME 키),shortcut.key.hanja
+docs/shortcuts/catalog-v1.json:49,data,범위 캡처,정적,shortcut.slot.region
+docs/shortcuts/catalog-v1.json:58,data,창 캡처,정적,shortcut.slot.window
+docs/shortcuts/catalog-v1.json:67,data,화면 녹화 시작·중지,정적,shortcut.slot.record
+docs/shortcuts/catalog-v1.json:76,data,판서,정적,shortcut.slot.draw
+docs/shortcuts/catalog-v1.json:85,data,실시간 확대,정적,shortcut.slot.zoom
+docs/shortcuts/catalog-v1.json:94,data,칠판,정적,shortcut.slot.board
+docs/shortcuts/catalog-v1.json:103,data,직전 범위 바로 캡처,정적,shortcut.slot.last
+docs/shortcuts/catalog-v1.json:112,data,모니터 전체 바로 캡처,정적,shortcut.slot.full
+docs/shortcuts/catalog-v1.json:121,data,활성 창 바로 캡처,정적,shortcut.slot.active
+docs/shortcuts/catalog-v1.json:130,data,지연 캡처,정적,shortcut.slot.delay
+docs/shortcuts/catalog-v1.json:139,data,직전 판서 열기,정적,shortcut.slot.restore
+docs/shortcuts/catalog-v1.json:148,data,단축키 켜기·끄기,정적,shortcut.slot.pause
+docs/shortcuts/catalog-v1.json:157,data,창 항상 위,정적 (Windows 전용),shortcut.slot.topmost
+docs/shortcuts/catalog-v1.json:166,data,화면에 붙이기,정적,shortcut.slot.pin
+docs/shortcuts/catalog-v1.json:175,data,핀 숨기기·보이기,정적,shortcut.slot.pinToggle
+docs/shortcuts/catalog-v1.json:184,data,타이머,정적,shortcut.slot.timer
+docs/shortcuts/catalog-v1.json:193,data,창 ↔ UI 요소 찾기 전환,정적,shortcut.slot.c-detect
+docs/shortcuts/catalog-v1.json:202,data,복사하고 끝내기,정적,shortcut.slot.c-copy
+docs/shortcuts/catalog-v1.json:211,data,저장,정적,shortcut.slot.c-save
+docs/shortcuts/catalog-v1.json:220,data,빠른 저장(묻지 않고 저장 폴더로),정적,shortcut.slot.c-quick
+docs/shortcuts/catalog-v1.json:229,data,취소,정적,shortcut.slot.c-cancel
+docs/shortcuts/catalog-v1.json:238,data,직전 범위로,정적,shortcut.slot.c-last
+docs/shortcuts/catalog-v1.json:247,data,지난 범위(앞),정적,shortcut.slot.c-prev
+docs/shortcuts/catalog-v1.json:256,data,지난 범위(뒤),정적,shortcut.slot.c-next
+docs/shortcuts/catalog-v1.json:265,data,모니터 전체 고르기,정적,shortcut.slot.c-full
+docs/shortcuts/catalog-v1.json:274,data,마우스 커서 넣기·빼기,정적,shortcut.slot.c-cursor
+docs/shortcuts/catalog-v1.json:283,data,확대경 색 복사,정적,shortcut.slot.c-color
+docs/shortcuts/catalog-v1.json:292,data,펜,정적,shortcut.slot.d-pen
+docs/shortcuts/catalog-v1.json:301,data,형광펜,정적,shortcut.slot.d-marker
+docs/shortcuts/catalog-v1.json:310,data,글자,정적,shortcut.slot.d-text
+docs/shortcuts/catalog-v1.json:319,data,고르기·옮기기,정적,shortcut.slot.d-select
+docs/shortcuts/catalog-v1.json:328,data,지우개(획 단위),정적,shortcut.slot.d-eraser
+docs/shortcuts/catalog-v1.json:337,data,모두 지우기,정적,shortcut.slot.d-clear
+docs/shortcuts/catalog-v1.json:346,data,색: 빨강,정적,shortcut.slot.d-red
+docs/shortcuts/catalog-v1.json:355,data,색: 노랑,정적,shortcut.slot.d-yellow
+docs/shortcuts/catalog-v1.json:364,data,색: 초록,정적,shortcut.slot.d-green
+docs/shortcuts/catalog-v1.json:373,data,색: 주황,정적,shortcut.slot.d-orange
+docs/shortcuts/catalog-v1.json:382,data,색: 파랑,정적,shortcut.slot.d-blue
+docs/shortcuts/catalog-v1.json:391,data,색: 연두,정적,shortcut.slot.d-lime
+docs/shortcuts/catalog-v1.json:400,data,흰 칠판으로,정적,shortcut.slot.d-white
+docs/shortcuts/catalog-v1.json:409,data,검은 칠판으로,정적,shortcut.slot.d-black
+docs/shortcuts/catalog-v1.json:418,data,되돌리기,정적,shortcut.slot.d-undo
+docs/shortcuts/catalog-v1.json:427,data,다시 하기,정적,shortcut.slot.d-redo
+docs/shortcuts/catalog-v1.json:436,data,판서한 화면 복사,정적,shortcut.slot.d-copy
+docs/shortcuts/catalog-v1.json:445,data,판서한 화면 저장,정적,shortcut.slot.d-save
+docs/shortcuts/catalog-v1.json:454,data,직전 판서 불러오기,정적,shortcut.slot.d-restore
+docs/shortcuts/catalog-v1.json:463,data,커서를 화면 가운데로,정적,shortcut.slot.d-center
+docs/shortcuts/catalog-v1.json:472,data,확대,정적,shortcut.slot.d-zin
+docs/shortcuts/catalog-v1.json:481,data,축소,정적,shortcut.slot.d-zout
+docs/shortcuts/catalog-v1.json:490,data,펜 굵게,정적,shortcut.slot.d-wup
+docs/shortcuts/catalog-v1.json:499,data,펜 가늘게,정적,shortcut.slot.d-wdown
+docs/shortcuts/catalog-v1.json:508,data,단축키 한 장 보기,정적,shortcut.slot.d-help
+docs/shortcuts/catalog-v1.json:517,data,판서 끝내기,정적,shortcut.slot.d-exit
+docs/shortcuts/catalog-v1.json:526,data,화면 강조(스포트라이트),정적,shortcut.slot.d-spot
+docs/shortcuts/catalog-v1.json:535,data,체크 도장,정적,shortcut.slot.d-check
+docs/shortcuts/catalog-v1.json:544,data,"번호 도장(1, 2, 3…)",정적,shortcut.slot.d-number
+docs/shortcuts/catalog-v1.json:553,data,실시간 확대 끝내기,정적,shortcut.slot.z-exit
+docs/shortcuts/catalog-v1.json:561,data,Windows,정적,shortcut.source.win
+docs/shortcuts/catalog-v1.json:566,data,한글 입력,정적,shortcut.source.ime
+docs/shortcuts/catalog-v1.json:571,data,앱 기능,정적,shortcut.source.winapp
+docs/shortcuts/catalog-v1.json:576,data,한글(HWP),정적,shortcut.source.hwp
+docs/shortcuts/catalog-v1.json:581,data,슬라이드 쇼,정적,shortcut.source.ppt
+docs/shortcuts/catalog-v1.json:586,data,PowerToys,정적,shortcut.source.pt
+docs/shortcuts/catalog-v1.json:591,data,PowerToys 항상 위,정적,shortcut.source.ptaot
+docs/shortcuts/catalog-v1.json:596,data,Snipaste,정적,shortcut.source.snip
+docs/shortcuts/catalog-v1.json:601,data,아이캔 줌잇,정적,shortcut.source.icz
+docs/shortcuts/catalog-v1.json:606,data,ZoomIt,정적,shortcut.source.zi
+docs/shortcuts/catalog-v1.json:611,data,macOS,정적,shortcut.source.mac
+docs/shortcuts/catalog-v1.json:616,data,맥 앱 기능,정적,shortcut.source.macapp
+docs/shortcuts/catalog-v1.json:626,data,캡처 도구 — 영역 캡처,정적 (Windows),shortcut.ref.win.win.win_shift_s
+docs/shortcuts/catalog-v1.json:633,data,캡처 도구 열기(Windows 11 기본 · 설정 > 접근성 > 키보드에서 끌 수 있음),정적 (Windows),shortcut.ref.win.win.prtscn
+docs/shortcuts/catalog-v1.json:640,data,전체 화면을 사진 폴더에 저장,정적 (Windows),shortcut.ref.win.win.win_prtscn
+docs/shortcuts/catalog-v1.json:647,data,활성 창을 클립보드로,정적 (Windows),shortcut.ref.win.win.alt_prtscn
+docs/shortcuts/catalog-v1.json:654,data,캡처 도구 화면 녹화(최신 Windows 11),정적 (Windows),shortcut.ref.win.win.win_shift_r
+docs/shortcuts/catalog-v1.json:661,data,Xbox Game Bar,정적 (Windows),shortcut.ref.win.win.win_g
+docs/shortcuts/catalog-v1.json:668,data,Game Bar 녹화 시작·중지,정적 (Windows),shortcut.ref.win.win.win_alt_r
+docs/shortcuts/catalog-v1.json:675,data,Game Bar 방금 전 구간 녹화,정적 (Windows),shortcut.ref.win.win.win_alt_g
+docs/shortcuts/catalog-v1.json:682,data,Game Bar 스크린샷,정적 (Windows),shortcut.ref.win.win.win_alt_prtscn
+docs/shortcuts/catalog-v1.json:689,data,돋보기 켜기·확대,정적 (Windows),shortcut.ref.win.win.win_plus
+docs/shortcuts/catalog-v1.json:696,data,돋보기 축소,정적 (Windows),shortcut.ref.win.win.win_minus
+docs/shortcuts/catalog-v1.json:703,data,돋보기 끄기,정적 (Windows),shortcut.ref.win.win.win_esc
+docs/shortcuts/catalog-v1.json:710,data,돋보기 보기 바꾸기(돋보기가 켜져 있을 때),정적 (Windows),shortcut.ref.win.win.ctrl_alt_m
+docs/shortcuts/catalog-v1.json:717,data,돋보기 전체 화면 보기(켜져 있을 때),정적 (Windows),shortcut.ref.win.win.ctrl_alt_f
+docs/shortcuts/catalog-v1.json:724,data,돋보기 렌즈 보기(켜져 있을 때),정적 (Windows),shortcut.ref.win.win.ctrl_alt_l
+docs/shortcuts/catalog-v1.json:731,data,돋보기 고정 보기(켜져 있을 때),정적 (Windows),shortcut.ref.win.win.ctrl_alt_d
+docs/shortcuts/catalog-v1.json:738,data,내레이터,정적 (Windows),shortcut.ref.win.win.ctrl_win_enter
+docs/shortcuts/catalog-v1.json:745,data,클립보드 기록,정적 (Windows),shortcut.ref.win.win.win_v
+docs/shortcuts/catalog-v1.json:752,data,이모지,정적 (Windows),shortcut.ref.win.win.win
+docs/shortcuts/catalog-v1.json:759,data,음성 입력,정적 (Windows),shortcut.ref.win.win.win_h
+docs/shortcuts/catalog-v1.json:766,data,화면 잠금,정적 (Windows),shortcut.ref.win.win.win_l
+docs/shortcuts/catalog-v1.json:773,data,보안 화면,정적 (Windows),shortcut.ref.win.win.ctrl_alt_delete
+docs/shortcuts/catalog-v1.json:780,data,작업 관리자,정적 (Windows),shortcut.ref.win.win.ctrl_shift_esc
+docs/shortcuts/catalog-v1.json:787,data,창 전환,정적 (Windows),shortcut.ref.win.win.alt_tab
+docs/shortcuts/catalog-v1.json:794,data,창 닫기,정적 (Windows),shortcut.ref.win.win.alt_f4
+docs/shortcuts/catalog-v1.json:801,data,창 순서대로 전환,정적 (Windows),shortcut.ref.win.win.alt_esc
+docs/shortcuts/catalog-v1.json:808,data,시작 메뉴,정적 (Windows),shortcut.ref.win.win.ctrl_esc
+docs/shortcuts/catalog-v1.json:815,data,창 메뉴(이 PC에서는 PowerToys Run이 씀),정적 (Windows),shortcut.ref.win.win.alt_space
+docs/shortcuts/catalog-v1.json:822,data,바탕 화면 보기,정적 (Windows),shortcut.ref.win.win.win_d
+docs/shortcuts/catalog-v1.json:829,data,모두 최소화,정적 (Windows),shortcut.ref.win.win.win_m
+docs/shortcuts/catalog-v1.json:836,data,파일 탐색기,정적 (Windows),shortcut.ref.win.win.win_e
+docs/shortcuts/catalog-v1.json:843,data,실행,정적 (Windows),shortcut.ref.win.win.win_r
+docs/shortcuts/catalog-v1.json:850,data,설정,정적 (Windows),shortcut.ref.win.win.win_i
+docs/shortcuts/catalog-v1.json:857,data,빠른 설정,정적 (Windows),shortcut.ref.win.win.win_a
+docs/shortcuts/catalog-v1.json:864,data,알림,정적 (Windows),shortcut.ref.win.win.win_n
+docs/shortcuts/catalog-v1.json:871,data,검색,정적 (Windows),shortcut.ref.win.win.win_s
+docs/shortcuts/catalog-v1.json:878,data,빠른 링크 메뉴,정적 (Windows),shortcut.ref.win.win.win_x
+docs/shortcuts/catalog-v1.json:885,data,작업 보기,정적 (Windows),shortcut.ref.win.win.win_tab
+docs/shortcuts/catalog-v1.json:892,data,위젯,정적 (Windows),shortcut.ref.win.win.win_w
+docs/shortcuts/catalog-v1.json:899,data,새 가상 데스크톱,정적 (Windows),shortcut.ref.win.win.ctrl_win_d
+docs/shortcuts/catalog-v1.json:906,data,이전 데스크톱,정적 (Windows),shortcut.ref.win.win.ctrl_win_left
+docs/shortcuts/catalog-v1.json:913,data,다음 데스크톱,정적 (Windows),shortcut.ref.win.win.ctrl_win_right
+docs/shortcuts/catalog-v1.json:920,data,데스크톱 닫기,정적 (Windows),shortcut.ref.win.win.ctrl_win_f4
+docs/shortcuts/catalog-v1.json:927,data,창 최대화,정적 (Windows),shortcut.ref.win.win.win_up
+docs/shortcuts/catalog-v1.json:934,data,창 복원·최소화,정적 (Windows),shortcut.ref.win.win.win_down
+docs/shortcuts/catalog-v1.json:941,data,왼쪽 반에 맞추기,정적 (Windows),shortcut.ref.win.win.win_left
+docs/shortcuts/catalog-v1.json:948,data,오른쪽 반에 맞추기,정적 (Windows),shortcut.ref.win.win.win_right
+docs/shortcuts/catalog-v1.json:955,data,창을 다른 모니터로,정적 (Windows),shortcut.ref.win.win.shift_win_left
+docs/shortcuts/catalog-v1.json:962,data,창을 다른 모니터로,정적 (Windows),shortcut.ref.win.win.shift_win_right
+docs/shortcuts/catalog-v1.json:969,data,스냅 레이아웃,정적 (Windows),shortcut.ref.win.win.win_z
+docs/shortcuts/catalog-v1.json:976,data,디스플레이 모드(복제·확장) — 교실 TV 연결 때 자주 씀,정적 (Windows),shortcut.ref.win.win.win_p
+docs/shortcuts/catalog-v1.json:983,data,무선 디스플레이 연결,정적 (Windows),shortcut.ref.win.win.win_k
+docs/shortcuts/catalog-v1.json:990,data,작업 표시줄 앱 열기,정적 (Windows),shortcut.ref.win.win.win_1_9
+docs/shortcuts/catalog-v1.json:997,data,작업 표시줄 순환,정적 (Windows),shortcut.ref.win.win.win_t
+docs/shortcuts/catalog-v1.json:1004,data,알림 영역,정적 (Windows),shortcut.ref.win.win.win_b
+docs/shortcuts/catalog-v1.json:1011,data,입력 언어 바꾸기,정적 (Windows),shortcut.ref.win.win.win_space
+docs/shortcuts/catalog-v1.json:1018,data,그래픽 드라이버 다시 시작,정적 (Windows),shortcut.ref.win.win.ctrl_shift_win_b
+docs/shortcuts/catalog-v1.json:1025,data,오른쪽 클릭 메뉴,정적 (Windows),shortcut.ref.win.win.shift_f10
+docs/shortcuts/catalog-v1.json:1032,data,화면 회전(일부 Intel 그래픽 드라이버),정적 (Windows),shortcut.ref.win.win.ctrl_alt_up
+docs/shortcuts/catalog-v1.json:1039,data,화면 회전(일부 Intel 그래픽 드라이버),정적 (Windows),shortcut.ref.win.win.ctrl_alt_down
+docs/shortcuts/catalog-v1.json:1046,data,화면 회전(일부 Intel 그래픽 드라이버),정적 (Windows),shortcut.ref.win.win.ctrl_alt_left
+docs/shortcuts/catalog-v1.json:1053,data,화면 회전(일부 Intel 그래픽 드라이버),정적 (Windows),shortcut.ref.win.win.ctrl_alt_right
+docs/shortcuts/catalog-v1.json:1060,data,한/영 전환,정적 (Windows),shortcut.ref.ime.win.hangul
+docs/shortcuts/catalog-v1.json:1067,data,한자 변환,정적 (Windows),shortcut.ref.ime.win.hanja
+docs/shortcuts/catalog-v1.json:1074,data,한/영 전환(입력기 설정에 따라),정적 (Windows),shortcut.ref.ime.win.shift_space
+docs/shortcuts/catalog-v1.json:1081,data,도움말(거의 모든 앱),정적 (Windows),shortcut.ref.winapp.win.f1
+docs/shortcuts/catalog-v1.json:1088,data,이름 바꾸기(탐색기) · 셀 편집(엑셀),정적 (Windows),shortcut.ref.winapp.win.f2
+docs/shortcuts/catalog-v1.json:1095,data,찾기(탐색기·브라우저),정적 (Windows),shortcut.ref.winapp.win.f3
+docs/shortcuts/catalog-v1.json:1102,data,주소 표시줄(탐색기) · 참조 바꾸기(엑셀),정적 (Windows),shortcut.ref.winapp.win.f4
+docs/shortcuts/catalog-v1.json:1109,data,새로 고침 · PowerPoint 쇼 처음부터,정적 (Windows),shortcut.ref.winapp.win.f5
+docs/shortcuts/catalog-v1.json:1116,data,PowerPoint 지금 슬라이드부터 쇼,정적 (Windows),shortcut.ref.winapp.win.shift_f5
+docs/shortcuts/catalog-v1.json:1123,data,창 영역 옮겨 가기 · 주소 표시줄,정적 (Windows),shortcut.ref.winapp.win.f6
+docs/shortcuts/catalog-v1.json:1130,data,맞춤법(Office) · 캐럿 탐색(브라우저),정적 (Windows),shortcut.ref.winapp.win.f7
+docs/shortcuts/catalog-v1.json:1137,data,엑셀 선택 넓히기,정적 (Windows),shortcut.ref.winapp.win.f8
+docs/shortcuts/catalog-v1.json:1144,data,엑셀 다시 계산,정적 (Windows),shortcut.ref.winapp.win.f9
+docs/shortcuts/catalog-v1.json:1151,data,메뉴 막대,정적 (Windows),shortcut.ref.winapp.win.f10
+docs/shortcuts/catalog-v1.json:1158,data,전체 화면(브라우저·탐색기),정적 (Windows),shortcut.ref.winapp.win.f11
+docs/shortcuts/catalog-v1.json:1165,data,다른 이름으로 저장(Office) · 개발자 도구(브라우저),정적 (Windows),shortcut.ref.winapp.win.f12
+docs/shortcuts/catalog-v1.json:1172,data,브라우저 탭 옮기기 · 엑셀 Ctrl+1 셀 서식,정적 (Windows),shortcut.ref.winapp.win.ctrl_1_8
+docs/shortcuts/catalog-v1.json:1179,data,브라우저 마지막 탭,정적 (Windows),shortcut.ref.winapp.win.ctrl_9
+docs/shortcuts/catalog-v1.json:1186,data,탐색기 보기 바꾸기 · 엑셀 표시 형식(숫자·시간·날짜·통화·%),정적 (Windows),shortcut.ref.winapp.win.ctrl_shift_1_8
+docs/shortcuts/catalog-v1.json:1193,data,Office(워드·엑셀·PowerPoint) 빠른 실행 도구 모음 단추,정적 (Windows),shortcut.ref.winapp.win.alt_1_9
+docs/shortcuts/catalog-v1.json:1200,data,Edge 웹 캡처,정적 (Windows),shortcut.ref.winapp.win.ctrl_shift_s
+docs/shortcuts/catalog-v1.json:1207,data,브라우저 닫은 탭 다시 열기,정적 (Windows),shortcut.ref.winapp.win.ctrl_shift_t
+docs/shortcuts/catalog-v1.json:1214,data,시크릿 창 · 탐색기 새 폴더,정적 (Windows),shortcut.ref.winapp.win.ctrl_shift_n
+docs/shortcuts/catalog-v1.json:1221,data,인터넷 사용 기록 삭제,정적 (Windows),shortcut.ref.winapp.win.ctrl_shift_delete
+docs/shortcuts/catalog-v1.json:1228,data,복사,정적 (Windows),shortcut.ref.winapp.win.ctrl_c
+docs/shortcuts/catalog-v1.json:1235,data,붙여넣기,정적 (Windows),shortcut.ref.winapp.win.ctrl_v
+docs/shortcuts/catalog-v1.json:1242,data,잘라내기,정적 (Windows),shortcut.ref.winapp.win.ctrl_x
+docs/shortcuts/catalog-v1.json:1249,data,되돌리기,정적 (Windows),shortcut.ref.winapp.win.ctrl_z
+docs/shortcuts/catalog-v1.json:1256,data,다시 하기,정적 (Windows),shortcut.ref.winapp.win.ctrl_y
+docs/shortcuts/catalog-v1.json:1263,data,모두 선택,정적 (Windows),shortcut.ref.winapp.win.ctrl_a
+docs/shortcuts/catalog-v1.json:1270,data,저장,정적 (Windows),shortcut.ref.winapp.win.ctrl_s
+docs/shortcuts/catalog-v1.json:1277,data,찾기,정적 (Windows),shortcut.ref.winapp.win.ctrl_f
+docs/shortcuts/catalog-v1.json:1284,data,인쇄,정적 (Windows),shortcut.ref.winapp.win.ctrl_p
+docs/shortcuts/catalog-v1.json:1291,data,새 문서·새 창,정적 (Windows),shortcut.ref.winapp.win.ctrl_n
+docs/shortcuts/catalog-v1.json:1298,data,열기,정적 (Windows),shortcut.ref.winapp.win.ctrl_o
+docs/shortcuts/catalog-v1.json:1305,data,탭·문서 닫기,정적 (Windows),shortcut.ref.winapp.win.ctrl_w
+docs/shortcuts/catalog-v1.json:1312,data,브라우저 새 탭,정적 (Windows),shortcut.ref.winapp.win.ctrl_t
+docs/shortcuts/catalog-v1.json:1319,data,브라우저 즐겨찾기 추가,정적 (Windows),shortcut.ref.winapp.win.ctrl_d
+docs/shortcuts/catalog-v1.json:1326,data,브라우저 기록 · 워드 바꾸기,정적 (Windows),shortcut.ref.winapp.win.ctrl_h
+docs/shortcuts/catalog-v1.json:1333,data,새로 고침 · 오른쪽 정렬,정적 (Windows),shortcut.ref.winapp.win.ctrl_r
+docs/shortcuts/catalog-v1.json:1340,data,주소 표시줄 · 왼쪽 정렬,정적 (Windows),shortcut.ref.winapp.win.ctrl_l
+docs/shortcuts/catalog-v1.json:1347,data,가운데 정렬 · 브라우저 검색,정적 (Windows),shortcut.ref.winapp.win.ctrl_e
+docs/shortcuts/catalog-v1.json:1354,data,굵게,정적 (Windows),shortcut.ref.winapp.win.ctrl_b
+docs/shortcuts/catalog-v1.json:1361,data,기울임,정적 (Windows),shortcut.ref.winapp.win.ctrl_i
+docs/shortcuts/catalog-v1.json:1368,data,밑줄,정적 (Windows),shortcut.ref.winapp.win.ctrl_u
+docs/shortcuts/catalog-v1.json:1375,data,링크 넣기,정적 (Windows),shortcut.ref.winapp.win.ctrl_k
+docs/shortcuts/catalog-v1.json:1382,data,서식 없이 붙여넣기(브라우저·Office),정적 (Windows),shortcut.ref.winapp.win.ctrl_shift_v
+docs/shortcuts/catalog-v1.json:1389,data,브라우저 InPrivate·시크릿 창,정적 (Windows),shortcut.ref.winapp.win.ctrl_shift_p
+docs/shortcuts/catalog-v1.json:1396,data,Office 리본 접기·펴기,정적 (Windows),shortcut.ref.winapp.win.ctrl_f1
+docs/shortcuts/catalog-v1.json:1403,data,워드 서식 보기,정적 (Windows),shortcut.ref.winapp.win.shift_f1
+docs/shortcuts/catalog-v1.json:1410,data,엑셀 차트 바로 만들기,정적 (Windows),shortcut.ref.winapp.win.alt_f1
+docs/shortcuts/catalog-v1.json:1417,data,Office 인쇄 미리 보기,정적 (Windows),shortcut.ref.winapp.win.ctrl_f2
+docs/shortcuts/catalog-v1.json:1424,data,엑셀 메모 편집,정적 (Windows),shortcut.ref.winapp.win.shift_f2
+docs/shortcuts/catalog-v1.json:1431,data,워드 대/소문자 바꾸기 · 엑셀 함수 넣기,정적 (Windows),shortcut.ref.winapp.win.shift_f3
+docs/shortcuts/catalog-v1.json:1438,data,문서·탭 닫기,정적 (Windows),shortcut.ref.winapp.win.ctrl_f4
+docs/shortcuts/catalog-v1.json:1445,data,브라우저 강력 새로 고침,정적 (Windows),shortcut.ref.winapp.win.ctrl_f5
+docs/shortcuts/catalog-v1.json:1452,data,Office 매크로,정적 (Windows),shortcut.ref.winapp.win.alt_f8
+docs/shortcuts/catalog-v1.json:1459,data,Office VBA 편집기,정적 (Windows),shortcut.ref.winapp.win.alt_f11
+docs/shortcuts/catalog-v1.json:1466,data,엑셀 새 시트,정적 (Windows),shortcut.ref.winapp.win.shift_f11
+docs/shortcuts/catalog-v1.json:1473,data,Office 저장,정적 (Windows),shortcut.ref.winapp.win.shift_f12
+docs/shortcuts/catalog-v1.json:1480,data,워드 날짜 넣기,정적 (Windows),shortcut.ref.winapp.win.alt_shift_d
+docs/shortcuts/catalog-v1.json:1487,data,워드 시간 넣기,정적 (Windows),shortcut.ref.winapp.win.alt_shift_t
+docs/shortcuts/catalog-v1.json:1494,data,워드 쪽 번호 넣기,정적 (Windows),shortcut.ref.winapp.win.alt_shift_p
+docs/shortcuts/catalog-v1.json:1501,data,블록 지정,정적 (Windows),shortcut.ref.hwp.win.f3
+docs/shortcuts/catalog-v1.json:1508,data,표 셀 블록,정적 (Windows),shortcut.ref.hwp.win.f5
+docs/shortcuts/catalog-v1.json:1515,data,스타일,정적 (Windows),shortcut.ref.hwp.win.f6
+docs/shortcuts/catalog-v1.json:1522,data,편집 용지,정적 (Windows),shortcut.ref.hwp.win.f7
+docs/shortcuts/catalog-v1.json:1529,data,글자 모양,정적 (Windows),shortcut.ref.hwp.win.alt_l
+docs/shortcuts/catalog-v1.json:1536,data,문단 모양,정적 (Windows),shortcut.ref.hwp.win.alt_t
+docs/shortcuts/catalog-v1.json:1543,data,저장,정적 (Windows),shortcut.ref.hwp.win.alt_s
+docs/shortcuts/catalog-v1.json:1550,data,다른 이름으로 저장,정적 (Windows),shortcut.ref.hwp.win.alt_v
+docs/shortcuts/catalog-v1.json:1557,data,인쇄,정적 (Windows),shortcut.ref.hwp.win.alt_p
+docs/shortcuts/catalog-v1.json:1564,data,문자표,정적 (Windows),shortcut.ref.hwp.win.ctrl_f10
+docs/shortcuts/catalog-v1.json:1571,data,쇼 중 펜,정적 (Windows),shortcut.ref.ppt.win.ctrl_p
+docs/shortcuts/catalog-v1.json:1578,data,쇼 중 화살표 포인터,정적 (Windows),shortcut.ref.ppt.win.ctrl_a
+docs/shortcuts/catalog-v1.json:1585,data,쇼 중 지우개,정적 (Windows),shortcut.ref.ppt.win.ctrl_e
+docs/shortcuts/catalog-v1.json:1592,data,쇼 중 형광펜,정적 (Windows),shortcut.ref.ppt.win.ctrl_i
+docs/shortcuts/catalog-v1.json:1599,data,쇼 중 레이저 포인터,정적 (Windows),shortcut.ref.ppt.win.ctrl_l
+docs/shortcuts/catalog-v1.json:1606,data,쇼 중 잉크 보이기·숨기기,정적 (Windows),shortcut.ref.ppt.win.ctrl_m
+docs/shortcuts/catalog-v1.json:1613,data,쇼 중 포인터 숨기기,정적 (Windows),shortcut.ref.ppt.win.ctrl_h
+docs/shortcuts/catalog-v1.json:1620,data,쇼 중 검은 화면,정적 (Windows),shortcut.ref.ppt.win.b
+docs/shortcuts/catalog-v1.json:1627,data,쇼 중 흰 화면,정적 (Windows),shortcut.ref.ppt.win.w
+docs/shortcuts/catalog-v1.json:1634,data,쇼 중 잉크 모두 지우기,정적 (Windows),shortcut.ref.ppt.win.e
+docs/shortcuts/catalog-v1.json:1641,data,쇼 중 모든 슬라이드 보기,정적 (Windows),shortcut.ref.ppt.win.g
+docs/shortcuts/catalog-v1.json:1648,data,고급 붙여넣기,정적 (Windows),shortcut.ref.pt.win.shift_win_v
+docs/shortcuts/catalog-v1.json:1655,data,일반 텍스트로 붙여넣기,정적 (Windows),shortcut.ref.pt.win.ctrl_alt_win_v
+docs/shortcuts/catalog-v1.json:1662,data,창 항상 위에 두기(이 PC에서 바꾼 값 · 기본은 Win+Ctrl+T),정적 (Windows),shortcut.ref.ptaot.win.alt_shift_d
+docs/shortcuts/catalog-v1.json:1669,data,고정한 창 더 불투명하게(기본값),정적 (Windows),shortcut.ref.ptaot.win.ctrl_win
+docs/shortcuts/catalog-v1.json:1676,data,고정한 창 더 투명하게(기본값),정적 (Windows),shortcut.ref.ptaot.win.ctrl_win_2
+docs/shortcuts/catalog-v1.json:1683,data,색 선택기,정적 (Windows),shortcut.ref.pt.win.shift_win_c
+docs/shortcuts/catalog-v1.json:1690,data,Crop And Lock 창 잘라 붙이기,정적 (Windows),shortcut.ref.pt.win.ctrl_shift_win_r
+docs/shortcuts/catalog-v1.json:1697,data,Crop And Lock 썸네일,정적 (Windows),shortcut.ref.pt.win.ctrl_shift_win_t
+docs/shortcuts/catalog-v1.json:1704,data,FancyZones 편집기,정적 (Windows),shortcut.ref.pt.win.shift_win
+docs/shortcuts/catalog-v1.json:1711,data,FancyZones 다음 창,정적 (Windows),shortcut.ref.pt.win.win_pgdn
+docs/shortcuts/catalog-v1.json:1718,data,FancyZones 이전 창,정적 (Windows),shortcut.ref.pt.win.win_pgup
+docs/shortcuts/catalog-v1.json:1725,data,마우스 찾기,정적 (Windows),shortcut.ref.pt.win.shift_win_f
+docs/shortcuts/catalog-v1.json:1732,data,화면 눈금자,정적 (Windows),shortcut.ref.pt.win.ctrl_shift_win_m
+docs/shortcuts/catalog-v1.json:1739,data,마우스 강조,정적 (Windows),shortcut.ref.pt.win.shift_win_h
+docs/shortcuts/catalog-v1.json:1746,data,Peek 미리 보기,정적 (Windows),shortcut.ref.pt.win.ctrl_space
+docs/shortcuts/catalog-v1.json:1753,data,PowerToys Run,정적 (Windows),shortcut.ref.pt.win.alt_space
+docs/shortcuts/catalog-v1.json:1760,data,단축키 가이드,정적 (Windows),shortcut.ref.pt.win.shift_win_2
+docs/shortcuts/catalog-v1.json:1767,data,Workspaces,정적 (Windows),shortcut.ref.pt.win.ctrl_win
+docs/shortcuts/catalog-v1.json:1774,data,Command Palette(기본값 · 설정 파일에서 확인 못 함),정적 (Windows),shortcut.ref.pt.win.alt_win_space
+docs/shortcuts/catalog-v1.json:1781,data,캡처,정적 (Windows),shortcut.ref.snip.win.f1
+docs/shortcuts/catalog-v1.json:1788,data,캡처 후 복사,정적 (Windows),shortcut.ref.snip.win.ctrl_f1
+docs/shortcuts/catalog-v1.json:1795,data,커스텀 캡처,정적 (Windows),shortcut.ref.snip.win.shift_f1
+docs/shortcuts/catalog-v1.json:1802,data,붙이기(핀),정적 (Windows),shortcut.ref.snip.win.f3
+docs/shortcuts/catalog-v1.json:1809,data,모든 이미지 보이기·숨기기,정적 (Windows),shortcut.ref.snip.win.shift_f3
+docs/shortcuts/catalog-v1.json:1816,data,다른 이미지 그룹 전환,정적 (Windows),shortcut.ref.snip.win.ctrl_f3
+docs/shortcuts/catalog-v1.json:1823,data,확대하기,정적 (Windows),shortcut.ref.icz.win.ctrl_1
+docs/shortcuts/catalog-v1.json:1830,data,판서하기,정적 (Windows),shortcut.ref.icz.win.ctrl_2
+docs/shortcuts/catalog-v1.json:1837,data,타이머,정적 (Windows),shortcut.ref.icz.win.ctrl_3
+docs/shortcuts/catalog-v1.json:1844,data,실시간 확대,정적 (Windows),shortcut.ref.icz.win.ctrl_4
+docs/shortcuts/catalog-v1.json:1851,data,화면 색 반전,정적 (Windows),shortcut.ref.icz.win.ctrl_shift_f12
+docs/shortcuts/catalog-v1.json:1858,data,확대,정적 (Windows),shortcut.ref.zi.win.ctrl_1
+docs/shortcuts/catalog-v1.json:1865,data,그리기,정적 (Windows),shortcut.ref.zi.win.ctrl_2
+docs/shortcuts/catalog-v1.json:1872,data,쉬는 시간 타이머,정적 (Windows),shortcut.ref.zi.win.ctrl_3
+docs/shortcuts/catalog-v1.json:1879,data,LiveZoom,정적 (Windows),shortcut.ref.zi.win.ctrl_4
+docs/shortcuts/catalog-v1.json:1886,data,LiveDraw,정적 (Windows),shortcut.ref.zi.win.ctrl_shift_4
+docs/shortcuts/catalog-v1.json:1893,data,녹화,정적 (Windows),shortcut.ref.zi.win.ctrl_5
+docs/shortcuts/catalog-v1.json:1900,data,스닙(영역 복사),정적 (Windows),shortcut.ref.zi.win.ctrl_6
+docs/shortcuts/catalog-v1.json:1907,data,스닙 저장,정적 (Windows),shortcut.ref.zi.win.ctrl_shift_6
+docs/shortcuts/catalog-v1.json:1914,data,글자 인식 스닙,정적 (Windows),shortcut.ref.zi.win.ctrl_alt_6
+docs/shortcuts/catalog-v1.json:1921,data,DemoType,정적 (Windows),shortcut.ref.zi.win.ctrl_7
+docs/shortcuts/catalog-v1.json:1928,data,DemoType 처음으로,정적 (Windows),shortcut.ref.zi.win.ctrl_shift_7
+docs/shortcuts/catalog-v1.json:1935,data,파노라마,정적 (Windows),shortcut.ref.zi.win.ctrl_8
+docs/shortcuts/catalog-v1.json:1942,data,파노라마 저장,정적 (Windows),shortcut.ref.zi.win.ctrl_shift_8
+docs/shortcuts/catalog-v1.json:1949,data,미러,정적 (Windows),shortcut.ref.zi.win.ctrl_9
+docs/shortcuts/catalog-v1.json:1956,data,전체 화면 캡처,정적 (macOS),shortcut.ref.mac.mac.shift_cmd_3
+docs/shortcuts/catalog-v1.json:1963,data,영역 캡처(Space = 창),정적 (macOS),shortcut.ref.mac.mac.shift_cmd_4
+docs/shortcuts/catalog-v1.json:1970,data,캡처·녹화 도구,정적 (macOS),shortcut.ref.mac.mac.shift_cmd_5
+docs/shortcuts/catalog-v1.json:1977,data,Touch Bar 캡처,정적 (macOS),shortcut.ref.mac.mac.shift_cmd_6
+docs/shortcuts/catalog-v1.json:1984,data,전체 화면을 클립보드로,정적 (macOS),shortcut.ref.mac.mac.ctrl_shift_cmd_3
+docs/shortcuts/catalog-v1.json:1991,data,영역을 클립보드로,정적 (macOS),shortcut.ref.mac.mac.ctrl_shift_cmd_4
+docs/shortcuts/catalog-v1.json:1998,data,Spotlight,정적 (macOS),shortcut.ref.mac.mac.cmd_space
+docs/shortcuts/catalog-v1.json:2005,data,Finder 검색 창,정적 (macOS),shortcut.ref.mac.mac.option_cmd_space
+docs/shortcuts/catalog-v1.json:2012,data,입력 소스 바꾸기(한/영),정적 (macOS),shortcut.ref.mac.mac.ctrl_space
+docs/shortcuts/catalog-v1.json:2019,data,다음 입력 소스,정적 (macOS),shortcut.ref.mac.mac.ctrl_option_space
+docs/shortcuts/catalog-v1.json:2026,data,앱 전환,정적 (macOS),shortcut.ref.mac.mac.cmd_tab
+docs/shortcuts/catalog-v1.json:2033,data,같은 앱 창 전환,정적 (macOS),shortcut.ref.mac.mac.cmd
+docs/shortcuts/catalog-v1.json:2040,data,앱 끝내기,정적 (macOS),shortcut.ref.mac.mac.cmd_q
+docs/shortcuts/catalog-v1.json:2047,data,창 닫기,정적 (macOS),shortcut.ref.mac.mac.cmd_w
+docs/shortcuts/catalog-v1.json:2054,data,앱 가리기,정적 (macOS),shortcut.ref.mac.mac.cmd_h
+docs/shortcuts/catalog-v1.json:2061,data,다른 앱 가리기,정적 (macOS),shortcut.ref.mac.mac.option_cmd_h
+docs/shortcuts/catalog-v1.json:2068,data,창 최소화,정적 (macOS),shortcut.ref.mac.mac.cmd_m
+docs/shortcuts/catalog-v1.json:2075,data,강제 종료,정적 (macOS),shortcut.ref.mac.mac.option_cmd_esc
+docs/shortcuts/catalog-v1.json:2082,data,화면 잠금,정적 (macOS),shortcut.ref.mac.mac.ctrl_cmd_q
+docs/shortcuts/catalog-v1.json:2089,data,로그아웃,정적 (macOS),shortcut.ref.mac.mac.shift_cmd_q
+docs/shortcuts/catalog-v1.json:2096,data,전체 화면 켜기·끄기,정적 (macOS),shortcut.ref.mac.mac.ctrl_cmd_f
+docs/shortcuts/catalog-v1.json:2103,data,Mission Control,정적 (macOS),shortcut.ref.mac.mac.ctrl_up
+docs/shortcuts/catalog-v1.json:2110,data,앱 윈도우,정적 (macOS),shortcut.ref.mac.mac.ctrl_down
+docs/shortcuts/catalog-v1.json:2117,data,왼쪽 데스크톱,정적 (macOS),shortcut.ref.mac.mac.ctrl_left
+docs/shortcuts/catalog-v1.json:2124,data,오른쪽 데스크톱,정적 (macOS),shortcut.ref.mac.mac.ctrl_right
+docs/shortcuts/catalog-v1.json:2131,data,데스크톱 1~9로(설정에서 켠 경우),정적 (macOS),shortcut.ref.mac.mac.ctrl_1_9
+docs/shortcuts/catalog-v1.json:2138,data,확대/축소 켜기(손쉬운 사용에서 켠 경우),정적 (macOS),shortcut.ref.mac.mac.option_cmd_8
+docs/shortcuts/catalog-v1.json:2145,data,화면 확대(켠 경우),정적 (macOS),shortcut.ref.mac.mac.option_cmd
+docs/shortcuts/catalog-v1.json:2152,data,화면 축소(켠 경우),정적 (macOS),shortcut.ref.mac.mac.option_cmd_2
+docs/shortcuts/catalog-v1.json:2159,data,손쉬운 사용 단축키,정적 (macOS),shortcut.ref.mac.mac.option_cmd_f5
+docs/shortcuts/catalog-v1.json:2166,data,VoiceOver,정적 (macOS),shortcut.ref.mac.mac.cmd_f5
+docs/shortcuts/catalog-v1.json:2173,data,이모지·기호,정적 (macOS),shortcut.ref.mac.mac.ctrl_cmd_space
+docs/shortcuts/catalog-v1.json:2180,data,특수 문자 입력(¡ ™ £ ¢ ∞ § ¶ • ª) — 가로채면 이 글자를 못 침,정적 (macOS),shortcut.ref.mac.mac.option_1_9
+docs/shortcuts/catalog-v1.json:2187,data,특수 문자 입력(º),정적 (macOS),shortcut.ref.mac.mac.option_0
+docs/shortcuts/catalog-v1.json:2194,data,기본은 밝기·음량 등 — F키로 쓰려면 fn을 함께,정적 (macOS),shortcut.ref.mac.mac.f1_12
+docs/shortcuts/catalog-v1.json:2201,data,디스플레이 미러링 켜기·끄기,정적 (macOS),shortcut.ref.mac.mac.cmd_f1
+docs/shortcuts/catalog-v1.json:2208,data,키보드 탐색 켜기·끄기,정적 (macOS),shortcut.ref.mac.mac.ctrl_f1
+docs/shortcuts/catalog-v1.json:2215,data,메뉴 막대로(키보드 탐색을 켠 경우),정적 (macOS),shortcut.ref.mac.mac.ctrl_f2
+docs/shortcuts/catalog-v1.json:2222,data,Dock으로(켠 경우),정적 (macOS),shortcut.ref.mac.mac.ctrl_f3
+docs/shortcuts/catalog-v1.json:2229,data,한/영 전환(설정에 따라),정적 (macOS),shortcut.ref.mac.mac.caps_lock
+docs/shortcuts/catalog-v1.json:2236,data,복사,정적 (macOS),shortcut.ref.macapp.mac.cmd_c
+docs/shortcuts/catalog-v1.json:2243,data,붙여넣기,정적 (macOS),shortcut.ref.macapp.mac.cmd_v
+docs/shortcuts/catalog-v1.json:2250,data,잘라내기,정적 (macOS),shortcut.ref.macapp.mac.cmd_x
+docs/shortcuts/catalog-v1.json:2257,data,되돌리기,정적 (macOS),shortcut.ref.macapp.mac.cmd_z
+docs/shortcuts/catalog-v1.json:2264,data,다시 하기,정적 (macOS),shortcut.ref.macapp.mac.shift_cmd_z
+docs/shortcuts/catalog-v1.json:2271,data,모두 선택,정적 (macOS),shortcut.ref.macapp.mac.cmd_a
+docs/shortcuts/catalog-v1.json:2278,data,저장,정적 (macOS),shortcut.ref.macapp.mac.cmd_s
+docs/shortcuts/catalog-v1.json:2285,data,찾기,정적 (macOS),shortcut.ref.macapp.mac.cmd_f
+docs/shortcuts/catalog-v1.json:2292,data,인쇄,정적 (macOS),shortcut.ref.macapp.mac.cmd_p
+docs/shortcuts/catalog-v1.json:2299,data,새 문서·새 창,정적 (macOS),shortcut.ref.macapp.mac.cmd_n
+docs/shortcuts/catalog-v1.json:2306,data,열기,정적 (macOS),shortcut.ref.macapp.mac.cmd_o
+docs/shortcuts/catalog-v1.json:2313,data,브라우저 새 탭,정적 (macOS),shortcut.ref.macapp.mac.cmd_t
+docs/shortcuts/catalog-v1.json:2320,data,새로 고침,정적 (macOS),shortcut.ref.macapp.mac.cmd_r
+docs/shortcuts/catalog-v1.json:2327,data,주소 표시줄,정적 (macOS),shortcut.ref.macapp.mac.cmd_l
+docs/shortcuts/catalog-v1.json:2334,data,즐겨찾기 추가,정적 (macOS),shortcut.ref.macapp.mac.cmd_d
+docs/shortcuts/catalog-v1.json:2341,data,굵게,정적 (macOS),shortcut.ref.macapp.mac.cmd_b
+docs/shortcuts/catalog-v1.json:2348,data,기울임,정적 (macOS),shortcut.ref.macapp.mac.cmd_i
+docs/shortcuts/catalog-v1.json:2355,data,밑줄,정적 (macOS),shortcut.ref.macapp.mac.cmd_u
+docs/shortcuts/catalog-v1.json:2362,data,링크 넣기,정적 (macOS),shortcut.ref.macapp.mac.cmd_k
+docs/shortcuts/catalog-v1.json:2369,data,글 칸에서 줄 처음으로,정적 (macOS),shortcut.ref.macapp.mac.ctrl_a
+docs/shortcuts/catalog-v1.json:2376,data,글 칸에서 줄 끝으로,정적 (macOS),shortcut.ref.macapp.mac.ctrl_e
+docs/shortcuts/catalog-v1.json:2383,data,글 칸에서 줄 끝까지 지우기,정적 (macOS),shortcut.ref.macapp.mac.ctrl_k
+docs/shortcuts/catalog-v1.json:2390,data,글 칸에서 앞 글자 지우기,정적 (macOS),shortcut.ref.macapp.mac.ctrl_d
+docs/shortcuts/catalog-v1.json:2397,data,글 칸에서 뒤 글자 지우기,정적 (macOS),shortcut.ref.macapp.mac.ctrl_h
+docs/shortcuts/catalog-v1.json:2404,data,브라우저 탭 · Finder 보기 바꾸기,정적 (macOS),shortcut.ref.macapp.mac.cmd_1_9
+docs/shortcuts/catalog-v1.json:2411,data,도움말 메뉴,정적 (macOS),shortcut.ref.macapp.mac.shift_cmd
+docs/shortcuts/catalog-v1.json:2418,data,앱 설정,정적 (macOS),shortcut.ref.macapp.mac.cmd
+docs/shortcuts/catalog-v1.json:2425,data,브라우저 닫은 탭 다시 열기,정적 (macOS),shortcut.ref.macapp.mac.shift_cmd_t
+apps/screen-ink/src-tauri/packaging/msix/msix.config.json:3,store,슉쇽 (ShookShok),정적 (MSIX DisplayName · PRI 다국어 리소스 필요),store.msix.displayName
+apps/screen-ink/src-tauri/packaging/msix/msix.config.json:4,store,발표자를 위한 화면 캡처·판서·확대 도구,정적 (MSIX Description · PRI 다국어 리소스 필요),store.msix.description
+apps/screen-ink/src-tauri/packaging/msix/msix.config.json:5,store,찰떡쌤,정적 (MSIX PublisherDisplayName),store.msix.publisherDisplayName
+apps/screen-ink/src-tauri/packaging/msix/AppxManifest.template.xml:36,store,ko-KR / en-US (단일 표시 이름 주입 중),"동적 ({{DISPLAY_NAME}}, {{DESCRIPTION}})",store.msix.resources
+docs/store/microsoft-store-listing.md:22,store,찰떡쌤,정적,store.listing.publisherName
+docs/store/microsoft-store-listing.md:23,store,슉쇽,정적 (영문 예약명 ShookShok 병기),store.listing.appName
+docs/store/microsoft-store-listing.md:30,store,© 2026 찰떡쌤. MIT License.,정적,store.listing.copyright
+docs/store/microsoft-store-listing.md:42,store,"단축키 한 번으로 화면을 캡처하고, 확대하고, 그 위에 바로 판서하는 수업용 도구입니다. 인터넷 연결 없이 동작하고, 어떤 정보도 모으지 않습니다.",정적 (영문 초안 있음),store.listing.shortDescFull
+docs/store/microsoft-store-listing.md:46,store,"F1 한 번이면 커서 아래 표·그림·단추를 알아서 잡아 주는 화면 캡처 도구입니다. 한글·PPT에 바로 붙여 넣고, 인터넷 연결 없이 동작하며 어떤 정보도 모으지 않습니다.",정적 (영문 초안 있음 · 문화권 표현),store.listing.shortDescFirst
+docs/store/microsoft-store-listing.md:51,store,슉쇽은 교실에서 화면을 보여 주며 수업하는 선생님을 위해 만든 도구입니다. … (스토어 상세 설명 5문단),정적 (영문 초안 있음),store.listing.description
+docs/store/microsoft-store-listing.md:82,store,F1 한 번으로 커서 아래 표·그림·단추·문단을 알아서 강조,정적 (영문 초안 있음),store.listing.feature.01
+docs/store/microsoft-store-listing.md:83,store,"마우스 휠로 더 크게·더 작게 범위 고르기, 고른 깊이를 기억",정적 (영문 초안 있음),store.listing.feature.02
+docs/store/microsoft-store-listing.md:84,store,드래그할 때 창·칸 경계에 붙는 자석과 1px 방향키 조정,정적 (영문 초안 있음),store.listing.feature.03
+docs/store/microsoft-store-listing.md:85,store,결과를 클립보드에 바로 — 한글·PowerPoint에 Ctrl+V,정적 (영문 초안 있음 · 문화권 표현),store.listing.feature.04
+docs/store/microsoft-store-listing.md:86,store,저장 폴더·파일 이름 규칙 지정,정적 (영문 초안 있음),store.listing.feature.05
+docs/store/microsoft-store-listing.md:87,store,"F1 안에서 R로 방금 잡은 범위, 쉼표·마침표로 최근 범위 넘기기",정적 (영문 초안 있음),store.listing.feature.06
+docs/store/microsoft-store-listing.md:88,store,모니터 2대에서도 정확한 범위,정적 (영문 초안 있음),store.listing.feature.07
+docs/store/microsoft-store-listing.md:89,store,배율이 서로 다른 모니터에서도 정확한 범위,정적 (영문 초안 있음),store.listing.feature.08
+docs/store/microsoft-store-listing.md:90,store,단색 범위는 색 코드(HEX) 바로 복사,정적 (영문 초안 있음),store.listing.feature.09
+docs/store/microsoft-store-listing.md:91,store,"Shift+F1 직전 범위 바로 캡처, Ctrl+F1 모니터 바로 캡처",정적 (영문 초안 있음),store.listing.feature.10
+docs/store/microsoft-store-listing.md:92,store,마우스 커서 함께 찍기 선택,정적 (영문 초안 있음),store.listing.feature.11
+docs/store/microsoft-store-listing.md:93,store,"단축키 59개 모두 바꾸기, 다른 앱과 겹치면 안내",정적 (영문 초안 있음),store.listing.feature.12
+docs/store/microsoft-store-listing.md:94,store,"인터넷 연결 없이 동작, 개인정보 수집 없음",정적 (영문 초안 있음),store.listing.feature.13
+docs/store/microsoft-store-listing.md:95,store,Alt+1 화면 위 판서 — 휠로 확대하며 쓰기,정적 (영문 초안 있음),store.listing.feature.14
+docs/store/microsoft-store-listing.md:96,store,Alt+3 빈 칠판,정적 (영문 초안 있음),store.listing.feature.15
+docs/store/microsoft-store-listing.md:97,store,Alt+2 커서를 따라가는 실시간 확대,정적 (영문 초안 있음),store.listing.feature.16
+docs/store/microsoft-store-listing.md:98,store,"F2 창 캡처(가려진 부분까지), F3 화면 녹화(MP4)",정적 (영문 초안 있음),store.listing.feature.17
+docs/store/microsoft-store-listing.md:99,store,지연 캡처(Alt+F1) 3·5·10초,정적 (영문 초안 있음),store.listing.feature.18
+docs/store/microsoft-store-listing.md:103,store,"첫 버전입니다. F1 스마트 캡처, 휠로 범위 고르기, 클립보드 복사·저장, 최근 범위 다시 고르기(R)를 담았습니다.",정적 (영문 초안 있음),store.listing.whatsNew
+docs/store/microsoft-store-listing.md:107,store,화면 캡처 · 스크린샷 · 캡처 프로그램 · 판서 · 화면 확대 · 수업 도구 · 전자칠판,정적 (영문 초안 있음 · 검색어 7개),store.listing.searchTerms
