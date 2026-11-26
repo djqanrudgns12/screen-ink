@@ -24,7 +24,7 @@
 | CI 상시 실행 | [완료] | `.github/workflows/ci.yml`(푸시마다 ubuntu·Windows·맥·UI, Windows 순수 판정 시험 추가) | — |
 | 앱 이름·아이콘 (사용자 브랜드 세션) | [완료] | 커밋 8796250·848d271, `docs/brand/README.md` | — |
 
-**맥은 오늘 코드가 바뀌지 않았다.** 다만 공통 코드가 크게 늘어 맥에서 확인할 것이 생겼다(§2). 새 포트는 모두 기본 구현이 있어 맥 어댑터를 고치지 않아도 빌드된다(CI 맥 clippy 통과).
+**맥 어댑터는 오늘 Windows 흐름에서 바뀌지 않았다**(아침 맥 커밋 `621e070`~`84723a9` — 진입 p50 64 ms·모니터 넘어 끌기·섬 위치 — 은 이전 문서 §2.5에 있다). 다만 공통 코드가 크게 늘어 맥에서 확인할 것이 생겼다(§2). 새 포트는 모두 기본 구현이 있어 맥 어댑터를 고치지 않아도 빌드된다(CI 맥 clippy 통과).
 
 ---
 
@@ -33,7 +33,7 @@
 1. **앱 이름·ID·경로가 바뀌었다**(브랜드 세션, 사용자 결정).
    - 화면(한글) **슉쇽**, 영문으로만 쓰는 곳 **ShookShok**, 파일·폴더·exe **Shookshok**, 앱 ID `com.ssamuniverse.shookshok`(소문자). 크레이트·npm·플러그인·이벤트 이름은 `screen-ink` 그대로.
    - 플러그인 상수 `APP_NAME`("슉쇽")·`APP_DIR`("Shookshok") — 화면 문구·폴더 이름은 여기서 읽는다.
-   - 로그: tauri-plugin-log `LogDir`, 파일 이름 `Shookshok`. 맥 `~/Library/Logs/com.ssamuniverse.shookshok/Shookshok.log`, Windows `%LOCALAPPDATA%\com.ssamuniverse.shookshok\logs\Shookshok.log` **[확인 필요 — 맥에서 첫 실행 때 실제 경로를 확인해 이 줄을 고칠 것]**. 옛 `kr.screenink.desktop` 경로는 더 쓰지 않는다.
+   - 로그: tauri-plugin-log `LogDir`, 파일 이름 `Shookshok`. 맥 `~/Library/Logs/com.ssamuniverse.shookshok/Shookshok.log` **[확인됨 2026-11-26 맥 `tauri dev` — 첫 줄 `ShookShok ready`, 시각은 UTC]**, Windows `%LOCALAPPDATA%\com.ssamuniverse.shookshok\logs\Shookshok.log` [확인 필요]. 옛 `kr.screenink.desktop` 경로는 더 쓰지 않는다(맥에 옛 폴더가 남아 있지만 새 로그는 안 쌓인다).
    - 설정 폴더는 시작할 때 옛 `screen-ink` 폴더를 `Shookshok`으로 한 번 옮긴다. 포터블 표시 파일은 `Shookshok.portable`(옛 `screen-ink.portable`·`shookshok.portable`도 인정).
    - 맥 Dock·Launchpad 이름 슉쇽(`apps/screen-ink/src-tauri/Info.plist` `CFBundleDisplayName`).
 2. **모드가 늘었다**: `Mode::{Idle, Capture, Draw, LiveZoom, Recording}`(`crates/ink-domain/src/mode.rs`). 다른 모드 키 = 지금 모드를 끝내고 전환(03 §3). 녹화 중 다른 모드를 끝내면 `rest_mode()`로 녹화 상태로 돌아간다.
