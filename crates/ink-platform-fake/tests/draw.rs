@@ -471,4 +471,11 @@ fn 판서와_실시간_확대는_서로_끝내고_전환() {
     // 트레이 판서도 확대를 끝내고 연다
     s.start_draw(DrawKind::Board);
     assert!(matches!(s.mode(), Mode::Draw { board: true, .. }));
+    // 판서 중 트레이 [실시간 확대]도 Alt+2처럼 판서를 끝내고(늦은 끝으로 보관) 확대
+    let board = session_of(&s);
+    s.start_zoom();
+    assert!(matches!(s.mode(), Mode::LiveZoom { .. }), "트레이 확대는 판서를 끝낸다");
+    assert!(w.overlay.0.lock().unwrap().showing.is_none(), "판서 오버레이를 숨긴다");
+    s.draw_finish(finish(board, 2));
+    assert_eq!(s.kept_ink().unwrap().document, doc(2), "늦은 끝으로 보관");
 }

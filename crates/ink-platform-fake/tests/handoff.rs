@@ -250,6 +250,27 @@ fn 결과_섬에_판서로_단추와_키캡() {
 }
 
 #[test]
+fn 결과_섬이_떠_있을_때_alt1은_판서로와_같고_지나면_보통_판서() {
+    let w = world();
+    let mut s = service(&w);
+    capture_at(&mut s, &w, 420, 320);
+    let before = captures(&w);
+    let now = std::time::Instant::now();
+    assert_eq!(s.on_hotkey_at("draw", now), HotkeyOutcome::Draw);
+    assert_eq!(captures(&w), before, "재캡처 0회 — [판서로]와 같다");
+    let (ds, _) = last_draw(&w);
+    let (vs, tx, ty) = fit_rect_view(FHD, 1.0, ROW);
+    assert_eq!(ds.initial_view, view_of(vs, tx, ty), "고른 범위가 꽉 차게");
+    // 판서를 끝내고 다시: 결과 섬 시간이 지나면 보통 판서(1×, 새로 찍음)
+    s.on_hotkey_at("draw", now);
+    capture_at(&mut s, &w, 420, 320);
+    let later = std::time::Instant::now() + ink_app::RESULT_ISLAND_TO_DRAW + std::time::Duration::from_millis(10);
+    assert_eq!(s.on_hotkey_at("draw", later), HotkeyOutcome::Draw);
+    let (ds, _) = last_draw(&w);
+    assert_eq!(ds.initial_view.s, 1.0, "보통 판서는 1×");
+}
+
+#[test]
 fn 판서로는_다시_찍지_않고_고른_범위가_꽉_차게_그_모니터_판서로() {
     let w = world();
     let mut s = service(&w);

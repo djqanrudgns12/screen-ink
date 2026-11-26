@@ -110,6 +110,8 @@ impl InkService {
     pub fn start_zoom(&mut self) {
         self.end_zoom();
         self.end_capture();
+        // 판서 중이면 판서를 끝내고(보관은 늦은 끝으로) 확대로 — 판서 중 Alt+2와 같다(이어받기 일꾼이 찾은 버그)
+        self.end_draw_for_switch();
         self.begin_zoom(Instant::now());
     }
 

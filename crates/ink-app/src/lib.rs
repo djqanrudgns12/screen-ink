@@ -22,7 +22,7 @@ pub use ports::{
 pub use ports::{NoRecorder, RecStartOpts, RecStats, Recorder, WindowShot, REC_ENCODER_FAILED, REC_UNSUPPORTED, REC_WINDOW_CLOSED, WINDOW_PROTECTED};
 pub use quick::Delay;
 pub use capture::CaptureInput;
-pub use draw::{DrawExportMeta, DrawExported, DrawFinish, DrawIslandPatch, DrawRestoreResult, ExportAction, KeptInk, KeptPayload, PenSample};
+pub use draw::{DrawExportMeta, DrawExported, DrawFinish, DrawIslandPatch, DrawRestoreResult, ExportAction, KeptInk, KeptPayload, PenSample, RESULT_ISLAND_TO_DRAW};
 pub use ink_domain::mode::DrawKind;
 pub use vision::VisionEngine;
 pub use service::{HotkeyOutcome, ImportPreview, InkService, ACTION_PERM_AX, ACTION_PERM_SCREEN, PAUSE_SLOT};

@@ -33,6 +33,9 @@ pub const EXPORT_FORMAT: &str = "x-ink-format";
 const EXPORT_MAX_SIDE: u32 = 16_384;
 /// 섬 안내 한 줄 길이 상한(글자)
 const NOTICE_MAX_CHARS: usize = 60;
+/// 결과 섬이 떠 있다고 보는 시간 — UI 결과 섬 1.2초(동작 줄이기면 2초, `islandQueue`) 중 긴 쪽.
+/// 이 안의 판서 키는 [판서로]와 같다. 지나면 보통 판서(커서 모니터 1×).
+pub const RESULT_ISLAND_TO_DRAW: std::time::Duration = std::time::Duration::from_millis(2000);
 /// 섬 단추가 판서 엔진에 보낼 수 있는 명령(`run` 동작 `draw.<명령>`)
 pub const DRAW_COMMANDS: [&str; 2] = ["acceptSuggestion", "undo"];
 
@@ -508,6 +511,11 @@ impl InkService {
     /// 판서 중 캡처 키 = 판서를 끝내고(보관은 늦은 끝으로) `None` — 캡처 흐름이 쉬는 상태에서 시작한다.
     pub(crate) fn on_draw_hotkey(&mut self, slot: &str, pressed: Instant) -> Option<HotkeyOutcome> {
         let drawing = matches!(self.mode, Mode::Draw { .. });
+        // 결과 섬이 떠 있는 동안 판서 키 = 결과 섬 [판서로](키캡 `Alt 1`과 맞춤, 메인 결정) — 고른 범위가 꽉 차게
+        if slot == "draw" && matches!(self.mode, Mode::Idle | Mode::Recording { .. }) && self.result_island_up(pressed) {
+            self.capture_to_draw_at(pressed);
+            return Some(HotkeyOutcome::Draw);
+        }
         // 판서 중 실시간 확대 키 = 판서를 끝내고(보관은 늦은 끝으로) 확대로 — 확대 판정은 쉬는 상태에서 다시
         if drawing && slot == ink_domain::zoom::ZOOM_SLOT {
             self.end_draw(EndWhy::Switch);
@@ -553,6 +561,18 @@ impl InkService {
         }
         self.end_for_switch();
         self.begin_draw(kind, Instant::now());
+    }
+
+    /// 방금 확정한 캡처의 결과 섬([판서로] 단추)이 아직 떠 있을 때인지 — 섬은 화면이 걷어서 Rust는 시간으로 가늠한다.
+    fn result_island_up(&self, pressed: Instant) -> bool {
+        self.cap.handoff.as_ref().is_some_and(|h| pressed.saturating_duration_since(h.at) < RESULT_ISLAND_TO_DRAW)
+    }
+
+    /// 판서 중이면 다른 모드로 넘어가려고 끝낸다(보관은 웹뷰의 늦은 `drawFinish`로). 판서가 아니면 아무것도 안 함.
+    pub(crate) fn end_draw_for_switch(&mut self) {
+        if matches!(self.mode, Mode::Draw { .. }) {
+            self.end_draw(EndWhy::Switch);
+        }
     }
 
     /// 다른 모드로 넘어가기 전 지금 모드 끝. 확대는 돋보기가 화면에서 사라질 때까지 기다린다(곧 찍을 수 있다).
