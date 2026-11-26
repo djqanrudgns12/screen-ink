@@ -85,6 +85,8 @@ pub struct InkService {
     pub(crate) settings: Settings,
     pub(crate) env: Environment,
     pub(crate) hotkeys_enabled: bool,
+    /// 설정에서 단축키를 녹화하는 중(R2-KEY-REC) — 전역 키를 모두 조용히 풀어 둔다
+    pub(crate) capturing_keys: bool,
     /// 칸 → 등록한 가속기
     pub(crate) registered: BTreeMap<String, String>,
     /// 등록하지 못한 전역 칸과 이유
@@ -194,6 +196,7 @@ impl InkService {
             settings,
             env: catalog().default_environment(),
             hotkeys_enabled: true,
+            capturing_keys: false,
             registered: BTreeMap::new(),
             failures: BTreeMap::new(),
             offered: BTreeMap::new(),
@@ -392,7 +395,7 @@ impl InkService {
             }
         }
         self.env = env;
-        if self.hotkeys_enabled {
+        if self.hotkeys_enabled && !self.capturing_keys {
             let failed: Vec<String> = self.failures.keys().cloned().collect();
             for id in failed {
                 let combo = self.settings.shortcut(&id).to_string();
@@ -495,7 +498,13 @@ impl InkService {
         }
         let live = slot.is_global() && (self.hotkeys_enabled || slot.id == PAUSE_SLOT);
         let mut status = Self::status_of(&a);
-        if live && !combo.is_empty() {
+        if live && !combo.is_empty() && self.capturing_keys {
+            // 녹화 중: 다른 앱이 쓰는지 운영체제에 한 번 물어보고(등록 → 바로 해제) 진짜 등록은 녹화가 끝날 때
+            let accel = self.try_register(slot, combo)?;
+            self.ports.hotkeys.unregister(&accel);
+            self.registered.remove(&slot.id);
+            status = Self::status_of(&a.confirmed_free());
+        } else if live && !combo.is_empty() {
             let accel = self.try_register(slot, combo)?;
             if let Some(old) = self.registered.insert(slot.id.clone(), accel.clone()) {
                 if old != accel {
@@ -610,6 +619,11 @@ impl InkService {
         if enabled == self.hotkeys_enabled {
             return self.state();
         }
+        if self.capturing_keys {
+            // 녹화 중: 값만 바꾸고 등록은 녹화가 끝날 때(`end_shortcut_capture` → `start`)
+            self.hotkeys_enabled = enabled;
+            return self.state();
+        }
         self.hotkeys_enabled = enabled;
         if enabled {
             self.start();
@@ -635,6 +649,35 @@ impl InkService {
         self.state()
     }
 
+    /// 설정에서 단축키 녹화를 시작한다(R2-KEY-REC-1): 녹화 칸이 키를 받도록 **모든 전역 키(잠시 끄기 칸 포함)를 조용히 푼다**.
+    /// 섬을 띄우지 않고 `hotkeys_enabled`도 그대로다(사용자가 끈 것과 다름). 이미 녹화 중이면 아무 일도 없다.
+    pub fn begin_shortcut_capture(&mut self) {
+        if self.capturing_keys {
+            return;
+        }
+        self.capturing_keys = true;
+        for (_, accel) in std::mem::take(&mut self.registered) {
+            self.ports.hotkeys.unregister(&accel);
+        }
+        log::debug!("shortcut capture begin");
+    }
+
+    /// 녹화를 끝낸다 — 지금 설정 값으로 전역 키를 다시 등록한다(끈 상태면 잠시 끄기 칸만). 녹화 중이 아니면 아무 일도 없다.
+    /// 설정 창이 닫히거나 뒤로 가거나 시간이 지나면 어댑터가 부른다(R2-KEY-REC-2) — 몇 번 불러도 안전.
+    pub fn end_shortcut_capture(&mut self) {
+        if !self.capturing_keys {
+            return;
+        }
+        self.capturing_keys = false;
+        let bad = self.start();
+        log::debug!("shortcut capture end ({bad} failures)");
+        self.emit_state();
+    }
+
+    pub fn capturing_shortcut(&self) -> bool {
+        self.capturing_keys
+    }
+
     /// 어댑터가 전역 키 눌림을 넘긴다.
     pub fn on_hotkey(&mut self, slot: &str) -> HotkeyOutcome {
         self.on_hotkey_at(slot, Instant::now())
@@ -642,6 +685,10 @@ impl InkService {
 
     /// `pressed` = 어댑터가 키를 받은 순간(진입 계측 M1의 시작점).
     pub fn on_hotkey_at(&mut self, slot: &str, pressed: Instant) -> HotkeyOutcome {
+        // 녹화 중에는 운영체제가 키를 못 풀었더라도 아무것도 실행하지 않는다(R2-KEY-REC-4 이중 안전)
+        if self.capturing_keys {
+            return HotkeyOutcome::Ignored;
+        }
         if slot == PAUSE_SLOT {
             let next = !self.hotkeys_enabled;
             self.set_hotkeys_enabled(next);
@@ -1004,7 +1051,10 @@ impl InkService {
         }
         self.failures.clear();
         self.offered.clear();
-        self.start();
+        // 녹화 중이면 녹화가 끝날 때 다시 등록한다
+        if !self.capturing_keys {
+            self.start();
+        }
     }
 
     // ───────────── 내보내기 · 가져오기 · 모두 처음으로 (05 §1) ─────────────

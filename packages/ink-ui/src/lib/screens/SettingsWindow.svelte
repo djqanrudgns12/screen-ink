@@ -43,6 +43,15 @@
   let activeTab = $state('shortcuts');
   let state = $state(null);
   let isRecordingShortcut = $state(false);
+  // 녹화 칸이 키를 받는 동안 전역 키를 조용히 풀고(F1 같은 키가 캡처를 실행하지 않게), 끝나면 되살린다(R2-KEY-REC).
+  // 창이 닫혀도 되살린다. Rust 쪽도 창이 뒤로 가거나 20초가 지나면 스스로 되살린다.
+  $effect(() => {
+    const on = isRecordingShortcut;
+    void client?.shortcutCapture?.(on);
+  });
+  $effect(() => () => {
+    void client?.shortcutCapture?.(false);
+  });
   let firstRunOpen = $state(false);
   let noticesDismissed = $state(false);
 

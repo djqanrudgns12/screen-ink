@@ -149,6 +149,53 @@ fn 잠시_끄면_alt_백틱만_남고_다시_누르면_켜진다() {
     assert_eq!(s.on_hotkey("draw"), HotkeyOutcome::Draw, "캡처 중 Alt+1 = 캡처를 끝내고 판서로");
 }
 
+/// R2-KEY-REC: 설정에서 단축키를 녹화하는 동안 전역 키가 먼저 가로채 캡처를 실행하던 버그(F1 → 캡처).
+#[test]
+fn 단축키_녹화_중에는_전역_키를_조용히_풀고_끝나면_새_값으로_다시_등록한다() {
+    let w = FakeWorld::new();
+    let mut s = service(&w);
+    let all = w.registered_count();
+    let islands = || w.notifier.0.lock().unwrap().islands.len();
+    let before = islands();
+
+    s.begin_shortcut_capture();
+    assert!(s.capturing_shortcut());
+    assert_eq!(w.registered_count(), 0, "잠시 끄기 칸까지 모두 푼다");
+    assert_eq!(islands(), before, "섬을 띄우지 않는다(사용자가 끈 것과 다름)");
+    assert!(s.state().hotkeys_enabled, "단축키 켜짐 상태는 그대로");
+    // 운영체제가 못 풀어 키 사건이 와도 아무것도 하지 않는다
+    assert_eq!(s.on_hotkey("region"), HotkeyOutcome::Ignored);
+    assert_eq!(s.on_hotkey("pause"), HotkeyOutcome::Ignored);
+    assert_eq!(s.mode(), ink_domain::mode::Mode::Idle);
+
+    // 녹화 중 새 키 확정: 다른 앱이 쓰는지만 물어보고 아직 등록하지 않는다
+    assert!(s.set_shortcut("region", "F7").ok);
+    assert!(!w.is_registered("F7"), "녹화가 끝나기 전에는 등록하지 않는다");
+    assert_eq!(w.registered_count(), 0);
+
+    s.end_shortcut_capture();
+    assert!(!s.capturing_shortcut());
+    assert_eq!(w.registered_count(), all);
+    assert!(w.is_registered("F7"), "끝나면 새 값으로 다시 등록");
+    assert_eq!(s.on_hotkey("region"), HotkeyOutcome::Captured);
+    // 몇 번 불러도 안전
+    s.end_shortcut_capture();
+    assert_eq!(w.registered_count(), all);
+}
+
+#[test]
+fn 단축키_녹화_중_잠시_끄기를_바꿔도_끝날_때_그_상태로_등록한다() {
+    let w = FakeWorld::new();
+    let mut s = service(&w);
+    s.begin_shortcut_capture();
+    s.begin_shortcut_capture();
+    s.set_hotkeys_enabled(false);
+    assert_eq!(w.registered_count(), 0, "녹화 중에는 등록하지 않는다");
+    s.end_shortcut_capture();
+    assert_eq!(w.registered_count(), 1);
+    assert!(w.is_registered("Alt+Backquote"), "꺼 둔 상태면 잠시 끄기 칸만");
+}
+
 #[test]
 fn 설정은_바로_반영되고_되돌릴_수_있다() {
     let w = FakeWorld::new();

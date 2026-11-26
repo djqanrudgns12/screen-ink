@@ -34,6 +34,7 @@ export function createTauriClient() {
     resetShortcutGroup: (group) => cmd('reset_shortcut_group', { group }),
     undo: () => cmd('undo'),
     setHotkeysEnabled: (enabled) => cmd('set_hotkeys_enabled', { enabled }),
+    shortcutCapture: (active) => cmd('shortcut_capture', { active }),
     run: (action) => cmd('run', { action }),
     previewImport: () => cmd('preview_import'),
     applyImport: (path) => cmd('apply_import', { path }),

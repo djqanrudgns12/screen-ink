@@ -557,7 +557,20 @@ fn open_settings_with<R: Runtime>(app: &AppHandle<R>, first_run: bool) {
         .center()
         .build();
     match built {
-        Ok(_) => {
+        Ok(w) => {
+            // 녹화 중 설정 창이 뒤로 가거나 닫히면 전역 키를 바로 되살린다(R2-KEY-REC-2).
+            // 서비스가 잠금을 쥔 채 창을 닫는 길이 있어(settings.close) 여기서 바로 잠그지 않고 메인 대기열로 미룬다.
+            let h = app.clone();
+            w.on_window_event(move |e| {
+                if matches!(e, WindowEvent::Focused(false) | WindowEvent::Destroyed | WindowEvent::CloseRequested { .. }) {
+                    let h2 = h.clone();
+                    let _ = h.run_on_main_thread(move || {
+                        if let Some(ink) = h2.try_state::<Ink>() {
+                            ink.lock().end_shortcut_capture();
+                        }
+                    });
+                }
+            });
             let handle = app.clone();
             let _ = app.run_on_main_thread(move || handle.state::<Ink>().lock().begin_settings_session());
         }
@@ -716,6 +729,39 @@ fn undo(ink: State<'_, Ink>) -> UpdateResult {
 #[tauri::command]
 fn set_hotkeys_enabled(ink: State<'_, Ink>, enabled: bool) -> InkState {
     ink.lock().set_hotkeys_enabled(enabled)
+}
+
+/// 단축키 녹화가 이 시간보다 길면 전역 키를 되살린다(R2-KEY-REC-2 — 웹뷰가 끝을 못 알려도 갇히지 않게).
+const SHORTCUT_CAPTURE_LIMIT: Duration = Duration::from_secs(20);
+/// 녹화 세대 — 새 녹화가 시작되면 지난 시간 제한은 무시된다.
+static SHORTCUT_CAPTURE_GEN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// 설정 › 단축키 녹화 칸이 키를 받는 동안 전역 키를 조용히 푼다(true) / 다시 등록한다(false).
+#[tauri::command]
+fn shortcut_capture<R: Runtime>(app: AppHandle<R>, ink: State<'_, Ink>, active: bool) {
+    use std::sync::atomic::Ordering;
+    let gen = SHORTCUT_CAPTURE_GEN.fetch_add(1, Ordering::SeqCst) + 1;
+    if !active {
+        ink.lock().end_shortcut_capture();
+        return;
+    }
+    ink.lock().begin_shortcut_capture();
+    std::thread::spawn(move || {
+        std::thread::sleep(SHORTCUT_CAPTURE_LIMIT);
+        if SHORTCUT_CAPTURE_GEN.load(Ordering::SeqCst) != gen {
+            return;
+        }
+        let h = app.clone();
+        let _ = app.run_on_main_thread(move || {
+            if let Some(ink) = h.try_state::<Ink>() {
+                let mut ink = ink.lock();
+                if ink.capturing_shortcut() {
+                    log::info!("shortcut capture timed out — hotkeys restored");
+                    ink.end_shortcut_capture();
+                }
+            }
+        });
+    });
 }
 
 #[tauri::command]
@@ -1402,6 +1448,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             reset_shortcut_group,
             undo,
             set_hotkeys_enabled,
+            shortcut_capture,
             run,
             preview_import,
             apply_import,

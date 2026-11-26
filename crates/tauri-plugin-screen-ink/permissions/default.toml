@@ -10,6 +10,7 @@ permissions = [
   "allow-reset-shortcut-group",
   "allow-undo",
   "allow-set-hotkeys-enabled",
+  "allow-shortcut-capture",
   "allow-run",
   "allow-preview-import",
   "allow-apply-import",

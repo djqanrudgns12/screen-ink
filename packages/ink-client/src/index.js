@@ -275,6 +275,7 @@
  * @property {(group: string) => Promise<InkState>} resetShortcutGroup
  * @property {() => Promise<{ok: boolean, state: InkState}>} undo   설정 창 안 Ctrl+Z
  * @property {(enabled: boolean) => Promise<InkState>} setHotkeysEnabled
+ * @property {(active: boolean) => Promise<void>} [shortcutCapture]  설정 › 단축키 녹화 칸이 키를 받는 동안 전역 키를 조용히 푼다(true)·다시 등록(false). 없는 클라이언트는 그냥 건너뛴다(R2-KEY-REC)
  * @property {(action: InkAction) => Promise<void>} run
  * @property {() => Promise<ImportPick>} previewImport   가져오기: 파일 고르기 + 바뀌는 항목(저장 안 함)
  * @property {(path: string) => Promise<{ok: boolean, error?: string, state: InkState}>} applyImport  시트 [가져오기] — 되돌리기 1건

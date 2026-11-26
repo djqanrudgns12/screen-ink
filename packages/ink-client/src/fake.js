@@ -47,6 +47,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   const history = [];
   const subs = new Set();
   let hotkeysEnabled = true;
+  /** 단축키 녹화 중(전역 키를 풀어 둔 흉내) — 시험이 `isShortcutCapturing()`으로 본다 */
+  let shortcutCapturing = false;
   let mode = { mode: 'idle' };
   let sessionSeq = 0;
   /** @type {any} 가짜 고르기 상태(세션마다 새로) */
@@ -282,6 +284,11 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       island({ kind: 'result', text: '처음 상태로 되돌렸어요' });
       return state();
     },
+    async shortcutCapture(active) {
+      shortcutCapturing = Boolean(active);
+    },
+    /** 시험용: 단축키 녹화 중인지 */
+    isShortcutCapturing() { return shortcutCapturing; },
     async setHotkeysEnabled(enabled) {
       hotkeysEnabled = enabled; changed();
       island(enabled ? { kind: 'info', text: '단축키를 다시 켰어요' } : { kind: 'off', text: '단축키를 잠시 껐어요', detail: 'Alt+`' });

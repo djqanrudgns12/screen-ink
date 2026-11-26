@@ -11,6 +11,7 @@ screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있
 - `allow-reset-shortcut-group`
 - `allow-undo`
 - `allow-set-hotkeys-enabled`
+- `allow-shortcut-capture`
 - `allow-run`
 - `allow-preview-import`
 - `allow-apply-import`
@@ -608,6 +609,32 @@ Enables the set_shortcut command without any pre-configured scope.
 <td>
 
 Denies the set_shortcut command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-shortcut-capture`
+
+</td>
+<td>
+
+Enables the shortcut_capture command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-shortcut-capture`
+
+</td>
+<td>
+
+Denies the shortcut_capture command without any pre-configured scope.
 
 </td>
 </tr>

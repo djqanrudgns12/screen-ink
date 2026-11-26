@@ -79,6 +79,8 @@
 
 > 요청 4: 단축키를 바꾸려고 녹화 중 fn+F1을 누르면 캡처가 실행돼 안 바뀐다. 확실히 보완.
 
+**[완료 2026-11-27 — R2-KEY-REC-1·2·4]** 서비스 `begin_shortcut_capture`/`end_shortcut_capture`, 명령 `shortcut_capture`(20초 시간 제한·설정 창 blur/닫힘에 되살림), `SettingsWindow`가 녹화 상태를 알림, 시험 `usecases.rs` `단축키_녹화_중에는_…`·`단축키_녹화_중_잠시_끄기를_…`. 남음: 맥 fn+F1 실기·R2-KEY-REC-3·5(녹화 칸 문구).
+
 **원인(확인함)**: 실제 앱의 단축키 녹화(`ShortcutsPage.svelte`)는 웹뷰 `keydown`으로 키를 받는데, 그동안 **전역 단축키가 그대로 등록돼 있다** → OS가 F1을 먼저 가로채 캡처를 실행한다. 미리보기(`Preview.svelte`)만 녹화 중 `setHotkeysEnabled(false)`를 불러서 시험·미리보기에서는 안 보였다. Windows도 같은 버그(전역 `RegisterHotKey`가 먼저 가로챔).
 
 | ID | 우선 | 요구 | 수용 기준 |

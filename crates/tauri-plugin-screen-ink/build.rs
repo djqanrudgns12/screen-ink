@@ -6,6 +6,7 @@ const COMMANDS: &[&str] = &[
     "reset_shortcut_group",
     "undo",
     "set_hotkeys_enabled",
+    "shortcut_capture",
     "run",
     "preview_import",
     "apply_import",
