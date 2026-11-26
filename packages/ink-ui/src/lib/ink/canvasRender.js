@@ -73,6 +73,8 @@ export const FRAME_PLACEHOLDER = '#2A2B2E';
  */
 export function resolveInkColor(code, background) {
   if (background === 'black' && code === 'K') return INK_COLORS.W;
+  // 내 색·스포이트(R2-ANN-1): `#RRGGBB`는 그대로 그린다(저장·내보내기도 같은 색)
+  if (typeof code === 'string' && /^#[0-9a-fA-F]{6}$/.test(code)) return code;
   return /** @type {Record<string, string>} */ (INK_COLORS)[code] ?? INK_COLORS.R;
 }
 

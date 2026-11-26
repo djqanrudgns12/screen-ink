@@ -35,6 +35,8 @@ export function createTauriClient() {
     undo: () => cmd('undo'),
     setHotkeysEnabled: (enabled) => cmd('set_hotkeys_enabled', { enabled }),
     shortcutCapture: (active) => cmd('shortcut_capture', { active }),
+    savePdf: (bytes, name) => cmd('save_pdf', { bytes: Array.from(bytes), name }),
+    systemFonts: () => cmd('system_fonts'),
     run: (action) => cmd('run', { action }),
     previewImport: () => cmd('preview_import'),
     applyImport: (path) => cmd('apply_import', { path }),

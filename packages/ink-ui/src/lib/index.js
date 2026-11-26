@@ -188,3 +188,12 @@ export {
 
 // 다국어(R2-I18N): 지금 언어·OS의 글 t(), 상태에서 맞추기 syncLang
 export { locale, setLang, setOs, syncLang, t, translate } from './i18n/index.svelte.js';
+
+// 2차(R2): 색·굵기 패널·팔레트·굵기 모델, 사용 설명서·첫 실행·설정 찾기·트레이 모델(판서·바깥에서 같이 쓴다)
+export { default as ColorWidthPanel } from './components/ColorWidthPanel.svelte';
+export { default as HelpPage } from './screens/HelpPage.svelte';
+export * as palette from './models/palette.js';
+export * as inkSize from './models/inkSize.js';
+export * as onboarding from './models/onboarding.js';
+export * as settingsSearch from './models/settingsSearch.js';
+export * as trayMenu from './models/trayMenu.js';
