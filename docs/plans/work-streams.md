@@ -47,7 +47,7 @@
 
 | `cap-annotate` | Claude(2차) | B 4.9 캡처 주석(판서 엔진 재사용·Rust 합성·모자이크) + 잔상 eval → CaptureOverlay 이벤트로 | `target`(공용) |
 
-병합 기록: `cap-chip` 병합(3e-chip) · `ink-engine` 병합(4.1 엔진·4.2 렌더러·미리보기 `?draw=1`) + 메인 수정 c8aec99(DrawCanvas가 tick 효과를 버리던 것 — 제안 4초 만료가 섬에서 안 걷힘). 잔상은 지금 `overlay.rs`가 오버레이 웹뷰에 `eval`로 그린다 — 2차 캡처 주석 흐름(4.9)이 `CaptureOverlay.svelte`를 맡을 때 `screen-ink://afterimage` 이벤트 + `SelectionFrame state="afterimage"`로 옮기고 `eval`을 지운다. `msix`는 브랜드 커밋(8796250) 전 기준으로 출발했다 — 병합 때 Identity를 `com.ssamuniverse.shookshok`, 표시 이름 `슉쇽 (ShookShok)`, `.appinstaller` 파일 이름 `shookshok.appinstaller`로 맞춘다.
+병합 기록: `cap-chip` 병합(3e-chip) · `ink-engine` 병합(4.1 엔진·4.2 렌더러·미리보기 `?draw=1`) + 메인 수정 c8aec99(DrawCanvas가 tick 효과를 버리던 것 — 제안 4초 만료가 섬에서 안 걷힘). 잔상은 지금 `overlay.rs`가 오버레이 웹뷰에 `eval`로 그린다 — 2차 캡처 주석 흐름(4.9)이 `CaptureOverlay.svelte`를 맡을 때 `screen-ink://afterimage` 이벤트 + `SelectionFrame state="afterimage"`로 옮기고 `eval`을 지운다. `msix`는 브랜드 커밋(8796250) 전 기준으로 출발했다 — 병합 때 Identity `com.ssamuniverse.shookshok`, 표시 이름 슉쇽(영문 리소스 ShookShok), 파일 이름 `Shookshok_…msix`·`Shookshok.appinstaller`·exe `Shookshok.exe`로 맞춘다(848d271 규칙).
 
 - ~~빌드 폴더를 같이 쓰는 흐름은 cargo 잠금으로 빌드가 차례로 돈다~~ → **틀렸다(2026-11-26 live-zoom이 발견)**: 워크트리가 달라도 작업 공간 크레이트 산출물 이름이 같아 서로 덮어쓴다(엉뚱한 "모듈 없음" 오류·틀린 시험 결과). **흐름마다 전용 `target-<흐름>`**, 메모리를 위해 `CARGO_BUILD_JOBS=4`. 공용 `target`은 메인만 쓴다.
 - 같은 폴더(원본)에서 사용자의 브랜드 세션이 아이콘·`tokens.css`·`04-screens.md`·`10-design-system.md`·`tray_art.rs`를 고친다 — 모든 흐름에서 손대지 않는다.
@@ -64,7 +64,7 @@
 | 5 | 실시간 확대 중 휠 | 휠 = 배율, Shift+휠은 가로채지 않고 아래 앱으로 |
 | 6 | F3 녹화에서 창을 고르면 | 창 추적(WGC CreateForWindow) |
 | 7 | 일정이 밀릴 때 6.5 창 항상 위(P1) | 뒤로 미룸(필수 기능 뒤, 여유 있으면 1차) |
-| 8 | 앱 이름 | 화면 이름 **슉쇽**, 플랫폼(스토어 등) 표기 **슉쇽 (ShookShok)**, 폴더·파일 `shookshok`, identifier `com.ssamuniverse.shookshok`(브랜드 세션 8796250). 크레이트·npm·플러그인·이벤트 이름은 `screen-ink` 그대로 |
+| 8 | 앱 이름 | 화면(한글) **슉쇽**, 영문으로만 쓰는 곳 **ShookShok**, 파일·폴더·exe **Shookshok**(Shookshok.exe·Shookshok.portable·Shookshok_…), 앱 ID `com.ssamuniverse.shookshok`(소문자), MSIX 시작 메뉴 이름 슉쇽 — 브랜드 세션 8796250·848d271. 크레이트·npm·플러그인·이벤트 이름은 `screen-ink` 그대로 |
 | 9 | 맥 첫 실행 시트 F키 안내 | 첫 실행 시트에 짧은 보조 한 줄로 늘 함께 |
 
 | 10 | 실시간 확대 중 전역으로 가로채는 키 | **Esc만**(끝내기). ↑↓는 아래 앱(PPT 등)으로 넘김, 배율은 휠 |
