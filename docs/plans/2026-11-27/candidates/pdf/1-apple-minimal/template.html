@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>슉쇽 · 내 단축키 — 애플 미니멀</title>
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-sans-kr/400.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-sans-kr/500.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-sans-kr/600.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-sans-kr/700.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-mono/400.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-mono/500.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-mono/600.css" />
+    <style>
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+
+      :root {
+        --bg: #ffffff;
+        --surface: #f7f7f5;
+        --text: #121212;
+        --text-2: #3a3a38;
+        --sub: #5e5e5b;
+        --muted: #8a8a86;
+        --line: #e4e4e0;
+        --hair: #ededeb;
+        --key-bg: #f5f5f2;
+        --key-border: #dcdcd6;
+        --key-shadow: #d0d0c9;
+        --accent: #ff9f0a;
+        --accent-text: #9a5b00;
+        --accent-soft: #fff5e5;
+        --danger: #e5484d;
+        --font-sans: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', sans-serif;
+        --font-mono: 'IBM Plex Mono', 'IBM Plex Sans KR', monospace;
+        --font-sym: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Menlo', 'Apple Symbols', sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+        color: var(--text);
+        font-family: var(--font-sans);
+        word-break: keep-all;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .page {
+        width: 210mm;
+        height: 297mm;
+        padding: 13mm 14mm 11mm;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg);
+        overflow: hidden;
+      }
+
+      /* 상단 머리글 */
+      .header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        padding-bottom: 4.5mm;
+        border-bottom: 1.5px solid var(--text);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 3mm;
+      }
+
+      .brand-mark {
+        width: 8mm;
+        height: 8mm;
+        border-radius: 2mm;
+        background: var(--surface);
+        border: 0.75px solid var(--line);
+        display: grid;
+        place-items: center;
+        color: var(--text);
+      }
+
+      .title-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5mm;
+      }
+
+      .doc-title {
+        margin: 0;
+        font-size: 15.5pt;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        line-height: 1.15;
+      }
+
+      .doc-kicker {
+        font-size: 7.5pt;
+        color: var(--sub);
+        letter-spacing: 0.01em;
+      }
+
+      .header-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 1mm;
+      }
+
+      .meta-text {
+        font-family: var(--font-mono);
+        font-size: 7.8pt;
+        color: var(--sub);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .legend-mod {
+        display: inline-flex;
+        align-items: center;
+        gap: 1.4mm;
+        font-size: 7.3pt;
+        color: var(--text-2);
+      }
+
+      .mod-dot {
+        display: inline-block;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--accent);
+        flex: none;
+      }
+
+      /* 핵심 6개 요약 띠 */
+      .hero-strip {
+        margin-top: 4.5mm;
+        padding: 3.2mm 0;
+        border-bottom: 0.75px solid var(--line);
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+
+      .hero-cell {
+        padding: 0 2.5mm;
+        border-right: 0.75px solid var(--hair);
+        display: flex;
+        flex-direction: column;
+        gap: 1.6mm;
+      }
+
+      .hero-cell:first-child {
+        padding-left: 0;
+      }
+
+      .hero-cell:last-child {
+        border-right: 0;
+        padding-right: 0;
+      }
+
+      .hero-top {
+        display: flex;
+        align-items: center;
+        gap: 1.3mm;
+      }
+
+      .hero-label {
+        font-size: 7.8pt;
+        font-weight: 600;
+        color: var(--text);
+        white-space: nowrap;
+      }
+
+      .hero-keys {
+        display: flex;
+        align-items: center;
+        gap: 1mm;
+      }
+
+      /* 본문 3열 */
+      .columns {
+        flex: 1;
+        min-height: 0;
+        margin-top: 5mm;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 7.5mm;
+      }
+
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: 4.5mm;
+        min-width: 0;
+      }
+
+      .section {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .sec-head {
+        display: flex;
+        align-items: center;
+        gap: 1.6mm;
+        padding-bottom: 1.5mm;
+        margin-bottom: 1.4mm;
+        border-bottom: 0.75px solid var(--text);
+      }
+
+      .sec-title {
+        margin: 0;
+        font-size: 8.6pt;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: var(--text);
+      }
+
+      .sec-sub {
+        margin-left: auto;
+        font-size: 6.8pt;
+        color: var(--muted);
+      }
+
+      .sub-label {
+        margin: 2.4mm 0 1mm;
+        font-size: 6.8pt;
+        font-weight: 600;
+        color: var(--sub);
+        letter-spacing: 0.03em;
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 2mm;
+        min-height: 5.5mm;
+        padding: 0.65mm 0;
+        border-bottom: 0.5px solid var(--hair);
+      }
+
+      .row:last-child {
+        border-bottom: 0;
+      }
+
+      .row-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 1.3mm;
+        font-size: 7.7pt;
+        color: var(--text-2);
+        min-width: 0;
+        line-height: 1.25;
+      }
+
+      .row.is-mod .row-label {
+        color: var(--text);
+        font-weight: 500;
+      }
+
+      .later-tag {
+        font-size: 6pt;
+        color: var(--sub);
+        background: var(--surface);
+        border: 0.5px solid var(--line);
+        border-radius: 2px;
+        padding: 0 1mm;
+        line-height: 1.35;
+        flex: none;
+      }
+
+      /* 키캡 */
+      .keycaps {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.8mm;
+        flex: none;
+      }
+
+      kbd {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 4.3mm;
+        height: 4.2mm;
+        padding: 0 1.25mm;
+        border-radius: 1mm;
+        background: var(--key-bg);
+        border: 0.65px solid var(--key-border);
+        box-shadow: 0 0.7px 0 var(--key-shadow);
+        font-family: var(--font-mono);
+        font-size: 6.9pt;
+        font-weight: 500;
+        color: var(--text);
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .hero-keys kbd {
+        height: 5.2mm;
+        min-width: 5.4mm;
+        padding: 0 1.7mm;
+        font-size: 8.2pt;
+        font-weight: 600;
+      }
+
+      kbd.is-mod {
+        background: var(--accent-soft);
+        border-color: #f3c478;
+        box-shadow: 0 0.7px 0 #e6b462;
+        color: var(--accent-text);
+      }
+
+      .plus-op { font-size: 7.5pt; font-weight: 600; color: var(--sub, #5e5e5b); padding: 0 0.4mm; }
+      .sym {
+        font-family: var(--font-sym);
+        font-weight: 500;
+        font-size: 7.5pt;
+      }
+
+      .hero-keys .plus-op { font-size: 7.5pt; font-weight: 600; color: var(--sub, #5e5e5b); padding: 0 0.4mm; }
+      .sym {
+        font-size: 8.8pt;
+      }
+
+      .note-pill {
+        font-size: 7pt;
+        color: var(--sub);
+        white-space: nowrap;
+      }
+
+      /* 판서 색 2×3 콤팩트 그리드 */
+      .color-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.1mm 2.5mm;
+        padding: 1.4mm 0 1.6mm;
+        border-bottom: 0.5px solid var(--hair);
+      }
+
+      .color-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1mm;
+      }
+
+      .color-name {
+        display: inline-flex;
+        align-items: center;
+        gap: 1.3mm;
+        font-size: 7.4pt;
+        color: var(--text-2);
+      }
+
+      .swatch {
+        width: 2.4mm;
+        height: 2.4mm;
+        border-radius: 50%;
+        border: 0.5px solid rgba(0, 0, 0, 0.16);
+        flex: none;
+      }
+
+      /* 바닥글 */
+      .footer {
+        margin-top: auto;
+        padding-top: 2.5mm;
+        border-top: 0.75px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 7pt;
+        color: var(--sub);
+      }
+
+      .footer-right {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page" id="app"></main>
+    <script>
+      const ICONS = {
+        shortcuts:
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="6.5" cy="10" r="0.9" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="0.9" fill="currentColor" stroke="none"/><circle cx="14" cy="10" r="0.9" fill="currentColor" stroke="none"/><circle cx="17.5" cy="10" r="0.9" fill="currentColor" stroke="none"/><path d="M7.5 14h9"/></svg>',
+        region:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M12 8.8c1.4 1.8 2.2 2.9 2.2 3.9a2.2 2.2 0 0 1-4.4 0c0-1 .8-2.1 2.2-3.9z" fill="#FF9F0A" stroke="none"/></svg>',
+        window:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 9h17"/><circle cx="6.2" cy="7" r="1" fill="#FF9F0A" stroke="none"/></svg>',
+        record:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="#E5484D" stroke="none"/></svg>',
+        draw:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5l4.5 4.5L9.5 19H5v-4.5z"/><path d="M13 6.5l4.5 4.5"/><circle cx="4.8" cy="20.4" r="1.5" fill="#FF9F0A" stroke="none"/></svg>',
+        zoom:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/><circle cx="10.5" cy="10.5" r="1.8" fill="#FF9F0A" stroke="none"/></svg>',
+        board:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="11.5" rx="1.5"/><path d="M8.5 20l2-4.5M15.5 20l-2-4.5"/><circle cx="16.4" cy="12" r="1.4" fill="#FF9F0A" stroke="none"/></svg>',
+      };
+
+      const SYMBOLS = new Set(['⌃', '⌥', '⇧', '⌘', '↑', '↓', '←', '→', '↩', '⇥']);
+      const MAC_MAP = {
+        Ctrl: '⌃',
+        Option: '⌥',
+        Alt: '⌥',
+        Shift: '⇧',
+        Cmd: '⌘',
+        Up: '↑',
+        Down: '↓',
+        Enter: '↩',
+        Tab: '⇥',
+      };
+
+      function toTokens(combo) {
+        if (!combo) return [];
+        return combo.split('+').map((t) => MAC_MAP[t] || t);
+      }
+
+      function renderKeycapList(tokens, mod = false) {
+        return `<span class="keycaps">${tokens
+          .map((tok) => {
+            const cls = [mod ? 'is-mod' : '', SYMBOLS.has(tok) ? 'sym' : ''].filter(Boolean).join(' ');
+            return `<kbd class="${cls}">${tok}</kbd>`;
+          })
+          .join('')}</span>`;
+      }
+
+      function renderGestureKeys(keys) {
+        return keys
+          .map((k) => {
+            if (k === '+') return '<span class="plus-op">+</span>';
+            if (k === '+') return '<span class="plus-op">+</span>'; if (k.includes('+')) return renderKeycapList(toTokens(k), false);
+            const tok = MAC_MAP[k] || k;
+            const cls = SYMBOLS.has(tok) ? 'sym' : '';
+            return `<kbd class="${cls}">${tok}</kbd>`;
+          })
+          .join('');
+      }
+
+      function renderRow(item, customLabel) {
+        const mod = Boolean(item.modified);
+        const dot = mod ? '<span class="mod-dot" title="기본값에서 변경됨"></span>' : '';
+        const later = item.later ? '<span class="later-tag">후속</span>' : '';
+        return `<div class="row ${mod ? 'is-mod' : ''}">
+          <span class="row-label">${dot}<span>${customLabel || item.label}</span>${later}</span>
+          ${renderKeycapList(toTokens(item.combo), mod)}
+        </div>`;
+      }
+
+      function renderGestureRow(g) {
+        const right = g.keys
+          ? `<span class="keycaps">${renderGestureKeys(g.keys)}</span>`
+          : `<span class="note-pill">${g.note}</span>`;
+        return `<div class="row"><span class="row-label"><span>${g.label}</span></span>${right}</div>`;
+      }
+
+      async function boot() {
+        const data = window.__SHORTCUTS_DATA__ || (await fetch('./shortcuts.json').then((r) => r.json()));
+        const active = data.shortcuts.filter((s) => s.combo && !s.windowsOnly);
+        const byId = new Map(active.map((s) => [s.id, s]));
+
+        const heroIds = [
+          { id: 'region', icon: 'region', short: '범위 캡처' },
+          { id: 'window', icon: 'window', short: '창 캡처' },
+          { id: 'record', icon: 'record', short: '화면 녹화' },
+          { id: 'draw', icon: 'draw', short: '판서' },
+          { id: 'zoom', icon: 'zoom', short: '실시간 확대' },
+          { id: 'board', icon: 'board', short: '칠판' },
+        ];
+
+        const captureExtra = ['last', 'full', 'active', 'delay'].map((id) => byId.get(id)).filter(Boolean);
+        const captureMode = active.filter((s) => s.group === 'capture-mode');
+
+        const drawTools = ['d-pen', 'd-marker', 'd-text', 'd-select', 'd-eraser', 'd-clear', 'd-spot', 'd-check', 'd-number']
+          .map((id) => byId.get(id))
+          .filter(Boolean);
+        const drawColors = ['d-red', 'd-yellow', 'd-green', 'd-orange', 'd-blue', 'd-lime']
+          .map((id) => byId.get(id))
+          .filter(Boolean);
+        const drawBoards = ['d-white', 'd-black'].map((id) => byId.get(id)).filter(Boolean);
+        const drawOps = ['d-undo', 'd-redo', 'd-copy', 'd-save', 'd-restore', 'd-center', 'd-zin', 'd-zout', 'd-wup', 'd-wdown', 'd-help', 'd-exit']
+          .map((id) => byId.get(id))
+          .filter(Boolean);
+
+        const zoomList = [byId.get('zoom'), byId.get('z-exit')].filter(Boolean);
+        const quickList = active.filter((s) => s.group === 'quick');
+
+        const app = document.getElementById('app');
+        app.innerHTML = `
+          <header class="header">
+            <div class="brand">
+              <div class="brand-mark">${ICONS.shortcuts}</div>
+              <div class="title-wrap">
+                <span class="doc-kicker">발표자 화면 필기 · 확대 · 스마트 캡처</span>
+                <h1 class="doc-title">${data.meta.title}</h1>
+              </div>
+            </div>
+            <div class="header-meta">
+              <span class="meta-text">${data.meta.subtitle}</span>
+              <span class="legend-mod"><span class="mod-dot"></span><span>기본값에서 변경</span></span>
+            </div>
+          </header>
+
+          <section class="hero-strip">
+            ${heroIds
+              .map((h) => {
+                const s = byId.get(h.id);
+                if (!s) return '';
+                const mod = Boolean(s.modified);
+                return `<div class="hero-cell">
+                  <div class="hero-top">
+                    ${ICONS[h.icon]}
+                    <span class="hero-label">${h.short}</span>
+                    ${mod ? '<span class="mod-dot"></span>' : ''}
+                  </div>
+                  <div class="hero-keys">${renderKeycapList(toTokens(s.combo), mod)}</div>
+                </div>`;
+              })
+              .join('')}
+          </section>
+
+          <div class="columns">
+            <div class="col">
+              <section class="section">
+                <div class="sec-head">
+                  ${ICONS.region}
+                  <h2 class="sec-title">캡처</h2>
+                  <span class="sec-sub">바로 · 화면 안</span>
+                </div>
+                <div class="sub-label">어디서나 바로 캡처</div>
+                ${captureExtra.map((s) => renderRow(s)).join('')}
+                <div class="sub-label">캡처 화면 안에서</div>
+                ${captureMode.map((s) => renderRow(s)).join('')}
+                <div class="sub-label">범위 미세 조작</div>
+                ${data.gestures.capture.map(renderGestureRow).join('')}
+              </section>
+            </div>
+
+            <div class="col">
+              <section class="section">
+                <div class="sec-head">
+                  ${ICONS.draw}
+                  <h2 class="sec-title">판서</h2>
+                  <span class="sec-sub">도구 · 색 · 편집</span>
+                </div>
+                <div class="sub-label">도구 · 강조 · 도장</div>
+                ${drawTools.map((s) => renderRow(s)).join('')}
+                <div class="sub-label">펜 색</div>
+                <div class="color-grid">
+                  ${drawColors
+                    .map(
+                      (c) => `<div class="color-item">
+                        <span class="color-name"><span class="swatch" style="background:${c.colorHex}"></span><span>${c.label.replace('색: ', '')}</span></span>
+                        ${renderKeycapList(toTokens(c.combo), false)}
+                      </div>`
+                    )
+                    .join('')}
+                </div>
+                <div class="sub-label">칠판 · 편집 · 화면</div>
+                ${drawBoards.map((s) => renderRow(s)).join('')}
+                ${drawOps.map((s) => renderRow(s)).join('')}
+              </section>
+            </div>
+
+            <div class="col">
+              <section class="section">
+                <div class="sec-head">
+                  ${ICONS.zoom}
+                  <h2 class="sec-title">확대 · 녹화</h2>
+                  <span class="sec-sub">실시간 · 배율</span>
+                </div>
+                ${byId.get('record') ? renderRow(byId.get('record'), '화면 녹화 시작·중지') : ''}
+                ${zoomList.map((s) => renderRow(s)).join('')}
+                <div class="sub-label">확대 조작</div>
+                ${data.gestures.zoom.map(renderGestureRow).join('')}
+              </section>
+
+              <section class="section">
+                <div class="sec-head">
+                  ${ICONS.board}
+                  <h2 class="sec-title">끌어서 도형</h2>
+                  <span class="sec-sub">판서 중</span>
+                </div>
+                ${data.gestures.draw.map(renderGestureRow).join('')}
+              </section>
+
+              <section class="section">
+                <div class="sec-head">
+                  ${ICONS.window}
+                  <h2 class="sec-title">빠른 동작</h2>
+                  <span class="sec-sub">어디서나</span>
+                </div>
+                ${quickList.map((s) => renderRow(s)).join('')}
+              </section>
+            </div>
+          </div>
+
+          <footer class="footer">
+            <span>${data.meta.fnNote}</span>
+            <span class="footer-right">${data.meta.title} · ${data.meta.subtitle}</span>
+          </footer>
+        `;
+
+        await document.fonts.ready;
+        window.__RENDER_DONE__ = true;
+      }
+
+      boot();
+    </script>
+  </body>
+</html>

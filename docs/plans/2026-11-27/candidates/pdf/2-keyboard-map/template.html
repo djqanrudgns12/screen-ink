@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>슉쇽 · 내 단축키 — 키보드 지도</title>
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-sans-kr/400.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-sans-kr/500.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-sans-kr/600.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-sans-kr/700.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-mono/400.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-mono/500.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-mono/600.css" />
+    <style>
+      @page {
+        size: A4 landscape;
+        margin: 0;
+      }
+
+      :root {
+        --bg: #ffffff;
+        --surface: #f7f7f5;
+        --text: #121212;
+        --text-2: #3a3a38;
+        --sub: #5e5e5b;
+        --line: #ddddda;
+        --hair: #ededeb;
+
+        /* 모드 색 */
+        --c-global-bg: #ecece8;
+        --c-global-bd: #6b6b66;
+        --c-global-tx: #121212;
+
+        --c-cap-bg: #eef4ff;
+        --c-cap-bd: #4e83ec;
+        --c-cap-tx: #1749b2;
+
+        --c-draw-bg: #fff5e5;
+        --c-draw-bd: #e08600;
+        --c-draw-tx: #8c4f00;
+
+        --c-zoom-bg: #eaf7f0;
+        --c-zoom-bd: #2e9e6a;
+        --c-zoom-tx: #156640;
+
+        --accent: #ff9f0a;
+        --font-sans: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', sans-serif;
+        --font-mono: 'IBM Plex Mono', 'IBM Plex Sans KR', monospace;
+        --font-sym: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Menlo', 'Apple Symbols', sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+        color: var(--text);
+        font-family: var(--font-sans);
+        word-break: keep-all;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .page {
+        width: 297mm;
+        height: 210mm;
+        padding: 8mm 11mm 7.5mm;
+        display: flex;
+        flex-direction: column;
+        gap: 2.7mm;
+        overflow: hidden;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 2.5mm;
+        border-bottom: 1.5px solid var(--text);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 2.5mm;
+      }
+
+      .doc-title {
+        margin: 0;
+        font-size: 13.5pt;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .legend-bar {
+        display: flex;
+        align-items: center;
+        gap: 4.5mm;
+        font-size: 7.5pt;
+        color: var(--text-2);
+      }
+
+      .leg-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 1.3mm;
+      }
+
+      .leg-chip {
+        width: 2.8mm;
+        height: 2.8mm;
+        border-radius: 0.7mm;
+        border: 1px solid;
+      }
+
+      .mod-dot {
+        display: inline-block;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--accent);
+        flex: none;
+      }
+
+      .meta-text {
+        font-family: var(--font-mono);
+        font-size: 7.6pt;
+        color: var(--sub);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* 맥 키보드 덱 */
+      .kbd-deck {
+        background: #f5f5f2;
+        border: 1px solid #d8d8d2;
+        border-radius: 3mm;
+        padding: 2.4mm 3.5mm;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25mm;
+      }
+
+      .kbd-row {
+        display: flex;
+        gap: 1.4mm;
+      }
+
+      .key {
+        position: relative;
+        height: 10.4mm;
+        border-radius: 1.3mm;
+        background: #ffffff;
+        border: 0.75px solid #d4d4ce;
+        box-shadow: 0 0.6mm 0 #c6c6bf;
+        padding: 0.9mm 1.3mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .kbd-row.fn-row .key {
+        height: 7mm;
+        justify-content: center;
+      }
+
+      .kbd-row.fn-row .key.has-use {
+        justify-content: space-between;
+      }
+
+      .key.is-unused {
+        background: #fafaf8;
+        border-color: #e2e2dc;
+        box-shadow: none;
+        color: #9e9e98;
+      }
+
+      .key.mode-global {
+        background: var(--c-global-bg);
+        border-color: var(--c-global-bd);
+        color: var(--c-global-tx);
+      }
+
+      .key.mode-capture {
+        background: var(--c-cap-bg);
+        border-color: var(--c-cap-bd);
+        color: var(--c-cap-tx);
+      }
+
+      .key.mode-draw {
+        background: var(--c-draw-bg);
+        border-color: var(--c-draw-bd);
+        color: var(--c-draw-tx);
+      }
+
+      .key.mode-zoom {
+        background: var(--c-zoom-bg);
+        border-color: var(--c-zoom-bd);
+        color: var(--c-zoom-tx);
+      }
+
+      .key.is-modified {
+        box-shadow: 0 0 0 1px var(--accent), 0 0.6mm 0 #d68500;
+      }
+
+      .key-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6mm;
+      }
+
+      .key-code {
+        font-family: var(--font-mono);
+        font-size: 7.1pt;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .key-dots {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.7mm;
+      }
+
+      .dot-mode {
+        width: 3.5px;
+        height: 3.5px;
+        border-radius: 50%;
+      }
+
+      .key-fn {
+        font-size: 6.1pt;
+        font-weight: 500;
+        line-height: 1.1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        letter-spacing: -0.02em;
+      }
+
+      .arrow-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.7mm;
+        height: 10.4mm;
+      }
+
+      .arrow-stack .key {
+        height: 4.85mm;
+        padding: 0.35mm 1mm;
+        flex-direction: row;
+        align-items: center;
+      }
+
+      /* 하단 4열 범례 목록 */
+      .ref-grid {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 0.95fr 1.02fr 1.12fr 1.05fr;
+        gap: 5mm;
+      }
+
+      .ref-col {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .ref-head {
+        display: flex;
+        align-items: center;
+        gap: 1.5mm;
+        padding-bottom: 1.2mm;
+        margin-bottom: 1mm;
+        border-bottom: 1.2px solid;
+      }
+
+      .ref-head.h-global {
+        border-color: var(--c-global-bd);
+        color: var(--c-global-tx);
+      }
+
+      .ref-head.h-capture {
+        border-color: var(--c-cap-bd);
+        color: var(--c-cap-tx);
+      }
+
+      .ref-head.h-draw {
+        border-color: var(--c-draw-bd);
+        color: var(--c-draw-tx);
+      }
+
+      .ref-head.h-zoom {
+        border-color: var(--c-zoom-bd);
+        color: var(--c-zoom-tx);
+      }
+
+      .ref-title {
+        margin: 0;
+        font-size: 8.3pt;
+        font-weight: 700;
+      }
+
+      .ref-badge {
+        margin-left: auto;
+        font-size: 6.4pt;
+        color: var(--sub);
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5mm;
+        padding: 0.4mm 0;
+        border-bottom: 0.4px solid var(--hair);
+      }
+
+      .row:last-child {
+        border-bottom: 0;
+      }
+
+      .row-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 1mm;
+        font-size: 7.1pt;
+        color: var(--text-2);
+        line-height: 1.2;
+        min-width: 0;
+      }
+
+      .row.is-mod .row-label {
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .keycaps {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6mm;
+        flex: none;
+      }
+
+      kbd {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 3.8mm;
+        height: 3.6mm;
+        padding: 0 1mm;
+        border-radius: 0.8mm;
+        background: var(--surface);
+        border: 0.55px solid #d2d2cc;
+        font-family: var(--font-mono);
+        font-size: 6.4pt;
+        font-weight: 500;
+        color: var(--text);
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      kbd.is-mod {
+        background: var(--c-draw-bg);
+        border-color: var(--accent);
+        color: var(--c-draw-tx);
+      }
+
+      .plus-op { font-size: 7.5pt; font-weight: 600; color: var(--sub, #5e5e5b); padding: 0 0.4mm; }
+      .sym {
+        font-family: var(--font-sym);
+        font-size: 7pt;
+      }
+
+      .color-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.9mm 1.8mm;
+        padding: 1mm 0;
+        margin-bottom: 0.8mm;
+        border-bottom: 0.4px solid var(--hair);
+      }
+
+      .color-chip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 6.9pt;
+      }
+
+      .swatch {
+        width: 2.2mm;
+        height: 2.2mm;
+        border-radius: 50%;
+        border: 0.5px solid rgba(0, 0, 0, 0.16);
+        display: inline-block;
+        margin-right: 0.9mm;
+      }
+
+      .sub-sep {
+        margin: 1.5mm 0 0.7mm;
+        font-size: 6.4pt;
+        font-weight: 600;
+        color: var(--sub);
+        text-transform: uppercase;
+      }
+
+      .note-pill {
+        font-size: 6.6pt;
+        color: var(--sub);
+      }
+
+      .footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 1.5mm;
+        border-top: 0.6px solid var(--line);
+        font-size: 6.8pt;
+        color: var(--sub);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page" id="app"></main>
+    <script>
+      const ICONS = {
+        shortcuts:
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="6.5" cy="10" r="0.9" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="0.9" fill="currentColor" stroke="none"/><circle cx="14" cy="10" r="0.9" fill="currentColor" stroke="none"/><circle cx="17.5" cy="10" r="0.9" fill="currentColor" stroke="none"/><path d="M7.5 14h9"/></svg>',
+      };
+      const SYMBOLS = new Set(['⌃', '⌥', '⇧', '⌘', '↑', '↓', '←', '→', '↩', '⇥']);
+      const MAC_MAP = {
+        Ctrl: '⌃',
+        Option: '⌥',
+        Alt: '⌥',
+        Shift: '⇧',
+        Cmd: '⌘',
+        Up: '↑',
+        Down: '↓',
+        Enter: '↩',
+        Tab: '⇥',
+      };
+
+      function toTokens(combo) {
+        if (!combo) return [];
+        return combo.split('+').map((t) => MAC_MAP[t] || t);
+      }
+
+      function renderKeycapList(tokens, mod = false) {
+        return `<span class="keycaps">${tokens
+          .map((tok) => {
+            const cls = [mod ? 'is-mod' : '', SYMBOLS.has(tok) ? 'sym' : ''].filter(Boolean).join(' ');
+            return `<kbd class="${cls}">${tok}</kbd>`;
+          })
+          .join('')}</span>`;
+      }
+
+      function renderRow(item) {
+        const mod = Boolean(item.modified);
+        return `<div class="row ${mod ? 'is-mod' : ''}">
+          <span class="row-label">${mod ? '<span class="mod-dot"></span>' : ''}<span>${item.label}</span></span>
+          ${renderKeycapList(toTokens(item.combo), mod)}
+        </div>`;
+      }
+
+      function renderGestureRow(g) {
+        const right = g.keys
+          ? `<span class="keycaps">${g.keys
+              .map((k) => {
+                if (k === '+') return '<span class="plus-op">+</span>';
+            if (k === '+') return '<span class="plus-op">+</span>'; if (k.includes('+')) return renderKeycapList(toTokens(k), false);
+                const tok = MAC_MAP[k] || k;
+                return `<kbd class="${SYMBOLS.has(tok) ? 'sym' : ''}">${tok}</kbd>`;
+              })
+              .join('')}</span>`
+          : `<span class="note-pill">${g.note}</span>`;
+        return `<div class="row"><span class="row-label"><span>${g.label}</span></span>${right}</div>`;
+      }
+
+      const KEYBOARD_ROWS = [
+        {
+          cls: 'fn-row',
+          keys: [
+            { id: 'Esc', label: 'Esc', w: 1.35 },
+            { id: 'F1', label: 'F1', w: 1 },
+            { id: 'F2', label: 'F2', w: 1 },
+            { id: 'F3', label: 'F3', w: 1 },
+            { id: 'F4', label: 'F4', w: 1 },
+            { id: 'F5', label: 'F5', w: 1 },
+            { id: 'F6', label: 'F6', w: 1 },
+            { id: 'F7', label: 'F7', w: 1 },
+            { id: 'F8', label: 'F8', w: 1 },
+            { id: 'F9', label: 'F9', w: 1 },
+            { id: 'F10', label: 'F10', w: 1 },
+            { id: 'F11', label: 'F11', w: 1 },
+            { id: 'F12', label: 'F12', w: 1 },
+            { id: 'Power', label: '●', w: 1.15 },
+          ],
+        },
+        {
+          keys: [
+            { id: '`', label: '`', w: 1 },
+            { id: '1', label: '1', w: 1 },
+            { id: '2', label: '2', w: 1 },
+            { id: '3', label: '3', w: 1 },
+            { id: '4', label: '4', w: 1 },
+            { id: '5', label: '5', w: 1 },
+            { id: '6', label: '6', w: 1 },
+            { id: '7', label: '7', w: 1 },
+            { id: '8', label: '8', w: 1 },
+            { id: '9', label: '9', w: 1 },
+            { id: '0', label: '0', w: 1 },
+            { id: '-', label: '-', w: 1 },
+            { id: '=', label: '=', w: 1 },
+            { id: 'Backspace', label: '⌫', w: 1.5 },
+          ],
+        },
+        {
+          keys: [
+            { id: 'Tab', label: '⇥', w: 1.5 },
+            { id: 'Q', label: 'Q', w: 1 },
+            { id: 'W', label: 'W', w: 1 },
+            { id: 'E', label: 'E', w: 1 },
+            { id: 'R', label: 'R', w: 1 },
+            { id: 'T', label: 'T', w: 1 },
+            { id: 'Y', label: 'Y', w: 1 },
+            { id: 'U', label: 'U', w: 1 },
+            { id: 'I', label: 'I', w: 1 },
+            { id: 'O', label: 'O', w: 1 },
+            { id: 'P', label: 'P', w: 1 },
+            { id: '[', label: '[', w: 1 },
+            { id: ']', label: ']', w: 1 },
+            { id: '\\', label: '\\', w: 1 },
+          ],
+        },
+        {
+          keys: [
+            { id: 'Caps', label: '⇪', w: 1.75 },
+            { id: 'A', label: 'A', w: 1 },
+            { id: 'S', label: 'S', w: 1 },
+            { id: 'D', label: 'D', w: 1 },
+            { id: 'F', label: 'F', w: 1 },
+            { id: 'G', label: 'G', w: 1 },
+            { id: 'H', label: 'H', w: 1 },
+            { id: 'J', label: 'J', w: 1 },
+            { id: 'K', label: 'K', w: 1 },
+            { id: 'L', label: 'L', w: 1 },
+            { id: ';', label: ';', w: 1 },
+            { id: "'", label: "'", w: 1 },
+            { id: 'Enter', label: '↩', w: 1.75 },
+          ],
+        },
+        {
+          keys: [
+            { id: 'ShiftL', label: '⇧', w: 2.25 },
+            { id: 'Z', label: 'Z', w: 1 },
+            { id: 'X', label: 'X', w: 1 },
+            { id: 'C', label: 'C', w: 1 },
+            { id: 'V', label: 'V', w: 1 },
+            { id: 'B', label: 'B', w: 1 },
+            { id: 'N', label: 'N', w: 1 },
+            { id: 'M', label: 'M', w: 1 },
+            { id: ',', label: ',', w: 1 },
+            { id: '.', label: '.', w: 1 },
+            { id: '/', label: '/', w: 1 },
+            { id: 'ShiftR', label: '⇧', w: 2.25 },
+          ],
+        },
+        {
+          keys: [
+            { id: 'fn', label: 'fn', w: 1 },
+            { id: 'Ctrl', label: '⌃', w: 1 },
+            { id: 'OptL', label: '⌥', w: 1 },
+            { id: 'CmdL', label: '⌘', w: 1.25 },
+            { id: 'Space', label: 'Space', w: 5.2 },
+            { id: 'CmdR', label: '⌘', w: 1.25 },
+            { id: 'OptR', label: '⌥', w: 1 },
+            { id: 'Left', label: '←', w: 0.9 },
+            { id: 'UpDown', stack: true, w: 0.95 },
+            { id: 'Right', label: '→', w: 0.9 },
+          ],
+        },
+      ];
+
+      const SHORT_NAME = {
+        region: '범위캡처',
+        window: '창캡처',
+        record: '녹화',
+        draw: '판서',
+        zoom: '확대',
+        board: '칠판',
+        last: '직전캡처',
+        full: '전체캡처',
+        active: '활성창',
+        restore: '직전판서',
+        pause: '켜기·끄기',
+        pin: '붙이기',
+        pinToggle: '핀숨김',
+        timer: '타이머',
+        'c-detect': '요소전환',
+        'c-copy': '복사끝',
+        'c-save': '저장',
+        'c-quick': '빠른저장',
+        'c-cancel': '취소',
+        'c-last': '직전범위',
+        'c-prev': '이전범위',
+        'c-next': '다음범위',
+        'c-full': '전체선택',
+        'c-cursor': '커서포함',
+        'c-color': '색복사',
+        'd-pen': '펜',
+        'd-marker': '형광펜',
+        'd-text': '글자',
+        'd-select': '고르기',
+        'd-eraser': '지우개',
+        'd-clear': '모두지움',
+        'd-red': '빨강',
+        'd-yellow': '노랑',
+        'd-green': '초록',
+        'd-orange': '주황',
+        'd-blue': '파랑',
+        'd-lime': '연두',
+        'd-white': '흰칠판',
+        'd-black': '검은칠판',
+        'd-undo': '되돌리기',
+        'd-redo': '다시하기',
+        'd-copy': '화면복사',
+        'd-save': '화면저장',
+        'd-restore': '불러오기',
+        'd-center': '가운데',
+        'd-zin': '확대',
+        'd-zout': '축소',
+        'd-wup': '굵게',
+        'd-wdown': '가늘게',
+        'd-help': '한장보기',
+        'd-exit': '끝내기',
+        'd-spot': '강조',
+        'd-check': '체크도장',
+        'd-number': '번호도장',
+        'z-exit': '확대끝',
+      };
+
+      function classifyMode(s) {
+        if (s.scope === 'zoom' || s.id === 'zoom' || s.id === 'record') return 'zoom';
+        if (s.scope === 'capture') return 'capture';
+        if (s.scope === 'draw') return 'draw';
+        return 'global';
+      }
+
+      const MODE_COLOR = {
+        global: '#6b6b66',
+        capture: '#4e83ec',
+        draw: '#e08600',
+        zoom: '#2e9e6a',
+      };
+
+      async function boot() {
+        const data = window.__SHORTCUTS_DATA__ || (await fetch('./shortcuts.json').then((r) => r.json()));
+        const active = data.shortcuts.filter((s) => s.combo && !s.windowsOnly);
+
+        // 물리 키 매핑
+        const keyUses = new Map();
+        const addUse = (physId, entry) => {
+          if (!keyUses.has(physId)) keyUses.set(physId, []);
+          keyUses.get(physId).push(entry);
+        };
+
+        for (const s of active) {
+          const parts = s.combo.split('+');
+          const main = parts[parts.length - 1];
+          const mode = classifyMode(s);
+          const hasMod = parts.length > 1;
+          const prefix = parts
+            .slice(0, -1)
+            .map((p) => MAC_MAP[p] || p)
+            .join('');
+          addUse(main, {
+            id: s.id,
+            mode,
+            modified: s.modified,
+            text: (hasMod ? `${prefix}` : '') + (SHORT_NAME[s.id] || s.label),
+            priority: s.scope === 'global' ? 3 : s.scope === 'draw' ? 2 : 1,
+          });
+        }
+
+        // 보조 수식키 표기
+        addUse('OptL', { mode: 'global', text: '도구·자석' });
+        addUse('CmdL', { mode: 'draw', text: '편집·사각' });
+        addUse('ShiftL', { mode: 'capture', text: '캡처·직선' });
+        addUse('Ctrl', { mode: 'global', text: '전체캡처' });
+
+        function renderPhysicalKey(k) {
+          if (k.stack) {
+            const up = keyUses.get('Up') || [];
+            const dn = keyUses.get('Down') || [];
+            return `<div class="arrow-stack" style="flex:${k.w}">
+              <div class="key ${up.length ? 'mode-draw has-use' : 'is-unused'}">
+                <span class="key-code sym">↑</span>
+                <span class="key-fn">${up.length ? '확대·굵기' : ''}</span>
+              </div>
+              <div class="key ${dn.length ? 'mode-draw has-use' : 'is-unused'}">
+                <span class="key-code sym">↓</span>
+                <span class="key-fn">${dn.length ? '축소·가늘게' : ''}</span>
+              </div>
+            </div>`;
+          }
+          const uses = keyUses.get(k.id) || [];
+          const hasMod = uses.some((u) => u.modified);
+          const modes = [...new Set(uses.map((u) => u.mode))];
+          const primaryMode = modes[0] || '';
+          const primaryUse = uses.find((u) => u.modified) || uses[0];
+          const cls = [
+            'key',
+            uses.length ? `mode-${primaryMode} has-use` : 'is-unused',
+            hasMod ? 'is-modified' : '',
+          ]
+            .filter(Boolean)
+            .join(' ');
+          const dots = [
+            ...(hasMod ? ['<span class="mod-dot"></span>'] : []),
+            ...modes.slice(1).map((m) => `<span class="dot-mode" style="background:${MODE_COLOR[m]}"></span>`),
+          ].join('');
+          const isSym = SYMBOLS.has(k.label);
+          return `<div class="${cls}" style="flex:${k.w}">
+            <div class="key-top">
+              <span class="key-code ${isSym ? 'sym' : ''}">${k.label}</span>
+              <span class="key-dots">${dots}</span>
+            </div>
+            ${primaryUse ? `<div class="key-fn">${primaryUse.text}</div>` : ''}
+          </div>`;
+        }
+
+        const globalList = active.filter((s) => s.scope === 'global');
+        const captureList = active.filter((s) => s.group === 'capture-mode');
+        const drawColors = ['d-red', 'd-yellow', 'd-green', 'd-orange', 'd-blue', 'd-lime']
+          .map((id) => active.find((s) => s.id === id))
+          .filter(Boolean);
+        const drawCol3Ids = ['d-pen', 'd-marker', 'd-text', 'd-select', 'd-eraser', 'd-clear', 'd-spot', 'd-check', 'd-number', 'd-white', 'd-black'];
+        const drawCol3 = drawCol3Ids.map((id) => active.find((s) => s.id === id)).filter(Boolean);
+        const drawCol4Ids = ['d-undo', 'd-redo', 'd-copy', 'd-save', 'd-restore', 'd-center', 'd-zin', 'd-zout', 'd-wup', 'd-wdown', 'd-help', 'd-exit'];
+        const drawCol4 = drawCol4Ids.map((id) => active.find((s) => s.id === id)).filter(Boolean);
+        const zoomExit = active.find((s) => s.id === 'z-exit');
+
+        document.getElementById('app').innerHTML = `
+          <header class="header">
+            <div class="brand">
+              ${ICONS.shortcuts}
+              <h1 class="doc-title">${data.meta.title}</h1>
+            </div>
+            <div class="legend-bar">
+              <span class="leg-item"><span class="leg-chip" style="background:var(--c-global-bg);border-color:var(--c-global-bd)"></span>어디서나</span>
+              <span class="leg-item"><span class="leg-chip" style="background:var(--c-cap-bg);border-color:var(--c-cap-bd)"></span>캡처</span>
+              <span class="leg-item"><span class="leg-chip" style="background:var(--c-draw-bg);border-color:var(--c-draw-bd)"></span>판서</span>
+              <span class="leg-item"><span class="leg-chip" style="background:var(--c-zoom-bg);border-color:var(--c-zoom-bd)"></span>확대·녹화</span>
+              <span class="leg-item"><span class="mod-dot"></span>기본값에서 변경</span>
+            </div>
+            <span class="meta-text">${data.meta.subtitle}</span>
+          </header>
+
+          <section class="kbd-deck">
+            ${KEYBOARD_ROWS.map((row) => `<div class="kbd-row ${row.cls || ''}">${row.keys.map(renderPhysicalKey).join('')}</div>`).join('')}
+          </section>
+
+          <div class="ref-grid">
+            <section class="ref-col">
+              <div class="ref-head h-global">
+                <h2 class="ref-title">어디서나</h2>
+                <span class="ref-badge">전역 ${globalList.length}개</span>
+              </div>
+              ${globalList.map(renderRow).join('')}
+            </section>
+
+            <section class="ref-col">
+              <div class="ref-head h-capture">
+                <h2 class="ref-title">캡처 화면 안</h2>
+                <span class="ref-badge">스마트 캡처</span>
+              </div>
+              ${captureList.map(renderRow).join('')}
+              <div class="sub-sep">범위 미세 조작</div>
+              ${data.gestures.capture.slice(0, 4).map(renderGestureRow).join('')}
+            </section>
+
+            <section class="ref-col">
+              <div class="ref-head h-draw">
+                <h2 class="ref-title">판서 도구 · 색 · 칠판</h2>
+                <span class="ref-badge">주황 모드</span>
+              </div>
+              <div class="color-strip">
+                ${drawColors
+                  .map(
+                    (c) => `<div class="color-chip">
+                      <span><span class="swatch" style="background:${c.colorHex}"></span>${c.label.replace('색: ', '')}</span>
+                      ${renderKeycapList(toTokens(c.combo), false)}
+                    </div>`
+                  )
+                  .join('')}
+              </div>
+              ${drawCol3.map(renderRow).join('')}
+            </section>
+
+            <section class="ref-col">
+              <div class="ref-head h-zoom">
+                <h2 class="ref-title">판서 편집 · 도형 · 확대</h2>
+                <span class="ref-badge">조작</span>
+              </div>
+              ${drawCol4.map(renderRow).join('')}
+              <div class="sub-sep">도형(끌기) · 확대</div>
+              ${data.gestures.draw.slice(0, 4).map(renderGestureRow).join('')}
+              ${zoomExit ? renderRow(zoomExit) : ''}
+              ${renderGestureRow(data.gestures.zoom[0])}
+            </section>
+          </div>
+
+          <footer class="footer">
+            <span>키 우상단 작은 점은 두 모드 이상에서 함께 쓰이는 키입니다 · ${data.meta.fnNote}</span>
+            <span class="meta-text">${data.meta.title} · ${data.meta.subtitle}</span>
+          </footer>
+        `;
+
+        await document.fonts.ready;
+        window.__RENDER_DONE__ = true;
+      }
+
+      boot();
+    </script>
+  </body>
+</html>

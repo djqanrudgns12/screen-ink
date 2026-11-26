@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>슉쇽 · 내 단축키 — 다크 프리미엄 & 인쇄용 짝</title>
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-sans-kr/400.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-sans-kr/500.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-sans-kr/600.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-sans-kr/700.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-mono/400.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-mono/500.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-mono/600.css" />
+    <style>
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', sans-serif;
+        word-break: keep-all;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .page {
+        width: 210mm;
+        height: 297mm;
+        padding: 12mm 13mm 10mm;
+        display: flex;
+        flex-direction: column;
+        gap: 4mm;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .page.page-break {
+        page-break-before: always;
+        break-before: page;
+      }
+
+      /* 다크 프리미엄 (tokens.css [data-theme='dark'] 준수) */
+      [data-theme='dark'] {
+        --bg: #111214;
+        --surface: #1c1d21;
+        --raised: #232429;
+        --line: #2c2e35;
+        --hair: #24252a;
+        --text: #f7f8fa;
+        --text-2: #c9ccd3;
+        --sub: #8e939e;
+        --key-bg: #2c2e35;
+        --key-bd: rgba(255, 255, 255, 0.08);
+        --key-tx: #f7f8fa;
+        --accent: #ff9f0a;
+        --accent-text: #ffb340;
+        --accent-soft: rgba(255, 159, 10, 0.14);
+        --card-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+      }
+
+      /* 인쇄용 라이트 짝 (tokens.css [data-theme='light'] + 순백 바탕) */
+      [data-theme='light'] {
+        --bg: #ffffff;
+        --surface: #f7f7f5;
+        --raised: #f4f4f1;
+        --line: #ddddda;
+        --hair: #ededeb;
+        --text: #121212;
+        --text-2: #3a3a38;
+        --sub: #5e5e5b;
+        --key-bg: #efeff0;
+        --key-bd: #d6d6d0;
+        --key-tx: #121212;
+        --accent: #ff9f0a;
+        --accent-text: #9a5b00;
+        --accent-soft: #fff3e0;
+        --card-ring: inset 0 0 0 1px #e1e1dc;
+      }
+
+      /* 머리글 */
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 3.4mm 4.2mm;
+        background: var(--surface);
+        border-radius: 3.5mm;
+        box-shadow: var(--card-ring);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 3mm;
+      }
+
+      .orange-dot {
+        width: 3mm;
+        height: 3mm;
+        border-radius: 50%;
+        background: var(--accent);
+        flex: none;
+      }
+
+      .doc-title {
+        margin: 0;
+        font-size: 15pt;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 3mm;
+      }
+
+      .mode-tag {
+        font-size: 7pt;
+        font-weight: 600;
+        padding: 0.7mm 2.2mm;
+        border-radius: 999px;
+        background: var(--raised);
+        color: var(--text-2);
+        border: 0.6px solid var(--line);
+      }
+
+      .meta-text {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 7.5pt;
+        color: var(--sub);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* 핵심 6개 아일랜드 띠 */
+      .island-strip {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 2.5mm;
+      }
+
+      .island-tile {
+        background: var(--surface);
+        border-radius: 2.6mm;
+        padding: 2.4mm 2.8mm;
+        box-shadow: var(--card-ring);
+        display: flex;
+        flex-direction: column;
+        gap: 1.7mm;
+      }
+
+      .island-tile.is-mod {
+        box-shadow: inset 0 0 0 1px rgba(255, 159, 10, 0.45);
+      }
+
+      .island-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 7.7pt;
+        font-weight: 600;
+        color: var(--text-2);
+      }
+
+      .island-name {
+        display: inline-flex;
+        align-items: center;
+        gap: 1.2mm;
+      }
+
+      .mod-dot {
+        display: inline-block;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--accent);
+        flex: none;
+      }
+
+      /* 본문 2열 */
+      .body-grid {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 0.96fr 1.04fr;
+        gap: 4mm;
+      }
+
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: 3.5mm;
+        min-width: 0;
+      }
+
+      .panel {
+        background: var(--surface);
+        border-radius: 3.2mm;
+        padding: 3.2mm 3.8mm;
+        box-shadow: var(--card-ring);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        gap: 1.8mm;
+        padding-bottom: 1.8mm;
+        margin-bottom: 1.2mm;
+        border-bottom: 0.75px solid var(--line);
+      }
+
+      .panel-title {
+        margin: 0;
+        font-size: 8.8pt;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .panel-sub {
+        margin-left: auto;
+        font-size: 6.8pt;
+        color: var(--sub);
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 2mm;
+        padding: 0.65mm 0;
+        border-bottom: 0.5px solid var(--hair);
+      }
+
+      .row:last-child {
+        border-bottom: 0;
+      }
+
+      .row-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 1.3mm;
+        font-size: 7.7pt;
+        color: var(--text-2);
+        line-height: 1.25;
+      }
+
+      .row.is-mod .row-label {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .later-tag {
+        font-size: 6pt;
+        color: var(--sub);
+        background: var(--raised);
+        border: 0.5px solid var(--line);
+        border-radius: 2px;
+        padding: 0 1mm;
+      }
+
+      .keycaps {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75mm;
+        flex: none;
+      }
+
+      kbd {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 4.3mm;
+        height: 4.2mm;
+        padding: 0 1.3mm;
+        border-radius: 1.1mm;
+        background: var(--key-bg);
+        border: 0.65px solid var(--key-bd);
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 6.9pt;
+        font-weight: 500;
+        color: var(--key-tx);
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .island-tile kbd {
+        height: 4.8mm;
+        min-width: 5mm;
+        font-size: 7.8pt;
+        font-weight: 600;
+      }
+
+      kbd.is-mod {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent-text);
+      }
+
+      .plus-op { font-size: 7.5pt; font-weight: 600; color: var(--sub, #5e5e5b); padding: 0 0.4mm; }
+      .sym {
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Menlo', 'Apple Symbols', sans-serif;
+        font-size: 7.5pt;
+      }
+
+      .island-tile .plus-op { font-size: 7.5pt; font-weight: 600; color: var(--sub, #5e5e5b); padding: 0 0.4mm; }
+      .sym {
+        font-size: 8.4pt;
+      }
+
+      /* 색 6종 */
+      .color-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.2mm 2mm;
+        padding: 1.6mm 2mm;
+        background: var(--raised);
+        border-radius: 2mm;
+        margin-bottom: 1.4mm;
+      }
+
+      .color-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 7.3pt;
+        color: var(--text-2);
+      }
+
+      .swatch {
+        width: 2.3mm;
+        height: 2.3mm;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 1mm;
+        border: 0.5px solid rgba(128, 128, 128, 0.35);
+      }
+
+      /* 하단 도형·확대 2열 스트립 */
+      .bottom-strip {
+        display: grid;
+        grid-template-columns: 1.35fr 0.65fr;
+        gap: 4mm;
+      }
+
+      .gesture-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 4mm;
+      }
+
+      .note-pill {
+        font-size: 6.9pt;
+        color: var(--sub);
+      }
+
+      .footer {
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 7pt;
+        color: var(--sub);
+        padding: 0 1mm;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      const ICONS = {
+        region:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M12 8.8c1.4 1.8 2.2 2.9 2.2 3.9a2.2 2.2 0 0 1-4.4 0c0-1 .8-2.1 2.2-3.9z" fill="#FF9F0A" stroke="none"/></svg>',
+        window:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 9h17"/><circle cx="6.2" cy="7" r="1" fill="#FF9F0A" stroke="none"/></svg>',
+        record:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="#E5484D" stroke="none"/></svg>',
+        draw:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5l4.5 4.5L9.5 19H5v-4.5z"/><path d="M13 6.5l4.5 4.5"/><circle cx="4.8" cy="20.4" r="1.5" fill="#FF9F0A" stroke="none"/></svg>',
+        zoom:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/><circle cx="10.5" cy="10.5" r="1.8" fill="#FF9F0A" stroke="none"/></svg>',
+        board:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="11.5" rx="1.5"/><path d="M8.5 20l2-4.5M15.5 20l-2-4.5"/><circle cx="16.4" cy="12" r="1.4" fill="#FF9F0A" stroke="none"/></svg>',
+      };
+
+      const SYMBOLS = new Set(['⌃', '⌥', '⇧', '⌘', '↑', '↓', '←', '→', '↩', '⇥']);
+      const MAC_MAP = {
+        Ctrl: '⌃',
+        Option: '⌥',
+        Alt: '⌥',
+        Shift: '⇧',
+        Cmd: '⌘',
+        Up: '↑',
+        Down: '↓',
+        Enter: '↩',
+        Tab: '⇥',
+      };
+
+      function toTokens(combo) {
+        return combo ? combo.split('+').map((t) => MAC_MAP[t] || t) : [];
+      }
+
+      function renderKeycapList(tokens, mod = false) {
+        return `<span class="keycaps">${tokens
+          .map((tok) => {
+            const cls = [mod ? 'is-mod' : '', SYMBOLS.has(tok) ? 'sym' : ''].filter(Boolean).join(' ');
+            return `<kbd class="${cls}">${tok}</kbd>`;
+          })
+          .join('')}</span>`;
+      }
+
+      function renderRow(item) {
+        const mod = Boolean(item.modified);
+        const later = item.later ? '<span class="later-tag">후속</span>' : '';
+        return `<div class="row ${mod ? 'is-mod' : ''}">
+          <span class="row-label">${mod ? '<span class="mod-dot"></span>' : ''}<span>${item.label}</span>${later}</span>
+          ${renderKeycapList(toTokens(item.combo), mod)}
+        </div>`;
+      }
+
+      function renderGestureRow(g) {
+        const right = g.keys
+          ? `<span class="keycaps">${g.keys
+              .map((k) => {
+                if (k === '+') return '<span class="plus-op">+</span>';
+            if (k === '+') return '<span class="plus-op">+</span>'; if (k.includes('+')) return renderKeycapList(toTokens(k), false);
+                const tok = MAC_MAP[k] || k;
+                return `<kbd class="${SYMBOLS.has(tok) ? 'sym' : ''}">${tok}</kbd>`;
+              })
+              .join('')}</span>`
+          : `<span class="note-pill">${g.note}</span>`;
+        return `<div class="row"><span class="row-label"><span>${g.label}</span></span>${right}</div>`;
+      }
+
+      function buildPage(data, theme, modeTag, pageBreak) {
+        const active = data.shortcuts.filter((s) => s.combo && !s.windowsOnly);
+        const byId = new Map(active.map((s) => [s.id, s]));
+
+        const heroDefs = [
+          { id: 'region', icon: 'region', title: '범위 캡처' },
+          { id: 'window', icon: 'window', title: '창 캡처' },
+          { id: 'record', icon: 'record', title: '화면 녹화' },
+          { id: 'draw', icon: 'draw', title: '판서' },
+          { id: 'zoom', icon: 'zoom', title: '실시간 확대' },
+          { id: 'board', icon: 'board', title: '칠판' },
+        ];
+
+        const globalExtras = ['last', 'full', 'active', 'restore', 'pause', 'pin', 'pinToggle', 'timer']
+          .map((id) => byId.get(id))
+          .filter(Boolean);
+        const captureMode = active.filter((s) => s.group === 'capture-mode');
+
+        const drawColors = ['d-red', 'd-yellow', 'd-green', 'd-orange', 'd-blue', 'd-lime']
+          .map((id) => byId.get(id))
+          .filter(Boolean);
+        const drawMain = [
+          'd-pen', 'd-marker', 'd-text', 'd-select', 'd-eraser', 'd-clear',
+          'd-spot', 'd-check', 'd-number', 'd-white', 'd-black',
+          'd-undo', 'd-redo', 'd-copy', 'd-save', 'd-restore', 'd-center',
+          'd-zin', 'd-zout', 'd-wup', 'd-wdown', 'd-help', 'd-exit',
+        ]
+          .map((id) => byId.get(id))
+          .filter(Boolean);
+        const zoomExit = byId.get('z-exit');
+
+        return `<main class="page ${pageBreak ? 'page-break' : ''}" data-theme="${theme}">
+          <header class="header">
+            <div class="brand">
+              <span class="orange-dot"></span>
+              <h1 class="doc-title">${data.meta.title}</h1>
+            </div>
+            <div class="header-right">
+              <span class="mode-tag">${modeTag}</span>
+              <span class="meta-text">${data.meta.subtitle}</span>
+            </div>
+          </header>
+
+          <section class="island-strip">
+            ${heroDefs
+              .map((h) => {
+                const s = byId.get(h.id);
+                if (!s) return '';
+                const mod = Boolean(s.modified);
+                return `<div class="island-tile ${mod ? 'is-mod' : ''}">
+                  <div class="island-top">
+                    <span class="island-name">${ICONS[h.icon]}<span>${h.title}</span></span>
+                    ${mod ? '<span class="mod-dot"></span>' : ''}
+                  </div>
+                  <div>${renderKeycapList(toTokens(s.combo), mod)}</div>
+                </div>`;
+              })
+              .join('')}
+          </section>
+
+          <div class="body-grid">
+            <div class="col">
+              <section class="panel">
+                <div class="panel-head">
+                  ${ICONS.region}
+                  <h2 class="panel-title">어디서나 · 보조 &amp; 빠른 동작</h2>
+                  <span class="panel-sub">전역</span>
+                </div>
+                ${globalExtras.map(renderRow).join('')}
+              </section>
+
+              <section class="panel" style="flex:1">
+                <div class="panel-head">
+                  ${ICONS.window}
+                  <h2 class="panel-title">캡처 화면 안</h2>
+                  <span class="panel-sub">스마트 캡처</span>
+                </div>
+                ${captureMode.map(renderRow).join('')}
+              </section>
+            </div>
+
+            <div class="col">
+              <section class="panel" style="flex:1">
+                <div class="panel-head">
+                  ${ICONS.draw}
+                  <h2 class="panel-title">판서 화면 안</h2>
+                  <span class="panel-sub">도구 · 색 · 편집</span>
+                </div>
+                <div class="color-grid">
+                  ${drawColors
+                    .map(
+                      (c) => `<div class="color-item">
+                        <span><span class="swatch" style="background:${c.colorHex}"></span>${c.label.replace('색: ', '')}</span>
+                        ${renderKeycapList(toTokens(c.combo), false)}
+                      </div>`
+                    )
+                    .join('')}
+                </div>
+                ${drawMain.map(renderRow).join('')}
+              </section>
+            </div>
+          </div>
+
+          <section class="bottom-strip">
+            <div class="panel">
+              <div class="panel-head">
+                ${ICONS.board}
+                <h2 class="panel-title">끌어서 도형 · 범위 미세 조작</h2>
+                <span class="panel-sub">마우스 + 보조키</span>
+              </div>
+              <div class="gesture-grid">
+                <div>${data.gestures.draw.slice(0, 4).map(renderGestureRow).join('')}</div>
+                <div>${data.gestures.capture.slice(0, 4).map(renderGestureRow).join('')}</div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                ${ICONS.zoom}
+                <h2 class="panel-title">실시간 확대</h2>
+                <span class="panel-sub">배율</span>
+              </div>
+              ${zoomExit ? renderRow(zoomExit) : ''}
+              ${data.gestures.zoom.map(renderGestureRow).join('')}
+            </div>
+          </section>
+
+          <footer class="footer">
+            <span><span class="mod-dot"></span> 기본값에서 변경 · ${data.meta.fnNote}</span>
+            <span class="meta-text">${data.meta.title} · ${data.meta.subtitle}</span>
+          </footer>
+        </main>`;
+      }
+
+      async function boot() {
+        const data = window.__SHORTCUTS_DATA__ || (await fetch('./shortcuts.json').then((r) => r.json()));
+        document.getElementById('root').innerHTML =
+          buildPage(data, 'dark', '화면 공유·보관용 다크', false) +
+          buildPage(data, 'light', '인쇄용 라이트 짝', true);
+
+        await document.fonts.ready;
+        window.__RENDER_DONE__ = true;
+      }
+
+      boot();
+    </script>
+  </body>
+</html>

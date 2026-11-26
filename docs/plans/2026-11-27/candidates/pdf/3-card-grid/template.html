@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>슉쇽 · 내 단축키 — 카드 격자</title>
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-mono/400.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-mono/500.css" />
+    <link rel="stylesheet" href="../../../../../../node_modules/@fontsource/ibm-plex-mono/600.css" />
+    <style>
+      @font-face {
+        font-family: 'Freesentation';
+        src: url('file:///Users/bodyking/Desktop/Architecture/fonts/Freesentation-4Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: 'Freesentation';
+        src: url('file:///Users/bodyking/Desktop/Architecture/fonts/Freesentation-5Medium.woff2') format('woff2');
+        font-weight: 500;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: 'Freesentation';
+        src: url('file:///Users/bodyking/Desktop/Architecture/fonts/Freesentation-6SemiBold.woff2') format('woff2');
+        font-weight: 600;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: 'Freesentation';
+        src: url('file:///Users/bodyking/Desktop/Architecture/fonts/Freesentation-7Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-style: normal;
+      }
+
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+
+      :root {
+        --bg: #f5f5f2;
+        --card: #ffffff;
+        --raised: #fafaf8;
+        --text: #121212;
+        --text-2: #3a3a38;
+        --sub: #5e5e5b;
+        --line: #e1e1db;
+        --hair: #ededeb;
+        --key-bg: #f1f1ed;
+        --key-bd: #dcdcd6;
+        --accent: #ff9f0a;
+        --accent-text: #9a5b00;
+        --accent-soft: #fff4e3;
+        --font-sans: 'Freesentation', 'IBM Plex Sans KR', sans-serif;
+        --font-mono: 'IBM Plex Mono', 'Freesentation', monospace;
+        --font-sym: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Menlo', 'Apple Symbols', sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-sans);
+        word-break: keep-all;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .page {
+        width: 210mm;
+        height: 297mm;
+        padding: 9.5mm 12mm 8.5mm;
+        background: var(--bg);
+        display: flex;
+        flex-direction: column;
+        gap: 3mm;
+        overflow: hidden;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 1mm;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 3mm;
+      }
+
+      .app-badge {
+        width: 9mm;
+        height: 9mm;
+        border-radius: 2.4mm;
+        background: #1a1a1a;
+        color: #fafaf8;
+        display: grid;
+        place-items: center;
+      }
+
+      .doc-title {
+        margin: 0;
+        font-size: 16pt;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+      }
+
+      .doc-sub {
+        font-size: 7.8pt;
+        color: var(--sub);
+        margin-top: 0.5mm;
+      }
+
+      .header-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 1mm;
+      }
+
+      .meta-pill {
+        font-family: var(--font-mono);
+        font-size: 7.5pt;
+        color: var(--text-2);
+        background: var(--card);
+        border: 0.7px solid var(--line);
+        padding: 0.8mm 2.3mm;
+        border-radius: 999px;
+      }
+
+      .legend-mod {
+        display: inline-flex;
+        align-items: center;
+        gap: 1.2mm;
+        font-size: 7.2pt;
+        color: var(--sub);
+      }
+
+      .mod-dot {
+        display: inline-block;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--accent);
+        flex: none;
+      }
+
+      .grid {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4.2mm;
+        align-items: stretch;
+      }
+
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 2.7mm;
+        min-width: 0;
+      }
+
+      .card {
+        background: var(--card);
+        border: 0.75px solid var(--line);
+        border-radius: 3mm;
+        padding: 2.5mm 3.5mm 2.3mm;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .card.accent-top {
+        border-top: 2px solid var(--accent);
+      }
+
+      .card-head {
+        display: flex;
+        align-items: center;
+        gap: 2mm;
+        padding-bottom: 1.5mm;
+        margin-bottom: 1mm;
+        border-bottom: 0.75px solid var(--hair);
+      }
+
+      .card-icon {
+        width: 5.5mm;
+        height: 5.5mm;
+        border-radius: 1.5mm;
+        background: var(--raised);
+        border: 0.6px solid var(--line);
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+
+      .card-title {
+        margin: 0;
+        font-size: 9.4pt;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .card-badge {
+        margin-left: auto;
+        font-size: 6.8pt;
+        font-weight: 600;
+        color: var(--sub);
+        background: var(--raised);
+        border: 0.5px solid var(--line);
+        padding: 0.3mm 1.6mm;
+        border-radius: 999px;
+      }
+
+      .card-badge.is-accent {
+        background: var(--accent-soft);
+        border-color: #f4c87f;
+        color: var(--accent-text);
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 2mm;
+        padding: 0.5mm 0;
+        border-bottom: 0.5px solid var(--hair);
+      }
+
+      .row:last-child {
+        border-bottom: 0;
+      }
+
+      .row-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 1.3mm;
+        font-size: 8.1pt;
+        color: var(--text-2);
+        line-height: 1.25;
+        min-width: 0;
+      }
+
+      .row.is-mod .row-label {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .later-tag {
+        font-size: 6.2pt;
+        color: var(--sub);
+        background: var(--raised);
+        border: 0.5px solid var(--line);
+        border-radius: 2px;
+        padding: 0 1mm;
+      }
+
+      .keycaps {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.8mm;
+        flex: none;
+      }
+
+      kbd {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 4.5mm;
+        height: 4.1mm;
+        padding: 0 1.4mm;
+        border-radius: 1.2mm;
+        background: var(--key-bg);
+        border: 0.65px solid var(--key-bd);
+        font-family: var(--font-mono);
+        font-size: 7.1pt;
+        font-weight: 500;
+        color: var(--text);
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      kbd.is-mod {
+        background: var(--accent-soft);
+        border-color: #f3c478;
+        color: var(--accent-text);
+      }
+
+      .plus-op { font-size: 7.5pt; font-weight: 600; color: var(--sub, #5e5e5b); padding: 0 0.4mm; }
+      .sym {
+        font-family: var(--font-sym);
+        font-size: 7.7pt;
+      }
+
+      .color-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.3mm 2mm;
+        padding: 1.3mm 1.8mm;
+        margin: 0.6mm 0 1mm;
+        background: var(--raised);
+        border-radius: 1.8mm;
+        border: 0.5px solid var(--hair);
+      }
+
+      .color-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 7.6pt;
+      }
+
+      .swatch {
+        width: 2.5mm;
+        height: 2.5mm;
+        border-radius: 50%;
+        border: 0.5px solid rgba(0, 0, 0, 0.16);
+        display: inline-block;
+        margin-right: 1mm;
+      }
+
+      .mini-band {
+        margin-top: 1.2mm;
+        padding: 1.4mm 2mm;
+        background: var(--raised);
+        border-radius: 1.8mm;
+        border: 0.5px solid var(--hair);
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.9mm 3mm;
+      }
+
+      .mini-cell {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 7.2pt;
+        color: var(--sub);
+      }
+
+      .mini-cell kbd {
+        height: 3.8mm;
+        font-size: 6.4pt;
+        padding: 0 1mm;
+      }
+
+      .note-pill {
+        font-size: 7.2pt;
+        color: var(--sub);
+      }
+
+      .footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 1mm;
+        font-size: 7.2pt;
+        color: var(--sub);
+      }
+
+      .footer-right {
+        font-family: var(--font-mono);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page" id="app"></main>
+    <script>
+      const ICONS = {
+        shortcuts:
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="6.5" cy="10" r="0.9" fill="#FF9F0A" stroke="none"/><circle cx="10" cy="10" r="0.9" fill="currentColor" stroke="none"/><circle cx="14" cy="10" r="0.9" fill="currentColor" stroke="none"/><circle cx="17.5" cy="10" r="0.9" fill="currentColor" stroke="none"/><path d="M7.5 14h9"/></svg>',
+        region:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M12 8.8c1.4 1.8 2.2 2.9 2.2 3.9a2.2 2.2 0 0 1-4.4 0c0-1 .8-2.1 2.2-3.9z" fill="#FF9F0A" stroke="none"/></svg>',
+        window:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 9h17"/><circle cx="6.2" cy="7" r="1" fill="#FF9F0A" stroke="none"/></svg>',
+        draw:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5l4.5 4.5L9.5 19H5v-4.5z"/><path d="M13 6.5l4.5 4.5"/><circle cx="4.8" cy="20.4" r="1.5" fill="#FF9F0A" stroke="none"/></svg>',
+        zoom:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/><circle cx="10.5" cy="10.5" r="1.8" fill="#FF9F0A" stroke="none"/></svg>',
+        board:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="11.5" rx="1.5"/><path d="M8.5 20l2-4.5M15.5 20l-2-4.5"/><circle cx="16.4" cy="12" r="1.4" fill="#FF9F0A" stroke="none"/></svg>',
+        restore:
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.3-5.6L4 8.5"/><path d="M4 4v4.5h4.5M12 8v4l2.5 1.5"/></svg>',
+      };
+
+      const SYMBOLS = new Set(['⌃', '⌥', '⇧', '⌘', '↑', '↓', '←', '→', '↩', '⇥']);
+      const MAC_MAP = {
+        Ctrl: '⌃',
+        Option: '⌥',
+        Alt: '⌥',
+        Shift: '⇧',
+        Cmd: '⌘',
+        Up: '↑',
+        Down: '↓',
+        Enter: '↩',
+        Tab: '⇥',
+      };
+
+      function toTokens(combo) {
+        return combo ? combo.split('+').map((t) => MAC_MAP[t] || t) : [];
+      }
+
+      function renderKeycapList(tokens, mod = false) {
+        return `<span class="keycaps">${tokens
+          .map((tok) => {
+            const cls = [mod ? 'is-mod' : '', SYMBOLS.has(tok) ? 'sym' : ''].filter(Boolean).join(' ');
+            return `<kbd class="${cls}">${tok}</kbd>`;
+          })
+          .join('')}</span>`;
+      }
+
+      function renderRow(item) {
+        const mod = Boolean(item.modified);
+        const later = item.later ? '<span class="later-tag">후속</span>' : '';
+        return `<div class="row ${mod ? 'is-mod' : ''}">
+          <span class="row-label">${mod ? '<span class="mod-dot"></span>' : ''}<span>${item.label}</span>${later}</span>
+          ${renderKeycapList(toTokens(item.combo), mod)}
+        </div>`;
+      }
+
+      function renderGestureRow(g) {
+        const right = g.keys
+          ? `<span class="keycaps">${g.keys
+              .map((k) => {
+                if (k === '+') return '<span class="plus-op">+</span>';
+            if (k === '+') return '<span class="plus-op">+</span>'; if (k.includes('+')) return renderKeycapList(toTokens(k), false);
+                const tok = MAC_MAP[k] || k;
+                return `<kbd class="${SYMBOLS.has(tok) ? 'sym' : ''}">${tok}</kbd>`;
+              })
+              .join('')}</span>`
+          : `<span class="note-pill">${g.note}</span>`;
+        return `<div class="row"><span class="row-label"><span>${g.label}</span></span>${right}</div>`;
+      }
+
+      async function boot() {
+        const data = window.__SHORTCUTS_DATA__ || (await fetch('./shortcuts.json').then((r) => r.json()));
+        const active = data.shortcuts.filter((s) => s.combo && !s.windowsOnly);
+        const byId = new Map(active.map((s) => [s.id, s]));
+
+        const globalCapture = active.filter((s) => s.group === 'capture');
+        const globalToolsQuick = active.filter((s) => s.group === 'tools' || s.group === 'quick');
+        const captureMode = active.filter((s) => s.group === 'capture-mode');
+        const drawTools = ['d-pen', 'd-marker', 'd-text', 'd-select', 'd-eraser', 'd-clear', 'd-spot', 'd-check', 'd-number', 'd-white', 'd-black']
+          .map((id) => byId.get(id))
+          .filter(Boolean);
+        const drawColors = ['d-red', 'd-yellow', 'd-green', 'd-orange', 'd-blue', 'd-lime']
+          .map((id) => byId.get(id))
+          .filter(Boolean);
+        const drawOps = ['d-undo', 'd-redo', 'd-copy', 'd-save', 'd-restore', 'd-center', 'd-zin', 'd-zout', 'd-wup', 'd-wdown', 'd-help', 'd-exit']
+          .map((id) => byId.get(id))
+          .filter(Boolean);
+        const zoomExit = byId.get('z-exit');
+
+        document.getElementById('app').innerHTML = `
+          <header class="header">
+            <div class="brand">
+              <div class="app-badge">${ICONS.shortcuts}</div>
+              <div>
+                <h1 class="doc-title">${data.meta.title}</h1>
+                <div class="doc-sub">카드 격자형 참조표 · 비운 칸 제외</div>
+              </div>
+            </div>
+            <div class="header-right">
+              <span class="meta-pill">${data.meta.subtitle}</span>
+              <span class="legend-mod"><span class="mod-dot"></span>기본값에서 변경</span>
+            </div>
+          </header>
+
+          <div class="grid">
+            <div class="stack">
+              <section class="card accent-top">
+                <div class="card-head">
+                  <span class="card-icon">${ICONS.region}</span>
+                  <h2 class="card-title">어디서나 · 캡처·녹화</h2>
+                  <span class="card-badge is-accent">전역</span>
+                </div>
+                ${globalCapture.map(renderRow).join('')}
+              </section>
+
+              <section class="card">
+                <div class="card-head">
+                  <span class="card-icon">${ICONS.draw}</span>
+                  <h2 class="card-title">어디서나 · 도구 &amp; 빠른 동작</h2>
+                  <span class="card-badge">전역</span>
+                </div>
+                ${globalToolsQuick.map(renderRow).join('')}
+              </section>
+
+              <section class="card">
+                <div class="card-head">
+                  <span class="card-icon">${ICONS.window}</span>
+                  <h2 class="card-title">캡처 화면 안</h2>
+                  <span class="card-badge">캡처 모드</span>
+                </div>
+                ${captureMode.map(renderRow).join('')}
+                <div class="mini-band">
+                  ${data.gestures.capture
+                    .slice(0, 6)
+                    .map(
+                      (g) => `<div class="mini-cell">
+                        <span>${g.label}</span>
+                        ${
+                          g.keys
+                            ? `<span class="keycaps">${g.keys
+                                .map((k) => {
+                                  const tok = MAC_MAP[k] || k;
+                                  return `<kbd class="${SYMBOLS.has(tok) ? 'sym' : ''}">${tok}</kbd>`;
+                                })
+                                .join('')}</span>`
+                            : `<span>${g.note}</span>`
+                        }
+                      </div>`
+                    )
+                    .join('')}
+                </div>
+              </section>
+
+              <section class="card">
+                <div class="card-head">
+                  <span class="card-icon">${ICONS.zoom}</span>
+                  <h2 class="card-title">실시간 확대</h2>
+                  <span class="card-badge">확대 모드</span>
+                </div>
+                ${zoomExit ? renderRow(zoomExit) : ''}
+                ${data.gestures.zoom.map(renderGestureRow).join('')}
+              </section>
+            </div>
+
+            <div class="stack">
+              <section class="card accent-top">
+                <div class="card-head">
+                  <span class="card-icon">${ICONS.draw}</span>
+                  <h2 class="card-title">판서 · 도구 &amp; 색</h2>
+                  <span class="card-badge is-accent">판서 모드</span>
+                </div>
+                <div class="color-grid">
+                  ${drawColors
+                    .map(
+                      (c) => `<div class="color-item">
+                        <span><span class="swatch" style="background:${c.colorHex}"></span>${c.label.replace('색: ', '')}</span>
+                        ${renderKeycapList(toTokens(c.combo), false)}
+                      </div>`
+                    )
+                    .join('')}
+                </div>
+                ${drawTools.map(renderRow).join('')}
+              </section>
+
+              <section class="card">
+                <div class="card-head">
+                  <span class="card-icon">${ICONS.restore}</span>
+                  <h2 class="card-title">판서 · 편집·저장·화면</h2>
+                  <span class="card-badge">판서 모드</span>
+                </div>
+                ${drawOps.map(renderRow).join('')}
+              </section>
+
+              <section class="card" style="flex:1">
+                <div class="card-head">
+                  <span class="card-icon">${ICONS.board}</span>
+                  <h2 class="card-title">판서 · 끌어서 도형</h2>
+                  <span class="card-badge">마우스 조작</span>
+                </div>
+                ${data.gestures.draw.map(renderGestureRow).join('')}
+              </section>
+            </div>
+          </div>
+
+          <footer class="footer">
+            <span>${data.meta.fnNote}</span>
+            <span class="footer-right">${data.meta.title} · ${data.meta.subtitle}</span>
+          </footer>
+        `;
+
+        await document.fonts.ready;
+        window.__RENDER_DONE__ = true;
+      }
+
+      boot();
+    </script>
+  </body>
+</html>

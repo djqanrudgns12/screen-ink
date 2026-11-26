@@ -1,0 +1,855 @@
+{
+  "schema": "screen-ink.shortcuts.print",
+  "version": 1,
+  "meta": {
+    "app": "슉쇽",
+    "title": "슉쇽 · 내 단축키",
+    "subtitle": "macOS · 2026-11-27 · v0.1.0",
+    "platform": "macos",
+    "date": "2026-11-27",
+    "version": "v0.1.0",
+    "fnNote": "Mac 키보드 설정에 따라 F1–F7 키는 fn과 함께 눌러야 할 수 있어요"
+  },
+  "groups": [
+    {
+      "id": "capture",
+      "title": "캡처·녹화",
+      "scope": "global"
+    },
+    {
+      "id": "tools",
+      "title": "화면 도구",
+      "scope": "global"
+    },
+    {
+      "id": "quick",
+      "title": "빠른 동작",
+      "scope": "global"
+    },
+    {
+      "id": "capture-mode",
+      "title": "캡처 화면 안",
+      "scope": "capture"
+    },
+    {
+      "id": "draw-mode",
+      "title": "판서 화면 안",
+      "scope": "draw"
+    },
+    {
+      "id": "zoom-mode",
+      "title": "실시간 확대 안",
+      "scope": "zoom"
+    }
+  ],
+  "shortcuts": [
+    {
+      "id": "region",
+      "scope": "global",
+      "group": "capture",
+      "label": "범위 캡처",
+      "combo": "F1",
+      "defaultCombo": "F1",
+      "modified": false,
+      "required": true,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "window",
+      "scope": "global",
+      "group": "capture",
+      "label": "창 캡처",
+      "combo": "F2",
+      "defaultCombo": "F2",
+      "modified": false,
+      "required": true,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "record",
+      "scope": "global",
+      "group": "capture",
+      "label": "화면 녹화 시작·중지",
+      "combo": "Option+R",
+      "defaultCombo": "F3",
+      "modified": true,
+      "required": true,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "draw",
+      "scope": "global",
+      "group": "tools",
+      "label": "판서",
+      "combo": "Option+1",
+      "defaultCombo": "Option+1",
+      "modified": false,
+      "required": true,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "zoom",
+      "scope": "global",
+      "group": "tools",
+      "label": "실시간 확대",
+      "combo": "Option+2",
+      "defaultCombo": "Option+2",
+      "modified": false,
+      "required": true,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "board",
+      "scope": "global",
+      "group": "tools",
+      "label": "칠판",
+      "combo": "Option+B",
+      "defaultCombo": "Option+3",
+      "modified": true,
+      "required": true,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "last",
+      "scope": "global",
+      "group": "capture",
+      "label": "직전 범위 바로 캡처",
+      "combo": "Shift+F1",
+      "defaultCombo": "Shift+F1",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "full",
+      "scope": "global",
+      "group": "capture",
+      "label": "모니터 전체 바로 캡처",
+      "combo": "Ctrl+Option+F1",
+      "defaultCombo": "Ctrl+Option+F1",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "active",
+      "scope": "global",
+      "group": "capture",
+      "label": "활성 창 바로 캡처",
+      "combo": "Shift+F2",
+      "defaultCombo": "Shift+F2",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "delay",
+      "scope": "global",
+      "group": "capture",
+      "label": "지연 캡처",
+      "combo": "",
+      "defaultCombo": "Option+F1",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "restore",
+      "scope": "global",
+      "group": "quick",
+      "label": "직전 판서 열기",
+      "combo": "Option+Shift+1",
+      "defaultCombo": "Option+Shift+1",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "pause",
+      "scope": "global",
+      "group": "quick",
+      "label": "단축키 켜기·끄기",
+      "combo": "Option+`",
+      "defaultCombo": "Option+`",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "topmost",
+      "scope": "global",
+      "group": "tools",
+      "label": "창 항상 위",
+      "combo": "",
+      "defaultCombo": "",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": true
+    },
+    {
+      "id": "pin",
+      "scope": "global",
+      "group": "quick",
+      "label": "화면에 붙이기",
+      "combo": "Option+Shift+V",
+      "defaultCombo": "Option+Shift+V",
+      "modified": false,
+      "required": false,
+      "later": true,
+      "windowsOnly": false
+    },
+    {
+      "id": "pinToggle",
+      "scope": "global",
+      "group": "quick",
+      "label": "핀 숨기기·보이기",
+      "combo": "Option+Shift+H",
+      "defaultCombo": "Option+Shift+H",
+      "modified": false,
+      "required": false,
+      "later": true,
+      "windowsOnly": false
+    },
+    {
+      "id": "timer",
+      "scope": "global",
+      "group": "quick",
+      "label": "타이머",
+      "combo": "Option+4",
+      "defaultCombo": "Option+4",
+      "modified": false,
+      "required": false,
+      "later": true,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-detect",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "창 ↔ UI 요소 찾기 전환",
+      "combo": "Tab",
+      "defaultCombo": "Tab",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-copy",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "복사하고 끝내기",
+      "combo": "Enter",
+      "defaultCombo": "Enter",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-save",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "저장",
+      "combo": "Cmd+S",
+      "defaultCombo": "Cmd+S",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-quick",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "빠른 저장(묻지 않고 저장 폴더로)",
+      "combo": "Shift+Cmd+S",
+      "defaultCombo": "Shift+Cmd+S",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-cancel",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "취소",
+      "combo": "Esc",
+      "defaultCombo": "Esc",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-last",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "직전 범위로",
+      "combo": "R",
+      "defaultCombo": "R",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-prev",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "지난 범위(앞)",
+      "combo": ",",
+      "defaultCombo": ",",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-next",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "지난 범위(뒤)",
+      "combo": ".",
+      "defaultCombo": ".",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-full",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "모니터 전체 고르기",
+      "combo": "Cmd+A",
+      "defaultCombo": "Cmd+A",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-cursor",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "마우스 커서 넣기·빼기",
+      "combo": "`",
+      "defaultCombo": "`",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "c-color",
+      "scope": "capture",
+      "group": "capture-mode",
+      "label": "확대경 색 복사",
+      "combo": "C",
+      "defaultCombo": "C",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-pen",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "펜",
+      "combo": "P",
+      "defaultCombo": "P",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-marker",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "형광펜",
+      "combo": "M",
+      "defaultCombo": "M",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-text",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "글자",
+      "combo": "T",
+      "defaultCombo": "T",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-select",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "고르기·옮기기",
+      "combo": "S",
+      "defaultCombo": "S",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-eraser",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "지우개(획 단위)",
+      "combo": "D",
+      "defaultCombo": "D",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-clear",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "모두 지우기",
+      "combo": "E",
+      "defaultCombo": "E",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-red",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "색: 빨강",
+      "combo": "R",
+      "defaultCombo": "R",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false,
+      "colorHex": "#E5484D"
+    },
+    {
+      "id": "d-yellow",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "색: 노랑",
+      "combo": "Y",
+      "defaultCombo": "Y",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false,
+      "colorHex": "#F2B705"
+    },
+    {
+      "id": "d-green",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "색: 초록",
+      "combo": "G",
+      "defaultCombo": "G",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false,
+      "colorHex": "#2BA36B"
+    },
+    {
+      "id": "d-orange",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "색: 주황",
+      "combo": "O",
+      "defaultCombo": "O",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false,
+      "colorHex": "#F97316"
+    },
+    {
+      "id": "d-blue",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "색: 파랑",
+      "combo": "B",
+      "defaultCombo": "B",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false,
+      "colorHex": "#2F6FED"
+    },
+    {
+      "id": "d-lime",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "색: 연두",
+      "combo": "L",
+      "defaultCombo": "L",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false,
+      "colorHex": "#84CC16"
+    },
+    {
+      "id": "d-white",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "흰 칠판으로",
+      "combo": "W",
+      "defaultCombo": "W",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false,
+      "colorHex": "#FFFFFF"
+    },
+    {
+      "id": "d-black",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "검은 칠판으로",
+      "combo": "K",
+      "defaultCombo": "K",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false,
+      "colorHex": "#1A1A1A"
+    },
+    {
+      "id": "d-undo",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "되돌리기",
+      "combo": "Cmd+Z",
+      "defaultCombo": "Cmd+Z",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-redo",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "다시 하기",
+      "combo": "Shift+Cmd+Z",
+      "defaultCombo": "Shift+Cmd+Z",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-copy",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "판서한 화면 복사",
+      "combo": "Cmd+C",
+      "defaultCombo": "Cmd+C",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-save",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "판서한 화면 저장",
+      "combo": "Cmd+S",
+      "defaultCombo": "Cmd+S",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-restore",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "직전 판서 불러오기",
+      "combo": "Shift+Cmd+R",
+      "defaultCombo": "Shift+Cmd+R",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-center",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "커서를 화면 가운데로",
+      "combo": "Space",
+      "defaultCombo": "Space",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-zin",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "확대",
+      "combo": "Up",
+      "defaultCombo": "Up",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-zout",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "축소",
+      "combo": "Down",
+      "defaultCombo": "Down",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-wup",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "펜 굵게",
+      "combo": "Cmd+Up",
+      "defaultCombo": "Cmd+Up",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-wdown",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "펜 가늘게",
+      "combo": "Cmd+Down",
+      "defaultCombo": "Cmd+Down",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-help",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "단축키 한 장 보기",
+      "combo": "Shift+/",
+      "defaultCombo": "Shift+/",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-exit",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "판서 끝내기",
+      "combo": "Esc",
+      "defaultCombo": "Esc",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-spot",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "화면 강조(스포트라이트)",
+      "combo": "F",
+      "defaultCombo": "H",
+      "modified": true,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-check",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "체크 도장",
+      "combo": "F6",
+      "defaultCombo": "F6",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "d-number",
+      "scope": "draw",
+      "group": "draw-mode",
+      "label": "번호 도장(1, 2, 3…)",
+      "combo": "F7",
+      "defaultCombo": "F7",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    },
+    {
+      "id": "z-exit",
+      "scope": "zoom",
+      "group": "zoom-mode",
+      "label": "실시간 확대 끝내기",
+      "combo": "Esc",
+      "defaultCombo": "Esc",
+      "modified": false,
+      "required": false,
+      "later": false,
+      "windowsOnly": false
+    }
+  ],
+  "gestures": {
+    "capture": [
+      {
+        "label": "넓히기·좁히기",
+        "keys": [
+          "휠"
+        ]
+      },
+      {
+        "label": "1px 이동",
+        "keys": [
+          "방향키"
+        ]
+      },
+      {
+        "label": "1px 늘리기",
+        "keys": [
+          "Cmd",
+          "방향키"
+        ]
+      },
+      {
+        "label": "1px 줄이기",
+        "keys": [
+          "Shift",
+          "방향키"
+        ]
+      },
+      {
+        "label": "자석 잠시 끄기",
+        "keys": [
+          "Option"
+        ]
+      },
+      {
+        "label": "확정·복사",
+        "note": "더블클릭"
+      },
+      {
+        "label": "다시 고르기",
+        "note": "오른쪽 클릭"
+      }
+    ],
+    "draw": [
+      {
+        "label": "직선",
+        "keys": [
+          "Shift",
+          "끌기"
+        ]
+      },
+      {
+        "label": "사각형",
+        "keys": [
+          "Cmd",
+          "끌기"
+        ]
+      },
+      {
+        "label": "화살표",
+        "keys": [
+          "Cmd",
+          "Shift",
+          "끌기"
+        ]
+      },
+      {
+        "label": "원",
+        "keys": [
+          "Tab",
+          "끌기"
+        ]
+      },
+      {
+        "label": "점선으로",
+        "keys": [
+          "+",
+          "Option"
+        ]
+      },
+      {
+        "label": "멈추면 도형",
+        "note": "0.5초"
+      },
+      {
+        "label": "확대 · 굵기",
+        "keys": [
+          "휠",
+          "Cmd+휠"
+        ]
+      },
+      {
+        "label": "확대 중 이동",
+        "note": "오른쪽 클릭"
+      }
+    ],
+    "zoom": [
+      {
+        "label": "배율 조절 (1×–8×)",
+        "keys": [
+          "휠"
+        ]
+      },
+      {
+        "label": "아래 앱 스크롤",
+        "keys": [
+          "Shift",
+          "휠"
+        ]
+      },
+      {
+        "label": "화면 따라가기",
+        "note": "커서 이동"
+      }
+    ]
+  }
+}
