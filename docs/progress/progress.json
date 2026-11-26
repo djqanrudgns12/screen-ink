@@ -123,11 +123,11 @@
           "id": "s6",
           "name": "단계 6 — F2 창 캡처·F3 녹화·바로 캡처",
           "items": [
-            { "id": "6.1", "title": "F2 WGC 창 캡처·대체 경로·검은 화면 판정", "platform": "win", "days": 0.6, "status": "todo", "level": "hard" },
-            { "id": "6.2", "title": "바로 캡처 키(Shift+F1·Ctrl+F1·Shift+F2·Alt+F1)", "platform": "common", "days": 0.6, "status": "todo", "level": "easy" },
-            { "id": "6.3", "title": "F3 범위 + Recorder", "platform": "win", "days": 0.6, "status": "todo", "level": "hard" },
-            { "id": "6.4", "title": "녹화 섬·빨간 꺾쇠·트레이 빨간 점", "platform": "common", "days": 0.6, "status": "todo", "level": "mid" },
-            { "id": "6.5", "title": "자동 중지·임시 파일 복구·마이크", "platform": "win", "days": 0.6, "status": "todo", "level": "hard" }
+            { "id": "6.1", "title": "F2 WGC 창 캡처·대체 경로·검은 화면 판정", "platform": "win", "days": 0.6, "status": "verify", "note": "WGC 창 캡처(wgc_window.rs·공용 D3D gpu.rs)·첫 프레임 150 ms·대체 경로·보호 화면 RGB 0 판정·둥근 귀 투명, 테두리 육안 확인 남음", "level": "hard" },
+            { "id": "6.2", "title": "바로 캡처 키(Shift+F1·Ctrl+F1·Shift+F2·Alt+F1)", "platform": "common", "days": 0.6, "status": "verify", "note": "바로 캡처 4종(직전 범위·커서 모니터·활성 창·지연 3/5/10초, 카운트다운 중 Esc 취소), 화면 확인 남음", "level": "easy" },
+            { "id": "6.3", "title": "F3 범위 + Recorder", "platform": "win", "days": 0.6, "status": "verify", "note": "F3 범위·모니터·창 추적 + MF 하드웨어 H.264 녹화기(1080p30 5 Mbps), 10분 녹화 확인 남음", "level": "hard" },
+            { "id": "6.4", "title": "녹화 섬·빨간 꺾쇠·트레이 빨간 점", "platform": "common", "days": 0.6, "status": "verify", "note": "녹화 섬·빨간 꺾쇠 창(캡처 제외)·트레이 빨간 점, 창 추적 녹화의 꺾쇠는 후속", "level": "mid" },
+            { "id": "6.5", "title": "자동 중지·임시 파일 복구·마이크", "platform": "win", "days": 0.6, "status": "partial", "note": "자동 중지(잠금·절전·모니터 해제)·임시 파일 복구 끝, 마이크(WASAPI+AAC)는 자리만", "level": "hard" }
           ]
         },
         {

@@ -18,7 +18,7 @@
 | 결과 섬 HEX 칩·주황 잔상 0.4초 (3e-chip) | [확인 남음] | `Island.svelte`, `overlay.rs` `flash_afterimage`(화면 이벤트 방식, eval 없음) | 잔상 중 클릭 통과 |
 | 이어받기 5.3(확대 중 Alt+1)·3e-handoff([판서로]) | [확인 남음] | `ink-app/src/{live_zoom,draw,capture}.rs`, `ink-domain/src/zoom.rs` | ≤150 ms 실측 |
 | 실시간 확대 5.1·5.2·5.5 (Windows) | [확인 남음] | `ink-platform-windows/src/magnifier.rs`, `ink-app/src/live_zoom.rs`, `ink-domain/src/zoom.rs`, 플러그인 `zoom_hud.rs`, `ZoomHud.svelte` | M6 fps(`bench/m6-zoom.md`) |
-| F2 창 캡처(WGC)·바로 캡처 4종·F3 녹화(MF)·자동 중지·복구·빨간 꺾쇠 (6.1~6.5, Windows) | [확인 남음] · 마이크는 자리만 | `ink-platform-windows/src/{gpu,wgc_window,recorder}.rs`, `ink-app/src/record.rs`, `ink-domain/src/recording.rs`, 플러그인 `rec_frame.rs`, `RecordFrame.svelte` | 테두리 육안·10분 녹화 |
+| F2 창 캡처(WGC, 둥근 귀 투명 RGBA)·바로 캡처 4종(지연은 카운트다운 중 Esc 취소)·F3 녹화(MF 5 Mbps, 녹화 중 Alt+1·Alt+2는 녹화를 끊지 않음)·자동 중지·복구·빨간 꺾쇠 (6.1~6.5, Windows) | [확인 남음] · 마이크는 자리만 | `ink-platform-windows/src/{gpu,wgc_window,recorder}.rs`, `ink-app/src/record.rs`, `ink-domain/src/recording.rs`, 플러그인 `rec_frame.rs`, `RecordFrame.svelte` | 테두리 육안·10분 녹화 |
 | 인식 마무리 (3b-dpi·3b-msaa·RB-15/16·시험 앱·Snipaste 판독) | [확인 남음] | `ink-platform-windows/src/{dpi,msaa}.rs`, `tests/rb15_16.rs`, `bench/recog/`(RUNBOOK-windows.md) | 화면 절차 1.7~2시간 |
 | MSIX 포장 D2·패키지 모드 D3 | [완료]·실설치 확인 남음 | `scripts/package-msix.ps1`, `apps/screen-ink/src-tauri/packaging/msix/`, `ink-domain/src/package.rs`, `ink-platform-windows/src/package.rs`, `.github/workflows/release-msix.yml` | 자체 서명 설치(사용자 승인) |
 | CI 상시 실행 | [완료] | `.github/workflows/ci.yml`(푸시마다 ubuntu·Windows·맥·UI, Windows 순수 판정 시험 추가) | — |
@@ -139,4 +139,6 @@ Windows 구현을 본보기로 같은 포트에 맥 구현을 꽂는다. 공통 
 
 ## 8. 기준 커밋
 
-(마감 커밋 뒤 채움)
+- 코드 기준: **`ae7766e`** — 흐름 11개를 모두 병합한 마지막 병합(window-record). 그 위에 진척도·이 문서 마감 커밋이 있다(`git log -1 -- docs/handoff/2026-11-26-mac-handoff.md`).
+- 마감 시점 진척: 전체 62.8% · 1차 계획 75.5% · 맥 트랙 41.7% · Windows 배포 42.4%([README](../progress/README.md)).
+- 마감 검사(깨끗한 검사 전용 워크트리, CI와 같은 범위): Rust 시험·Windows 순수 판정 시험·clippy -D warnings·npm test·npm run check·progress --check. 결과는 마감 커밋 메시지에 적는다. 실제 화면 확인은 하지 않았다(§3.1).

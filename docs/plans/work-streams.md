@@ -55,6 +55,8 @@
 - 같은 폴더(원본)에서 사용자의 브랜드 세션이 아이콘·`tokens.css`·`04-screens.md`·`10-design-system.md`·`tray_art.rs`를 고친다 — 모든 흐름에서 손대지 않는다.
 - 2차(1차 결과를 본 뒤): E 창 캡처·녹화(스파이크 결과 반영), F 창 항상 위, A 4.3~4.8 화면, B 4.9·이어받기, D 5.3, H D8~D10, G 안정화.
 
+**마감(2026-11-26 저녁)**: 흐름 11개(`cap-chip`·`ink-engine`·`draw-mode`·`win-recog`·`live-zoom`·`msix`·`window-record`·`cap-annotate`·`handoff`·`draw-ui` + 스파이크) 모두 feat/foundation에 병합(마지막 `ae7766e`). 메인 연결 커밋 c8aec99(DrawCanvas tick 효과)·0b666e6(결과 섬 보조 단추·판서 섬 물러남/비킴). 이어서 할 일과 화면 확인 묶음은 [맥 인수인계](../handoff/2026-11-26-mac-handoff.md).
+
 ## 6. 사용자 결정 (2026-11-26 확정)
 
 | # | 결정 | 확정 |
