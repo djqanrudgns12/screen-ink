@@ -82,7 +82,7 @@
             { "id": "3e-paste", "title": "한글·PPT에 붙여 넣어 크기·색 확인", "platform": "win", "days": 0.05, "status": "todo" },
             { "id": "3e-chip", "title": "결과 섬 HEX 칩·주황 잔상 0.4초", "platform": "common", "days": 0.15, "status": "todo" },
             { "id": "3e-handoff", "title": "[판서로] 이어받기 ≤ 150 ms", "platform": "common", "days": 0.2, "status": "todo", "note": "단계 4 판서가 먼저" },
-            { "id": "3g-toolbar", "title": "선택 툴바(R-CAP-27): 위치 규칙·여러 모니터·취소/저장/복사·툴팁 키", "platform": "common", "days": 0.5, "status": "verify", "note": "미리보기·단위 시험 확인. 실제 앱(Windows·맥)에서 눈 확인 남음" },
+            { "id": "3g-toolbar", "title": "선택 툴바(R-CAP-27): 위치 규칙·여러 모니터·취소/저장/복사·툴팁 키", "platform": "common", "days": 0.5, "status": "done", "note": "Windows 실제 앱 확인(2026-11-26: 확정 → 오른쪽 아래 툴바, [취소] 클릭으로 끝남). 위·안쪽 배치는 단위 시험, 맥은 인수인계 §2.6" },
             { "id": "3h-pin", "title": "캡처 핀(R-CAP-29): 툴바 [고정] → 늘 위 이미지 창·끌기·휠 확대·투명도·우클릭 메뉴·트레이 모두 닫기", "platform": "common", "days": 1.0, "status": "todo", "note": "2026-11-26 사용자 요청으로 1차" },
             { "id": "3g-keys", "title": "화면 안 키 설정 반영(R-KEY-6): c-* 키로 판정, 맥 Cmd", "platform": "common", "days": 0.25, "status": "done", "note": "Space로 바꾸면 Space = 복사(서비스 시험)" },
             { "id": "3f-docs", "title": "시험 문서·자동 정답(RB-01·14) + Win32 시험 앱(RB-04)", "platform": "common", "days": 0.5, "status": "partial", "note": "RB-01 문서·표지 자동 정답(recog-truth) 완료, RB-14·RB-04 남음" },
