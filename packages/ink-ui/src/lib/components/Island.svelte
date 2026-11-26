@@ -562,6 +562,7 @@
 
   .ink-island[data-result-card='true'] .ink-island-row {
     min-height: 36px;
+    gap: 8px;
   }
 
   .ink-island-thumb {
@@ -576,8 +577,8 @@
   }
 
   .ink-island[data-result-card='true'] .ink-island-thumb {
-    width: 74px;
-    height: 40px;
+    width: 64px;
+    height: 38px;
     border-radius: 16px 7px 7px 16px;
   }
 

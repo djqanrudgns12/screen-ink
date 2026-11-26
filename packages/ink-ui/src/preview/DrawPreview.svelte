@@ -4,6 +4,7 @@
   import DrawCanvas from '../lib/components/DrawCanvas.svelte';
   import Island from '../lib/components/Island.svelte';
   import MiniMap from '../lib/components/MiniMap.svelte';
+  import { locale, setLang, setOs, syncLang, t } from '../lib/i18n/index.svelte.js';
   import { InkEngine } from '../lib/ink/inkEngine.js';
   import { renderDocument } from '../lib/ink/canvasRender.js';
   import {
@@ -19,8 +20,8 @@
   } from '../lib/models/drawUi.js';
 
   /**
-   * 브라우저 미리보기 `?draw=1` — DrawCanvas + 실제 판서 섬(6/8색 펼침·4초 물러남·커서 회피) + MiniMap 데모.
-   * `&board=1` 칠판, `&platform=macos` 맥 키, `&apply=auto` 멈춤 도형 바로 바꾸기, `&desync=0` desynchronized 끔.
+   * 브라우저 미리보기 `?draw=1` — DrawCanvas + 실제 그리기 섬(6/8색 펼침·4초 물러남·커서 회피) + MiniMap 데모.
+   * `&board=1` 칠판, `&platform=macos` 맥 키, `&lang=en` 영어, `&apply=auto` 멈춤 도형 바로 바꾸기, `&desync=0` desynchronized 끔.
    * @type {{ client: import('@screen-ink/client').InkClient }}
    */
   let { client } = $props();
@@ -28,10 +29,14 @@
   const params = new URLSearchParams(typeof location !== 'undefined' ? location.search : '');
   const board = params.get('board') === '1';
   const platform = params.get('platform') === 'macos' ? 'macos' : 'windows';
+  const initialLang = params.get('lang') === 'en' ? 'en' : 'ko';
   const desync = params.get('desync') !== '0';
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 720;
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+
+  setLang(initialLang);
+  setOs(platform);
 
   const engine = new InkEngine({
     docOptions: {
@@ -44,6 +49,7 @@
     },
     viewport: { w: vw, h: vh },
     platform,
+    lang: initialLang,
     settings: params.get('apply') === 'auto' ? { 'draw.shapeApply': 'auto' } : {},
   });
 
@@ -72,19 +78,22 @@
       g.stroke();
     }
     g.fillStyle = '#1F2933';
-    g.font = '600 44px "IBM Plex Sans KR", sans-serif';
-    g.fillText('3단원 · 이차방정식의 근의 공식', 80, 120);
+    g.font = '600 44px "Freesentation", "IBM Plex Sans KR", sans-serif';
+    g.fillText(t('meta.preview.drawSampleTitle'), 80, 120);
     g.font = '28px "IBM Plex Mono", monospace';
     g.fillText('ax² + bx + c = 0  →  x = (−b ± √(b² − 4ac)) / 2a', 80, 210);
-    g.font = '24px "IBM Plex Sans KR", sans-serif';
-    ['① 판별식 D = b² − 4ac', '② D > 0 이면 서로 다른 두 실근', '③ D = 0 이면 중근', '④ D < 0 이면 허근'].forEach((t, i) =>
-      g.fillText(t, 100, 300 + i * 48),
-    );
+    g.font = '24px "Freesentation", "IBM Plex Sans KR", sans-serif';
+    [
+      t('meta.preview.drawSampleBullet1'),
+      t('meta.preview.drawSampleBullet2'),
+      t('meta.preview.drawSampleBullet3'),
+      t('meta.preview.drawSampleBullet4'),
+    ].forEach((line, i) => g.fillText(line, 100, 300 + i * 48));
     g.fillStyle = '#2F6FED';
     g.fillRect(vw - 420, 260, 300, 200);
     g.fillStyle = '#FFFFFF';
-    g.font = '600 22px "IBM Plex Sans KR", sans-serif';
-    g.fillText('예제 1', vw - 390, 300);
+    g.font = '600 22px "Freesentation", "IBM Plex Sans KR", sans-serif';
+    g.fillText(t('meta.preview.drawSampleExample'), vw - 390, 300);
     g.font = '20px "IBM Plex Mono", monospace';
     g.fillText('x² − 5x + 6 = 0', vw - 390, 350);
     return c;
@@ -108,7 +117,7 @@
   /** @type {HTMLDivElement | null} */
   let islandAnchor = $state(null);
 
-  // 4.8 판서 섬 상태(0.8초 펼침 · 4초 40% 물러남 · bbox+24px 커서 회피) + 데모 강제 토글
+  // 4.8 그리기 섬 상태(0.8초 펼침 · 4초 40% 물러남 · bbox+24px 커서 회피) + 데모 강제 토글
   let paletteTransient = $state(false);
   let forcePalette = $state(false);
   let autoIdleDim = $state(false);
@@ -155,7 +164,13 @@
       case 'exit':
         metrics = canvasRef?.flushPenMetrics?.() ?? metrics;
         if (engine.hasItems()) kept = engine.exportDocument();
-        showNotice(kept ? '판서를 보관했어요 · Alt+Shift+1 (데모: Ctrl+Shift+R로 복원)' : '판서를 끝냈어요');
+        if (kept) {
+          const restore = platform === 'macos' ? '⌥⇧1' : 'Alt+Shift+1';
+          const demo = platform === 'macos' ? '⌘⇧R' : 'Ctrl+Shift+R';
+          showNotice(t('meta.preview.drawExitKept', { restore, demo }));
+        } else {
+          showNotice(t('meta.preview.drawExitEnded'));
+        }
         engine.loadDocument({ ...engine.doc, pages: engine.doc.pages.map((p) => ({ ...p, items: [] })) });
         engine.setView({ s: 1, tx: 0, ty: 0 });
         break;
@@ -170,7 +185,13 @@
         out.height = doc.physSize.h;
         const g = out.getContext('2d');
         if (g) renderDocument(/** @type {any} */ (g), doc, { image: frame });
-        showNotice(`${fx.type === 'copy' ? '복사' : '저장'} 합성 ${out.width}×${out.height} (데모 — 클립보드·파일 없음)`);
+        showNotice(
+          t('meta.preview.drawCopySynth', {
+            action: fx.type === 'copy' ? t('common.copy') : t('common.save'),
+            w: out.width,
+            h: out.height,
+          }),
+        );
         break;
       }
       case 'centerCursor':
@@ -201,8 +222,14 @@
     engine.setBackground(next);
   }
 
+  $effect(() => {
+    void locale.lang;
+    if (!board && typeof document !== 'undefined') {
+      frame = makeFakeFrame();
+    }
+  });
+
   onMount(() => {
-    frame = board ? null : makeFakeFrame();
     resetIdle();
     const off = engine.subscribe(() => {
       const next = engine.islandPatch;
@@ -218,32 +245,47 @@
       undoDepth = engine.undoStack.length;
       resetIdle();
     });
+    const offState = client.subscribe((e) => {
+      if (e.type === 'state') syncLang(e.state);
+    });
     client
       .getState()
       .then((state) => {
+        syncLang(state);
         engine.setShortcuts(state.shortcuts);
         engine.setSettings({ ...state.settings, ...(params.get('apply') === 'auto' ? { 'draw.shapeApply': 'auto' } : {}) });
       })
       .catch(() => {});
     return () => {
       off();
+      offState();
       clearTimeout(noticeTimer);
       clearTimeout(idleTimer);
       clearTimeout(paletteTimer);
     };
   });
 
-  const TOOL_LABEL = /** @type {Record<string, string>} */ ({
-    pen: '펜',
-    marker: '형광펜',
-    text: '글자',
-    select: '고르기',
-    eraser: '지우개',
-    pan: '손',
-  });
+  function toolLabel(tool) {
+    const map = {
+      pen: 'island.draw.tool.pen',
+      marker: 'island.draw.tool.marker',
+      text: 'island.draw.tool.text',
+      select: 'island.draw.tool.select',
+      eraser: 'island.draw.tool.eraser',
+      pan: 'island.draw.tool.pan',
+    };
+    return map[tool] ? t(map[tool]) : tool;
+  }
 
   let isBoardView = $derived(patch.board || patch.background !== 'frame');
-  let boardText = $derived(formatBoardIslandText({ background: patch.background, pageIndex: patch.pageIndex, pageCount: patch.pageCount }));
+  let boardText = $derived(
+    formatBoardIslandText({
+      background: patch.background,
+      pageIndex: patch.pageIndex,
+      pageCount: patch.pageCount,
+      lang: locale.lang,
+    }),
+  );
   let zoomValue = $derived.by(() => {
     if (patch.zoom <= 1 + 1e-6) return '';
     const r = Math.round(patch.zoom * 100);
@@ -258,6 +300,13 @@
     }),
   );
   let islandAvoid = $derived(cursorAvoid && !suggestion && !forcePalette && !paletteTransient);
+  let currentBgName = $derived(
+    patch.background === 'white'
+      ? t('page.draw.boardWhite')
+      : patch.background === 'black'
+        ? t('page.draw.boardBlack')
+        : t('meta.preview.drawBgScreen'),
+  );
 </script>
 
 <svelte:window onkeydown={resetIdle} />
@@ -284,7 +333,7 @@
         variant={isBoardView ? 'board' : 'draw'}
         penColor={patch.color}
         penWidth={isBoardView ? '' : `${patch.widthPx}px`}
-        text={suggestion ? suggestion : isBoardView ? boardText.text : `판서 · ${TOOL_LABEL[patch.tool] ?? patch.tool}`}
+        text={suggestion ? suggestion : isBoardView ? boardText.text : t('island.draw.title', { tool: toolLabel(patch.tool) })}
         value={suggestion ? '' : isBoardView ? boardText.value : zoomValue}
         keys={suggestion ? undefined : isBoardView ? ['W', 'K'] : ['?']}
         {platform}
@@ -293,7 +342,7 @@
         avoid={islandAvoid}
         onSelectColor={(code) => engine.setColor(code)}
         button={suggestion
-          ? { label: '바꾸기', key: 'Enter', onClick: () => engine.acceptSuggestion().forEach(handleEffect) }
+          ? { label: t('island.draw.acceptSuggestion'), key: 'Enter', onClick: () => engine.acceptSuggestion().forEach(handleEffect) }
           : null}
         onmouseenter={() => (islandHover = true)}
         onmouseleave={() => (islandHover = false)}
@@ -306,24 +355,21 @@
   {/if}
 
   {#if helpOpen}
-    <div class="draw-preview-help">
-      P M T S D E 도구 · R Y G O B L 색 · W/K 칠판 · Shift 직선 · Ctrl 사각 · Ctrl+Shift 화살표 · Tab 원 · +Alt 점선 ·
-      휠 확대 · Ctrl+휠 굵기 · 우클릭 손 모드 · Space 1× · Ctrl+Z/Y · Esc 한 단계씩
-    </div>
+    <div class="draw-preview-help">{t('meta.preview.drawHelp')}</div>
   {/if}
 
-  <div class="draw-preview-hud" aria-label="판서 미리보기 도구">
+  <div class="draw-preview-hud" aria-label={t('meta.preview.drawHudAria')}>
     <span class="muted">undo {undoDepth}</span>
     <button type="button" data-active={forcePalette ? 'true' : undefined} onclick={() => (forcePalette = !forcePalette)}>
-      색 펼침
+      {t('meta.preview.drawForcePalette')}
     </button>
     <button type="button" data-active={forceIdleDim ? 'true' : undefined} onclick={() => (forceIdleDim = !forceIdleDim)}>
-      4초 물러남
+      {t('meta.preview.drawForceDim')}
     </button>
     <button type="button" onclick={toggleBoardBackground}>
-      바탕: {patch.background === 'white' ? '흰 칠판' : patch.background === 'black' ? '검은 칠판' : '화면'}
+      {t('meta.preview.drawBgLabel', { bg: currentBgName })}
     </button>
-    <button type="button" onclick={() => (metrics = canvasRef?.getPenMetrics?.() ?? null)}>지연 보기</button>
+    <button type="button" onclick={() => (metrics = canvasRef?.getPenMetrics?.() ?? null)}>{t('meta.preview.drawMetrics')}</button>
     {#if metrics}
       <span class="muted">pen n={metrics.n} p50={metrics.p50} p95={metrics.p95} max={metrics.max} ms</span>
     {/if}
@@ -352,7 +398,7 @@
   .draw-preview {
     position: fixed;
     inset: 0;
-    font-family: 'IBM Plex Sans KR', sans-serif;
+    font-family: var(--ink-font-sans);
   }
 
   .draw-preview-island-wrap {
@@ -403,7 +449,7 @@
   .draw-preview-hud {
     position: absolute;
     left: 16px;
-    bottom: 16px;
+    top: 14px;
     background: rgba(17, 18, 20, 0.85);
     color: #f7f8fa;
     border-radius: 999px;
@@ -433,7 +479,7 @@
 
   .muted {
     color: rgba(247, 248, 250, 0.65);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: var(--ink-font-mono);
     font-size: 11.5px;
   }
 

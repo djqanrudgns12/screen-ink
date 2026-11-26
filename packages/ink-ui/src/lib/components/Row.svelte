@@ -202,12 +202,11 @@
   }
 
   .ink-row-label {
-    flex: 1;
+    flex: 1 0 auto;
     display: inline-flex;
     align-items: center;
     gap: 6px;
     white-space: nowrap;
-    min-width: 0;
   }
 
   .ink-row-label[data-danger='true'] {

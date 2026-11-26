@@ -46,7 +46,7 @@
   "page.capture.templateAria": "파일 이름 규칙",
   "page.capture.templateErrEmpty": "파일 이름을 써 주세요",
   "page.capture.templateErrForbidden": "\\ / : * ? \" < > | 는 쓸 수 없어요",
-  "page.capture.templateTokensHint": "쓸 수 있는 값: {tokens}",
+  "page.capture.templateTokensHint": "토큰: {tokens}",
   "page.capture.title": "캡처·녹화",
 
   "page.draw.boardBgBlack": "검은색",

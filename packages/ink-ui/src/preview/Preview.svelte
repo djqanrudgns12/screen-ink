@@ -28,14 +28,20 @@
     TrayPopoverScreen,
     applyTheme,
     watchSystemTheme,
+    setLang,
+    setOs,
+    syncLang,
+    t,
   } from '../lib/index.js';
+  import { keycaps } from '@screen-ink/client';
+  import { formatComboReadable } from '../lib/models/shortcutDisplay.js';
 
   let { client } = $props();
 
   const params = new URLSearchParams(typeof location !== 'undefined' ? location.search : '');
   const initialScreen = params.get('screen') || 'settings';
   const initialTheme = params.get('theme') || (initialScreen === 'first' || initialScreen === 'cheat' ? 'dark' : 'light');
-  const initialPlatform = params.get('platform') || 'windows';
+  const initialPlatform = /** @type {'windows' | 'macos'} */ (params.get('platform') === 'macos' ? 'macos' : 'windows');
   const initialLang = params.get('lang') === 'en' ? 'en' : 'ko';
   const initialTab = params.get('tab') || 'shortcuts';
   const initialFirstRun = params.get('firstRun') === '1';
@@ -43,6 +49,9 @@
   const stepRaw = params.get('step');
   const initialStep = stepRaw !== null && stepRaw !== '' ? Number(stepRaw) : undefined;
   const hideBar = params.get('chrome') === '0';
+
+  setLang(initialLang);
+  setOs(initialPlatform);
 
   let screen = $state(initialScreen);
   let theme = $state(initialTheme);
@@ -106,7 +115,7 @@
   };
 
   // 트레이 미리보기에서 준비됨(겹침 없음) 상태를 보여 주기 위한 보조 클라이언트
-  const cleanTrayClient = createFakeClient({ platform: initialPlatform, snipasteRunning: false });
+  const cleanTrayClient = createFakeClient({ platform: initialPlatform, lang: initialLang, snipasteRunning: false });
 
   $effect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
@@ -119,6 +128,7 @@
   $effect(() => {
     const off = client.subscribe((e) => {
       if (e.type === 'state') {
+        syncLang(e.state);
         overlayActive = e.state?.mode?.mode === 'capture';
         if (e.state?.settings?.['general.lang']) {
           lang = e.state.settings['general.lang'];
@@ -140,6 +150,12 @@
       applyTheme(document.documentElement, theme, systemDark);
     }
   });
+
+  function switchLanguage(nextLang) {
+    setLang(nextLang);
+    client.updateSetting('general.lang', nextLang);
+    cleanTrayClient.updateSetting('general.lang', nextLang);
+  }
 
   function updateQuery(nextScreen, nextTheme, nextTab) {
     screen = nextScreen;
@@ -175,6 +191,14 @@
       client.run('capture.region');
     }
   }
+
+  let kSave = $derived(initialPlatform === 'macos' ? 'Cmd+S' : 'Ctrl+S');
+  let kDraw = $derived(initialPlatform === 'macos' ? 'Option+1' : 'Alt+1');
+  let kDelay = $derived(initialPlatform === 'macos' ? 'Option+F1' : 'Alt+F1');
+  let kZoom = $derived(initialPlatform === 'macos' ? 'Option+2' : 'Alt+2');
+  let kBoard = $derived(initialPlatform === 'macos' ? 'Option+3' : 'Alt+3');
+  let kPin = $derived(initialPlatform === 'macos' ? 'Option+Shift+D' : 'Alt+Shift+D');
+  let kPause = $derived(initialPlatform === 'macos' ? 'Option+`' : 'Alt+`');
 </script>
 
 <div class="pv-shell" data-theme={theme}>
@@ -182,13 +206,13 @@
     <header class="pv-bar" data-cheat-ignore="true">
       <div class="pv-bar-group">
         {#each [
-          { id: 'tray', label: '트레이 (S01)' },
-          { id: 'settings', label: '설정 (S02~S05)' },
-          { id: 'first', label: '첫 실행 (S06)' },
-          { id: 'overlay', label: '오버레이 (S07)' },
-          { id: 'cheat', label: '단축키 한 장 (S16)' },
-          { id: 'island', label: '섬 (S17)' },
-          { id: 'board', label: '부품 판 (F01·F02)' },
+          { id: 'tray', label: t('meta.preview.tray') },
+          { id: 'settings', label: t('meta.preview.settings') },
+          { id: 'first', label: t('meta.preview.first') },
+          { id: 'overlay', label: t('meta.preview.overlay') },
+          { id: 'cheat', label: t('meta.preview.cheat') },
+          { id: 'island', label: t('meta.preview.island') },
+          { id: 'board', label: t('meta.preview.board') },
         ] as s (s.id)}
           <button
             type="button"
@@ -204,20 +228,20 @@
       {#if screen === 'settings'}
         <div class="pv-bar-group">
           {#each [
-            { id: 'shortcuts', label: '단축키' },
-            { id: 'capture', label: '캡처·녹화' },
-            { id: 'draw', label: '그리기·확대' },
-            { id: 'general', label: '일반' },
-            { id: 'help', label: '사용 설명서' },
-            { id: 'info', label: '정보' },
-          ] as t (t.id)}
+            { id: 'shortcuts', label: t('settings.tab.shortcuts') },
+            { id: 'capture', label: t('settings.tab.capture') },
+            { id: 'draw', label: t('settings.tab.draw') },
+            { id: 'general', label: t('settings.tab.general') },
+            { id: 'help', label: t('settings.tab.help') },
+            { id: 'info', label: t('settings.tab.info') },
+          ] as item (item.id)}
             <button
               type="button"
               class="pv-pill ink-focus"
-              data-active={tab === t.id ? 'true' : undefined}
-              onclick={() => updateQuery('settings', theme, t.id)}
+              data-active={tab === item.id ? 'true' : undefined}
+              onclick={() => updateQuery('settings', theme, item.id)}
             >
-              {t.label}
+              {item.label}
             </button>
           {/each}
           <button
@@ -226,7 +250,7 @@
             data-active={settingsFirstRun ? 'true' : undefined}
             onclick={() => (settingsFirstRun = !settingsFirstRun)}
           >
-            첫 실행 시트
+            {t('meta.preview.firstSheet')}
           </button>
         </div>
       {:else if screen === 'first'}
@@ -237,7 +261,7 @@
             data-active={firstConflict ? 'true' : undefined}
             onclick={() => { firstConflict = true; firstOpen = true; }}
           >
-            겹침 있음
+            {t('meta.preview.firstConflict')}
           </button>
           <button
             type="button"
@@ -245,7 +269,7 @@
             data-active={!firstConflict ? 'true' : undefined}
             onclick={() => { firstConflict = false; firstOpen = true; }}
           >
-            겹침 없음(F키 안내)
+            {t('meta.preview.firstClean')}
           </button>
           {#if initialPlatform === 'macos'}
             <button
@@ -256,7 +280,7 @@
                 firstOpen = true;
               }}
             >
-              권한 모두 꺼짐
+              {t('meta.preview.firstPermOff')}
             </button>
             <button
               type="button"
@@ -266,16 +290,16 @@
                 firstOpen = true;
               }}
             >
-              권한 모두 켜짐
+              {t('meta.preview.firstPermOn')}
             </button>
           {/if}
         </div>
       {:else if screen === 'cheat'}
         <div class="pv-bar-group">
           {#each [
-            { id: 'draw', label: '판서' },
-            { id: 'capture', label: '캡처' },
-            { id: 'zoom', label: '실시간 확대' },
+            { id: 'draw', label: t('meta.preview.cheatModeDraw') },
+            { id: 'capture', label: t('meta.preview.cheatModeCapture') },
+            { id: 'zoom', label: t('meta.preview.cheatModeZoom') },
           ] as m (m.id)}
             <button
               type="button"
@@ -296,15 +320,15 @@
           type="button"
           class="pv-pill ink-focus"
           data-active={lang === 'ko' ? 'true' : undefined}
-          onclick={() => client.updateSetting('general.lang', 'ko')}
+          onclick={() => switchLanguage('ko')}
         >
-          한국어
+          {t('meta.preview.langKo')}
         </button>
         <button
           type="button"
           class="pv-pill ink-focus"
           data-active={lang === 'en' ? 'true' : undefined}
-          onclick={() => client.updateSetting('general.lang', 'en')}
+          onclick={() => switchLanguage('en')}
         >
           EN
         </button>
@@ -314,7 +338,7 @@
           data-active={theme === 'light' ? 'true' : undefined}
           onclick={() => updateQuery(screen, 'light', tab)}
         >
-          라이트
+          {t('meta.preview.themeLight')}
         </button>
         <button
           type="button"
@@ -322,7 +346,7 @@
           data-active={theme === 'dark' ? 'true' : undefined}
           onclick={() => updateQuery(screen, 'dark', tab)}
         >
-          다크
+          {t('meta.preview.themeDark')}
         </button>
         <span class="pv-meta ink-mono">{initialPlatform}</span>
       </div>
@@ -334,11 +358,11 @@
   {#if screen === 'tray'}
     <div class="pv-tray-split">
       <section class="pv-tray-pane" data-theme="light">
-        <p class="pv-pane-label">라이트 — 그래파이트</p>
+        <p class="pv-pane-label">{t('meta.preview.themeLightLabel')}</p>
         <TrayPopoverScreen client={cleanTrayClient} />
       </section>
       <section class="pv-tray-pane" data-theme="dark">
-        <p class="pv-pane-label">다크 — 아일랜드</p>
+        <p class="pv-pane-label">{t('meta.preview.themeDarkLabel')}</p>
         <TrayPopoverScreen client={cleanTrayClient} />
       </section>
     </div>
@@ -356,7 +380,7 @@
     <div class="pv-stage">
       {#if !firstOpen}
         <button type="button" class="pv-pill ink-focus" onclick={() => (firstOpen = true)}>
-          첫 실행 시트 다시 열기
+          {t('meta.preview.firstReopen')}
         </button>
       {/if}
       <FirstRunSheet
@@ -369,16 +393,16 @@
   {:else if screen === 'overlay'}
     <div class="pv-stage">
       <div class="pv-overlay-launcher">
-        <h2>캡처 오버레이</h2>
-        <p class="pv-overlay-sub">움직임(인식) · 휠(넓히기·좁히기) · 클릭(확정) · 드래그 · Enter(복사) · ?(안내) · 우클릭·Esc(다시/취소)</p>
-        <div class="pv-bar-group" role="group" aria-label="오버레이 렌더 방식">
+        <h2>{t('meta.preview.overlayHeading')}</h2>
+        <p class="pv-overlay-sub">{t('meta.preview.overlaySub')}</p>
+        <div class="pv-bar-group" role="group" aria-label={t('meta.preview.overlayRenderAria')}>
           <button
             type="button"
             class="pv-pill ink-focus"
             data-active={!overlayNativeFrame ? 'true' : undefined}
             onclick={() => (overlayNativeFrame = false)}
           >
-            웹 이미지 (nativeFrame=false)
+            {t('meta.preview.overlayWeb')}
           </button>
           <button
             type="button"
@@ -386,7 +410,7 @@
             data-active={overlayNativeFrame ? 'true' : undefined}
             onclick={() => (overlayNativeFrame = true)}
           >
-            네이티브 정지 화면 (nativeFrame=true)
+            {t('meta.preview.overlayNative')}
           </button>
         </div>
         <div class="pv-bar-group">
@@ -396,26 +420,26 @@
             data-active="true"
             onclick={() => client.run('capture.region')}
           >
-            범위 캡처 (F1)
+            {t('shortcuts.slot.region')} (F1)
           </button>
           <button
             type="button"
             class="pv-pill ink-focus"
             onclick={() => client.run('capture.window')}
           >
-            창 캡처 (F2)
+            {t('shortcuts.slot.window')} (F2)
           </button>
           <button
             type="button"
             class="pv-pill ink-focus"
             onclick={() => client.run('record.toggle')}
           >
-            녹화 범위 (F3)
+            {t('shortcuts.slot.record')} (F3)
           </button>
         </div>
         {#if overlayLastTiming}
           <p class="pv-overlay-sub ink-mono">
-            직전 overlayReady · load {overlayLastTiming.loadMs ?? 0}ms · paint {overlayLastTiming.paintMs ?? 0}ms
+            {t('meta.preview.overlayTiming', { load: overlayLastTiming.loadMs ?? 0, paint: overlayLastTiming.paintMs ?? 0 })}
           </p>
         {/if}
       </div>
@@ -425,7 +449,7 @@
     <div class="pv-stage">
       {#if !cheatOpen}
         <button type="button" class="pv-pill ink-focus" onclick={() => (cheatOpen = true)}>
-          단축키 한 장 다시 열기
+          {t('meta.preview.cheatReopen')}
         </button>
       {/if}
       <CheatSheet {client} mode={cheatMode} bind:open={cheatOpen} />
@@ -433,33 +457,41 @@
   {:else if screen === 'island'}
     <div class="pv-island-page" data-theme="dark">
       <div class="pv-island-head">
-        <h2>섬 — 화면 위 알림은 이 알약 하나</h2>
+        <h2>{t('meta.preview.islandHeading')}</h2>
         <div class="pv-bar-group">
-          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('result')}>결과 띄우기(1.2초)</button>
-          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('chip')}>결과 + HEX 칩</button>
-          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('draw')}>판서 섬</button>
-          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('board')}>칠판 섬</button>
-          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('off')}>단축키 꺼짐</button>
-          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('on')}>단축키 켜기</button>
-          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('info')}>안내</button>
+          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('result')}>{t('meta.preview.islandBtnResult')}</button>
+          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('chip')}>{t('meta.preview.islandBtnChip')}</button>
+          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('draw')}>{t('meta.preview.islandBtnDraw')}</button>
+          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('board')}>{t('meta.preview.islandBtnBoard')}</button>
+          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('off')}>{t('meta.preview.islandBtnOff')}</button>
+          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('on')}>{t('meta.preview.islandBtnOn')}</button>
+          <button type="button" class="pv-pill ink-focus" onclick={() => triggerIslandDemo('info')}>{t('meta.preview.islandBtnInfo')}</button>
         </div>
       </div>
 
       <div class="pv-island-grid">
         <div class="pv-isl-item">
-          <p>범위 캡처<small class="ink-mono">F1</small></p>
-          <Island variant="region" text="범위 캡처" path={['창', '표', '2행']} level={2} value="718×40" />
+          <p>{t('island.capture.regionTitle')}<small class="ink-mono">{t('meta.preview.islandRegionSub')}</small></p>
+          <Island
+            variant="region"
+            platform={initialPlatform}
+            text={t('island.capture.regionTitle')}
+            path={[t('meta.preview.islandPath1'), t('meta.preview.islandPath2'), t('meta.preview.islandPath3')]}
+            level={2}
+            value="718×40"
+          />
         </div>
         <div class="pv-isl-item">
-          <p>결과<small class="ink-mono">Enter · 1.2초</small></p>
+          <p>{t('meta.preview.islandResultTitle')}<small class="ink-mono">Enter · 1.2s</small></p>
           <Island
             variant="result"
-            text="복사했어요"
+            platform={initialPlatform}
+            text={t('island.capture.copied')}
             value="718×40"
-            detail="한글·PPT에 Ctrl+V"
+            detail={t('island.capture.pasteHint')}
             valueMuted={true}
-            button={{ label: '저장', key: 'Ctrl+S' }}
-            secondaryButton={{ label: '판서로', key: 'Alt+1' }}
+            button={{ label: t('common.save'), key: kSave }}
+            secondaryButton={{ label: t('island.capture.toDraw'), key: kDraw }}
             progressDurationMs={1200}
             paused={true}
           >
@@ -469,16 +501,17 @@
           </Island>
         </div>
         <div class="pv-isl-item">
-          <p>단색 결과 칩<small class="ink-mono">R-CAP-14 · HEX 칩</small></p>
+          <p>{t('meta.preview.islandResultChipTitle')}<small class="ink-mono">HEX</small></p>
           <Island
             variant="result"
-            text="복사했어요"
+            platform={initialPlatform}
+            text={t('island.capture.copied')}
             value="120×120"
-            detail="한글·PPT에 Ctrl+V"
+            detail={t('island.capture.pasteHint')}
             valueMuted={true}
-            button={{ label: '저장', key: 'Ctrl+S', onClick: () => client.run('capture.saveLast') }}
-            secondaryButton={{ label: '판서로', key: 'Alt+1' }}
-            chip={{ label: '#FF9F0A 복사', hex: '#FF9F0A', onClick: () => client.run('capture.copyHex') }}
+            button={{ label: t('common.save'), key: kSave, onClick: () => client.run('capture.saveLast') }}
+            secondaryButton={{ label: t('island.capture.toDraw'), key: kDraw }}
+            chip={{ label: t('island.capture.copyHexChip', { hex: '#FF9F0A' }), hex: '#FF9F0A', onClick: () => client.run('capture.copyHex') }}
             progressDurationMs={1200}
             paused={true}
           >
@@ -488,79 +521,81 @@
           </Island>
         </div>
         <div class="pv-isl-item">
-          <p>창 캡처<small class="ink-mono">F2</small></p>
-          <Island variant="window" text="창 캡처" detail="PowerPoint" keys={['F2']} keyHint="한 번 더 = 활성 창" />
+          <p>{t('island.capture.windowTitle')}<small class="ink-mono">F2</small></p>
+          <Island variant="window" platform={initialPlatform} text={t('island.capture.windowTitle')} detail="PowerPoint" keys={['F2']} keyHint={t('meta.preview.islandWindowKeyHint')} />
         </div>
         <div class="pv-isl-item">
-          <p>지연 캡처<small class="ink-mono">Alt F1</small></p>
-          <Island variant="delay" countdown={3} text="초 뒤 범위 캡처" detail="메뉴를 열어 두세요" keys={['Esc']} />
+          <p>{t('meta.preview.islandDelayTitle')}<small class="ink-mono">{formatComboReadable(kDelay, initialPlatform)}</small></p>
+          <Island variant="delay" platform={initialPlatform} countdown={3} text={t('island.delay.title')} detail={t('meta.preview.islandDelayDetail')} keys={['Esc']} />
         </div>
         <div class="pv-isl-item">
-          <p>녹화 중<small class="ink-mono">F3 · 계속 보임</small></p>
+          <p>{t('meta.preview.islandRecordTitle')}<small class="ink-mono">{t('meta.preview.islandRecordSub')}</small></p>
           <Island
             variant="record"
+            platform={initialPlatform}
             text="00:42"
             detail="1920×1080"
             micOff={true}
-            button={{ label: '중지', key: 'F3', stop: true }}
+            button={{ label: t('island.record.stopBtn'), key: 'F3', stop: true }}
           />
         </div>
         <div class="pv-isl-item">
-          <p>판서<small class="ink-mono">Alt 1 · 계속 보임</small></p>
-          <Island variant="draw" penColor="R" text="판서 · 펜" penWidth="4px" value="×1.75" keys={['?']} />
+          <p>{t('shortcuts.slot.draw')}<small class="ink-mono">{formatComboReadable(kDraw, initialPlatform)}</small></p>
+          <Island variant="draw" platform={initialPlatform} penColor="R" text={t('island.draw.title', { tool: t('island.draw.tool.pen') })} penWidth="4px" value="×1.75" keys={['?']} />
         </div>
         <div class="pv-isl-item">
-          <p>판서 · 6색 펼침<small class="ink-mono">색 키 · 0.8초</small></p>
-          <Island variant="draw" penColor="O" paletteExpanded={true} text="판서 · 펜" penWidth="4px" />
+          <p>{t('meta.preview.islandDraw6Title')}<small class="ink-mono">{t('meta.preview.islandDraw6Sub')}</small></p>
+          <Island variant="draw" platform={initialPlatform} penColor="O" paletteExpanded={true} text={t('island.draw.title', { tool: t('island.draw.tool.pen') })} penWidth="4px" />
         </div>
         <div class="pv-isl-item">
-          <p>판서 · 4초 물러남<small class="ink-mono">무동작 · 40%</small></p>
-          <Island variant="draw" penColor="R" idleDim={true} text="판서 · 펜" penWidth="4px" value="×1.75" />
+          <p>{t('meta.preview.islandDrawDimTitle')}<small class="ink-mono">{t('meta.preview.islandDrawDimSub')}</small></p>
+          <Island variant="draw" platform={initialPlatform} penColor="R" idleDim={true} text={t('island.draw.title', { tool: t('island.draw.tool.pen') })} penWidth="4px" value="×1.75" />
         </div>
         <div class="pv-isl-item">
-          <p>실시간 확대<small class="ink-mono">Alt 2</small></p>
-          <Island variant="zoom" text="실시간 확대" value="×2.0" keys={['Alt 1']} keyHint="멈추고 쓰기" />
+          <p>{t('island.zoom.title')}<small class="ink-mono">{formatComboReadable(kZoom, initialPlatform)}</small></p>
+          <Island variant="zoom" platform={initialPlatform} text={t('island.zoom.title')} value="×2.0" keys={keycaps(kDraw, initialPlatform)} keyHint={t('meta.preview.islandZoomKeyHint')} />
         </div>
         <div class="pv-isl-item">
-          <p>칠판<small class="ink-mono">Alt 3</small></p>
-          <Island variant="board" penColor="R" text="칠판 · 흰색" value="1 / 1" keys={['W', 'K']} />
+          <p>{t('meta.preview.islandBoardTitle')}<small class="ink-mono">{formatComboReadable(kBoard, initialPlatform)}</small></p>
+          <Island variant="board" platform={initialPlatform} penColor="R" text={t('island.draw.boardTitle', { bg: t('island.draw.board.white') })} value="1 / 1" keys={['W', 'K']} />
         </div>
         <div class="pv-isl-item">
-          <p>칠판 · 8색 펼침<small class="ink-mono">W·K 포함 · 0.8초</small></p>
-          <Island variant="board" penColor="W" paletteExpanded={true} text="칠판 · 검은색" value="2 / 3" />
+          <p>{t('meta.preview.islandBoard8Title')}<small class="ink-mono">{t('meta.preview.islandBoard8Sub')}</small></p>
+          <Island variant="board" platform={initialPlatform} penColor="W" paletteExpanded={true} text={t('island.draw.boardTitle', { bg: t('island.draw.board.black') })} value="2 / 3" />
         </div>
         <div class="pv-isl-item">
-          <p>창 고정<small class="ink-mono">Alt Shift D</small></p>
-          <Island variant="pin" lead="Chrome" text="을 맨 위에 고정했어요" keys={['Alt', 'Shift', 'D']} keyHint="풀기" />
+          <p>{t('meta.preview.islandPinTitle')}<small class="ink-mono">{formatComboReadable(kPin, initialPlatform)}</small></p>
+          <Island variant="pin" platform={initialPlatform} lead={t('meta.preview.islandPinLead')} text={t('meta.preview.islandPinText')} keys={keycaps(kPin, initialPlatform)} keyHint={t('meta.preview.islandPinKeyHint')} />
         </div>
         <div class="pv-isl-item">
-          <p>겹침 문제<small class="ink-mono">시작 · 등록 실패</small></p>
-          <Island variant="problem" text="F1은 Snipaste가 쓰고 있어요" button={{ label: '끄는 법' }} />
+          <p>{t('meta.preview.islandConflictTitle')}<small class="ink-mono">{t('meta.preview.islandConflictSub')}</small></p>
+          <Island variant="problem" platform={initialPlatform} text={t('meta.preview.islandConflictText')} button={{ label: t('shortcuts.conflict.howto') }} />
         </div>
         <div class="pv-isl-item">
-          <p>단축키 꺼짐<small class="ink-mono">Alt `</small></p>
-          <Island variant="off" text="단축키를 잠시 껐어요" keys={['Alt `']} keyHint="다시 켜기" />
+          <p>{t('tray.status.paused')}<small class="ink-mono">{formatComboReadable(kPause, initialPlatform)}</small></p>
+          <Island variant="off" platform={initialPlatform} text={t('island.hotkeys.off')} keys={keycaps(kPause, initialPlatform)} keyHint={t('meta.preview.islandOffKeyHint')} />
         </div>
         <div class="pv-isl-item">
-          <p>보안 화면<small class="ink-mono">UAC · 잠금</small></p>
-          <Island variant="security" text="보안 화면에서는 쓸 수 없어요" />
+          <p>{t('meta.preview.islandSecurityTitle')}<small class="ink-mono">{t('meta.preview.islandSecuritySub')}</small></p>
+          <Island variant="security" platform={initialPlatform} text={t('island.security')} />
         </div>
       </div>
 
       <div class="pv-island-twoline">
-        <p class="pv-pane-label">처음 3번 또는 ? 키 — 두 줄 안내</p>
+        <p class="pv-pane-label">{t('meta.preview.islandTwoLineLabel')}</p>
         <Island
           variant="region"
-          text="범위 캡처"
-          path={['창', '표', '2행']}
+          platform={initialPlatform}
+          text={t('island.capture.regionTitle')}
+          path={[t('meta.preview.islandPath1'), t('meta.preview.islandPath2'), t('meta.preview.islandPath3')]}
           level={2}
           value="718×40"
           showHints={true}
           hints={[
-            { key: '휠', label: '넓히기·좁히기' },
-            { key: 'Tab', label: '창' },
-            { key: 'Enter', label: '복사' },
-            { key: 'Esc', label: '취소' },
+            { key: t('island.hint.key.wheel'), label: t('island.hint.resize') },
+            { key: 'Tab', label: t('island.hint.window') },
+            { key: 'Enter', label: t('island.hint.copy') },
+            { key: 'Esc', label: t('island.hint.cancel') },
           ]}
         />
       </div>
@@ -570,54 +605,54 @@
       {#each ['light', 'dark'] as mode (mode)}
         <section class="pv-board-half" data-theme={mode}>
           <div class="pv-board-title">
-            <h2>{mode === 'light' ? '라이트 · 그래파이트' : '다크 · 아일랜드'}</h2>
+            <h2>{mode === 'light' ? t('meta.preview.boardLightTitle') : t('meta.preview.boardDarkTitle')}</h2>
             <span class="ink-mono">{mode === 'light' ? 'E' : 'B'}</span>
           </div>
 
           <div>
-            <SectionLabel title="행 상태 5종 — 기본 · 올림 · 누름 · 선택 · 비활성" />
+            <SectionLabel title={t('meta.preview.boardRowStates')} />
             <Group>
               <div class="pv-row-states">
-                <MenuRow icon="region" label="기본" combo="F1" visualState="default" />
-                <MenuRow icon="region" label="올림" combo="F1" visualState="hover" />
-                <MenuRow icon="region" label="누름" combo="F1" visualState="press" />
-                <MenuRow icon="region" label="선택 · 키보드 포커스" combo="F1" visualState="selected" />
-                <MenuRow icon="region" label="비활성 · 단축키 꺼짐" combo="F1" visualState="disabled" />
+                <MenuRow icon="region" label={t('meta.preview.boardRowDefault')} combo="F1" platform={initialPlatform} visualState="default" />
+                <MenuRow icon="region" label={t('meta.preview.boardRowHover')} combo="F1" platform={initialPlatform} visualState="hover" />
+                <MenuRow icon="region" label={t('meta.preview.boardRowPress')} combo="F1" platform={initialPlatform} visualState="press" />
+                <MenuRow icon="region" label={t('meta.preview.boardRowSelected')} combo="F1" platform={initialPlatform} visualState="selected" />
+                <MenuRow icon="region" label={t('meta.preview.boardRowDisabled')} combo="F1" platform={initialPlatform} visualState="disabled" />
               </div>
             </Group>
           </div>
 
           <div>
-            <SectionLabel title="부품 — 스위치 · 나눔 단추 · 키캡 · 배너 · 시트" />
+            <SectionLabel title={t('meta.preview.boardPartsSection')} />
             <Group>
-              <Row label="스위치">
+              <Row label={t('meta.preview.boardSwitch')}>
                 <div class="pv-inline">
-                  <Switch bind:checked={boardSwitchOn} label="켬 예시" />
-                  <Switch bind:checked={boardSwitchOff} label="끔 예시" />
+                  <Switch bind:checked={boardSwitchOn} label={t('meta.preview.boardSwitchOn')} />
+                  <Switch bind:checked={boardSwitchOff} label={t('meta.preview.boardSwitchOff')} />
                 </div>
               </Row>
-              <Row label="나눔 단추">
+              <Row label={t('meta.preview.boardSegmented')}>
                 <Segmented
                   bind:value={boardSeg}
-                  label="결과 예시"
+                  label={t('meta.preview.boardSegmentedAria')}
                   options={[
-                    { value: 'copy', label: '복사' },
-                    { value: 'save', label: '저장' },
-                    { value: 'both', label: '둘 다' },
+                    { value: 'copy', label: t('common.copy') },
+                    { value: 'save', label: t('common.save') },
+                    { value: 'both', label: t('page.capture.result.both') },
                   ]}
                 />
               </Row>
-              <Row label="키캡 상태">
+              <Row label={t('meta.preview.boardKeycapState')}>
                 <div class="pv-inline">
-                  <Keycap combo="Alt+Shift+D" variant="default" />
+                  <Keycap combo={kPin} platform={initialPlatform} variant="default" />
                   <Keycap label="F1" variant="waiting" />
                   <Keycap label="F2" variant="dim" />
                 </div>
               </Row>
-              <Row label="확인 시트">
+              <Row label={t('meta.preview.boardSheet')}>
                 <div class="pv-inline">
-                  <button type="button" class="pv-pill ink-focus" onclick={() => (demoSheetOpen = true)}>일반 시트</button>
-                  <button type="button" class="pv-pill ink-focus" onclick={() => (demoDangerSheetOpen = true)}>위험 시트(3초)</button>
+                  <button type="button" class="pv-pill ink-focus" onclick={() => (demoSheetOpen = true)}>{t('meta.preview.boardSheetNormal')}</button>
+                  <button type="button" class="pv-pill ink-focus" onclick={() => (demoDangerSheetOpen = true)}>{t('meta.preview.boardSheetDanger')}</button>
                 </div>
               </Row>
             </Group>
@@ -626,35 +661,35 @@
           <Banner
             kind="conflict"
             lead="Snipaste"
-            message="가 F1·F3 키 4개를 먼저 쓰고 있어요"
-            primaryLabel="끄는 법"
+            message={t('meta.preview.boardBannerMsg')}
+            primaryLabel={t('shortcuts.conflict.howto')}
             onPrimary={() => client.run('snipaste.howto')}
-            secondaryLabel="키 바꾸기"
+            secondaryLabel={t('shortcuts.conflict.change')}
             onSecondary={() => updateQuery('settings', mode, 'shortcuts')}
           />
 
           <div>
-            <SectionLabel title="오버레이 부품 — 선택 틀 · 확대경 · 위치 지도 · 창 고정" />
+            <SectionLabel title={t('meta.preview.boardOverlaySection')} />
             <div class="pv-overlay-row">
               <div class="pv-sel-demo">
                 <SelectionFrame x={22} y={24} width={120} height={54} state="confirmed" scrim={false} />
               </div>
               <Magnifier rgb={[255, 255, 255]} coord={{ x: 549, y: 246 }} />
-              <MiniMap size="md" label="모니터 1" />
+              <MiniMap size="md" />
               <PinFrame borderWidth={4} radius={8}>
-                <div class="pv-pin-sample">고정 창</div>
+                <div class="pv-pin-sample">{t('meta.preview.boardPinSample')}</div>
               </PinFrame>
             </div>
           </div>
 
           <div>
-            <SectionLabel title="선 아이콘 24종 + 앱 아이콘" />
+            <SectionLabel title={t('meta.preview.boardIconsSection')} />
             <Group>
               <div class="pv-icon-grid">
                 {#each ICON_NAMES as name (name)}
                   <div class="pv-icon-cell">
                     <Icon {name} size={24} />
-                    <span>{ICONS[name].label}</span>
+                    <span>{t(ICONS[name].labelKey)}</span>
                   </div>
                 {/each}
               </div>
@@ -674,16 +709,16 @@
 
 <Sheet
   bind:open={demoSheetOpen}
-  title="설정 가져오기"
-  description="가져온 파일에서 4개 항목이 바뀌어요."
-  confirmLabel="가져오기"
+  title={t('meta.preview.boardSheetDemoTitle')}
+  description={t('meta.preview.boardSheetDemoDesc')}
+  confirmLabel={t('general.data.import')}
 />
 
 <Sheet
   bind:open={demoDangerSheetOpen}
-  title="설정을 모두 처음으로 되돌릴까요?"
-  description="바꾼 단축키와 설정이 기본값으로 돌아가요."
-  confirmLabel="되돌리기"
+  title={t('meta.preview.boardDangerTitle')}
+  description={t('meta.preview.boardDangerDesc')}
+  confirmLabel={t('general.resetSheet.confirm')}
   danger={true}
   dangerDelaySeconds={3}
 />
@@ -801,9 +836,9 @@
 
   .pv-island-page {
     flex: 1;
-    padding: 28px 36px;
-    background: var(--ink-bg);
-    color: var(--ink-text);
+    background: #141518;
+    color: #f7f8fa;
+    padding: 26px 30px 44px;
     display: flex;
     flex-direction: column;
     gap: 24px;
@@ -813,7 +848,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 14px;
     flex-wrap: wrap;
   }
 
@@ -825,52 +860,55 @@
 
   .pv-island-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px 40px;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 18px 24px;
   }
 
   .pv-isl-item {
-    display: grid;
-    grid-template-columns: 140px minmax(0, 1fr);
-    align-items: center;
-    gap: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 
   .pv-isl-item p {
     margin: 0;
-    font-size: 12.5px;
-    color: var(--ink-text);
-    white-space: nowrap;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 12px;
+    color: #c9ccd3;
   }
 
   .pv-isl-item small {
-    display: block;
-    font-size: 10.5px;
-    color: var(--ink-sub);
-    margin-top: 2px;
+    font-size: 11px;
+    color: #8e939e;
   }
 
   .pv-thumb-sample {
-    display: block;
     width: 100%;
     height: 100%;
-    background: var(--ink-island-text);
+    display: block;
+    background: linear-gradient(135deg, #2563eb 0%, #38bdf8 55%, #f59e0b 100%);
   }
 
   .pv-island-twoline {
     position: relative;
-    padding-top: 28px;
+    padding: 42px 24px 24px;
+    border-radius: var(--ink-r-window);
+    background: #1a1b1f;
+    display: flex;
+    justify-content: center;
   }
 
   .pv-island-twoline .pv-pane-label {
-    left: 0;
-    top: 0;
+    color: #8e939e;
   }
 
   .pv-board-split {
-    flex: 1;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: calc(100vh - 45px);
   }
 
   .pv-board-half {

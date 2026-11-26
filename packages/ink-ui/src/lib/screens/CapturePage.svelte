@@ -200,7 +200,7 @@
       </Row>
       <Row
         label={t('page.capture.template')}
-        sub={t('page.capture.templateTokensHint', { tokens: '{yyyy} {MM} {dd} {HH} {mm} {ss} {n}' })}
+        sub={t('page.capture.templateTokensHint', { tokens: '{yyyy}{MM}{dd} {HH}{mm}{ss} {n}' })}
         error={templateError || ''}
       >
         <div class="ink-template-box">
@@ -433,7 +433,7 @@
   }
 
   .ink-text-input {
-    width: 196px;
+    width: 174px;
     height: 26px;
     padding: 0 10px;
     box-sizing: border-box;
