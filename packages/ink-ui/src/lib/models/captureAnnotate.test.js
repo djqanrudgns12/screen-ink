@@ -177,7 +177,11 @@ test('키: 글자 입력 중은 상자, 실행 취소·다시 실행은 설정 �
   assert.equal(annotKeyRoute(k('KeyY', { ctrlKey: true }), base), 'redo');
   assert.equal(annotKeyRoute(k('ArrowLeft'), base), 'swallow');
   assert.equal(annotKeyRoute(k('ArrowLeft'), { ...base, toolActive: false }), 'capture', '도구 해제 = 범위 조정');
-  assert.equal(annotKeyRoute(k('Enter'), base), 'capture', 'Enter·Esc·Ctrl+S 판정은 Rust');
+  assert.equal(annotKeyRoute(k('Enter'), base), 'capture', 'Enter·Ctrl+S 판정은 Rust');
+  // 도구를 고른 동안 첫 Esc = 도구만 해제(주석 유지), 도구가 없으면 Esc = 캡처 취소(Rust)
+  assert.equal(annotKeyRoute({ ...k('Escape'), key: 'Escape' }, base), 'release');
+  assert.equal(annotKeyRoute({ ...k('Escape'), key: 'Escape' }, { ...base, toolActive: false }), 'capture');
+  assert.equal(annotKeyRoute({ ...k('Escape'), key: 'Escape' }, { ...base, editing: true }), 'text', '글자 입력 중 Esc = 글자 확정');
   assert.equal(annotKeyRoute(k('KeyS', { ctrlKey: true }), base), 'capture');
   assert.equal(annotKeyRoute({ ...k('KeyZ', { ctrlKey: true }), isComposing: true }, base), 'capture', '한글 조합 중은 엔진 키 아님');
   // 키를 바꾸면 바로 반영(R-KEY-6)

@@ -994,6 +994,12 @@
     if (annot) {
       const route = annotKeyRoute(e, { editing: annotEditing, toolActive: Boolean(annotTool), keymap: annot.engine.keymap, platform });
       if (route === 'text') return;
+      if (route === 'release') {
+        // 도구를 고른 상태의 첫 Esc = 도구만 해제(주석 유지). 도구가 없을 때 Esc = 캡처 취소(Rust)
+        e.preventDefault();
+        if (annotTool) selectTool(annotTool);
+        return;
+      }
       if (route === 'undo' || route === 'redo') {
         e.preventDefault();
         annotHistory(route);

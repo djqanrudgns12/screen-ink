@@ -262,14 +262,17 @@ export function mosaicSourcePlan(anchor, monitor) {
 const ARROWS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
 
 /**
- * 주석이 있는 동안 키를 어디로: 글자 입력 중 = 입력 상자 · 실행 취소/다시 실행(d-undo·d-redo 설정 키) = 엔진 ·
- * 도구를 고른 동안 방향키 = 삼킴(범위 조정은 도구를 다시 눌러 해제한 뒤) · 나머지 = 캡처(Rust가 Esc·Enter·Ctrl+S 판정).
+ * 주석이 있는 동안 키를 어디로: 글자 입력 중 = 입력 상자 · 도구를 고른 동안 Esc = 도구만 해제(주석 유지, 메인 결정) ·
+ * 실행 취소/다시 실행(d-undo·d-redo 설정 키) = 엔진 · 도구를 고른 동안 방향키 = 삼킴(범위 조정은 도구를 해제한 뒤) ·
+ * 나머지 = 캡처(Rust가 Esc 취소·Enter·Ctrl+S 판정 — 도구가 없을 때 Esc는 캡처 취소).
  * @param {import('../ink/drawKeys.js').KeyEventLike} event
  * @param {{ editing: boolean, toolActive: boolean, keymap: Map<string, string> | null, platform?: 'windows' | 'macos' }} o
- * @returns {'text' | 'undo' | 'redo' | 'swallow' | 'capture'}
+ * @returns {'text' | 'release' | 'undo' | 'redo' | 'swallow' | 'capture'}
  */
 export function annotKeyRoute(event, o) {
   if (o.editing) return 'text';
+  const esc = event.code === 'Escape' || event.key === 'Escape';
+  if (o.toolActive && esc && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey && !event.isComposing) return 'release';
   const id = o.keymap ? matchDrawKey(event, o.keymap, o.platform ?? 'windows') : null;
   if (id === 'd-undo') return 'undo';
   if (id === 'd-redo') return 'redo';
