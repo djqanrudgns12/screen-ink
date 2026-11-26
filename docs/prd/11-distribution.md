@@ -191,10 +191,19 @@ Certum(€49/년)은 SignPath를 못 쓸 때만 고려한다(게시자 이름을
   - 페이지는 이 저장소에 있으니 앱과 같이 버전 관리된다.
   - `.appinstaller` 주소는 **한 번 정하면 바꿀 수 없다**(설치된 앱이 계속 그 주소를 본다). 내 도메인 아래에 두면 나중에 호스팅을 옮겨도 주소가 유지된다.
 - **순서**
-  1. 저장소 공개 뒤 GitHub Pages를 켠다. 처음에는 `djqanrudgns12.github.io/screen-ink/privacy`로 바로 쓸 수 있다. 스토어의 개인정보 처리방침 주소는 나중에 바꿀 수 있어서 이걸로 먼저 등록해도 된다.
+  1. **끝(2026-11-26)**: GitHub Pages를 켰다. 지금 주소는 아래와 같다. 스토어의 개인정보 처리방침 주소는 나중에 바꿀 수 있어서 이걸로 먼저 등록하면 된다.
+     - 개인정보 처리방침: `https://djqanrudgns12.github.io/screen-ink/privacy/`
+     - 지원: `https://djqanrudgns12.github.io/screen-ink/support/`
   2. 쌤유니버스.com DNS에 CNAME을 더하고 Pages에 사용자 도메인을 넣는다(HTTPS 자동). 한글 도메인은 퓨니코드(`xn--…`)로 들어간다. DNS 관리 화면 접근은 사용자 몫이다.
   3. **첫 `.appinstaller` 릴리스는 반드시 2가 끝난 뒤에 낸다.**
 - **올릴 것:** `/privacy`(개인정보 처리방침), `/support`(문의 = GitHub Issues 링크, 이메일은 싣지 않음), `/screen-ink.appinstaller`. `.msix` 파일은 GitHub Releases에 두고 `.appinstaller`가 그 정확한 주소를 가리킨다.
+- **원본과 발행:**
+  - 원본은 `feat/foundation`의 `site/` 폴더다. 바깥 글꼴·스크립트·쿠키를 쓰지 않는다.
+  - 발행은 `gh-pages` 브랜치로 한다. 고친 뒤 아래 명령을 돌린다.
+    ```
+    git push origin "$(git subtree split --prefix site HEAD):refs/heads/gh-pages"
+    ```
+  - 하위 도메인을 붙일 때는 `site/CNAME`에 도메인 한 줄을 넣고 다시 발행한다.
 - **개인정보 처리방침 초안(요지):**
   - screen-ink는 개인정보를 모으지 않고 어디로도 보내지 않는다.
   - 화면 캡처는 사용자가 고른 곳(클립보드·사용자 폴더)에만 남는다.
