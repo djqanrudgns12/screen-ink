@@ -2,7 +2,7 @@
   import { onMount, untrack } from 'svelte';
   import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
   import { listen } from '@tauri-apps/api/event';
-  import { CaptureOverlay, IslandHost, PinView, SettingsWindow, TrayPopoverScreen, applyTheme, watchSystemTheme } from '@screen-ink/ui';
+  import { CaptureOverlay, DrawOverlay, IslandHost, PinView, SettingsWindow, TrayPopoverScreen, applyTheme, watchSystemTheme } from '@screen-ink/ui';
   import { ZoomHud } from '@screen-ink/ui';
 
   /** @type {{ client: import('@screen-ink/client').InkClient, view: 'popover'|'settings'|'island'|'overlay'|'pin'|'zoom-hud', firstRun?: boolean, monitorId?: number, pinId?: number }} */
@@ -14,11 +14,30 @@
   // 첫 실행 시트: 창을 열 때 ?first=1, 이미 열린 창이면 이벤트로 다시(일반 > [다시 보기])
   let showFirstRun = $state(untrack(() => firstRun));
   let firstRunKey = $state(0);
+  // 오버레이 창: 지금 모드와 마지막 판서 세션 — 판서면 그 모니터 창만 DrawOverlay, 아니면 CaptureOverlay(창 재사용, A §2.5)
+  /** @type {import('@screen-ink/client').Mode} */
+  let mode = $state({ mode: 'idle' });
+  /** @type {import('@screen-ink/client').DrawSession | null} */
+  let drawSession = $state(null);
+  let drawHere = $derived(
+    view === 'overlay' && mode.mode === 'draw' && drawSession && drawSession.session === mode.session && drawSession.monitor.id === monitorId
+      ? drawSession
+      : null,
+  );
 
   $effect(() => {
-    client.getState().then((s) => (pref = s.theme));
+    client.getState().then((s) => {
+      pref = s.theme;
+      if (s.mode) mode = s.mode;
+    });
     const off = client.subscribe((e) => {
-      if (e.type === 'state') pref = e.state.theme;
+      if (e.type === 'state') {
+        pref = e.state.theme;
+        if (e.state.mode) mode = e.state.mode;
+      } else if (e.type === 'draw') {
+        // 세션이 상태보다 먼저 온다 — 상태가 draw로 바뀌는 순간 이미 쥐고 있다
+        drawSession = e.draw;
+      }
     });
     const unwatch = watchSystemTheme((dark) => (systemDark = dark));
     return () => {
@@ -76,7 +95,13 @@
     <IslandHost {client} />
   </div>
 {:else if view === 'overlay'}
-  <CaptureOverlay {client} {monitorId} />
+  {#if drawHere}
+    {#key drawHere.session}
+      <DrawOverlay {client} {monitorId} session={drawHere} />
+    {/key}
+  {:else}
+    <CaptureOverlay {client} {monitorId} />
+  {/if}
 {:else if view === 'pin'}
   <PinView {client} {pinId} />
 {:else if view === 'zoom-hud'}

@@ -70,6 +70,8 @@ pub enum HotkeyOutcome {
     /// 단축키 잠시 끄기·켜기를 처리함
     Toggled(bool),
     Ignored,
+    /// 판서·칠판을 시작·전환·끝냄(판서 중 직전 판서 키 = 그 자리 복원)
+    Draw,
 }
 
 fn ms(d: std::time::Duration) -> f64 {
@@ -106,6 +108,8 @@ pub struct InkService {
     pub(crate) secure_notified: bool,
     // ── 고르기·결과(단계 3) ──
     pub(crate) cap: crate::capture::CaptureState,
+    // ── 판서·칠판(단계 4) ──
+    pub(crate) draw: crate::draw::DrawState,
     // ── 실시간 확대(단계 5) ──
     pub(crate) zoom: crate::live_zoom::ZoomState,
 }
@@ -192,6 +196,7 @@ impl InkService {
             ready_samples: VecDeque::new(),
             secure_notified: false,
             cap: crate::capture::CaptureState::with_ranges(ranges),
+            draw: Default::default(),
             zoom: Default::default(),
         };
         svc.refresh_environment();
@@ -594,6 +599,9 @@ impl InkService {
         if !self.hotkeys_enabled || !self.registered.contains_key(slot) {
             return HotkeyOutcome::Ignored;
         }
+        if let Some(outcome) = self.on_draw_hotkey(slot, pressed) {
+            return outcome;
+        }
         match mode::on_hotkey(&self.mode, slot, self.now_ms()) {
             ModeCommand::Start(kind) => {
                 self.begin_capture(kind, pressed);
@@ -614,6 +622,8 @@ impl InkService {
                 HotkeyOutcome::Start("active".into())
             }
             ModeCommand::Ignore => HotkeyOutcome::Start(slot.to_string()),
+            // 판서 명령은 위 on_draw_hotkey가 이미 처리했다
+            ModeCommand::StartDraw(_) | ModeCommand::SwitchDraw(_) | ModeCommand::DrawRestore => HotkeyOutcome::Draw,
         }
     }
 
@@ -639,7 +649,7 @@ impl InkService {
     }
 
     /// 배치가 바뀌었으면 오버레이 창을 모니터에 다시 맞춘다. 바뀌었으면 true.
-    fn prepare_overlays(&mut self) -> bool {
+    pub(crate) fn prepare_overlays(&mut self) -> bool {
         let layout = self.ports.monitors.layout();
         if self.prepared.as_ref().map(|l| l.fingerprint()) == Some(layout.fingerprint()) {
             return false;
@@ -818,6 +828,7 @@ impl InkService {
 
     /// 잠금·절전이면 모드를 끝내고, 배치가 바뀌었거나 깨어나면 오버레이를 다시 맞춘다(R-SYS-3, 02 §7).
     pub fn on_system_event(&mut self, ev: SystemEvent) {
+        self.draw_on_system_event(ev);
         self.zoom_system_event(ev);
         match ev {
             SystemEvent::Lock | SystemEvent::Suspend => self.end_capture(),
@@ -971,6 +982,7 @@ impl InkService {
             return self.state();
         }
         self.history.clear();
+        self.clear_kept_ink();
         self.reregister_all();
         self.island(IslandEvent::new(IslandKind::Result, "처음 상태로 되돌렸어요"));
         self.emit_state();

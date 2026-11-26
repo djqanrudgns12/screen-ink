@@ -34,6 +34,7 @@ export { default as FirstRunSheet } from './screens/FirstRunSheet.svelte';
 export { default as CheatSheet } from './screens/CheatSheet.svelte';
 export { default as IslandHost } from './screens/IslandHost.svelte';
 export { default as CaptureOverlay } from './screens/CaptureOverlay.svelte';
+export { default as DrawOverlay } from './screens/DrawOverlay.svelte';
 export { default as PinView } from './screens/PinView.svelte';
 export { default as ZoomHud } from './screens/ZoomHud.svelte';
 

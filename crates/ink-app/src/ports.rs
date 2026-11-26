@@ -194,6 +194,12 @@ pub trait OverlayHost: Send {
     fn thumbnail(&mut self, _w: u32, _h: u32, _bgra: Vec<u8>) -> Option<String> {
         None
     }
+    /// 판서·칠판(A §2.5): `session.monitor`의 오버레이 창 하나를 보이고 키를 받게 한다. 판서는 확대·이동과 같은
+    /// 변환으로 배경을 움직여야 해서 네이티브 정지 창을 쓰지 않고, 웹뷰가 돌려준 주소의 이미지를 직접 그린다.
+    /// `frame`이 없으면(칠판) 주소도 없음. 끝은 `hide(session)`. 못 하는 곳은 실패로 알린다(조용히 빈 모드가 되지 않게).
+    fn show_draw(&mut self, _session: &crate::state::DrawSession, _frame: Option<Frame>) -> Result<Option<String>, String> {
+        Err("draw overlay not supported".into())
+    }
     /// 확정 직후 고른 자리에 주황 잔상 0.4초(R-CAP-26). 클릭 통과·비포커스로 띄우고 400 ms 뒤 숨긴다.
     /// 기본 구현은 no-op(가짜·미지원 어댑터 호환).
     fn flash_afterimage(&mut self, _session: u64, _rect: ink_domain::geometry::PhysRect, _layout: &MonitorLayout) {}
@@ -235,6 +241,10 @@ pub trait Notifier: Send + Sync {
     fn island(&self, event: &IslandEvent);
     /// 고르기 상태(`screen-ink://capture`) — 모든 오버레이·섬이 같은 것을 그린다.
     fn capture(&self, _view: &crate::state::CaptureView) {}
+    /// 판서 세션(`screen-ink://draw`) — 상태(`mode: draw`)보다 먼저 보내 오버레이가 세션을 쥔 채 화면을 바꾼다.
+    fn draw(&self, _session: &crate::state::DrawSession) {}
+    /// 섬 단추 → 판서 엔진(`screen-ink://draw-command`): `acceptSuggestion` · `undo`. 섬 창과 오버레이 창이 달라 서비스가 이어 준다.
+    fn draw_command(&self, _session: u64, _command: &str) {}
     /// 실시간 확대 상태(`screen-ink://zoom`) — 확대 HUD(후광·위치 지도)가 그린다. 확대가 끝나면 `None`.
     fn zoom(&self, _state: Option<&crate::state::LiveZoomState>) {}
 }
