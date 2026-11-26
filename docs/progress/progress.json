@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "updated": "2026-11-26",
-  "basis": "feat/foundation 84723a9 (맥 커밋 포함) + Windows 단계 3 61e2450",
+  "basis": "feat/foundation 0b95551 (맥 커밋 + Windows 회귀·3b·3f 2026-11-26)",
   "scale": {
     "done": { "label": "완료", "value": 1.0, "meaning": "완료 기준까지 확인함" },
     "verify": { "label": "확인 남음", "value": 0.8, "meaning": "구현·시험은 끝, 완료 기준의 실제 확인(눈·측정·실기)이 남음" },
@@ -10,7 +10,7 @@
   },
   "platforms": { "common": "공통", "win": "Windows", "mac": "맥" },
   "next": {
-    "win": ["R-win-regress", "3e-paste", "3b-measure", "3f-win-cases", "D2"],
+    "win": ["3b-uia-budget", "3e-paste", "3f-win-cases", "3b-dpi", "D2"],
     "mac": ["M9", "M10", "M3", "3e-chip", "4.1"],
     "common": ["D1", "3f-docs", "3d-evidence"]
   },
@@ -71,7 +71,8 @@
             { "id": "3b-index", "title": "A 근거: 미리 깨우기·UIA 색인·느린 앱 강등", "platform": "win", "days": 0.7, "status": "done" },
             { "id": "3b-msaa", "title": "MSAA 대체 경로", "platform": "win", "days": 0.3, "status": "todo" },
             { "id": "3b-dpi", "title": "DPI 모르는 창 좌표 보정(D12)", "platform": "win", "days": 0.2, "status": "todo" },
-            { "id": "3b-measure", "title": "Chrome 첫 강조 ≤ 진입+30 ms·이동 질의 ≤ 5 ms 측정", "platform": "win", "days": 0.3, "status": "todo" },
+            { "id": "3b-measure", "title": "Chrome 첫 강조 ≤ 진입+30 ms·이동 질의 ≤ 5 ms 측정", "platform": "win", "days": 0.3, "status": "done", "note": "릴리스: V 첫 근거 43~54 ms(진입 56~70), 이동 p95 1.5~4.6 ms. selection probe 로그" },
+            { "id": "3b-uia-budget", "title": "UIA 색인 예산(60 ms) 초과·느린 앱 강등 문턱(150 ms×2) 재검토", "platform": "win", "days": 0.3, "status": "todo", "note": "Chrome 110~210 ms로 자주 강등 → 사용자 결정" },
             { "id": "3c-engine", "title": "V 엔진(전처리·상자 사다리·평탄·지지율)", "platform": "common", "days": 1.2, "status": "done", "note": "4K 17 ms" },
             { "id": "3c-g3", "title": "G3: V 혼자 RB-01·03 Top-1 ≥ 80%", "platform": "win", "days": 0.3, "status": "todo" },
             { "id": "3d-fusion", "title": "융합·첫 강조·깊이 기억·제목 표시줄 규칙", "platform": "common", "days": 0.8, "status": "done" },
@@ -81,7 +82,7 @@
             { "id": "3e-paste", "title": "한글·PPT에 붙여 넣어 크기·색 확인", "platform": "win", "days": 0.05, "status": "todo" },
             { "id": "3e-chip", "title": "결과 섬 HEX 칩·주황 잔상 0.4초", "platform": "common", "days": 0.15, "status": "todo" },
             { "id": "3e-handoff", "title": "[판서로] 이어받기 ≤ 150 ms", "platform": "common", "days": 0.2, "status": "todo", "note": "단계 4 판서가 먼저" },
-            { "id": "3f-docs", "title": "시험 문서·자동 정답(RB-01·14) + Win32 시험 앱(RB-04)", "platform": "common", "days": 0.5, "status": "todo", "note": "RB-04 앱은 Windows" },
+            { "id": "3f-docs", "title": "시험 문서·자동 정답(RB-01·14) + Win32 시험 앱(RB-04)", "platform": "common", "days": 0.5, "status": "partial", "note": "RB-01 문서·표지 자동 정답(recog-truth) 완료, RB-14·RB-04 남음" },
             { "id": "3f-frozen", "title": "멈춘 시험 앱 RB-20", "platform": "win", "days": 0.2, "status": "todo" },
             { "id": "3f-win-cases", "title": "Windows 사례 뜨기(RB 17종)·기준선", "platform": "win", "days": 0.4, "status": "todo" },
             { "id": "3f-snipaste", "title": "Snipaste 대조 하네스·측정·G4 보고서", "platform": "win", "days": 0.4, "status": "todo" }
@@ -180,7 +181,7 @@
           "id": "mac-merge",
           "name": "통합 확인(맥 변경을 Windows에서)",
           "items": [
-            { "id": "R-win-regress", "title": "맥 변경 뒤 Windows 회귀 확인(빌드·M1·듀얼 모니터)", "platform": "win", "days": 0.25, "status": "todo", "note": "인수인계 §3.0-2·3" }
+            { "id": "R-win-regress", "title": "맥 변경 뒤 Windows 회귀 확인(빌드·M1·듀얼 모니터)", "platform": "win", "days": 0.25, "status": "verify", "note": "clippy 수정·M1 p50 55/p95 65·같은 배율 넘어 끌기 확인. 결과 섬 위치·혼합 배율은 미확인" }
           ]
         }
       ]
