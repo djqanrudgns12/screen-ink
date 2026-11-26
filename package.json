@@ -12,7 +12,8 @@
     "ui:dev": "npm run dev -w @screen-ink/ui",
     "app:dev": "npm run tauri -w @screen-ink/app -- dev",
     "app:build": "npm run tauri -w @screen-ink/app -- build",
-    "shortcuts:data": "node scripts/extract-shortcut-data.mjs"
+    "shortcuts:data": "node scripts/extract-shortcut-data.mjs",
+    "progress": "node scripts/progress.mjs"
   },
   "engines": {
     "node": ">=22"

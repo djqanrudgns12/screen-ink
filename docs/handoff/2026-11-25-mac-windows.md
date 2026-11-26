@@ -2,6 +2,8 @@
 
 - 기준: 브랜치 `feat/foundation`, 커밋 `61e2450`(2026-11-25). 맥 작업 반영 2026-11-26 아침(§2.1 진행 표·§2.5·§3.0·§4)
 - **학교에서 바로 할 일은 §3.0**에 순서대로 적었다.
+- **진척도(%)·남은 일 전체 목록은 [docs/progress/README.md](../progress/README.md)**(원본 `docs/progress/progress.json`). 항목 상태를 바꾸면 JSON을 고치고 `npm run progress`로 보고서를 다시 만든다. 커밋 전 `npm run progress -- --check`.
+- 배포·스토어·서명 방침은 [docs/prd/11-distribution.md](../prd/11-distribution.md)(진척도 `D1`~`D7`).
 - 범위: 남은 일을 **맥에서 할 것(§2)** 과 **Windows에서만 할 수 있는 것(§3)** 으로 나눈다. 두 쪽 공통 규칙은 §1.
 - 표기: **[완료]** 이미 있음 · **[할 일]** 새로 할 것 · **[확인 필요]** 아직 실제로 확인하지 않은 가정
 
@@ -342,6 +344,8 @@ $env:CARGO_HTTP_CHECK_REVOKE='false'
 | 2026-11-25 (맥) | `RawWindow.class` = 번들 ID(없으면 빈 문자열), `exe` = 실행 파일 이름 소문자. `topmost`·`tool` = 층 > 0, `layered_alpha` = 창 알파 < 1일 때만. WindowServer(메뉴 막대)·Dock 소유 창은 목록에서 뺀다 | 맥에서 앱 가족은 번들 ID가 가장 안정적. 메뉴 막대·Dock은 앱 창이 아니라 화면 장식(M4 완료 기준) |
 | 2026-11-26 (맥) | 맥 배포 서명은 **자체 서명 인증서(무료)**로 고정한다. Apple Developer Program(연 99달러)은 사용자가 늘 때 다시 검토한다. 받는 사람은 첫 실행 때 "그래도 열기"를 한 번 누른다 | 비용(사용자 결정). 임시(ad-hoc) 서명은 빌드마다 신원이 바뀌어 화면 기록·손쉬운 사용 권한이 업데이트마다 풀린다 → 고정 서명으로 막는다(실제로 유지되는지는 [확인 필요], §2.5-4) |
 | 2026-11-26 (맥) | 권한은 스마트 흐름으로 받는다(§2.5-3): 단추 하나로 요청 + 정확한 설정 칸 열기 + 1초 검사. 화면 기록은 앱이 스스로 다시 시작하고, 손쉬운 사용은 필요한 순간에 묻는다 | 사용자가 설정 앱에서 길을 찾지 않게(사용자 요청) |
+| 2026-11-26 | Windows 배포는 **Microsoft Store(MSIX, 스토어가 서명)** 가 기본. 파일 직접 공유는 저장소 공개 뒤 Certum 오픈소스 서명(€49/년) 또는 SignPath(무료)만. Azure Artifact Signing(한국 개인 불가)·일반 OV/EV(비쌈) 기각 | 경고 없음 + 유료 서명 없음(싸면 허용) 조건(사용자). 11-distribution |
+| 2026-11-26 | 진척도는 `docs/progress/progress.json` 하나에서 작업일 가중으로 계산(완료 1 · 확인 남음 0.8 · 진행 중 0.5 · 안 함 0) | 두 컴퓨터가 같은 기준으로 % 보고 |
 | 2026-11-26 (맥) | 맥 자동 입력 시험은 `bench/mac/keys.swift`·`drag.swift`(CGEvent)로 한다. osascript System Events는 쓰지 않는다 | System Events는 자동화 권한 창이 따로 뜬다. CGEvent는 손쉬운 사용 권한만으로 F1·Esc·끌기를 반복할 수 있다 |
 
 ---

@@ -71,6 +71,7 @@ apps/screen-ink              단독 앱 셸
 
 ## 문서
 
+- [docs/progress/README.md](docs/progress/README.md) — **진척도(%)·남은 일**(원본 `progress.json`, `npm run progress`) · [docs/prd/11-distribution.md](docs/prd/11-distribution.md) — **배포 채널·서명**(Microsoft Store MSIX 기본)
 - [docs/handoff/2026-11-25-mac-windows.md](docs/handoff/2026-11-25-mac-windows.md) — **인수인계**: 단계 3 이후 맥에서 할 일 / Windows(학교 PC)에서 할 일 / 공통 규칙
 - [docs/PRD.md](docs/PRD.md) — **1차 프로토타입 PRD v2.0**: 요구사항 ID·합격 기준·측정 목표·기술 근거·벤치마크 대조표 + 부속 문서 [docs/prd/](docs/prd/)(기능 목록 · 스마트 로직 · 구조 · **최종 화면 명세** · CRUD · 원격 · **마스터플랜** · **스마트 캡처 v2** · 디자인 방향 · **디자인 시스템**)
 - [docs/shortcuts/README.md](docs/shortcuts/README.md) — **단축키 확정본 v1**(전역 16 · 모드 안 43) + 기계용 `defaults-v1.json`
