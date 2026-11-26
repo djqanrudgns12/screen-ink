@@ -197,6 +197,12 @@ pub trait OverlayHost: Send {
     /// 확정 직후 고른 자리에 주황 잔상 0.4초(R-CAP-26). 클릭 통과·비포커스로 띄우고 400 ms 뒤 숨긴다.
     /// 기본 구현은 no-op(가짜·미지원 어댑터 호환).
     fn flash_afterimage(&mut self, _session: u64, _rect: ink_domain::geometry::PhysRect, _layout: &MonitorLayout) {}
+    /// 캡처 주석(4.9): 주석이 있는 범위의 결과를 내기 전에 오버레이에 주석 층을 부탁한다
+    /// (`screen-ink://capture-commit`). 오버레이는 `InkService::capture_commit_annotated`로 답한다.
+    /// 부탁을 보낼 수 없으면(기본 구현) `false` → 서비스는 주석 없이 지금 경로로 끝낸다.
+    fn request_commit(&mut self, _request: &crate::capture::CommitRequest) -> bool {
+        false
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
