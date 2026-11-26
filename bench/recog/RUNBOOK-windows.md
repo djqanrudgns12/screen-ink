@@ -21,7 +21,7 @@
 cargo test -p ink-platform-windows --test rb15_16 real:: -- --ignored --test-threads=1 --nocapture
 ```
 - 1초 안쪽으로 시험 창·투명 덮개가 뜨고 최대화 창이 포커스를 잠깐 가져간다(그동안 클릭하지 않기).
-- 기대: 2개 통과. `real::`을 꼭 붙인다 — 붙이지 않으면 도메인 수정 대기 중인 `rb15_바탕_화면_첫_강조는_그_모니터_작업_영역`도 돌아 실패한다(보고서 "필요한 변경").
+- 기대: 2개 통과(`real::` = 실제 창 시험만, 순수 판정은 CI가 돈다). ③ 바탕 화면은 모니터마다 그 작업 영역 후보로 들어가야 한다.
 - 실패하면 메시지에 고른 창의 실행 파일·클래스가 나온다(사용자의 항상 위 창이 끼었는지 확인).
 
 ## 2. `3b-dpi`·`3b-msaa` 실측 — 배율 125% 또는 150% 모니터가 있는 PC (10분)
@@ -46,7 +46,7 @@ cargo test -p ink-platform-windows --test rb15_16 real:: -- --ignored --test-thr
    | `dpi_자체_msaa_서버의_논리_좌표를_물리로` | 자체 IAccessible(`accLocation`)이 논리 px → `msaa::Msaa`가 물리로 | 칸 크기 = 16 × 배율 px, 클라이언트 안 |
    출력의 `인식 Unaware · 창 DPI 96 · 모니터 DPI 144 · 비 1.500` 줄을 보고서에 옮긴다.
 3. 같은 것을 `--dpi system`(rb04)으로 한 번 더 — System-aware 창은 시스템 DPI ≠ 모니터 DPI인 모니터에서만 가상화된다.
-4. 앱에서 눈으로: `capture.evidence: true`(설정 파일)로 `npm run app:dev` → F1 → RB-20 위에서 회색 칸과 근거 테두리(M은 지금 A 색으로 보임 — 보고서 "필요한 변경" 1)가 겹치는지.
+4. 앱에서 눈으로: `capture.evidence: true`(설정 파일)로 `npm run app:dev` → F1 → RB-20 위에서 회색 칸과 근거 테두리(MSAA만 잡은 요소는 청록 `M`)가 겹치는지.
 5. 스파이크 도구(`spikes\dpi`·`spikes\msaa`)도 같은 창으로 다시 돌려 숫자를 맞춰 본다.
 
 ## 3. `3f-frozen` RB-20 멈춘 앱 (모드마다 2분, 합 8분)
