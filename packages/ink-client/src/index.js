@@ -46,7 +46,7 @@
  * @property {string[]} [suggestions]  줄마다 다른 추천 3개
  *
  * @typedef {'capture.region'|'capture.window'|'record.toggle'|'draw'|'zoom'|'board'|'pin.toggle'|'pin.releaseAll'|'draw.restore'|'folder.open'|'settings.open'|'firstRun.open'|'app.quit'|'snipaste.howto'
- *   |'folder.pick'|'logs.open'|'settings.export'|'capture.history.clear'
+ *   |'folder.pick'|'logs.open'|'settings.export'|'capture.history.clear'|'capture.saveLast'|'capture.copyHex'|'pins.closeAll'
  *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'} InkAction
  *   capture.cancel = 오버레이에서 Esc·우클릭(모드 끝, 정지 이미지 버림)
  *   folder.pick = 저장 폴더 [바꾸기](폴더 고르기 → output.folder) · logs.open = 로그 폴더 · settings.export = 내보내기(저장 대화)
@@ -76,8 +76,14 @@
  * @property {{key: string, label: string}[]} [hints]  둘째 줄 키 안내
  * @property {string} [thumbUrl]    결과 섬 썸네일(ink://thumb/…, 작은 BMP)
  * @property {string} [buttonKey]   단추 옆 키캡(예: 'Ctrl+S')
+ * @property {{label: string, action: InkAction}} [chip]  추천 칩 하나(예: '#RRGGBB 복사' → 'capture.copyHex')
  *
  * @typedef {{x: number, y: number, w: number, h: number}} PhysRect  물리 px, 가상 화면 좌표
+ *
+ * @typedef {Object} AfterimageEvent  확정 직후 고른 자리 주황 잔상 0.4초(R-CAP-26)
+ * @property {number} session
+ * @property {PhysRect} rect
+ * @property {number} durationMs
  *
  * @typedef {Object} OverlayMonitor
  * @property {number} id
@@ -136,7 +142,7 @@
  * @property {(id: number, action: 'close'|'closeAll'|'copy'|'save'|'drag'|'menu') => Promise<void>} pinAction  핀 동작(drag = 끌어 옮기기 시작, menu = 오른쪽 클릭 메뉴)
  * @property {(id: number, dy: -1|1, fx: number, fy: number) => Promise<number | null>} pinZoom  휠 한 칸 확대(-1)·축소(1), 커서 자리 = 창 안 비율 → 새 배율(%)
  * @property {(input: CaptureInput) => Promise<void>} captureInput  오버레이 입력 전달(포인터 이동은 rAF로 묶어 프레임당 한 번). 결과는 'capture' 이벤트로
- * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView}) => void) => () => void} subscribe
+ * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView} | {type: 'afterimage', afterimage: AfterimageEvent}) => void) => () => void} subscribe
  */
 
 export const SHORTCUT_GROUPS = [

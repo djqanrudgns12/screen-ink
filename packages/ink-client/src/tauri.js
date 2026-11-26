@@ -29,6 +29,7 @@ export function createTauriClient() {
         listen('screen-ink://island', (e) => handler({ type: 'island', island: e.payload })),
         listen('screen-ink://overlay', (e) => handler({ type: 'overlay', overlay: e.payload })),
         listen('screen-ink://capture', (e) => handler({ type: 'capture', view: e.payload })),
+        listen('screen-ink://afterimage', (e) => handler({ type: 'afterimage', afterimage: e.payload })),
       ];
       return () => offs.forEach((p) => p.then((off) => off()));
     },

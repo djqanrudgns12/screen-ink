@@ -318,3 +318,45 @@ export function applyCaptureView(state, view) {
     helpOpen: patch.help,
   };
 }
+
+/**
+ * 칩 문구(예: "#FF9F0A 복사")에서 6자리 #RRGGBB 색 코드를 뽑아 대문자로 돌려준다.
+ * @param {string | null | undefined} label
+ * @returns {string | null}
+ */
+export function extractHexColor(label) {
+  if (typeof label !== 'string') return null;
+  const match = label.match(/(?:^|\s)(#[0-9a-fA-F]{6})(?![0-9a-fA-F])/);
+  return match ? match[1].toUpperCase() : null;
+}
+
+/**
+ * 결과 섬 추천 칩 표시 정보(라벨·견본 색·동작)를 정리한다.
+ * @param {{ label?: string, action?: string, hex?: string } | null | undefined} chip
+ * @returns {{ label: string, hex: string | null, action: string } | null}
+ */
+export function resolveIslandChip(chip) {
+  if (!chip || typeof chip.label !== 'string' || !chip.label.trim()) return null;
+  const hex = extractHexColor(chip.hex) ?? extractHexColor(chip.label);
+  return {
+    label: chip.label,
+    hex,
+    action: typeof chip.action === 'string' ? chip.action : '',
+  };
+}
+
+/**
+ * 520px 폭 안에 액션 단추가 3개(주·보조·칩) 동시에 들어가거나 실제로 넘칠 때 단추 안 키캡을 생략한다(시안 결정 #4).
+ * @param {{ button?: any, secondaryButton?: any, chip?: any, overflow?: boolean }} [opts]
+ * @returns {boolean}
+ */
+export function shouldOmitButtonKeys({
+  button = null,
+  secondaryButton = null,
+  chip = null,
+  overflow = false,
+} = {}) {
+  if (overflow) return true;
+  const actionCount = (button ? 1 : 0) + (secondaryButton ? 1 : 0) + (chip ? 1 : 0);
+  return actionCount >= 3;
+}

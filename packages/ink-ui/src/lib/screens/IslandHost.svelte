@@ -9,6 +9,7 @@
     dismissIsland,
     getAutoDismissMs,
     pushIsland,
+    resolveIslandChip,
     setHelpOpen,
     setIslandHover,
     shouldShowHintLine,
@@ -143,7 +144,9 @@
   let mutedSurface = $derived(variant === 'off' || variant === 'security');
   let showHints = $derived(shouldShowHintLine(queue));
   let morphKey = $derived(
-    current ? `${current.kind}:${variant}:${current.text}:${showHints ? 1 : 0}` : '',
+    current
+      ? `${current.kind}:${variant}:${current.text}:${current.chip?.label ?? ''}:${showHints ? 1 : 0}`
+      : '',
   );
   let durationMs = $derived(
     current && current.kind !== 'mode'
@@ -158,19 +161,38 @@
           key: current.buttonKey || current.button.key,
           stop: current.button.stop,
           onClick: async () => {
+            const seq = queue.seq;
             const act = current.button.action;
             if (act === 'undo') {
               await client.undo();
             } else if (act) {
               await client.run(act);
             }
-            if (current.kind !== 'mode') {
+            if (queue.seq === seq && current.kind !== 'mode') {
               queue = dismissIsland(queue);
             }
           },
         }
       : null,
   );
+
+  let chipButton = $derived.by(() => {
+    const parsed = resolveIslandChip(current?.chip);
+    if (!parsed) return null;
+    return {
+      label: parsed.label,
+      hex: parsed.hex ?? undefined,
+      onClick: async () => {
+        const seq = queue.seq;
+        if (parsed.action) {
+          await client.run(/** @type {import('@screen-ink/client').InkAction} */ (parsed.action));
+        }
+        if (queue.seq === seq && current?.kind !== 'mode') {
+          queue = dismissIsland(queue);
+        }
+      },
+    };
+  });
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -210,6 +232,7 @@
                 penWidth={current.penWidth || ''}
                 micOff={Boolean(current.micOff)}
                 button={actionButton}
+                chip={chipButton}
                 hints={current.hints || []}
                 {showHints}
                 progressDurationMs={current.kind === 'result' ? durationMs : null}
