@@ -77,3 +77,35 @@ fn 손쉬운_사용을_켜면_다음_확인부터_칩이_없다() {
     assert!(island.chip.is_none());
     assert!(s.refresh_permissions().is_some_and(|p| p.accessibility));
 }
+
+/// R2-ONB-2: 첫 실행 카드가 1초마다 다시 읽는다 — 켜지는 순간에만 상태를 보낸다(그 사이 같은 값이면 조용히).
+#[test]
+fn 권한_감시는_바뀔_때만_상태를_보낸다() {
+    let w = FakeWorld::new();
+    set_perm(&w, false, false);
+    let mut s = service(&w);
+    s.refresh_permissions();
+    let sent = || w.notifier.0.lock().unwrap().states;
+    let n = sent();
+    assert!(!s.poll_permissions(), "그대로면 보내지 않는다");
+    assert_eq!(sent(), n);
+    set_perm(&w, false, true);
+    assert!(s.poll_permissions(), "손쉬운 사용을 켠 순간");
+    assert_eq!(sent(), n + 1);
+    let p = s.state().permissions.unwrap();
+    assert!(p.accessibility && !p.screen);
+    assert!(!s.poll_permissions());
+    // 권한 개념이 없는 OS는 아무 일도 없다
+    let w2 = FakeWorld::new();
+    let mut s2 = service(&w2);
+    assert!(!s2.poll_permissions());
+}
+
+#[test]
+fn 첫_실행_카드_위치는_숨은_설정으로_남는다() {
+    let w = FakeWorld::new();
+    let mut s = service(&w);
+    assert!(s.update_setting("onboarding.step", &serde_json::json!(2)).ok);
+    assert_eq!(s.state().settings["onboarding.step"], 2);
+    assert!(!s.update_setting("onboarding.step", &serde_json::json!(9)).ok, "0~4만");
+}

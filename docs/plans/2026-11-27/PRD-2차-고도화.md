@@ -31,6 +31,8 @@
 | R2-ONB-6 | P0 | **설정 › 일반 › 권한 점검** 묶음: 줄마다 상태(켜짐 ✓ / 꺼짐 ! / 다시 시작 필요), [열기] 단추, 위에 한 줄 요약("둘 다 켜져 있어요"). 설정을 열 때·창이 앞으로 올 때 다시 읽는다. Windows는 같은 자리에 단축키 겹침·시작 프로그램 점검. | 권한을 끄면 설정 창에 2초 안에 반영 |
 | R2-ONB-7 | P1 | 업데이트·재서명 뒤 권한이 풀린 것을 감지하면(M10 `screen_revoked`) 첫 실행 카드의 그 장만 다시 연다(섬 대신). | 재서명 시나리오 fake 시험 |
 
+**[완료 2026-11-27 — 상태 계약]** 숨은 설정 `onboarding.step`(0~4), 서비스 `poll_permissions()`(바뀔 때만 상태를 보냄), 동작 `perm.refresh`(두 OS — Windows는 아무 일도 없음), 시험 `permissions.rs` `권한_감시는_바뀔_때만_…`·`첫_실행_카드_위치는_…`. 남음: 카드 화면 5장·설정 점검 묶음(제미나이, W2).
+
 **설계 메모(총괄)**
 - 서비스: `InkService::onboarding_state()` → `{ step, screen, accessibility, needsRestart }`(새 상태 필드, `Permissions` 재사용). 상태 읽기는 기존 `SystemProbe::permissions()`. 1초 감시는 시트가 열려 있을 때만(창 쪽 타이머 → `refresh_permissions` 명령).
 - 화면: `FirstRunSheet.svelte`를 `Onboarding.svelte`(카드 틀) + 카드 5개 부품으로 나눈다. 카드 그림은 아이콘 세트(§3 결정)로.
@@ -42,7 +44,10 @@
 
 > 요청 2: 언어에서 English도 구현.
 
-**지금**: `general.lang`(ko·en) 설정만 있고 글은 모두 한국어로 박혀 있다(UI·Rust 섬 문구·트레이 메뉴·단축키 이름). 전수 조사 = 제미나이 [research/i18n-inventory.md](research/i18n-inventory.md)(작성 중).
+**지금**: `general.lang`(ko·en) 설정만 있고 글은 모두 한국어로 박혀 있다(UI·Rust 섬 문구·트레이 메뉴·단축키 이름).
+- **[완료 2026-11-27] 틀**: 공용 카탈로그 `packages/ink-ui/src/lib/i18n/{ko,en}.json`(Rust `ink_domain::i18n::tr/trf` + 서비스 `t()/tf()`, 화면 `t()`·`syncLang`), 첫 사례 = 설정 탭 이름·단축키 켜기/끄기 섬, 키·자리 표시 검사(Rust·JS).
+- **전수 조사(제미나이)** = [research/i18n-inventory.md](research/i18n-inventory.md) · [CSV](research/i18n-strings.csv): 1,270곳 · 고유 키 962(앱 번역 대상 887, 그중 `catalog-v1.json` 설명 258은 `catalog-en-v1.json` 덧씌우기로 분리 제안). 층별: 화면 600 · Rust 섬 197 · Rust 오류 92 · 트레이 8 · OS 14 · 데이터 329 · 스토어 30.
+- 조사에서 나온 할 일: ① `syncLang`을 설정 창만이 아니라 `apps/screen-ink/src/App.svelte` 맨 위로(창 8개 모두 + `html[lang]`·창 제목) ② 언어를 바꾸면 트레이 툴팁·열린 창 제목도 다시 ③ 복수형 도우미(`.one/.other`)·조사(은/는)처럼 이어 붙이는 문장은 통문장 틀로 ④ **`Info.plist`에 화면 기록 권한 설명(`NSScreenCaptureUsageDescription`) 등이 빠져 있다** → §1과 함께 넣는다 ⑤ 넘침 위험 상위 5(섬 520 px·트레이 288 px·단축키 한 장·설정 옆 목록 196 px·배너/위치 지도).
 
 | ID | 우선 | 요구 | 수용 기준 |
 |---|---|---|---|
@@ -121,7 +126,7 @@
 |---|---|---|---|
 | R2-FONT-1 | P0 | UI 글꼴 한 벌 결정 **[결정 대기: 견본 보고 사용자가 고름, 총괄 추천 첨부]**: 본문·제목·숫자(키캡·시간·배율은 고정폭 숫자 `font-variant-numeric: tabular-nums` 또는 Mono). | 토큰 `--ink-font-*` 한 곳에서 바뀜 |
 | R2-FONT-2 | P0 | 라이선스: 앱에 넣어 배포·PDF 임베딩이 되는 것만. 출처·고지를 설정 › 정보에. | 라이선스 표 링크 |
-| R2-FONT-3 | P0 | 크기: woff2 부분 집합(한글 2,350자 + KS X 1001 + 라틴) — 앱 크기 +2 MB 이하. | 번들 크기 측정 |
+| R2-FONT-3 | P0 | 크기: woff2 부분 집합 — 앱 크기 +2 MB 이하. **주의: 앱 이름 "슉"(U+C289)은 KS X 1001 2,350자 밖이다** → 부분 집합은 2,350자 + 카탈로그(ko·en)에 쓰인 모든 글자 + 사용자가 치는 칸(텍스트 주석)은 시스템 글꼴 대체. Paperlogy는 한글 2,780자뿐이라 본문에 쓰면 빠진 글자가 빈칸이 된다(제미나이 조사). | 번들 크기 측정 + 카탈로그 글자 전부 들어 있는지 검사 |
 | R2-FONT-4 | P1 | 글자 위계 표 다시: 11/12/13/15/20 pt, 굵기 400/500/600, 줄 간격·자간(한글 −0.2~−0.4%). `10-design-system.md` 고침. | 토큰 문서 |
 
 ---
@@ -192,7 +197,7 @@
 | ID | 우선 | 요구 | 수용 기준 |
 |---|---|---|---|
 | R2-OS-1 | P0 | **동등 표**(기능 × OS × 상태 × 까닭) 문서 `docs/plans/2026-11-27/parity.md`를 코드에서 뽑는다(포트마다 맥·Windows 구현 유무, `Noop` 대체, `#[cfg]` 분기). 제미나이 조사 → 총괄 확정. | 표의 "한쪽만" 줄마다 계획 또는 불가 까닭 |
-| R2-OS-2 | P0 | 지금 알려진 차이(총괄 메모): 맥 — 창 캡처 둥근 귀 투명 확인(M14), 녹화 실기(M15), 서명 앱 권한 유지(M-sign), 캡처 중 글 상자 **한글 조합 버그**(M16, 열린 버그), 스토어/설치 배포. Windows — 이번 2차의 맥 쪽 새 동작(확대 고른 배율·포인터 지도·확대 커서) 실기. | 각각 결과 기록 |
+| R2-OS-2 | P0 | 조사에서 나온 **OS별 단축키 표기를 박아 둔 곳 5곳**(`settingsMeta.js` `Ctrl+Z`, `DrawZoomPage.svelte` `Ctrl+휠`·`Alt+Shift+1`, `AnnotateOptions.svelte` `Ctrl+휠`, `CapturePage.svelte` `Alt`·`.exe` 예시) → 지금 OS 기호로(`spoken`). 지금 알려진 차이(총괄 메모): 맥 — 창 캡처 둥근 귀 투명 확인(M14), 녹화 실기(M15), 서명 앱 권한 유지(M-sign), 캡처 중 글 상자 **한글 조합 버그**(M16, 열린 버그), 스토어/설치 배포. Windows — 이번 2차의 맥 쪽 새 동작(확대 고른 배율·포인터 지도·확대 커서) 실기. | 각각 결과 기록 |
 | R2-OS-3 | P0 | 이번 묶음의 모든 새 기능은 **두 OS 시험 줄**을 갖는다(fake 시험은 공통, 실기 확인 표는 OS별). | PR마다 표 |
 | R2-OS-4 | P1 | Windows 실기는 Windows 기계 세션에서(인수인계 문서로 넘김). 맥 실기는 이 맥. | 인수인계 갱신 |
 
@@ -236,7 +241,7 @@
 
 | 물결 | 내용 | 끝 조건 |
 |---|---|---|
-| W0 결정 | 아이콘 10세트·PDF 5시안·글꼴 견본(제미나이 작업 중) → **사용자 고름** · R-NET 개정 승인 · 권한 탈출구 여부 | 결정 4개 |
+| W0 결정 | 아이콘 10세트·PDF 5시안·글꼴 견본(제미나이 완료) → **사용자 고름** · R-NET 개정 승인 · 권한 탈출구 여부 | 결정 4개 |
 | W1 기반(결정과 무관, 바로 시작) | S1 단축키 녹화 버그 · S3 다국어 틀 · S2 권한 상태 계약 · S8 가림 알고리즘 + 합성 사례 · S10 동등 표 | 각 시험 통과·커밋 |
 | W2 화면 | S2 카드·점검 · S4 아이콘 이식·툴바 · S5 트레이 · S6 글꼴 적용 · S11 설명서 · S3 문자열 옮기기·영어 | 미리보기 전 화면 눈 확인 |
 | W3 기능 | S7 PDF · S9 업데이트(맥 Sparkle·Windows 틀) · S8 회귀 표 | 두 OS 결과(맥 실기, Windows는 표) |
@@ -247,6 +252,15 @@
 2. 맥 권한 켜기는 첫 실행 카드에서 사용자가 직접(에이전트는 권한 창을 누르지 않는다).
 3. Sparkle EdDSA 키 만들기(`generate_keys`) + Bitwarden `ops` 백업, 자체 서명 인증서 p12 Bitwarden 백업.
 4. 릴리스 게시 확인(초안 → 공개).
+
+## 13.1 W0 시안 결과와 총괄 추천(2026-11-27)
+
+| 결정 | 시안 | 총괄 추천 | 까닭 |
+|---|---|---|---|
+| 버튼 아이콘 | [10세트 비교](candidates/icons/overview.png) · [표](candidates/icons/index.md) — 01 Phosphor · 02 Lucide · 03 Tabler · 04 Fluent · 05 Material Symbols · 06 Iconoir · 07 Heroicons · 08 MingCute · 09 Remix · 10 슉쇽 맞춤 | **01 Phosphor Regular**(차선 10 맞춤) | 35/35 대체 없이 맞고(모자이크·형광펜·칠판·자석까지), 둥근 끝·이음이 SF Symbols에 가장 가깝다. 같은 세트의 Light·Fill로 상태(지금 도구 채움)를 낼 수 있다. MIT. Heroicons(24/35)·Iconoir(31/35)는 빠진 것이 많다 |
+| 단축키 PDF | [5시안 비교](candidates/pdf/overview.png) · [설명](candidates/pdf/index.md) — ① 애플 미니멀 ② 키보드 지도 ③ 카드 격자 ④ 책상 옆 한 장 ⑤ 다크 프리미엄 | **① 애플 미니멀**(+ ⑤의 다크를 "화면용" 선택지로) | 한 장에 55칸이 다 들어가면서 가장 덜 붐빈다. 인쇄 잉크가 적다. ②는 눈에 띄지만 바꾼 키가 많으면 지도가 흐려진다 |
+| UI 글꼴 | [견본 비교](candidates/fonts/compare.png) · [트레이 흉내](candidates/fonts/tray-mock.png) · [표](candidates/fonts/index.md) | **Freesentation 400/500/600**(폴더 안) + 숫자·키캡 IBM Plex Mono 유지. 대안 = Pretendard(폴더 밖, 맥 감성·영어 라틴 최고) | 폴더 후보 중 유일하게 굵기 4종·한글 11,172자·고정폭 숫자·SIL OFL 1.1을 모두 갖췄다. 영어 UI까지 보면 Pretendard가 한 단계 위라 둘 중 하나를 고르시게 한다 |
+| 트레이 시안 | (W2에 3개 만들어 총괄이 고름) | — | 아이콘·글꼴이 정해진 뒤 |
 
 ## 14. 검증
 

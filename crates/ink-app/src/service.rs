@@ -127,6 +127,8 @@ pub struct InkService {
 /// 권한 단추 동작(M10) — 플러그인이 받아 요청 + 설정 칸 열기를 한다.
 pub const ACTION_PERM_SCREEN: &str = "perm.screen";
 pub const ACTION_PERM_AX: &str = "perm.accessibility";
+/// 권한을 다시 읽는다(R2-ONB-2 — 첫 실행 카드·설정 점검이 열려 있는 동안 1초마다). 바뀌었을 때만 상태를 보낸다.
+pub const ACTION_PERM_REFRESH: &str = "perm.refresh";
 /// 권한 안내 섬은 설정 앱을 다녀올 동안 남겨 둔다.
 pub const PERMISSION_ISLAND_MS: u32 = 15_000;
 
@@ -354,6 +356,18 @@ impl InkService {
         let p = Permissions { screen, accessibility, screen_revoked: had_screen && !screen, accessibility_revoked: had_ax && !accessibility };
         self.permissions = Some(p);
         Some(p)
+    }
+
+    /// 권한을 다시 읽고 **바뀌었으면** 상태를 보낸다(R2-ONB-2). 켜지는 순간 카드에 체크가 뜨게 하는 감시용. 바뀌었으면 true.
+    /// 권한 개념이 없는 OS(Windows·시험 기본)는 아무 일도 없다.
+    pub fn poll_permissions(&mut self) -> bool {
+        let before = self.permissions;
+        let now = self.refresh_permissions();
+        let changed = now.is_some() && now != before;
+        if changed {
+            self.emit_state();
+        }
+        changed
     }
 
     /// 시작할 때 한 번: 업데이트·재서명 뒤 화면 기록 권한이 풀렸으면 바로 알린다(M10).

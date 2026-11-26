@@ -1126,6 +1126,14 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             let h = app.clone();
             app.run_on_main_thread(move || h.state::<Ink>().lock().start_zoom()).map_err(|e| e.to_string())?;
         }
+        // 첫 실행 카드·설정 점검이 1초마다(R2-ONB-2): 권한을 다시 읽고 바뀌었을 때만 상태를 보낸다(두 OS — Windows는 아무 일도 없음)
+        ink_app::ACTION_PERM_REFRESH => {
+            let h = app.clone();
+            app.run_on_main_thread(move || {
+                h.state::<Ink>().lock().poll_permissions();
+            })
+            .map_err(|e| e.to_string())?;
+        }
         // 맥 권한(M10): 단추 하나로 요청 + 정확한 설정 칸 열기. 켜는 것은 사용자가 한다
         #[cfg(target_os = "macos")]
         ink_app::ACTION_PERM_SCREEN => {
