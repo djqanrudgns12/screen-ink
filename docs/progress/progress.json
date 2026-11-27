@@ -244,16 +244,16 @@
             {"id": "R2-ANN", "title": "색 16·내 색·스포이트·굵기 슬라이더·미리보기", "platform": "common", "days": 1, "status": "verify", "note": "b7a97de·ea683f3(판서). 실기 남음", "level": "easy"},
             {"id": "R2-FONT", "title": "글꼴 역할·부분 집합·크기 보정", "platform": "common", "days": 0.5, "status": "verify", "note": "320ba1e(627 KiB)", "level": "easy"},
             {"id": "R2-UI-TRAY", "title": "트레이 팝오버 다시 디자인(Paperlogy)", "platform": "common", "days": 0.5, "status": "verify", "note": "320ba1e·9d60625", "level": "easy"},
-            {"id": "R2-BUG-TRAY", "title": "트레이가 전체 화면 앱 위에서 안 열림", "platform": "mac", "days": 0.5, "status": "verify", "note": "2dcb018 계측·활성화 막기·Space 데려오기. 실기 남음", "level": "mid"},
+            {"id": "R2-BUG-TRAY", "title": "트레이가 전체 화면 앱 위에서 안 열림", "platform": "mac", "days": 0.5, "status": "done", "note": "대응 코드 + 실기(2026-11-27): 전체 화면 텍스트 편집기 위에서 트레이 팝오버가 같은 Space에 열림(on space now true)", "level": "mid"},
             {"id": "R2-ONB", "title": "첫 실행 권한 카드 5장·설정 점검", "platform": "common", "days": 1, "status": "verify", "note": "3dbed55·756bdb4. 실기 남음", "level": "easy"},
             {"id": "R2-HELP", "title": "사용 설명서 탭(OS별 글)·설정 찾기", "platform": "common", "days": 0.75, "status": "verify", "note": "756bdb4·b76a22e", "level": "easy"},
             {"id": "R2-DRAW-TB", "title": "그리기·칠판 도구 막대", "platform": "common", "days": 0.75, "status": "verify", "note": "ea683f3", "level": "easy"},
-            {"id": "R2-TXT", "title": "글자 글꼴 고르기(Tidy식)·맥 한글 입력 버그", "platform": "common", "days": 1.5, "status": "partial", "note": "9261699·b76a22e 고르기 완료. R2-TXT-0 한글 입력: 초점 때 웹뷰 입력 문맥 바로잡기 fc3fd52(가설 수정), 실기 확인 남음", "level": "hard"},
+            {"id": "R2-TXT", "title": "글자 글꼴 고르기(Tidy식)·맥 한글 입력 버그", "platform": "common", "days": 1.5, "status": "done", "note": "고르기 9261699·b76a22e. 한글 조합 fc3fd52·ed5ed02·6dce869 — 실기(2026-11-27): 새로 켠 실행 3/3 캡처 글 상자 \"안녕 12\", [그리기로] 판서 글 상자도 통과", "level": "hard"},
             {"id": "R2-PDF", "title": "내 단축키 PDF(책상 옆 한 장)", "platform": "common", "days": 1, "status": "verify", "note": "e3f50ff + save_pdf 2d71338. 앱 안 저장 실기 남음", "level": "easy"},
-            {"id": "R2-UPD", "title": "자동 업데이트(맥 OS 도구 + 같은 인증서 확인)", "platform": "mac", "days": 1.5, "status": "verify", "note": "2d71338·eb145e6 release-mac.sh. 받기·서명 확인 시험 통과, 실제 릴리스 게시·설치 실기 남음", "level": "mid"},
+            {"id": "R2-UPD", "title": "자동 업데이트(맥 OS 도구 + 같은 인증서 확인)", "platform": "mac", "days": 1.5, "status": "verify", "note": "맥 업데이터 + 릴리스 v0.2.0 게시(latest-mac.json 200). 남음: 다음 판에서 실제로 받아 바꿔 끼우는지", "level": "mid"},
             {"id": "R2-OSFIT", "title": "맥·Windows 맞춤 글·표기 검사", "platform": "common", "days": 1, "status": "verify", "note": "표기 34건 고침, OS 변형 키(~mac·~win), 자동 검사 ee71193(R2-OSFIT-3)", "level": "mid"},
-            {"id": "R2-CAP", "title": "스마트 캡처 가림 인지", "platform": "common", "days": 1.5, "status": "partial", "note": "94c2543 가림 판정. V 경계·평탄도·사다리 합침·합성 사례 12개는 G12 진행 중", "level": "hard"},
-            {"id": "R2-EXTRA", "title": "덧붙인 개선(기록 묶기·되살리기·추천 묶음·연습 카드 등)", "platform": "common", "days": 2, "status": "partial", "note": "A11Y·추천 묶음·연습 카드 G13, 되살리기·기록 묶기 G14, 스냅숏·성능·점검표 G15 진행 중. 최근 목록(HIST-1, P2)은 다음 묶음", "level": "mid"}
+            {"id": "R2-CAP", "title": "스마트 캡처 가림 인지", "platform": "common", "days": 1.5, "status": "verify", "note": "924a904·585073e·e4d14ab — 합성 사례 14/14, 앱 경로 연결·계측. 남음: 실제 앱 화면에서 가린 창 범위 눈 확인", "level": "hard"},
+            {"id": "R2-EXTRA", "title": "덧붙인 개선(기록 묶기·되살리기·추천 묶음·연습 카드 등)", "platform": "common", "days": 2, "status": "verify", "note": "A11Y·추천 묶음·연습 afee97e, 되살리기·기록 묶기 b7a6b31, 스냅숏·성능·점검표 03947df, 최근 목록 fcbebff, 검토 수정 e4d14ab·6dce869. 실기: 되살리기·최근 목록 통과. 남음: 연습 카드·기록 묶기 zip 눈 확인", "level": "mid"}
           ]
         }
       ]
