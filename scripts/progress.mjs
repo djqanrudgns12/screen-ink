@@ -35,6 +35,18 @@ export function validate(data) {
   for (const [p, list] of Object.entries(data.next ?? {})) {
     for (const id of list) if (!ids.has(id)) errors.push(`next.${p}: 없는 id ${id}`);
   }
+  // 3차 단계(PRD-3차): 단계를 정했으면 남은 항목은 모두 어느 단계인지 밝힌다
+  if (data.phases) {
+    const phaseIds = new Set(data.phases.map((/** @type {any} */ ph) => ph.id));
+    for (const t of data.tracks ?? []) {
+      for (const g of t.groups ?? []) {
+        for (const it of g.items ?? []) {
+          if (it.phase !== undefined && !phaseIds.has(it.phase)) errors.push(`${it.id}: 모르는 단계 ${it.phase}`);
+          if (it.status !== 'done' && it.phase === undefined) errors.push(`${it.id}: 남은 일은 단계(phase: ${[...phaseIds].join('|')}) 필요`);
+        }
+      }
+    }
+  }
   return errors;
 }
 
@@ -91,6 +103,36 @@ function renderLevels(data, L, plat, label) {
   }
 }
 
+/**
+ * 3차 단계(PRD-3차) — 단계별 진척과 항목. 단계를 단 항목은 끝나도 단계를 남겨 단계 진척에 센다.
+ * @param {any} data
+ * @param {string[]} L
+ * @param {(p: string) => string} plat
+ * @param {(s: string) => string} label
+ */
+function renderPhases(data, L, plat, label) {
+  const items = data.tracks.flatMap(all).filter((/** @type {any} */ it) => it.phase);
+  L.push('## 3차 단계(PRD-3차)', '');
+  L.push('계획: [PRD-3차-마무리](../plans/2026-11-28/PRD-3차-마무리.md). 단계를 단 항목만 센다(끝난 항목도 단계에 남는다).', '');
+  L.push('| 단계 | 항목 | 작업일 | 진척 | | 끝남 | 남음 | 남은 작업일(환산) | 관문 |', '|---|---:|---:|---:|---|---:|---:|---:|---|');
+  for (const ph of data.phases) {
+    const xs = items.filter((/** @type {any} */ it) => it.phase === ph.id);
+    const s = sum(data, xs);
+    L.push(`| ${ph.name} | ${xs.length} | ${days(s.days)} | **${fmtPct(s.pct)}** | \`${bar(s.pct)}\` | ${s.count.done} | ${xs.length - s.count.done} | ${days(s.days - s.got)} | ${ph.gate} |`);
+  }
+  const t = sum(data, items);
+  L.push(`| **3차 전체** | ${items.length} | ${days(t.days)} | **${fmtPct(t.pct)}** | \`${bar(t.pct)}\` | ${t.count.done} | ${items.length - t.count.done} | ${days(t.days - t.got)} | |`, '');
+  for (const ph of data.phases) {
+    const xs = items.filter((/** @type {any} */ it) => it.phase === ph.id);
+    L.push(`### ${ph.name} — ${fmtPct(sum(data, xs).pct)}`, '');
+    for (const it of xs) {
+      const box = it.status === 'done' ? 'x' : it.status === 'todo' ? ' ' : '~';
+      L.push(`- [${box}] \`${it.id}\` ${it.title} — ${plat(it.platform)} · ${days(it.days)}일 · ${label(it.status)}`);
+    }
+    L.push('');
+  }
+}
+
 /** @param {any} data */
 export function render(data) {
   const L = [];
@@ -123,6 +165,8 @@ export function render(data) {
     L.push(`| ${plat(p)} | ${days(s.days)} | ${fmtPct(s.pct)} | ${days(s.days - s.got)} |`);
   }
   L.push('');
+
+  if (data.phases) renderPhases(data, L, plat, label);
 
   L.push('## 지금 할 순서', '');
   for (const [p, list] of Object.entries(data.next ?? {})) {

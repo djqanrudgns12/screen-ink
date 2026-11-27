@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "updated": "2026-11-27",
-  "basis": "feat/foundation — Windows 2026-11-26 오후(선택 툴바·R-KEY-6·근거 보기·문턱 500 ms)",
+  "updated": "2026-11-28",
+  "basis": "feat/foundation b7f1785(0.3.1 게시 뒤) — PRD-3차 마무리 단계 P1~P5",
   "scale": {
     "done": { "label": "완료", "value": 1, "meaning": "완료 기준까지 확인함" },
     "verify": { "label": "확인 남음", "value": 0.8, "meaning": "구현·시험은 끝, 완료 기준의 실제 확인(눈·측정·실기)이 남음" },
@@ -11,10 +11,17 @@
   "platforms": { "common": "공통", "win": "Windows", "mac": "맥" },
   "levels": { "hard": "상", "mid": "중", "easy": "하" },
   "levelMeaning": { "hard": "새 OS API·성능 목표·설계 결정이 많음", "mid": "아는 방법으로 여러 파일·실측 필요", "easy": "작은 화면·문서·확인·측정 한 번" },
+  "phases": [
+    { "id": "P1", "name": "1단계 — 고침 + 맥 실기", "gate": "4K 첫 강조 ≤ 30 ms · RB-20 굳음 0 · Windows 대기 ≤ 550 MiB · 맥 실기 14항목 판정" },
+    { "id": "P2", "name": "2단계 — 화면 확인 + 0.3.2", "gate": "점검표 결함 0(또는 고침·사유) · 0.3.2 게시" },
+    { "id": "P3", "name": "3단계 — 측정 + 인식", "gate": "인식 Top-1 ≥ 85%·Top-3 ≥ 93%·새 장면 ≥ 80% · 1시간 대기 진입 ≤ 150 ms · Snipaste 대조" },
+    { "id": "P4", "name": "4단계 — 배포 준비 + 0.4.0", "gate": "CI 릴리스 빌드 초록 · 스토어 자료 · 0.4.0 게시" },
+    { "id": "P5", "name": "5단계 — 사람 몫", "gate": "PRD-3차 §10 체크리스트" }
+  ],
   "next": {
-    "win": ["3f-win-cases", "4.2", "5.4", "6.1", "D10"],
-    "mac": ["M-sign", "M13", "M16"],
-    "common": ["R2-TXT", "R2-I18N", "R2-OSFIT", "R2-CAP"]
+    "win": ["2.5", "3f-frozen", "6.4", "3-MEM-W"],
+    "mac": ["M10", "M4", "1.3", "7.4"],
+    "common": ["3-RECOG", "3-CHECKLIST"]
   },
   "tracks": [
     {
@@ -30,7 +37,7 @@
             { "id": "0.3", "title": "포트 trait + Noop·Fake", "platform": "common", "days": 0.25, "status": "done" },
             { "id": "0.4", "title": "토큰 라이트·다크, 글꼴, 테마 전환", "platform": "common", "days": 0.25, "status": "done", "note": "토큰 라이트·다크·글꼴·테마 + 하드코딩 색 정적 검사(위반 0)·F02 대조 49d567a", "level": "easy" },
             { "id": "0.4b", "title": "아이콘 24종·부품 14종", "platform": "common", "days": 0.25, "status": "done", "note": "아이콘·부품 + 대비 자동 검사(글자 4.5:1·아이콘 3:1, 146쌍) afee97e", "level": "easy" },
-            { "id": "0.4c", "title": "앱 아이콘·트레이 4상태·맥 템플릿", "platform": "common", "days": 0.25, "status": "verify", "note": "16px 눈 검사 3명 안 함", "level": "easy" },
+            { "id": "0.4c", "title": "앱 아이콘·트레이 4상태·맥 템플릿", "platform": "common", "days": 0.25, "status": "verify", "phase": "P5", "note": "16px 눈 검사 3명 안 함", "level": "easy" },
             { "id": "0.5", "title": "Tauri 껍데기(single-instance·autostart)", "platform": "common", "days": 0.25, "status": "done" },
             { "id": "0.6", "title": "로그(순환·금지 항목)·launch time", "platform": "common", "days": 0.25, "status": "done" }
           ]
@@ -41,7 +48,7 @@
           "items": [
             { "id": "1.1", "title": "설정 원자적 저장·백업·손상 복구·스키마", "platform": "common", "days": 0.3125, "status": "done" },
             { "id": "1.2", "title": "포터블 표시 파일 판정", "platform": "common", "days": 0.3125, "status": "done" },
-            { "id": "1.3", "title": "트레이 팝오버(S01)", "platform": "common", "days": 0.3125, "status": "verify", "note": "트레이 팝오버 표시 p95 33.6 ms(Windows W7, 목표 140). 남음: 맥 측정", "level": "easy" },
+            { "id": "1.3", "title": "트레이 팝오버(S01)", "platform": "common", "days": 0.3125, "status": "verify", "phase": "P1", "note": "트레이 팝오버 표시 p95 33.6 ms(Windows W7, 목표 140). 남음: 맥 측정", "level": "easy" },
             { "id": "1.4", "title": "shortcuts::analyze(입력표 판정 이식)", "platform": "common", "days": 0.3125, "status": "done" },
             { "id": "1.5", "title": "단축키 즉시 등록 트랜잭션·원인 찾기", "platform": "common", "days": 0.3125, "status": "done" },
             { "id": "1.6", "title": "설정 창 S02~S05 바로 반영·되돌리기", "platform": "common", "days": 0.3125, "status": "done", "note": "설정 창 S02~S05 바로 반영·되돌리기 + 시안 v3 대조(제목 글꼴 고침) 49d567a, 단축키 되돌리기 값 복원 f6ca494", "level": "easy" },
@@ -54,11 +61,11 @@
           "name": "단계 2 — 오버레이·정지 스냅숏·섬",
           "items": [
             { "id": "2.1", "title": "MonitorProbe·구성 지문·변경 이벤트", "platform": "win", "days": 0.35, "status": "done" },
-            { "id": "2.2", "title": "오버레이 창 미리 만들기·투명도 재지정", "platform": "win", "days": 0.35, "status": "verify", "note": "오버레이 미리 만들기·투명도 재지정, 혼합 배율 첫 진입 표본 128개 검은 화면 0(W5). 남음: 1시간 대기 뒤 진입", "level": "easy" },
+            { "id": "2.2", "title": "오버레이 창 미리 만들기·투명도 재지정", "platform": "win", "days": 0.35, "status": "verify", "phase": "P3", "note": "오버레이 미리 만들기·투명도 재지정, 혼합 배율 첫 진입 표본 128개 검은 화면 0(W5). 남음: 1시간 대기 뒤 진입", "level": "easy" },
             { "id": "2.3", "title": "정지 프레임·ink:// 프로토콜", "platform": "win", "days": 0.35, "status": "done" },
             { "id": "2.4", "title": "이미지·창 목록·모니터 같은 순간", "platform": "win", "days": 0.35, "status": "done" },
-            { "id": "2.5", "title": "진입 계측·M1 측정", "platform": "win", "days": 0.35, "status": "verify", "note": "M1 캡처 진입 p95 4K 79·FHD 82 ms 통과(W7), 첫 강조 p95 FHD 25 ms 통과·4K 38 ms(목표 30, W16에서 244→38). 남음: 4K 첫 강조 8 ms", "level": "easy" },
-            { "id": "2.6", "title": "SystemEvents(잠금·절전·보안 데스크톱)", "platform": "win", "days": 0.35, "status": "verify", "note": "S12·S13 시나리오 카드 기록 남음", "level": "easy" },
+            { "id": "2.5", "title": "진입 계측·M1 측정", "platform": "win", "days": 0.35, "status": "verify", "phase": "P1", "note": "M1 캡처 진입 p95 4K 79·FHD 82 ms 통과(W7), 첫 강조 p95 FHD 25 ms 통과·4K 38 ms(목표 30, W16에서 244→38). 남음: 4K 첫 강조 8 ms", "level": "easy" },
+            { "id": "2.6", "title": "SystemEvents(잠금·절전·보안 데스크톱)", "platform": "win", "days": 0.35, "status": "verify", "phase": "P5", "note": "S12·S13 시나리오 카드 기록 남음", "level": "easy" },
             { "id": "2.7", "title": "섬 호스트·12상태·알림 큐", "platform": "common", "days": 0.4, "status": "done" }
           ]
         },
@@ -72,7 +79,7 @@
             { "id": "3a-ci", "title": "재생 시험 CI 상시 실행", "platform": "common", "days": 0.1, "status": "done", "note": "푸시마다 ubuntu·Windows·맥·UI(75dd40f 첫 실행 통과)" },
             { "id": "3b-index", "title": "A 근거: 미리 깨우기·UIA 색인·느린 앱 강등", "platform": "win", "days": 0.7, "status": "done" },
             { "id": "3b-msaa", "title": "MSAA 대체 경로", "platform": "win", "days": 0.3, "status": "done", "note": "200% 실제 창의 32px 단추 검증. 빈 UIA 하위 트리에서 MSAA 단추 96개를 받아 대체 경로 통과", "level": "hard" },
-            { "id": "3b-dpi", "title": "DPI 모르는 창 좌표 보정(D12)", "platform": "win", "days": 0.2, "status": "verify", "note": "dpi.rs 판정·보정 + 200%/100% 실측 12개 통과(W5 9070297). 남음: 125%/150% 시스템 배율(사람 승인)", "level": "hard" },
+            { "id": "3b-dpi", "title": "DPI 모르는 창 좌표 보정(D12)", "platform": "win", "days": 0.2, "status": "verify", "phase": "P5", "note": "dpi.rs 판정·보정 + 200%/100% 실측 12개 통과(W5 9070297). 남음: 125%/150% 시스템 배율(사람 승인)", "level": "hard" },
             { "id": "3b-measure", "title": "Chrome 첫 강조 ≤ 진입+30 ms·이동 질의 ≤ 5 ms 측정", "platform": "win", "days": 0.3, "status": "done", "note": "릴리스: V 첫 근거 43~54 ms(진입 56~70), 이동 p95 1.5~4.6 ms. selection probe 로그" },
             { "id": "3b-uia-budget", "title": "UIA 색인 예산(60 ms) 초과·느린 앱 강등 문턱(150 ms×2) 재검토", "platform": "win", "days": 0.3, "status": "done", "note": "문턱 500 ms×2(adef3d3). 색인 자체 80~210 ms는 V가 먼저 강조하고 A는 도착하면 갱신(08 §4.7)" },
             { "id": "3c-engine", "title": "V 엔진(전처리·상자 사다리·평탄·지지율)", "platform": "common", "days": 1.2, "status": "done", "note": "4K 17 ms" },
@@ -81,16 +88,16 @@
             { "id": "3d-evidence", "title": "숨은 \"인식 근거 보기\"", "platform": "common", "days": 0.2, "status": "done", "note": "capture.evidence(설정 파일), 미리보기 ?evidence=1로 확인" },
             { "id": "3e-overlay", "title": "CaptureOverlay·SelectionFrame·확대경·자석·키", "platform": "common", "days": 1, "status": "done" },
             { "id": "3e-output", "title": "복사(DIB+PNG)·저장·기록·결과 섬(썸네일·저장)", "platform": "common", "days": 0.6, "status": "done" },
-            { "id": "3e-paste", "title": "한글·PPT에 붙여 넣어 크기·색 확인", "platform": "win", "days": 0.05, "status": "todo", "level": "easy" },
-            { "id": "3e-chip", "title": "결과 섬 HEX 칩·주황 잔상 0.4초", "platform": "common", "days": 0.15, "status": "verify", "note": "구현·시험 끝, 잔상은 이미 CaptureOverlay 사건(eval 없음). 맥 실기 M16 확인. 남음: Windows 확인", "level": "easy" },
-            { "id": "3e-handoff", "title": "[판서로] 이어받기 ≤ 150 ms", "platform": "common", "days": 0.2, "status": "verify", "note": "[그리기로] 맥 71~82 ms, Windows FHD 105·4K 82 ms 통과(W16)", "level": "mid" },
+            { "id": "3e-paste", "title": "한글·PPT에 붙여 넣어 크기·색 확인", "platform": "win", "days": 0.05, "status": "todo", "phase": "P5", "level": "easy" },
+            { "id": "3e-chip", "title": "결과 섬 HEX 칩·주황 잔상 0.4초", "platform": "common", "days": 0.15, "status": "verify", "phase": "P2", "note": "구현·시험 끝, 잔상은 이미 CaptureOverlay 사건(eval 없음). 맥 실기 M16 확인. 남음: Windows 확인", "level": "easy" },
+            { "id": "3e-handoff", "title": "[판서로] 이어받기 ≤ 150 ms", "platform": "common", "days": 0.2, "status": "done", "note": "[그리기로] 이어받기 맥 71~82 ms, Windows FHD 105·4K 82 ms 통과(W16) — 두 OS 모두 ≤ 150 ms", "level": "mid" },
             { "id": "3g-toolbar", "title": "선택 툴바(R-CAP-27): 위치 규칙·여러 모니터·취소/저장/복사·툴팁 키", "platform": "common", "days": 0.5, "status": "done", "note": "Windows 실제 앱 확인(2026-11-26: 확정 → 오른쪽 아래 툴바, [취소] 클릭으로 끝남). 위·안쪽 배치는 단위 시험, 맥은 인수인계 §2.6" },
             { "id": "3h-pin", "title": "캡처 핀(R-CAP-29): 툴바 [고정] → 늘 위 이미지 창·끌기·휠 확대·투명도·우클릭 메뉴·트레이 모두 닫기", "platform": "common", "days": 1, "status": "done", "note": "Windows 실제 앱 확인(2026-11-26): 원래 자리 생성·휠 125%·오른쪽 클릭 메뉴·끌기·두 번 클릭 닫기. Ctrl+휠 투명도·메뉴 복사/저장은 시험만, 맥 혼합 배율 자리는 인수인계 §2.6" },
             { "id": "3g-keys", "title": "화면 안 키 설정 반영(R-KEY-6): c-* 키로 판정, 맥 Cmd", "platform": "common", "days": 0.25, "status": "done", "note": "Space로 바꾸면 Space = 복사(서비스 시험)" },
-            { "id": "3f-docs", "title": "시험 문서·자동 정답(RB-01·14) + Win32 시험 앱(RB-04)", "platform": "common", "days": 0.5, "status": "partial", "note": "rb14.html·rb04 Win32 시험 앱 준비, 사례 뜨기 남음", "level": "mid" },
-            { "id": "3f-frozen", "title": "멈춘 시험 앱 RB-20", "platform": "win", "days": 0.2, "status": "partial", "note": "RB-20 네 모드에서 진입·이동·종료 확인. UI 응답 100ms 초과가 모드마다 1회여서 기준 미달", "level": "mid" },
-            { "id": "3f-win-cases", "title": "Windows 사례 뜨기(RB 17종)·기준선", "platform": "win", "days": 0.4, "status": "partial", "note": "Windows 16/17종, 21장면·287점 기준선. Top-1 217/287. RB-13 관리자 권한 시험은 사람 승인 필요", "level": "mid" },
-            { "id": "3f-snipaste", "title": "Snipaste 대조 하네스·측정·G4 보고서", "platform": "win", "days": 0.4, "status": "partial", "note": "compare-snipaste.ps1·snipaste-diff 준비, 실행 남음", "level": "mid" }
+            { "id": "3f-docs", "title": "시험 문서·자동 정답(RB-01·14) + Win32 시험 앱(RB-04)", "platform": "common", "days": 0.5, "status": "partial", "phase": "P3", "note": "rb14.html·rb04 Win32 시험 앱 준비, 사례 뜨기 남음", "level": "mid" },
+            { "id": "3f-frozen", "title": "멈춘 시험 앱 RB-20", "platform": "win", "days": 0.2, "status": "partial", "phase": "P1", "note": "RB-20 네 모드에서 진입·이동·종료 확인. UI 응답 100ms 초과가 모드마다 1회여서 기준 미달", "level": "mid" },
+            { "id": "3f-win-cases", "title": "Windows 사례 뜨기(RB 17종)·기준선", "platform": "win", "days": 0.4, "status": "partial", "phase": "P3", "note": "Windows 16/17종, 21장면·287점 기준선. Top-1 217/287. RB-13 관리자 권한 시험은 사람 승인 필요", "level": "mid" },
+            { "id": "3f-snipaste", "title": "Snipaste 대조 하네스·측정·G4 보고서", "platform": "win", "days": 0.4, "status": "partial", "phase": "P3", "note": "compare-snipaste.ps1·snipaste-diff 준비, 실행 남음", "level": "mid" }
           ]
         },
         {
@@ -98,58 +105,58 @@
           "name": "단계 4 — 판서·칠판",
           "items": [
             { "id": "4.1", "title": "inkEngine.js(순수)", "platform": "common", "days": 0.375, "status": "done", "note": "packages/ink-ui/src/lib/ink — 시험 69개" },
-            { "id": "4.2", "title": "DrawCanvas 렌더러 + M5(G5) 측정", "platform": "common", "days": 0.375, "status": "verify", "note": "canvasRender·DrawCanvas·Mode::Draw 진입·펜 지연 로그 끝, G5 측정(학교 PC) 남음", "level": "hard" },
-            { "id": "4.3", "title": "도구·도형·색·굵기 키, 칠판", "platform": "common", "days": 0.375, "status": "verify", "note": "판서 키 29칸·칠판 W/K·Alt+3 구현, 화면 확인 남음", "level": "mid" },
-            { "id": "4.4", "title": "휠 확대·가장자리 밀기·스마트 우클릭", "platform": "common", "days": 0.375, "status": "verify", "note": "휠 확대(첫 휠 시작 배율)·가장자리 밀기·스마트 우클릭 구현, 화면 확인 남음", "level": "hard" },
+            { "id": "4.2", "title": "DrawCanvas 렌더러 + M5(G5) 측정", "platform": "common", "days": 0.375, "status": "verify", "phase": "P5", "note": "canvasRender·DrawCanvas·Mode::Draw 진입·펜 지연 로그 끝, G5 측정(학교 PC) 남음", "level": "hard" },
+            { "id": "4.3", "title": "도구·도형·색·굵기 키, 칠판", "platform": "common", "days": 0.375, "status": "verify", "phase": "P2", "note": "판서 키 29칸·칠판 W/K·Alt+3 구현, 화면 확인 남음", "level": "mid" },
+            { "id": "4.4", "title": "휠 확대·가장자리 밀기·스마트 우클릭", "platform": "common", "days": 0.375, "status": "verify", "phase": "P2", "note": "휠 확대(첫 휠 시작 배율)·가장자리 밀기·스마트 우클릭 구현, 화면 확인 남음", "level": "hard" },
             { "id": "4.5", "title": "글자 T(IME 보호)·고르기·다시 고치기", "platform": "common", "days": 0.375, "status": "done", "note": "글자 T·IME 조합 보호·고르기·다시 고치기. 한글 실기 통과: 맥(2026-11-27, 판서·캡처 글 상자), Windows(W6 7da7852, 새 실행 3번 모두 캡처 글 상자·판서 글 상자 '안녕 12' — docs/qa/2026-11-27/win-r2feat.md)", "level": "hard" },
-            { "id": "4.6", "title": "나가기·보관·복원", "platform": "common", "days": 0.375, "status": "verify", "note": "나가기·keptInk 메모리 보관·복원(배율 맞춤·다른 모니터 거절·실행 취소 가능) 구현, 화면 확인 남음", "level": "mid" },
-            { "id": "4.7", "title": "판서 결과 복사·저장", "platform": "common", "days": 0.375, "status": "verify", "note": "복사·저장 = 늘 모니터 전체(원본 바이트 IPC), 4K 멈칫 측정 남음", "level": "easy" },
-            { "id": "4.8", "title": "판서 섬·펜 색 고리·MiniMap·칠판 미리 보기", "platform": "common", "days": 0.375, "status": "verify", "note": "판서 섬 6색·4초 물러남·커서 비킴·펜 색 고리·MiniMap·칠판 미리 보기 구현, 미리보기·화면 확인 남음", "level": "mid" },
-            { "id": "4.9", "title": "캡처 주석(R-CAP-28): 툴바 도구 = 4.1 엔진·범위 안·결과 합성·모자이크", "platform": "common", "days": 1, "status": "verify", "note": "주석 도구 8종·실행 취소·Rust 모자이크+알파 합성(복사·저장·핀), 첫 Esc = 도구 해제. 화면 확인·여러 모니터 동기화 남음", "level": "hard" }
+            { "id": "4.6", "title": "나가기·보관·복원", "platform": "common", "days": 0.375, "status": "verify", "phase": "P2", "note": "나가기·keptInk 메모리 보관·복원(배율 맞춤·다른 모니터 거절·실행 취소 가능) 구현, 화면 확인 남음", "level": "mid" },
+            { "id": "4.7", "title": "판서 결과 복사·저장", "platform": "common", "days": 0.375, "status": "verify", "phase": "P3", "note": "복사·저장 = 늘 모니터 전체(원본 바이트 IPC), 4K 멈칫 측정 남음", "level": "easy" },
+            { "id": "4.8", "title": "판서 섬·펜 색 고리·MiniMap·칠판 미리 보기", "platform": "common", "days": 0.375, "status": "verify", "phase": "P2", "note": "판서 섬 6색·4초 물러남·커서 비킴·펜 색 고리·MiniMap·칠판 미리 보기 구현, 미리보기·화면 확인 남음", "level": "mid" },
+            { "id": "4.9", "title": "캡처 주석(R-CAP-28): 툴바 도구 = 4.1 엔진·범위 안·결과 합성·모자이크", "platform": "common", "days": 1, "status": "verify", "phase": "P2", "note": "주석 도구 8종·실행 취소·Rust 모자이크+알파 합성(복사·저장·핀), 첫 Esc = 도구 해제. 화면 확인·여러 모니터 동기화 남음", "level": "hard" }
           ]
         },
         {
           "id": "s5",
           "name": "단계 5 — 실시간 확대",
           "items": [
-            { "id": "5.1", "title": "Magnifier(Magnification API)·M6", "platform": "win", "days": 0.4, "status": "verify", "note": "magnifier.rs(전용 스레드·미리 만들기·EXCLUDE 필터)·포트·유스케이스·가짜 시험, 실제 화면 확인 남음", "level": "hard" },
-            { "id": "5.2", "title": "커서 따라가기·휠 단계·배지", "platform": "common", "days": 0.4, "status": "verify", "note": "zoom.rs 추적·휠 단계·배지 + 시험, 화면 확인 남음", "level": "mid" },
-            { "id": "5.3", "title": "Alt+1 전환", "platform": "common", "days": 0.4, "status": "verify", "note": "확대 중 Alt+1 전환 FHD p95 129 ms, 4K 138 ms 통과(W16: 판서 원본을 WebView2 공유 메모리로). 남음: 맥 실측", "level": "mid" },
+            { "id": "5.1", "title": "Magnifier(Magnification API)·M6", "platform": "win", "days": 0.4, "status": "verify", "phase": "P2", "note": "magnifier.rs(전용 스레드·미리 만들기·EXCLUDE 필터)·포트·유스케이스·가짜 시험, 실제 화면 확인 남음", "level": "hard" },
+            { "id": "5.2", "title": "커서 따라가기·휠 단계·배지", "platform": "common", "days": 0.4, "status": "verify", "phase": "P2", "note": "zoom.rs 추적·휠 단계·배지 + 시험, 화면 확인 남음", "level": "mid" },
+            { "id": "5.3", "title": "Alt+1 전환", "platform": "common", "days": 0.4, "status": "verify", "phase": "P1", "note": "확대 중 Alt+1 전환 FHD p95 129 ms, 4K 138 ms 통과(W16: 판서 원본을 WebView2 공유 메모리로). 남음: 맥 실측", "level": "mid" },
             { "id": "5.4", "title": "4K 30 fps 미달 시 2안 판단", "platform": "win", "days": 0.4, "status": "done", "note": "4K 실시간 확대 앱 루프 82.5 fps(W7) — 30 fps 넘어 Magnification API 유지(2안 불필요)", "level": "mid" },
-            { "id": "5.5", "title": "확대 섬·후광·MiniMap(원본 제외)", "platform": "common", "days": 0.4, "status": "verify", "note": "ZoomHud·후광·MiniMap(원본 제외) 구현, 화면 확인 남음", "level": "mid" }
+            { "id": "5.5", "title": "확대 섬·후광·MiniMap(원본 제외)", "platform": "common", "days": 0.4, "status": "verify", "phase": "P2", "note": "ZoomHud·후광·MiniMap(원본 제외) 구현, 화면 확인 남음", "level": "mid" }
           ]
         },
         {
           "id": "s6",
           "name": "단계 6 — F2 창 캡처·F3 녹화·바로 캡처",
           "items": [
-            { "id": "6.1", "title": "F2 WGC 창 캡처·대체 경로·검은 화면 판정", "platform": "win", "days": 0.6, "status": "verify", "note": "WGC 창 캡처 첫 프레임 p95 8.2 ms(W7). 남음: 테두리 육안", "level": "hard" },
-            { "id": "6.2", "title": "바로 캡처 키(Shift+F1·Ctrl+F1·Shift+F2·Alt+F1)", "platform": "common", "days": 0.6, "status": "verify", "note": "바로 캡처 직전 범위·모니터·활성 창 복사 성공(W7). 지연 캡처는 04-screens대로 N초 뒤 범위 고르기(Enter 확정). 남음: 맥 확인", "level": "easy" },
-            { "id": "6.3", "title": "F3 범위 + Recorder", "platform": "win", "days": 0.6, "status": "verify", "note": "모니터·영역·창 녹화 1분·10분 중지·저장·재생 통과, 창 녹화 부족 10.88→0.68%·CPU 1.65%(W15 f272999). 남음: 실제 잠금·절전·모니터 분리, 맥 앱 안 F3 10분", "level": "hard" },
-            { "id": "6.4", "title": "녹화 섬·빨간 꺾쇠·트레이 빨간 점", "platform": "common", "days": 0.6, "status": "verify", "note": "녹화 섬·빨간 꺾쇠 창(캡처 제외)·트레이 빨간 점 + 창 추적 녹화 꺾쇠(맥 7b9569f: 이동·크기·최소화·다른 Space 숨김). 남음: 맥 실기, Windows 어댑터 사건", "level": "mid" },
-            { "id": "6.5", "title": "자동 중지·임시 파일 복구·마이크", "platform": "win", "days": 0.6, "status": "verify", "note": "마이크: 맥 SCStream→AAC(7b9569f)·Windows WASAPI→AAC(2a8f2df)·장치 목록 권한(9998d75). 2026-11-28 맥 실기 통과: 서명에 마이크 권리(354c412)·권한 점검 마이크 줄·기본 마이크는 SCK에 맡김(4956dcf) → 앱 안 녹화에 AAC 48 kHz 2채널 트랙. 남음: Windows 실제 녹음(입력 장치 필요), 실제 잠금·절전 자동 중지(사람)", "level": "hard" }
+            { "id": "6.1", "title": "F2 WGC 창 캡처·대체 경로·검은 화면 판정", "platform": "win", "days": 0.6, "status": "verify", "phase": "P2", "note": "WGC 창 캡처 첫 프레임 p95 8.2 ms(W7). 남음: 테두리 육안", "level": "hard" },
+            { "id": "6.2", "title": "바로 캡처 키(Shift+F1·Ctrl+F1·Shift+F2·Alt+F1)", "platform": "common", "days": 0.6, "status": "verify", "phase": "P1", "note": "바로 캡처 직전 범위·모니터·활성 창 복사 성공(W7). 지연 캡처는 04-screens대로 N초 뒤 범위 고르기(Enter 확정). 남음: 맥 확인", "level": "easy" },
+            { "id": "6.3", "title": "F3 범위 + Recorder", "platform": "win", "days": 0.6, "status": "verify", "phase": "P5", "note": "모니터·영역·창 녹화 1분·10분 중지·저장·재생 통과, 창 녹화 부족 10.88→0.68%·CPU 1.65%(W15 f272999). 맥 앱 안 F3 10분 통과(0.3.1, ed8319e 정지 화면 길이 고침). 남음: 실제 잠금·절전·모니터 분리(사람)", "level": "hard" },
+            { "id": "6.4", "title": "녹화 섬·빨간 꺾쇠·트레이 빨간 점", "platform": "common", "days": 0.6, "status": "verify", "phase": "P1", "note": "녹화 섬·빨간 꺾쇠 창(캡처 제외)·트레이 빨간 점 + 창 추적 녹화 꺾쇠(맥 7b9569f: 이동·크기·최소화·다른 Space 숨김). 남음: 맥 실기, Windows 어댑터 사건", "level": "mid" },
+            { "id": "6.5", "title": "자동 중지·임시 파일 복구·마이크", "platform": "win", "days": 0.6, "status": "verify", "phase": "P5", "note": "마이크: 맥 SCStream→AAC(7b9569f)·Windows WASAPI→AAC(2a8f2df)·장치 목록 권한(9998d75). 2026-11-28 맥 실기 통과: 서명에 마이크 권리(354c412)·권한 점검 마이크 줄·기본 마이크는 SCK에 맡김(4956dcf) → 앱 안 녹화에 AAC 48 kHz 2채널 트랙. 남음: Windows 실제 녹음(입력 장치 필요), 실제 잠금·절전 자동 중지(사람)", "level": "hard" }
           ]
         },
         {
           "id": "s65",
           "name": "단계 6.5 — 창 항상 위 고정(P1)",
           "items": [
-            { "id": "6.5.1", "title": "WindowPinner", "platform": "win", "days": 0.34, "status": "verify", "note": "시험 창 고정·풀기 100회(dce54d8). 남음: PowerToys·주요 앱 조합·관리자 권한 창(사람 승인)", "level": "mid" },
+            { "id": "6.5.1", "title": "WindowPinner", "platform": "win", "days": 0.34, "status": "verify", "phase": "P5", "note": "시험 창 고정·풀기 100회(dce54d8). 남음: PowerToys·주요 앱 조합·관리자 권한 창(사람 승인)", "level": "mid" },
             { "id": "6.5.2", "title": "테두리 창·따라가기", "platform": "win", "days": 0.33, "status": "done", "note": "실제 창 이동·크기 추적 16ms 이내, 최대화·최소화·복원 확인. F1 캡처 경로에서 주황 테두리 0픽셀", "level": "hard" },
-            { "id": "6.5.3", "title": "정리·모두 풀기", "platform": "win", "days": 0.33, "status": "verify", "note": "창 닫힘·모두 풀기·비정상 종료 정리(dce54d8). 남음: 앱 재실행 직후 안내 표시", "level": "mid" }
+            { "id": "6.5.3", "title": "정리·모두 풀기", "platform": "win", "days": 0.33, "status": "verify", "phase": "P1", "note": "창 닫힘·모두 풀기·비정상 종료 정리(dce54d8). 남음: 앱 재실행 직후 안내 표시", "level": "mid" }
           ]
         },
         {
           "id": "s7",
           "name": "단계 7 — 안정화·설치본",
           "items": [
-            { "id": "7.1", "title": "벤치 M1~M10 학교 PC·혼합 배율", "platform": "win", "days": 0.36, "status": "todo", "level": "mid" },
-            { "id": "7.2", "title": "시나리오 카드 S1~S15", "platform": "win", "days": 0.36, "status": "todo", "level": "mid" },
-            { "id": "7.3", "title": "인식 회귀·CI 기준선 고정", "platform": "common", "days": 0.36, "status": "partial", "note": "합성 사례와 Windows 실제 16종의 사례별 기준선·G3를 순수 재생으로 검사. RB-13 관리자 권한 사례 남음", "level": "easy" },
-            { "id": "7.4", "title": "200회 진입·종료(메모리·핸들)", "platform": "win", "days": 0.35, "status": "verify", "note": "Windows 캡처·판서·확대 각 200회(W8 9bf9e4c): 20회 뒤 평탄 — 누수 없음(20→200회 +0.3~4.3%). 다만 첫 사용 뒤 상주 증가(캡처 웹뷰 +572 MiB) → W17에서 숨길 때 정지 화면 자원 놓기. 남음: 맥 200회", "level": "easy" },
-            { "id": "7.5", "title": "릴리스 체크리스트(R-NET-2·R-LOG-1 등)", "platform": "win", "days": 0.35, "status": "verify", "note": "릴리스 점검표 Windows 몫(docs/release/checklist-2.md): 기록에 창 제목 0, 업데이트 끈 상태 통신 0(WebView2 백그라운드 통신 차단 5a264b6, 187초 관측 TCP·UDP 0)·맥 60초 0(1ad2dcd). 남음: 서명·설치형 MSIX 실기(사람 승인)", "level": "mid" },
-            { "id": "7.6", "title": "NSIS 설치본·포터블 ZIP", "platform": "win", "days": 0.36, "status": "verify", "note": "NSIS 설치본(5.1 MB)·포터블 ZIP(설정을 실행 파일 옆에) 생성, scripts/package-portable.ps1(4ce8bf1). 남음: 설치·제거 실기", "level": "mid" },
-            { "id": "7.7", "title": "디자인 관문(S01~S17 = v3)", "platform": "common", "days": 0.36, "status": "verify", "note": "디자인 관문 docs/qa/2026-11-27/design-gate.md(49d567a): 미리보기 168장 넘침·잘림·겹침 0. 남음: 실제 창(S07 다중 모니터·S10 둥근 귀·S11 꺾쇠·S13 확대·S15 창 고정) 눈 확인", "level": "mid" }
+            { "id": "7.1", "title": "벤치 M1~M10 학교 PC·혼합 배율", "platform": "win", "days": 0.36, "status": "todo", "phase": "P5", "level": "mid" },
+            { "id": "7.2", "title": "시나리오 카드 S1~S15", "platform": "win", "days": 0.36, "status": "todo", "phase": "P3", "level": "mid" },
+            { "id": "7.3", "title": "인식 회귀·CI 기준선 고정", "platform": "common", "days": 0.36, "status": "partial", "phase": "P3", "note": "합성 사례와 Windows 실제 16종의 사례별 기준선·G3를 순수 재생으로 검사. RB-13 관리자 권한 사례 남음", "level": "easy" },
+            { "id": "7.4", "title": "200회 진입·종료(메모리·핸들)", "platform": "win", "days": 0.35, "status": "verify", "phase": "P1", "note": "Windows 캡처·판서·확대 각 200회(W8 9bf9e4c): 20회 뒤 평탄 — 누수 없음(20→200회 +0.3~4.3%). 다만 첫 사용 뒤 상주 증가(캡처 웹뷰 +572 MiB) → W17에서 숨길 때 정지 화면 자원 놓기. 남음: 맥 200회", "level": "easy" },
+            { "id": "7.5", "title": "릴리스 체크리스트(R-NET-2·R-LOG-1 등)", "platform": "win", "days": 0.35, "status": "verify", "phase": "P4", "note": "릴리스 점검표 Windows 몫(docs/release/checklist-2.md): 기록에 창 제목 0, 업데이트 끈 상태 통신 0(WebView2 백그라운드 통신 차단 5a264b6, 187초 관측 TCP·UDP 0)·맥 60초 0(1ad2dcd). 남음: 서명·설치형 MSIX 실기(사람 승인)", "level": "mid" },
+            { "id": "7.6", "title": "NSIS 설치본·포터블 ZIP", "platform": "win", "days": 0.36, "status": "verify", "phase": "P4", "note": "NSIS 설치본(5.1 MB)·포터블 ZIP(설정을 실행 파일 옆에) 생성, scripts/package-portable.ps1(4ce8bf1). 남음: 설치·제거 실기", "level": "mid" },
+            { "id": "7.7", "title": "디자인 관문(S01~S17 = v3)", "platform": "common", "days": 0.36, "status": "verify", "phase": "P2", "note": "디자인 관문 docs/qa/2026-11-27/design-gate.md(49d567a): 미리보기 168장 넘침·잘림·겹침 0. 남음: 실제 창(S07 다중 모니터·S10 둥근 귀·S11 꺾쇠·S13 확대·S15 창 고정) 눈 확인", "level": "mid" }
           ]
         }
       ]
@@ -164,20 +171,20 @@
           "items": [
             { "id": "M1", "title": "모니터 배치·좌표 변환", "platform": "mac", "days": 0.5, "status": "done" },
             { "id": "M2", "title": "ScreenCaptureKit 캡처(우리 앱 제외)", "platform": "mac", "days": 0.5, "status": "done" },
-            { "id": "M3", "title": "커서 모양", "platform": "mac", "days": 0.25, "status": "verify", "note": "` 켜고 확정 → 결과에 커서", "level": "easy" },
-            { "id": "M4", "title": "창 목록(CGWindowList)", "platform": "mac", "days": 0.5, "status": "verify", "note": "F2로 창 강조 확인", "level": "easy" },
-            { "id": "M5", "title": "알림 덮개 거르기(D23)", "platform": "mac", "days": 0.25, "status": "verify", "level": "easy" },
-            { "id": "M6", "title": "클립보드(NSPasteboard)", "platform": "mac", "days": 0.25, "status": "verify", "note": "앱 붙여 넣기 확인", "level": "easy" },
+            { "id": "M3", "title": "커서 모양", "platform": "mac", "days": 0.25, "status": "verify", "phase": "P1", "note": "` 켜고 확정 → 결과에 커서", "level": "easy" },
+            { "id": "M4", "title": "창 목록(CGWindowList)", "platform": "mac", "days": 0.5, "status": "verify", "phase": "P1", "note": "F2로 창 강조 확인", "level": "easy" },
+            { "id": "M5", "title": "알림 덮개 거르기(D23)", "platform": "mac", "days": 0.25, "status": "verify", "phase": "P1", "level": "easy" },
+            { "id": "M6", "title": "클립보드(NSPasteboard)", "platform": "mac", "days": 0.25, "status": "verify", "phase": "P1", "note": "앱 붙여 넣기 확인", "level": "easy" },
             { "id": "M7", "title": "오버레이·네이티브 정지 화면", "platform": "mac", "days": 1, "status": "done", "note": "p50 64·p95 74 ms" },
             { "id": "M8", "title": "섬·팝오버 캡처 제외", "platform": "mac", "days": 0.25, "status": "done", "note": "CGWindowList 공유 상태로 확인(2026-11-27): 섬·트레이 팝오버·확대 HUD·녹화 범위·정지 화면 창 모두 kCGWindowSharingNone(0) — 스크린숏·화면 기록에서 빠짐", "level": "easy" },
-            { "id": "M9", "title": "AX 요소 색인", "platform": "mac", "days": 1.5, "status": "verify", "note": "ax.rs AxIndex·앱 안 A 근거: 손쉬운 사용을 켠 설치판에서 ax index 65개 20 ms(2026-11-27 기록). 남음: 실제 창에서 요소 강조 눈 확인", "level": "hard" },
-            { "id": "M10", "title": "권한 스마트 흐름(화면 기록·손쉬운 사용)", "platform": "mac", "days": 1, "status": "verify", "note": "단추 요청+설정 칸 열기·다시 시작·손쉬운 사용 1초 확인·풀림 감지·첫 실행 시트, 가짜 세계 시험 5. 서명한 .app 실기 남음", "level": "mid" },
-            { "id": "M11", "title": "시스템 사건·지역 시각", "platform": "mac", "days": 0.5, "status": "verify", "level": "easy" },
+            { "id": "M9", "title": "AX 요소 색인", "platform": "mac", "days": 1.5, "status": "verify", "phase": "P1", "note": "ax.rs AxIndex·앱 안 A 근거: 손쉬운 사용을 켠 설치판에서 ax index 65개 20 ms(2026-11-27 기록). 남음: 실제 창에서 요소 강조 눈 확인", "level": "hard" },
+            { "id": "M10", "title": "권한 스마트 흐름(화면 기록·손쉬운 사용)", "platform": "mac", "days": 1, "status": "verify", "phase": "P1", "note": "단추 요청+설정 칸 열기·다시 시작·손쉬운 사용 1초 확인·풀림 감지·첫 실행 시트, 가짜 세계 시험 5. 서명한 .app 실기 남음", "level": "mid" },
+            { "id": "M11", "title": "시스템 사건·지역 시각", "platform": "mac", "days": 0.5, "status": "verify", "phase": "P5", "level": "easy" },
             { "id": "M-drag", "title": "듀얼 모니터 넘어 끌기·섬 위치", "platform": "mac", "days": 0.5, "status": "done" },
             { "id": "M12", "title": "맥 판서·칠판 확인(Alt+1·Alt+3, 웹뷰 판서·보관·복사)", "platform": "mac", "days": 0.5, "status": "done", "note": "2026-11-26 맥 실기: 판서·칠판·보관·복원·Cmd+C·Cmd+S·도형 제안. ⌥1 바로 진입 8회 100~171 ms(중앙 약 111 ms, 목표 150 안), [그리기로] 71~82 ms. 2026-11-27 판서 글 상자 한글 실기 통과", "level": "mid" },
-            { "id": "M13", "title": "맥 실시간 확대(Magnifier 포트: SCStream → CALayer)", "platform": "mac", "days": 1.5, "status": "verify", "note": "2026-11-27: magnifier.rs(SCStream IOSurface → CALayer contentsRect, 우리 앱 제외)·wheel.rs(CGEventTap 휠·트랙패드·Esc)·확대 커서 층·HUD. 내 셸 실기: 진입 49~156 ms, 58 Hz 틱, 커서 자리 일치·Esc 뒤 커서 복구. 같은 날 공통 고도화: 1×~8× 연속 배율(한 칸 ×2^(1/8))·부드러운 전환·마우스 위치대로 따라가기(기본). 남음: 사용자 눈 확인·4K CPU·서명 앱", "level": "hard" },
+            { "id": "M13", "title": "맥 실시간 확대(Magnifier 포트: SCStream → CALayer)", "platform": "mac", "days": 1.5, "status": "verify", "phase": "P1", "note": "2026-11-27: magnifier.rs(SCStream IOSurface → CALayer contentsRect, 우리 앱 제외)·wheel.rs(CGEventTap 휠·트랙패드·Esc)·확대 커서 층·HUD. 내 셸 실기: 진입 49~156 ms, 58 Hz 틱, 커서 자리 일치·Esc 뒤 커서 복구. 같은 날 공통 고도화: 1×~8× 연속 배율(한 칸 ×2^(1/8))·부드러운 전환·마우스 위치대로 따라가기(기본). 남음: 사용자 눈 확인·4K CPU·서명 앱", "level": "hard" },
             { "id": "M14", "title": "맥 F2 창 캡처(ScreenCaptureKit 창 한 장·보호 화면 판정)", "platform": "mac", "days": 0.5, "status": "done", "note": "window_shot.rs SCK 창 하나·대체 사슬. 2026-11-28 앱 안 F2 실기(0.3.1 서명판): 시스템 설정 창 1480x1252 27~51 ms, 클립보드 RGBA PNG. 처음엔 서비스의 불투명 처리로 귀가 검게 칠해짐 → SCK 알파로 귀 반지름(42 px)을 재어 넘김(2b97296), 고친 뒤 네 귀 알파 0·경계 부드러움·창 안 불투명", "level": "mid" },
-            { "id": "M15", "title": "맥 F3 녹화(Recorder 포트: SCStream + AVAssetWriter H.264)", "platform": "mac", "days": 1.5, "status": "verify", "note": "recorder.rs SCStream→AVAssetWriter H.264 + 마이크 AAC 트랙·창 추적 꺾쇠(7b9569f). 2026-11-28 앱 안 F3 실기(0.3.1 서명판): 마이크 켜고 13초·10분 범위 녹화 저장, 10분 동안 메모리 170 MB 그대로. 정지 화면이면 SCK가 프레임을 거의 안 보내 영상 트랙이 짧던 문제(10분 → 영상 122초) 고침(ed8319e) → 20초 녹화 영상 20.85 s·소리 20.81 s. 남음: 실제 잠금·절전 자동 중지(사람), 소리·화면 입 모양 싱크 눈 확인", "level": "hard" },
+            { "id": "M15", "title": "맥 F3 녹화(Recorder 포트: SCStream + AVAssetWriter H.264)", "platform": "mac", "days": 1.5, "status": "verify", "phase": "P5", "note": "recorder.rs SCStream→AVAssetWriter H.264 + 마이크 AAC 트랙·창 추적 꺾쇠(7b9569f). 2026-11-28 앱 안 F3 실기(0.3.1 서명판): 마이크 켜고 13초·10분 범위 녹화 저장, 10분 동안 메모리 170 MB 그대로. 정지 화면이면 SCK가 프레임을 거의 안 보내 영상 트랙이 짧던 문제(10분 → 영상 122초) 고침(ed8319e) → 20초 녹화 영상 20.85 s·소리 20.81 s. 남음: 실제 잠금·절전 자동 중지(사람), 소리·화면 입 모양 싱크 눈 확인", "level": "hard" },
             { "id": "M16", "title": "맥 캡처 주석·핀·결과 섬 칩·잔상 확인", "platform": "mac", "days": 0.25, "status": "done", "note": "2026-11-26 주석·핀·칩·잔상·[판서로] 확인 + 2026-11-27 캡처 중 한글 조합 고침·실기 3/3(R2-TXT)", "level": "easy" },
             { "id": "M17", "title": "맥 첫 실행 시트 F키 안내 한 줄(fn+F1·표준 기능 키)", "platform": "mac", "days": 0.1, "status": "done", "note": "사용자 결정 #9 — 맥만 안내 상자 아래 한 줄(FirstRunSheet .ink-first-fkey), 미리보기 확인", "level": "easy" }
           ]
@@ -193,7 +200,7 @@
           "id": "mac-merge",
           "name": "통합 확인(맥 변경을 Windows에서)",
           "items": [
-            { "id": "R-win-regress", "title": "맥 변경 뒤 Windows 회귀 확인(빌드·M1·듀얼 모니터)", "platform": "win", "days": 0.25, "status": "verify", "note": "Windows 기준선(91619e7: 시험 266+390·clippy·빌드·실행) + 혼합 배율 4K 200%↔FHD 100% 실기(9070297: 결과 섬 위치·입력 복귀 고침, 범위·핀·판서·확대 통과). 남음: 1시간 대기 뒤 진입·성능 측정(W7)", "level": "easy" }
+            { "id": "R-win-regress", "title": "맥 변경 뒤 Windows 회귀 확인(빌드·M1·듀얼 모니터)", "platform": "win", "days": 0.25, "status": "verify", "phase": "P3", "note": "Windows 기준선(91619e7: 시험 266+390·clippy·빌드·실행) + 혼합 배율 4K 200%↔FHD 100% 실기(9070297: 결과 섬 위치·입력 복귀 고침, 범위·핀·판서·확대 통과). 남음: 1시간 대기 뒤 진입·성능 측정(W7)", "level": "easy" }
           ]
         }
       ]
@@ -206,12 +213,12 @@
           "id": "store",
           "name": "Microsoft Store(MSIX, 무료·무경고)",
           "items": [
-            { "id": "D1", "title": "개발자 계정(개인, 무료: 신분증·셀카)", "platform": "common", "days": 0.25, "status": "partial", "note": "게시자 표시 이름 찰떡쌤. 신분증 인증 때문에 등록 보류(사용자가 신분증 지참 후 진행)", "level": "easy" },
+            { "id": "D1", "title": "개발자 계정(개인, 무료: 신분증·셀카)", "platform": "common", "days": 0.25, "status": "partial", "phase": "P5", "note": "게시자 표시 이름 찰떡쌤. 신분증 인증 때문에 등록 보류(사용자가 신분증 지참 후 진행)", "level": "easy" },
             { "id": "D2", "title": "MSIX 포장 파이프라인(Tauri 빌드 → 매니페스트·아이콘·makeappx)", "platform": "win", "days": 1, "status": "done", "note": "scripts/package-msix.ps1 + 매니페스트 템플릿, store·direct 포장·풀기 검증 통과(서명 없음)" },
-            { "id": "D3", "title": "패키지 모드 대응: 자동 실행 StartupTask·포터블 표시 무시·저장 위치", "platform": "win", "days": 0.5, "status": "verify", "note": "패키지 판정·StartupTask·저장 위치 정적 점검·시험 14개 통과(4ce8bf1). 남음: 실제 MSIX 설치 확인(사람 승인)", "level": "mid" },
-            { "id": "D4", "title": "스토어 등록 자료(설명·스크린숏·개인정보 처리방침 URL·연령 등급)", "platform": "common", "days": 0.5, "status": "partial", "note": "초안 docs/store/microsoft-store-listing.md. 남은 것: 스크린숏(실제 화면)·로고·게시자 표시 이름", "level": "easy" },
-            { "id": "D5", "title": "인증 제출·통과", "platform": "win", "days": 0.5, "status": "todo", "level": "mid" },
-            { "id": "D6", "title": "winget(msstore) 설치 확인·학교 PC Store 허용 여부 확인", "platform": "win", "days": 0.25, "status": "partial", "note": "학교 PC 스토어 열림 확인(사용자 2026-11-26), winget 확인 남음", "level": "easy" }
+            { "id": "D3", "title": "패키지 모드 대응: 자동 실행 StartupTask·포터블 표시 무시·저장 위치", "platform": "win", "days": 0.5, "status": "verify", "phase": "P5", "note": "패키지 판정·StartupTask·저장 위치 정적 점검·시험 14개 통과(4ce8bf1). 남음: 실제 MSIX 설치 확인(사람 승인)", "level": "mid" },
+            { "id": "D4", "title": "스토어 등록 자료(설명·스크린숏·개인정보 처리방침 URL·연령 등급)", "platform": "common", "days": 0.5, "status": "partial", "phase": "P4", "note": "초안 docs/store/microsoft-store-listing.md. 남은 것: 스크린숏(실제 화면)·로고·게시자 표시 이름", "level": "easy" },
+            { "id": "D5", "title": "인증 제출·통과", "platform": "win", "days": 0.5, "status": "todo", "phase": "P5", "level": "mid" },
+            { "id": "D6", "title": "winget(msstore) 설치 확인·학교 PC Store 허용 여부 확인", "platform": "win", "days": 0.25, "status": "partial", "phase": "P5", "note": "학교 PC 스토어 열림 확인(사용자 2026-11-26), winget 확인 남음", "level": "easy" }
           ]
         },
         {
@@ -219,10 +226,10 @@
           "name": "파일 직접 공유(선택)",
           "items": [
             { "id": "D7", "title": "저장소 공개: 라이선스 → 라이선스 필드 → 공개 전환", "platform": "common", "days": 0.25, "status": "done", "note": "MIT, 2026-11-26 공개 전환" },
-            { "id": "D8", "title": "서명한 MSIX 한 파일 배포판(직접 배포 Publisher·WebView2 없을 때 안내·내려받은 파일 경고 확인)", "platform": "win", "days": 0.5, "status": "verify", "note": "무서명 MSIX 한 파일·MakeAppx unpack·WebView2 부재 안내 확인(4ce8bf1). 남음: 배포 인증서로 서명·설치·다운로드 경고 실기(사람 승인)", "level": "mid" },
-            { "id": "D9", "title": "자동 업데이트: .appinstaller 호스팅·릴리스 스크립트·실행 중 적용 시점 확인", "platform": "win", "days": 0.5, "status": "verify", "note": "업데이트 확인(latest-win.json)·.appinstaller·릴리스 초안 스크립트 scripts/release-win.ps1(74861b2). 남음: 서명한 MSIX로 실제 설치·업데이트(사람 승인)", "level": "mid" },
-            { "id": "D10", "title": "업데이트 팝업: 준비되면 바로 띄우고 클릭 한 번에 몇 초 안 설치·자동 재시작(모드·전체 화면 중엔 미룸)", "platform": "win", "days": 1, "status": "verify", "note": "새 판 알림 섬·[지금 업데이트]·모드·녹화·전체 화면 중 미룸·자동 확인 끄면 통신 0(74861b2). 남음: 실제 적용·자동 재시작 실기(사람 승인)", "level": "hard" },
-            { "id": "D11", "title": "SignPath Foundation 신청: 서명 정책 문구·GitHub Actions 릴리스 빌드·2단계 인증", "platform": "common", "days": 0.5, "status": "todo", "note": "11 §10.3, D7 다음", "level": "mid" },
+            { "id": "D8", "title": "서명한 MSIX 한 파일 배포판(직접 배포 Publisher·WebView2 없을 때 안내·내려받은 파일 경고 확인)", "platform": "win", "days": 0.5, "status": "verify", "phase": "P5", "note": "무서명 MSIX 한 파일·MakeAppx unpack·WebView2 부재 안내 확인(4ce8bf1). 남음: 배포 인증서로 서명·설치·다운로드 경고 실기(사람 승인)", "level": "mid" },
+            { "id": "D9", "title": "자동 업데이트: .appinstaller 호스팅·릴리스 스크립트·실행 중 적용 시점 확인", "platform": "win", "days": 0.5, "status": "verify", "phase": "P5", "note": "업데이트 확인(latest-win.json)·.appinstaller·릴리스 초안 스크립트 scripts/release-win.ps1(74861b2). 남음: 서명한 MSIX로 실제 설치·업데이트(사람 승인)", "level": "mid" },
+            { "id": "D10", "title": "업데이트 팝업: 준비되면 바로 띄우고 클릭 한 번에 몇 초 안 설치·자동 재시작(모드·전체 화면 중엔 미룸)", "platform": "win", "days": 1, "status": "verify", "phase": "P5", "note": "새 판 알림 섬·[지금 업데이트]·모드·녹화·전체 화면 중 미룸·자동 확인 끄면 통신 0(74861b2). 남음: 실제 적용·자동 재시작 실기(사람 승인)", "level": "hard" },
+            { "id": "D11", "title": "SignPath Foundation 신청: 서명 정책 문구·GitHub Actions 릴리스 빌드·2단계 인증", "platform": "common", "days": 0.5, "status": "todo", "phase": "P4", "note": "11 §10.3, D7 다음", "level": "mid" },
             { "id": "D12", "title": "배포 주소: GitHub Pages(개인정보 처리방침·지원) + ink.ssamuniverse.com", "platform": "common", "days": 0.5, "status": "done", "note": "2026-11-26 HTTPS 강제까지. .appinstaller 파일 올리기는 D9" }
           ]
         }
@@ -236,24 +243,43 @@
           "id": "r2-all",
           "name": "2차 요구",
           "items": [
-            {"id": "R2-KEY-REC", "title": "단축키 녹화 중 F 키가 캡처를 실행하던 버그", "platform": "common", "days": 0.25, "status": "verify", "note": "72b3ac6. 남음: 맥 fn+F1 실기", "level": "easy"},
-            {"id": "R2-I18N", "title": "영어 지원(화면·Rust·플러그인·단축키 설명)", "platform": "common", "days": 2, "status": "verify", "note": "틀 4265624, 화면·Rust 1,279키, 플러그인 글·catalog 영어판 7e6fe62, 합본 7b9b788. 남음: 영어 화면 눈 확인", "level": "mid"},
-            {"id": "R2-WORD", "title": "쉬운 말 용어 확정·적용", "platform": "common", "days": 0.5, "status": "verify", "note": "용어 확정 표(PRD §4.4) + 옮기며 적용", "level": "easy"},
-            {"id": "R2-ICON", "title": "버튼 아이콘 맞춤 세트(46종)", "platform": "common", "days": 0.5, "status": "verify", "note": "b7a97de·b76a22e", "level": "easy"},
-            {"id": "R2-UI-TB", "title": "캡처 툴바·말풍선·크기 배지", "platform": "common", "days": 0.5, "status": "verify", "note": "b7a97de. 패널이 그릴 자리를 가리던 것 고침 5eb78f7", "level": "easy"},
-            {"id": "R2-ANN", "title": "색 16·내 색·스포이트·굵기 슬라이더·미리보기", "platform": "common", "days": 1, "status": "verify", "note": "b7a97de·ea683f3(판서). 실기 남음", "level": "easy"},
-            {"id": "R2-FONT", "title": "글꼴 역할·부분 집합·크기 보정", "platform": "common", "days": 0.5, "status": "verify", "note": "320ba1e(627 KiB)", "level": "easy"},
-            {"id": "R2-UI-TRAY", "title": "트레이 팝오버 다시 디자인(Paperlogy)", "platform": "common", "days": 0.5, "status": "verify", "note": "320ba1e·9d60625", "level": "easy"},
-            {"id": "R2-BUG-TRAY", "title": "트레이가 전체 화면 앱 위에서 안 열림", "platform": "mac", "days": 0.5, "status": "done", "note": "대응 코드 + 실기(2026-11-27): 전체 화면 텍스트 편집기 위에서 트레이 팝오버가 같은 Space에 열림(on space now true)", "level": "mid"},
-            {"id": "R2-ONB", "title": "첫 실행 권한 카드 5장·설정 점검", "platform": "common", "days": 1, "status": "verify", "note": "3dbed55·756bdb4. 실기 남음", "level": "easy"},
-            {"id": "R2-HELP", "title": "사용 설명서 탭(OS별 글)·설정 찾기", "platform": "common", "days": 0.75, "status": "verify", "note": "756bdb4·b76a22e", "level": "easy"},
-            {"id": "R2-DRAW-TB", "title": "그리기·칠판 도구 막대", "platform": "common", "days": 0.75, "status": "verify", "note": "ea683f3", "level": "easy"},
-            {"id": "R2-TXT", "title": "글자 글꼴 고르기(Tidy식)·맥 한글 입력 버그", "platform": "common", "days": 1.5, "status": "done", "note": "고르기 9261699·b76a22e. 한글 조합 fc3fd52·ed5ed02·6dce869 — 실기(2026-11-27): 새로 켠 실행 3/3 캡처 글 상자 \"안녕 12\", [그리기로] 판서 글 상자도 통과", "level": "hard"},
-            {"id": "R2-PDF", "title": "내 단축키 PDF(책상 옆 한 장)", "platform": "common", "days": 1, "status": "verify", "note": "e3f50ff + save_pdf 2d71338. 앱 안 저장 실기 남음", "level": "easy"},
+            { "id": "R2-KEY-REC", "title": "단축키 녹화 중 F 키가 캡처를 실행하던 버그", "platform": "common", "days": 0.25, "status": "verify", "phase": "P1", "note": "72b3ac6. 남음: 맥 fn+F1 실기", "level": "easy" },
+            { "id": "R2-I18N", "title": "영어 지원(화면·Rust·플러그인·단축키 설명)", "platform": "common", "days": 2, "status": "verify", "phase": "P2", "note": "틀 4265624, 화면·Rust 1,279키, 플러그인 글·catalog 영어판 7e6fe62, 합본 7b9b788. 남음: 영어 화면 눈 확인", "level": "mid" },
+            { "id": "R2-WORD", "title": "쉬운 말 용어 확정·적용", "platform": "common", "days": 0.5, "status": "verify", "phase": "P2", "note": "용어 확정 표(PRD §4.4) + 옮기며 적용", "level": "easy" },
+            { "id": "R2-ICON", "title": "버튼 아이콘 맞춤 세트(46종)", "platform": "common", "days": 0.5, "status": "verify", "phase": "P2", "note": "b7a97de·b76a22e", "level": "easy" },
+            { "id": "R2-UI-TB", "title": "캡처 툴바·말풍선·크기 배지", "platform": "common", "days": 0.5, "status": "verify", "phase": "P2", "note": "b7a97de. 패널이 그릴 자리를 가리던 것 고침 5eb78f7", "level": "easy" },
+            { "id": "R2-ANN", "title": "색 16·내 색·스포이트·굵기 슬라이더·미리보기", "platform": "common", "days": 1, "status": "verify", "phase": "P2", "note": "b7a97de·ea683f3(판서). 실기 남음", "level": "easy" },
+            { "id": "R2-FONT", "title": "글꼴 역할·부분 집합·크기 보정", "platform": "common", "days": 0.5, "status": "verify", "phase": "P2", "note": "320ba1e(627 KiB)", "level": "easy" },
+            { "id": "R2-UI-TRAY", "title": "트레이 팝오버 다시 디자인(Paperlogy)", "platform": "common", "days": 0.5, "status": "verify", "phase": "P2", "note": "320ba1e·9d60625", "level": "easy" },
+            { "id": "R2-BUG-TRAY", "title": "트레이가 전체 화면 앱 위에서 안 열림", "platform": "mac", "days": 0.5, "status": "done", "note": "대응 코드 + 실기(2026-11-27): 전체 화면 텍스트 편집기 위에서 트레이 팝오버가 같은 Space에 열림(on space now true)", "level": "mid" },
+            { "id": "R2-ONB", "title": "첫 실행 권한 카드 5장·설정 점검", "platform": "common", "days": 1, "status": "verify", "phase": "P2", "note": "3dbed55·756bdb4. 실기 남음", "level": "easy" },
+            { "id": "R2-HELP", "title": "사용 설명서 탭(OS별 글)·설정 찾기", "platform": "common", "days": 0.75, "status": "verify", "phase": "P2", "note": "756bdb4·b76a22e", "level": "easy" },
+            { "id": "R2-DRAW-TB", "title": "그리기·칠판 도구 막대", "platform": "common", "days": 0.75, "status": "verify", "phase": "P2", "note": "ea683f3", "level": "easy" },
+            { "id": "R2-TXT", "title": "글자 글꼴 고르기(Tidy식)·맥 한글 입력 버그", "platform": "common", "days": 1.5, "status": "done", "note": "고르기 9261699·b76a22e. 한글 조합 fc3fd52·ed5ed02·6dce869 — 실기(2026-11-27): 새로 켠 실행 3/3 캡처 글 상자 \"안녕 12\", [그리기로] 판서 글 상자도 통과", "level": "hard" },
+            { "id": "R2-PDF", "title": "내 단축키 PDF(책상 옆 한 장)", "platform": "common", "days": 1, "status": "verify", "phase": "P1", "note": "e3f50ff + save_pdf 2d71338. 앱 안 저장 실기 남음", "level": "easy" },
             { "id": "R2-UPD", "title": "자동 업데이트(맥 OS 도구 + 같은 인증서 확인)", "platform": "mac", "days": 1.5, "status": "done", "note": "맥 실기(2026-11-27): 설치판 0.2.0이 공개된 v0.3.0을 받아 sha256·같은 인증서 확인 → [지금 업데이트] → 바꿔 끼우고 다시 켜짐(update installed 0.3.0 — relaunching, 시작 222 ms)", "level": "mid" },
-            {"id": "R2-OSFIT", "title": "맥·Windows 맞춤 글·표기 검사", "platform": "common", "days": 1, "status": "verify", "note": "표기 34건 고침, OS 변형 키(~mac·~win), 자동 검사 ee71193(R2-OSFIT-3)", "level": "mid"},
-            {"id": "R2-CAP", "title": "스마트 캡처 가림 인지", "platform": "common", "days": 1.5, "status": "verify", "note": "924a904·585073e·e4d14ab·27a353e — 합성 사례 16/16(가림+여백 cap15·16 포함), 다중 모니터 주석 동기화 ead3814. 남음: 고친 뒤 실제 창 재확인", "level": "hard"},
-            {"id": "R2-EXTRA", "title": "덧붙인 개선(기록 묶기·되살리기·추천 묶음·연습 카드 등)", "platform": "common", "days": 2, "status": "verify", "note": "A11Y·추천 묶음·연습 afee97e, 되살리기·기록 묶기 b7a6b31, 스냅숏·성능·점검표 03947df, 최근 목록 fcbebff, 검토 수정 e4d14ab·6dce869. 실기: 되살리기·최근 목록 통과. 남음: 연습 카드·기록 묶기 zip 눈 확인", "level": "mid"}
+            { "id": "R2-OSFIT", "title": "맥·Windows 맞춤 글·표기 검사", "platform": "common", "days": 1, "status": "verify", "phase": "P2", "note": "표기 34건 고침, OS 변형 키(~mac·~win), 자동 검사 ee71193(R2-OSFIT-3)", "level": "mid" },
+            { "id": "R2-CAP", "title": "스마트 캡처 가림 인지", "platform": "common", "days": 1.5, "status": "verify", "phase": "P2", "note": "924a904·585073e·e4d14ab·27a353e — 합성 사례 16/16(가림+여백 cap15·16 포함), 다중 모니터 주석 동기화 ead3814. 남음: 고친 뒤 실제 창 재확인", "level": "hard" },
+            { "id": "R2-EXTRA", "title": "덧붙인 개선(기록 묶기·되살리기·추천 묶음·연습 카드 등)", "platform": "common", "days": 2, "status": "verify", "phase": "P2", "note": "A11Y·추천 묶음·연습 afee97e, 되살리기·기록 묶기 b7a6b31, 스냅숏·성능·점검표 03947df, 최근 목록 fcbebff, 검토 수정 e4d14ab·6dce869. 실기: 되살리기·최근 목록 통과. 남음: 연습 카드·기록 묶기 zip 눈 확인", "level": "mid" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "r3",
+      "name": "3차 마무리(PRD-3차) — 새 일",
+      "groups": [
+        {
+          "id": "r3-new",
+          "name": "3차에서 새로 생긴 일",
+          "items": [
+            { "id": "3-MEM-W", "title": "Windows 대기 메모리 줄이기(합산 작업 집합 ≤ 550 MiB, M1 유지)", "platform": "win", "days": 0.75, "status": "todo", "phase": "P1", "note": "지금 중앙값 786 MiB(4K+FHD, 10분). 숨긴 웹뷰 메모리 목표 낮추기·드문 화면 늦게 만들기. PRD-3차 D3-1", "level": "hard" },
+            { "id": "3-MAC-IDLE", "title": "맥 대기 자원·시작 기준선(본체 + 웹 화면 합산 10분)", "platform": "mac", "days": 0.25, "status": "todo", "phase": "P1", "level": "easy" },
+            { "id": "3-CHECKLIST", "title": "화면 점검표(두 OS 실제 창: 넘침·잘림·겹침·OS 표기·영어)", "platform": "common", "days": 0.25, "status": "todo", "phase": "P2", "level": "easy" },
+            { "id": "3-REL-032", "title": "0.3.2 릴리스(1·2단계 고침, 맥 자동 업데이트 확인)", "platform": "common", "days": 0.25, "status": "todo", "phase": "P2", "level": "easy" },
+            { "id": "3-RECOG", "title": "인식 적중률 올리기(실제 287점 재생 Top-1 ≥ 85%·Top-3 ≥ 93%, 회귀 없음)", "platform": "common", "days": 2, "status": "todo", "phase": "P3", "note": "지금 75.6%·87.5%. 놓친 점이 RB-12(200%)·RB-04·RB-18·RB-14에 몰림", "level": "hard" },
+            { "id": "3-HOLDOUT", "title": "새 장면 인식 확인(287점에 안 쓴 ≥ 60점, Top-1 ≥ 80%)", "platform": "win", "days": 0.5, "status": "todo", "phase": "P3", "level": "mid" },
+            { "id": "3-REL-040", "title": "0.4.0 릴리스(인식·배포 준비)", "platform": "common", "days": 0.25, "status": "todo", "phase": "P4", "level": "easy" }
           ]
         }
       ]
