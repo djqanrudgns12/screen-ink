@@ -70,7 +70,10 @@ fn 고정_풀기_모두풀기_창닫힘_시작정리_흐름() {
     svc.start();
     svc.tick();
     svc.announce_topmost_cleanup();
-    assert_eq!(w.last_island().unwrap().text, "지난번에 고정한 창 1개를 풀었어요");
+    assert_eq!(w.last_island().unwrap().text, "창 고정이 풀렸어요");
+    let notices = w.islands().len();
+    svc.announce_topmost_cleanup();
+    assert_eq!(w.islands().len(), notices);
     assert_eq!(svc.on_hotkey("topmost"), HotkeyOutcome::Topmost);
     assert_eq!(svc.state().pinned_count, 1);
     assert_eq!(w.last_island().unwrap().text, "‘Chrome’을 맨 위에 고정했어요");
@@ -99,4 +102,28 @@ fn 고정_풀기_모두풀기_창닫힘_시작정리_흐름() {
     svc.toggle_topmost();
     assert_eq!(w.last_island().unwrap().text, "관리자 권한 창이라 고정할 수 없어요");
     assert_eq!(svc.state().pinned_count, 0);
+}
+
+#[test]
+fn 정상_종료와_모두_풀기_뒤에는_시작_정리_안내가_없다() {
+    for announce in [false, true] {
+        let p = Pinner::default();
+        let w = FakeWorld::new();
+        let mut svc = InkService::new(w.ports(), Platform::Win, "시험");
+        svc.set_window_pinner(Box::new(p.clone()));
+        svc.start();
+        svc.toggle_topmost();
+        assert_eq!(svc.state().pinned_count, 1);
+        svc.unpin_all(announce);
+        assert_eq!(svc.state().pinned_count, 0);
+
+        let restarted = FakeWorld::new();
+        let mut svc = InkService::new(restarted.ports(), Platform::Win, "시험");
+        svc.set_window_pinner(Box::new(p));
+        svc.cleanup_on_start();
+        svc.start();
+        let notices = restarted.islands().len();
+        svc.announce_topmost_cleanup();
+        assert_eq!(restarted.islands().len(), notices);
+    }
 }

@@ -40,7 +40,7 @@ impl InkService {
     pub fn announce_topmost_cleanup(&mut self) {
         let cleaned = std::mem::take(&mut self.topmost.cleaned);
         if cleaned > 0 {
-            self.pin_notice(self.tp("topmost.cleaned", cleaned as u64));
+            self.island(IslandEvent::new(IslandKind::Info, self.tp("topmost.cleaned", cleaned as u64)).variant("pin").duration_ms(3000));
         }
     }
 

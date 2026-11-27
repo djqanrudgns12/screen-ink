@@ -10,7 +10,7 @@
   "topmost.releaseFailed": "일부 창의 고정을 풀 수 없어요",
   "topmost.releasedAll.one": "고정한 창 {n}개를 풀었어요",
   "topmost.releasedAll.other": "고정한 창 {n}개를 풀었어요",
-  "topmost.cleaned.one": "지난번에 고정한 창 {n}개를 풀었어요",
-  "topmost.cleaned.other": "지난번에 고정한 창 {n}개를 풀었어요",
+  "topmost.cleaned.one": "창 고정이 풀렸어요",
+  "topmost.cleaned.other": "창 고정이 풀렸어요",
   "topmost.trayRelease": "고정한 창 모두 풀기 ({n})"
 }

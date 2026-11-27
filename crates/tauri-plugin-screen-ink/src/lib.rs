@@ -1886,8 +1886,6 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String, id: Option<u64>) -> 
             app.run_on_main_thread(move || h.state::<Ink>().lock().capture_to_draw_at(pressed)).map_err(|e| e.to_string())?;
         }
         "app.quit" => {
-            #[cfg(windows)]
-            app.state::<Ink>().lock().unpin_all(false);
             let _ = app.global_shortcut().unregister_all();
             app.exit(0);
         }
@@ -2372,6 +2370,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .register_uri_scheme_protocol(overlay::SCHEME, |ctx, req| overlay::serve(ctx, req))
         .setup(|app, _api| setup(app))
         .on_event(|_app, event| {
+            // 창 고정은 종료 이벤트를 받는 메인 스레드에서만 푼다.
             #[cfg(windows)]
             if matches!(event, RunEvent::ExitRequested { code: Some(_), .. } | RunEvent::Exit) {
                 if let Some(ink) = _app.try_state::<Ink>() { ink.lock().unpin_all(false); }

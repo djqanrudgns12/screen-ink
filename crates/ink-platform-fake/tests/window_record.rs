@@ -511,7 +511,7 @@ fn 창_추적_녹화_꺾쇠_이동_숨김_및_미지원_어댑터() {
     let w = FakeWorld::new();
     let mut s = service(&w);
 
-    // 어댑터가 window_rect 사건을 내지 않으면(예: Windows) 지금처럼 꺾쇠 없음 유지
+    // 어댑터에서 위치가 아직 오지 않은 동안에는 꺾쇠를 표시하지 않는다.
     s.on_hotkey("record");
     s.capture_input(CaptureInput::Move { x: 420, y: 320 });
     click(&mut s, 420, 320);
@@ -527,8 +527,12 @@ fn 창_추적_녹화_꺾쇠_이동_숨김_및_미지원_어댑터() {
     s.tick();
     w.recorder.0.lock().unwrap().window_rect = Some(Some(r2));
     s.tick();
-    s.on_tracked_window_rect(None);
-    s.on_tracked_window_rect(Some(r1));
+    w.recorder.0.lock().unwrap().window_rect = Some(None);
+    s.tick();
+    w.recorder.0.lock().unwrap().window_rect = Some(None);
+    s.tick();
+    w.recorder.0.lock().unwrap().window_rect = Some(Some(r1));
+    s.tick();
     assert_eq!(w.notifier.0.lock().unwrap().record_frames, vec![Some(r1), Some(r2), None, Some(r1)]);
 
     // 중지 뒤에는 무시

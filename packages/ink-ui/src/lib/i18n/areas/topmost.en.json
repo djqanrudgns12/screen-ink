@@ -10,7 +10,7 @@
   "topmost.releaseFailed": "Some windows couldn’t be unpinned",
   "topmost.releasedAll.one": "Unpinned {n} window",
   "topmost.releasedAll.other": "Unpinned {n} windows",
-  "topmost.cleaned.one": "Unpinned {n} window from last time",
-  "topmost.cleaned.other": "Unpinned {n} windows from last time",
+  "topmost.cleaned.one": "Your window pin was removed",
+  "topmost.cleaned.other": "Your window pins were removed",
   "topmost.trayRelease": "Unpin all windows ({n})"
 }

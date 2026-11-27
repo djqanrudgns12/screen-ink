@@ -449,7 +449,7 @@ impl InkService {
         self.emit_state();
     }
 
-    /// 창 추적 녹화 중 대상 창의 화면 자리 변화(`Some(rect)` = 표시/이동, `None` = 최소화·다른 Space 숨김).
+    /// 창 추적 녹화 중 대상 창의 화면 자리 변화(`Some(rect)` = 표시/이동, `None` = 최소화·다른 데스크톱/Space로 숨김).
     pub fn on_tracked_window_rect(&mut self, rect: Option<PhysRect>) {
         if self.rec.phase != RecPhase::Recording || !matches!(self.rec.target, Some(RecTarget::Window { .. })) {
             return;

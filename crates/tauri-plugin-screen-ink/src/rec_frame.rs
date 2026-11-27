@@ -16,7 +16,12 @@ const EVT_REC_FRAME: &str = "screen-ink://recframe";
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct Shown {
     rect: PhysRect,
+    #[cfg(not(windows))]
     monitor_id: Option<u32>,
+    #[cfg(windows)]
+    bounds: PhysRect,
+    #[cfg(windows)]
+    tracking: bool,
 }
 
 /// 지금 보이는 범위와 모니터(같으면 다시 하지 않는다).
@@ -45,6 +50,8 @@ struct FramePlace {
     y: f64,
     width: f64,
     height: f64,
+    #[cfg(windows)]
+    aligned: bool,
 }
 
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
@@ -75,6 +82,9 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 /// 창 추적(`window`) 중에는 상태 틱마다 덮지 않고 `Notifier::record_frame` → `set_rect`만 따른다.
 pub fn sync<R: Runtime>(app: &AppHandle<R>, rec: &ink_app::state::Recording) {
     if let SyncAction::Set(want) = sync_action(rec.active, rec.target, rec.rect) {
+        #[cfg(windows)]
+        queue_windows_rect(app, want.map(|r| (r, false)));
+        #[cfg(not(windows))]
         set_rect(app, want);
     }
 }
@@ -82,34 +92,77 @@ pub fn sync<R: Runtime>(app: &AppHandle<R>, rec: &ink_app::state::Recording) {
 /// 녹화 꺾쇠 창의 범위·보임 상태를 맞춘다(`None` = 숨김).
 pub fn set_rect<R: Runtime>(app: &AppHandle<R>, want: Option<PhysRect>) {
     #[cfg(windows)]
-    {
-        struct Request {
-            rect: Option<PhysRect>,
-            queued: bool,
-        }
-        static REQUEST: Mutex<Request> = Mutex::new(Request { rect: None, queued: false });
-        let mut request = REQUEST.lock().unwrap_or_else(|e| e.into_inner());
-        let previous = std::mem::replace(&mut request.rect, want);
-        if request.queued || (previous == want && SHOWN.lock().unwrap_or_else(|e| e.into_inner()).map(|s| s.rect) == want) {
-            return;
-        }
-        request.queued = true;
-        drop(request);
-        // 서비스 알림 안에서 창을 옮기면 WebView2가 서비스 잠금에 재진입한다.
-        // 시작 직후 중지하거나 창이 연달아 움직여도 마지막 요청만 반영한다.
-        crate::overlay::defer(app, |app| {
-            let rect = {
-                let mut request = REQUEST.lock().unwrap_or_else(|e| e.into_inner());
-                request.queued = false;
-                request.rect
-            };
-            apply_rect(app, rect);
-        });
-    }
+    queue_windows_rect(app, want.map(|r| (r, true)));
     #[cfg(not(windows))]
     apply_rect(app, want);
 }
 
+#[cfg(windows)]
+fn queue_windows_rect<R: Runtime>(app: &AppHandle<R>, want: Option<(PhysRect, bool)>) {
+    struct Request {
+        frame: Option<(PhysRect, bool)>,
+        queued: bool,
+    }
+    static REQUEST: Mutex<Request> = Mutex::new(Request { frame: None, queued: false });
+    let mut request = REQUEST.lock().unwrap_or_else(|e| e.into_inner());
+    let previous = std::mem::replace(&mut request.frame, want);
+    if request.queued || (previous == want && SHOWN.lock().unwrap_or_else(|e| e.into_inner()).map(|s| (s.rect, s.tracking)) == want) {
+        return;
+    }
+    request.queued = true;
+    drop(request);
+    // 서비스 잠금을 놓고 창을 옮긴다. 그사이 새 요청이 오면 마지막 요청만 반영한다.
+    crate::overlay::defer(app, |app| {
+        let frame = {
+            let mut request = REQUEST.lock().unwrap_or_else(|e| e.into_inner());
+            request.queued = false;
+            request.frame
+        };
+        apply_windows_rect(app, frame);
+    });
+}
+
+#[cfg(windows)]
+fn apply_windows_rect<R: Runtime>(app: &AppHandle<R>, frame: Option<(PhysRect, bool)>) {
+    let Some(w) = app.get_webview_window(REC_FRAME) else { return };
+    let Ok(hwnd) = w.hwnd() else { return };
+    let prev = *SHOWN.lock().unwrap_or_else(|e| e.into_inner());
+    let next = frame.and_then(|(rect, tracking)| {
+        let bounds = if tracking {
+            // 두 모니터에 걸친 창도 양쪽 꺾쇠가 보이도록 겹치는 모니터를 함께 덮는다.
+            ink_platform_windows::screen::monitor_layout().monitors.into_iter()
+                .map(|m| m.bounds)
+                .filter(|b| b.intersect(&rect).is_some())
+                .reduce(|a, b| a.union(&b))?
+        } else {
+            let m = w.monitor_from_point((rect.x + rect.w / 2) as f64, (rect.y + rect.h / 2) as f64).ok().flatten()?;
+            PhysRect::new(m.position().x, m.position().y, m.size().width as i32, m.size().height as i32)
+        };
+        Some(Shown { rect, bounds, tracking })
+    });
+    if next == prev {
+        return;
+    }
+    let Some(Shown { rect, bounds, tracking }) = next else {
+        ink_platform_windows::events::set_window_shown(hwnd.0 as isize, false);
+        *SHOWN.lock().unwrap_or_else(|e| e.into_inner()) = None;
+        return;
+    };
+    if prev.map(|s| s.bounds) != Some(bounds) {
+        let _ = w.set_position(PhysicalPosition::new(bounds.x, bounds.y));
+        let _ = w.set_size(PhysicalSize::new(bounds.w as u32, bounds.h as u32));
+    }
+    // 두 모니터에 걸쳐도 좌표는 웹뷰 창 한 개의 물리 원점과 실제 배율로 바꾼다.
+    let Ok(pos) = w.inner_position() else { return };
+    let Ok(scale) = w.scale_factor() else { return };
+    let place = FramePlace { x: (rect.x - pos.x) as f64 / scale, y: (rect.y - pos.y) as f64 / scale, width: rect.w as f64 / scale, height: rect.h as f64 / scale, aligned: tracking };
+    let _ = app.emit_to(REC_FRAME, EVT_REC_FRAME, place);
+    if prev.is_some() || ink_platform_windows::events::set_window_shown(hwnd.0 as isize, true) {
+        *SHOWN.lock().unwrap_or_else(|e| e.into_inner()) = next;
+    }
+}
+
+#[cfg(not(windows))]
 fn apply_rect<R: Runtime>(app: &AppHandle<R>, want: Option<PhysRect>) {
     let prev_monitor = {
         let mut shown = SHOWN.lock().unwrap_or_else(|e| e.into_inner());
@@ -123,12 +176,6 @@ fn apply_rect<R: Runtime>(app: &AppHandle<R>, want: Option<PhysRect>) {
     };
     let Some(w) = app.get_webview_window(REC_FRAME) else { return };
     let Some(r) = want else {
-        #[cfg(windows)]
-        if let Ok(h) = w.hwnd() {
-            // 표시할 때와 같은 네이티브 창을 숨긴다. 웹뷰의 표시 상태는 따로 갱신되지 않는다.
-            ink_platform_windows::events::set_window_shown(h.0 as isize, false);
-            return;
-        }
         let _ = w.hide();
         return;
     };
@@ -163,12 +210,6 @@ fn apply_rect<R: Runtime>(app: &AppHandle<R>, want: Option<PhysRect>) {
     let _ = w.set_size(PhysicalSize::new(size.width, size.height));
     let place = FramePlace { x: (r.x - pos.x) as f64 / scale, y: (r.y - pos.y) as f64 / scale, width: r.w as f64 / scale, height: r.h as f64 / scale };
     let _ = app.emit_to(REC_FRAME, EVT_REC_FRAME, place);
-    #[cfg(windows)]
-    if let Ok(h) = w.hwnd() {
-        // 활성화하지 않고 맨 위에(녹화 대상 앱이 포커스를 잃지 않게)
-        ink_platform_windows::events::set_window_shown(h.0 as isize, true);
-        return;
-    }
     let _ = w.show();
 }
 

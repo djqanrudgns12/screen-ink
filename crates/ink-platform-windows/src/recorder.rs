@@ -11,7 +11,9 @@
 
 use crate::gpu::{self, Gpu};
 use crate::microphone::{self, Microphone};
+use crate::screen::{cloaked, frame_bounds};
 use ink_app::{MicAccess, RecStartOpts, RecStats, Recorder, SavedFile, REC_ENCODER_FAILED, REC_WINDOW_CLOSED};
+use ink_domain::geometry::PhysRect;
 use ink_domain::naming;
 use ink_domain::recording::{self, Leftover, RecTarget};
 use std::ffi::c_void;
@@ -36,6 +38,7 @@ use windows::Win32::System::Performance::{QueryPerformanceCounter, QueryPerforma
 use windows::Win32::System::WinRT::Direct3D11::IDirect3DDxgiInterfaceAccess;
 use windows::Win32::System::WinRT::Graphics::Capture::IGraphicsCaptureItemInterop;
 use windows::Win32::System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED};
+use windows_sys::Win32::UI::WindowsAndMessaging::{IsIconic, IsWindow, IsWindowVisible};
 
 /// 우리 텍스처 링 크기(spikes §2 함정 4).
 const RING: usize = 8;
@@ -80,6 +83,31 @@ struct Live {
     stop: Arc<AtomicBool>,
     thread: Option<JoinHandle<Result<RecStats, String>>>,
     temp: PathBuf,
+    window: Option<TrackedWindow>,
+}
+
+struct TrackedWindow {
+    handle: u64,
+    last: Option<Option<PhysRect>>,
+}
+
+impl TrackedWindow {
+    fn take_rect(&mut self) -> Option<Option<PhysRect>> {
+        let hwnd = self.handle as usize as *mut c_void;
+        // WGC가 새 프레임을 보내지 않아도 현재 보임 상태와 물리 경계를 읽는다.
+        let rect = if unsafe { IsWindowVisible(hwnd) != 0 && IsIconic(hwnd) == 0 } && !cloaked(hwnd) {
+            frame_bounds(hwnd)
+                .map(|r| PhysRect::from_edges(r.left, r.top, r.right, r.bottom))
+                .filter(|r| !r.is_empty())
+        } else {
+            None
+        };
+        if self.last == Some(rect) {
+            return None;
+        }
+        self.last = Some(rect);
+        Some(rect)
+    }
 }
 
 /// `Recorder` 구현(Windows). `temp_dir` = `%TEMP%\shookshok`, `default_folder` = 저장 폴더가 비었을 때(사진\shookshok).
@@ -174,12 +202,16 @@ impl Recorder for WinRecorder {
         let stop = Arc::new(AtomicBool::new(false));
         let (ready_tx, ready_rx) = channel();
         let temp = opts.temp_path.clone();
+        let window = match &opts.target {
+            RecTarget::Window { handle, .. } => Some(TrackedWindow { handle: *handle, last: None }),
+            _ => None,
+        };
         let (stop2, shared2) = (stop.clone(), shared.clone());
         let timeout = if opts.mic_device.is_some() { Duration::from_secs(10) } else { START_TIMEOUT };
         let thread = std::thread::Builder::new().name("shookshok-rec".into()).spawn(move || run(opts, stop2, shared2, ready_tx)).map_err(|e| e.to_string())?;
         match ready_rx.recv_timeout(timeout) {
             Ok(Ok(())) => {
-                self.live = Some(Live { stop, thread: Some(thread), temp });
+                self.live = Some(Live { stop, thread: Some(thread), temp, window });
                 Ok(())
             }
             Ok(Err(e)) => {
@@ -215,6 +247,10 @@ impl Recorder for WinRecorder {
 
     fn take_failure(&mut self) -> Option<String> {
         self.shared.failure.lock().unwrap_or_else(|e| e.into_inner()).take()
+    }
+
+    fn take_window_rect(&mut self) -> Option<Option<PhysRect>> {
+        self.live.as_mut()?.window.as_mut()?.take_rect()
     }
 
     fn temp_dir(&self) -> Option<PathBuf> {
@@ -520,9 +556,7 @@ fn record(opts: &RecStartOpts, src: &Source, stop: &AtomicBool, shared: &Shared,
 
     while !stop.load(Ordering::SeqCst) {
         // 창을 닫은 뒤 WGC 알림이 늦어져도 마이크가 계속 녹음되지 않게 한다.
-        let gone = matches!(opts.target, RecTarget::Window { handle, .. } if unsafe {
-            windows_sys::Win32::UI::WindowsAndMessaging::IsWindow(handle as usize as *mut c_void) == 0
-        });
+        let gone = matches!(opts.target, RecTarget::Window { handle, .. } if unsafe { IsWindow(handle as usize as *mut c_void) == 0 });
         if gone || src.closed.load(Ordering::SeqCst) {
             *shared.failure.lock().unwrap_or_else(|e| e.into_inner()) = Some(REC_WINDOW_CLOSED.into());
             break;

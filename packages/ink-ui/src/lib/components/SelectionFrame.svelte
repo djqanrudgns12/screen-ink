@@ -12,6 +12,7 @@
    *   state?: 'picking' | 'confirmed' | 'recording' | 'afterimage',
    *   scrim?: boolean,
    *   instant?: boolean,
+   *   aligned?: boolean,
    *   label?: string,
    *   class?: string,
    * }}
@@ -24,6 +25,7 @@
     state: frameState = 'picking',
     scrim = true,
     instant = false,
+    aligned = false,
     label = undefined,
     class: className = '',
   } = $props();
@@ -36,6 +38,8 @@
   let svgW = $derived(safeW + pad * 2);
   let svgH = $derived(safeH + pad * 2);
   let arm = $derived(Math.min(14, Math.floor(Math.min(safeW, safeH) / 3)));
+  // 창 추적 녹화에서는 꺾쇠 선의 중심을 창 경계에 놓는다.
+  let corner = $derived(aligned ? pad : 1);
   let borderInset = $derived(Math.min(0.75, safeW / 2, safeH / 2));
 </script>
 
@@ -73,7 +77,7 @@
       {/if}
       {#if arm > 0}
         <path
-          d={`M1 ${1 + arm}V1h${arm}M${svgW - 1 - arm} 1h${arm}v${arm}M${svgW - 1} ${svgH - 1 - arm}v${arm}h${-arm}M${1 + arm} ${svgH - 1}H1v${-arm}`}
+          d={`M${corner} ${corner + arm}V${corner}h${arm}M${svgW - corner - arm} ${corner}h${arm}v${arm}M${svgW - corner} ${svgH - corner - arm}v${arm}h${-arm}M${corner + arm} ${svgH - corner}H${corner}v${-arm}`}
           fill="none"
           stroke={frameState === 'recording' ? 'var(--ink-danger)' : 'var(--ink-accent)'}
           stroke-width="2.5"
