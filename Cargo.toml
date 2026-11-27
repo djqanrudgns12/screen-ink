@@ -25,7 +25,6 @@ log = "0.4"
 ink-domain = { path = "crates/ink-domain" }
 ink-app = { path = "crates/ink-app" }
 ink-store = { path = "crates/ink-store" }
-ink-platform-fake = { path = "crates/ink-platform-fake" }
 ink-platform-windows = { path = "crates/ink-platform-windows" }
 ink-platform-macos = { path = "crates/ink-platform-macos" }
 ink-vision = { path = "crates/ink-vision" }
