@@ -600,6 +600,10 @@
     flex: none;
   }
 
+  .ink-fp-search:focus-within {
+    box-shadow: inset 0 -1.5px 0 var(--ink-focus-ring);
+  }
+
   .ink-fp-search-input {
     flex: 1;
     min-width: 0;
@@ -627,6 +631,12 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+  }
+
+  .ink-fp-search-clear:focus-visible,
+  .ink-fp-tab:focus-visible {
+    outline: 2px solid var(--ink-focus-ring);
+    outline-offset: 1px;
   }
 
   .ink-fp-tabs {

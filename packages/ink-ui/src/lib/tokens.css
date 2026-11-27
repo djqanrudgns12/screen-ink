@@ -20,11 +20,12 @@
   --ink-invert: #1A1A1A;
   --ink-on-invert: #FAFAF8;
   --ink-accent: #FF9F0A;
-  --ink-accent-icon: #D97706;
+  --ink-accent-icon: #C46B00;
   --ink-accent-text: #9A5B00;
+  --ink-focus-ring: var(--ink-accent-icon);
   --ink-attn: #C76400;
   --ink-accent-soft: #FFF3E0;
-  --ink-ok: #2E9E6A;
+  --ink-ok: #278F5F;
   --ink-danger: #E5484D;
   --ink-island: #000000;
   --ink-scrim: rgba(12, 12, 14, 0.5);
@@ -73,7 +74,7 @@
   --ink-island-muted: #1C1D21;
   --ink-island-text: #F7F8FA;
   --ink-island-text-2: #C9CCD3;
-  --ink-island-sub: #8E939E;
+  --ink-island-sub: #969BA6;
   --ink-island-accent-text: #FFB340;
   --ink-island-key-bg: #2C2E35;
   --ink-island-btn-bg: #F7F8FA;
@@ -166,12 +167,13 @@
   --ink-hair: #24252A;
   --ink-text: #F7F8FA;
   --ink-text-2: #C9CCD3;
-  --ink-sub: #8E939E;
+  --ink-sub: #969BA6;
   --ink-invert: #F7F8FA;
   --ink-on-invert: #111315;
   --ink-accent: #FF9F0A;
   --ink-accent-icon: #FF9F0A;
   --ink-accent-text: #FFB340;
+  --ink-focus-ring: var(--ink-accent);
   --ink-attn: #FF9F0A;
   --ink-accent-soft: rgba(255, 159, 10, 0.14);
   --ink-ok: #3DD68C;
@@ -185,7 +187,7 @@
   --ink-group-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   --ink-hover: #26272C;
   --ink-press: #2C2E35;
-  --ink-muted: #5C606B;
+  --ink-muted: #727785;
   --ink-line-strong: #2C2E35;
   --ink-line-soft: #2C2E35;
   --ink-rec-bg: rgba(255, 159, 10, 0.14);
@@ -255,12 +257,13 @@
     --ink-hair: #24252A;
     --ink-text: #F7F8FA;
     --ink-text-2: #C9CCD3;
-    --ink-sub: #8E939E;
+    --ink-sub: #969BA6;
     --ink-invert: #F7F8FA;
     --ink-on-invert: #111315;
     --ink-accent: #FF9F0A;
     --ink-accent-icon: #FF9F0A;
     --ink-accent-text: #FFB340;
+    --ink-focus-ring: var(--ink-accent);
     --ink-attn: #FF9F0A;
     --ink-accent-soft: rgba(255, 159, 10, 0.14);
     --ink-ok: #3DD68C;
@@ -274,7 +277,7 @@
     --ink-group-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
     --ink-hover: #26272C;
     --ink-press: #2C2E35;
-    --ink-muted: #5C606B;
+    --ink-muted: #727785;
     --ink-line-strong: #2C2E35;
     --ink-line-soft: #2C2E35;
     --ink-rec-bg: rgba(255, 159, 10, 0.14);
@@ -384,7 +387,12 @@ body {
 }
 
 .ink-focus:focus-visible {
-  outline: 2px solid var(--ink-accent);
+  outline: 2px solid var(--ink-focus-ring);
+  outline-offset: 2px;
+}
+
+:where(button, [role='button'], [role='tab'], [role='switch'], [role='radio'], [role='slider'], [role='option'], a[href]):focus-visible {
+  outline: 2px solid var(--ink-focus-ring);
   outline-offset: 2px;
 }
 

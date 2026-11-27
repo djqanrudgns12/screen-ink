@@ -5,6 +5,7 @@
   "onboarding.nav.prev": "Back",
   "onboarding.nav.next": "Next",
   "onboarding.nav.close": "Close",
+  "onboarding.nav.finish": "Get started",
   "onboarding.nav.tryNow": "Try it now",
   "onboarding.langLabel": "Language",
 
@@ -95,6 +96,14 @@
   "onboarding.ready.practiceTitle": "First capture practice",
   "onboarding.ready.practiceDesc": "Press {key} or click [Try it now] below to capture",
   "onboarding.ready.practiceDescNoKey": "Click [Try it now] below to capture",
+  "onboarding.ready.practicePrompt": "Press {key} to capture this card",
+  "onboarding.ready.practicePromptNoKey": "Use the button below to capture this card",
+  "onboarding.ready.practiceSampleLabel": "Practice target",
+  "onboarding.ready.practiceTryBtn": "Capture now",
+  "onboarding.ready.practiceMarkDone": "I captured it",
+  "onboarding.ready.practiceDoneTitle": "Nice capture!",
+  "onboarding.ready.practiceDoneDesc": "You can capture anytime with that same shortcut",
+  "onboarding.ready.practiceNextKeys": "Next keys to try",
 
   "onboarding.howto.title": "How to turn off {app} shortcuts",
   "onboarding.howto.genericTitle": "How to resolve shortcut conflicts",

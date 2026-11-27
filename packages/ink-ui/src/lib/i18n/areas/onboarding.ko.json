@@ -5,6 +5,7 @@
   "onboarding.nav.prev": "이전",
   "onboarding.nav.next": "다음",
   "onboarding.nav.close": "닫기",
+  "onboarding.nav.finish": "시작하기",
   "onboarding.nav.tryNow": "바로 해 보기",
   "onboarding.langLabel": "언어",
 
@@ -95,6 +96,14 @@
   "onboarding.ready.practiceTitle": "첫 캡처 연습",
   "onboarding.ready.practiceDesc": "{key} 또는 아래 [바로 해 보기]를 눌러 화면을 찍어 보세요",
   "onboarding.ready.practiceDescNoKey": "아래 [바로 해 보기]를 눌러 화면을 찍어 보세요",
+  "onboarding.ready.practicePrompt": "{key}로 이 카드를 찍어 보세요",
+  "onboarding.ready.practicePromptNoKey": "아래 단추로 이 카드를 찍어 보세요",
+  "onboarding.ready.practiceSampleLabel": "연습용 카드",
+  "onboarding.ready.practiceTryBtn": "바로 찍어 보기",
+  "onboarding.ready.practiceMarkDone": "찍었어요",
+  "onboarding.ready.practiceDoneTitle": "잘 찍었어요!",
+  "onboarding.ready.practiceDoneDesc": "이제 언제든 같은 키로 화면을 바로 찍을 수 있어요",
+  "onboarding.ready.practiceNextKeys": "다음으로 알아 둘 키",
 
   "onboarding.howto.title": "{app} 단축키 끄는 법",
   "onboarding.howto.genericTitle": "겹치는 단축키 끄는 법",

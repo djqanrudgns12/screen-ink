@@ -163,3 +163,53 @@ export function summarizeCheckup(state, { screenAsked = false } = {}) {
     allOk: issueCount === 0,
   };
 }
+
+/**
+ * 첫 실행 ⑤ 연습 카드의 캡처 완료 감지 상태(R2-ONB-9)를 만든다.
+ * @param {number} [initialPins=0]
+ */
+export function createPracticeTracker(initialPins = 0) {
+  return {
+    sawCapture: false,
+    completed: false,
+    pins: Number(initialPins) || 0,
+  };
+}
+
+/**
+ * 클라이언트 구독 이벤트(`state` · `island` · `afterimage`)로 연습 캡처 완료를 판정한다.
+ * - 캡처 진입(`mode === 'capture'`) 뒤 `afterimage` 또는 결과 섬(`island.kind === 'result'`)이 오거나
+ *   핀 개수(`pins`)가 늘어나면 완료로 본다.
+ * - 캡처 진입 뒤 아무 결과 없이 `idle` 등으로 돌아오면 취소로 보고 대기 상태를 푼다.
+ * @param {{ sawCapture: boolean, completed: boolean, pins: number }} tracker
+ * @param {{ type: string, state?: any, island?: any }} event
+ */
+export function stepPracticeTracker(tracker, event) {
+  if (!tracker || tracker.completed || !event) return tracker;
+
+  if (event.type === 'afterimage') {
+    return { ...tracker, sawCapture: false, completed: true };
+  }
+
+  if (event.type === 'island') {
+    if (tracker.sawCapture && event.island?.kind === 'result') {
+      return { ...tracker, sawCapture: false, completed: true };
+    }
+    return tracker;
+  }
+
+  if (event.type === 'state' && event.state) {
+    const nextPins = Number(event.state.pins ?? tracker.pins) || 0;
+    const modeName = event.state.mode?.mode;
+    if (modeName === 'capture') {
+      return { ...tracker, sawCapture: true, pins: nextPins };
+    }
+    if (tracker.sawCapture) {
+      const pinned = nextPins > tracker.pins;
+      return { ...tracker, sawCapture: false, completed: pinned, pins: nextPins };
+    }
+    return { ...tracker, pins: nextPins };
+  }
+
+  return tracker;
+}

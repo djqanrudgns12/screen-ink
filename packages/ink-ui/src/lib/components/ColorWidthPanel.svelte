@@ -814,6 +814,13 @@
     cursor: pointer;
   }
 
+  .ink-cw-picker-btn:focus-visible,
+  .ink-cw-eye-btn:focus-visible,
+  .ink-cw-recent-dot:focus-visible {
+    outline: 2px solid var(--ink-focus-ring);
+    outline-offset: 2px;
+  }
+
   .ink-cw-eye-btn.active {
     background: rgba(255, 159, 10, 0.24);
     color: var(--ink-accent);
@@ -1022,6 +1029,12 @@
   .ink-cw-tick-btn.active {
     color: var(--cw-fg);
     font-weight: 600;
+  }
+
+  .ink-cw-tick-btn:focus-visible {
+    outline: 2px solid var(--ink-focus-ring);
+    outline-offset: 2px;
+    border-radius: 3px;
   }
 
   .ink-cw-preview-wrap {

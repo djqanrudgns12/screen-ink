@@ -6,6 +6,7 @@
   import Group from '../components/Group.svelte';
   import Row from '../components/Row.svelte';
   import Keycap from '../components/Keycap.svelte';
+  import ShortcutPresetPicker from '../components/ShortcutPresetPicker.svelte';
   import Icon from '../icons/Icon.svelte';
   import { eventToCombo, isClearOnly, isEscapeOnly } from '../models/keyCombo.js';
   import { formatConflictBanner, getShortcutRowDisplay } from '../models/shortcutDisplay.js';
@@ -279,6 +280,10 @@
         secondaryLabel={conflicts.app ? t('shortcuts.conflict.change') : ''}
         onSecondary={conflicts.app ? focusFirstConflict : undefined}
       />
+    {/if}
+
+    {#if scopeTab === 'global'}
+      <ShortcutPresetPicker {client} {shortcuts} {platform} slotLabel={rowLabel} />
     {/if}
 
     {#each visibleGroups as group (group.id)}

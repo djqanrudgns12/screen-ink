@@ -1,0 +1,118 @@
+{
+  "schema": "screen-ink.shortcuts.presets",
+  "version": 1,
+  "presets": [
+    {
+      "id": "presentation",
+      "titleKey": "page.shortcuts.preset.presentation",
+      "descKey": "page.shortcuts.preset.presentationDesc",
+      "badgeKey": "common.recommended",
+      "win": {
+        "region": "F1",
+        "window": "F2",
+        "record": "F3",
+        "draw": "Alt+1",
+        "zoom": "Alt+2",
+        "board": "Alt+3",
+        "last": "Shift+F1",
+        "full": "Ctrl+F1",
+        "active": "Shift+F2",
+        "delay": "Alt+F1",
+        "restore": "Alt+Shift+1",
+        "pause": "Alt+`",
+        "pin": "Alt+Shift+V",
+        "pinToggle": "Alt+Shift+H"
+      },
+      "mac": {
+        "region": "F1",
+        "window": "F2",
+        "record": "F3",
+        "draw": "Option+1",
+        "zoom": "Option+2",
+        "board": "Option+3",
+        "last": "Shift+F1",
+        "full": "Ctrl+Option+F1",
+        "active": "Shift+F2",
+        "delay": "Option+F1",
+        "restore": "Option+Shift+1",
+        "pause": "Option+`",
+        "pin": "Option+Shift+V",
+        "pinToggle": "Option+Shift+H"
+      }
+    },
+    {
+      "id": "snipaste",
+      "titleKey": "page.shortcuts.preset.snipaste",
+      "descKey": "page.shortcuts.preset.snipasteDesc",
+      "win": {
+        "region": "F1",
+        "window": "F2",
+        "record": "F4",
+        "draw": "Alt+1",
+        "zoom": "Alt+2",
+        "board": "Alt+3",
+        "last": "Shift+F1",
+        "full": "Ctrl+F1",
+        "active": "Shift+F2",
+        "delay": "Alt+F1",
+        "restore": "Alt+Shift+1",
+        "pause": "Alt+`",
+        "pin": "F3",
+        "pinToggle": "Shift+F3"
+      },
+      "mac": {
+        "region": "F1",
+        "window": "F2",
+        "record": "F4",
+        "draw": "Option+1",
+        "zoom": "Option+2",
+        "board": "Option+3",
+        "last": "Shift+F1",
+        "full": "Ctrl+Option+F1",
+        "active": "Shift+F2",
+        "delay": "Option+F1",
+        "restore": "Option+Shift+1",
+        "pause": "Option+`",
+        "pin": "F3",
+        "pinToggle": "Shift+F3"
+      }
+    },
+    {
+      "id": "lefthand",
+      "titleKey": "page.shortcuts.preset.lefthand",
+      "descKey": "page.shortcuts.preset.lefthandDesc",
+      "win": {
+        "region": "Alt+Q",
+        "window": "Alt+W",
+        "record": "Alt+E",
+        "draw": "Alt+1",
+        "zoom": "Alt+2",
+        "board": "Alt+3",
+        "last": "Alt+A",
+        "full": "Alt+S",
+        "active": "Alt+D",
+        "delay": "Alt+Shift+Q",
+        "restore": "Alt+Shift+1",
+        "pause": "Alt+`",
+        "pin": "Alt+Shift+V",
+        "pinToggle": "Alt+Shift+H"
+      },
+      "mac": {
+        "region": "Ctrl+Option+Q",
+        "window": "Ctrl+Option+W",
+        "record": "Ctrl+Option+E",
+        "draw": "Option+1",
+        "zoom": "Option+2",
+        "board": "Option+3",
+        "last": "Ctrl+Option+A",
+        "full": "Ctrl+Option+S",
+        "active": "Ctrl+Option+D",
+        "delay": "Ctrl+Option+Shift+Q",
+        "restore": "Option+Shift+1",
+        "pause": "Option+`",
+        "pin": "Option+Shift+V",
+        "pinToggle": "Option+Shift+H"
+      }
+    }
+  ]
+}

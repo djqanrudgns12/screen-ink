@@ -4,9 +4,11 @@ import {
   ONBOARDING_STEP_COUNT,
   canAdvanceStep,
   canJumpToStep,
+  createPracticeTracker,
   getConflictHowtoKind,
   getOnboardingSteps,
   resolveInitialStep,
+  stepPracticeTracker,
   summarizeCheckup,
 } from './onboarding.js';
 
@@ -95,4 +97,33 @@ test('설정 일반 점검 요약은 맥 권한 상태와 Windows 겹침·시작
   assert.equal(winWarn.issueCount, 1);
   assert.equal(winWarn.items[0].status, 'warn');
   assert.equal(winWarn.items[1].status, 'off');
+});
+
+test('첫 실행 연습 카드 추적기는 캡처 진입 뒤 결과/잔상/핀 증가 시 완료로 판정하고 취소는 미완료로 둔다', () => {
+  // 1) 진입 → afterimage 이벤트로 완료
+  let t = createPracticeTracker(0);
+  t = stepPracticeTracker(t, { type: 'state', state: { mode: { mode: 'capture' }, pins: 0 } });
+  assert.equal(t.sawCapture, true);
+  assert.equal(t.completed, false);
+  t = stepPracticeTracker(t, { type: 'afterimage', afterimage: { session: 1 } });
+  assert.equal(t.completed, true);
+
+  // 2) 진입 → 결과 섬(result) 이벤트로 완료
+  let t2 = createPracticeTracker(0);
+  t2 = stepPracticeTracker(t2, { type: 'state', state: { mode: { mode: 'capture' }, pins: 0 } });
+  t2 = stepPracticeTracker(t2, { type: 'island', island: { kind: 'result', text: '복사했어요' } });
+  assert.equal(t2.completed, true);
+
+  // 3) 진입 → 취소(idle 복귀) 시 완료되지 않음
+  let t3 = createPracticeTracker(0);
+  t3 = stepPracticeTracker(t3, { type: 'state', state: { mode: { mode: 'capture' }, pins: 0 } });
+  t3 = stepPracticeTracker(t3, { type: 'state', state: { mode: { mode: 'idle' }, pins: 0 } });
+  assert.equal(t3.completed, false);
+  assert.equal(t3.sawCapture, false);
+
+  // 4) 진입 → 핀 추가로 완료
+  let t4 = createPracticeTracker(1);
+  t4 = stepPracticeTracker(t4, { type: 'state', state: { mode: { mode: 'capture' }, pins: 1 } });
+  t4 = stepPracticeTracker(t4, { type: 'state', state: { mode: { mode: 'idle' }, pins: 2 } });
+  assert.equal(t4.completed, true);
 });

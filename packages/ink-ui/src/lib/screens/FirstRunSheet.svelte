@@ -5,6 +5,7 @@
   import Keycap from '../components/Keycap.svelte';
   import MakerCredit from '../components/MakerCredit.svelte';
   import Switch from '../components/Switch.svelte';
+  import ShortcutPresetPicker from '../components/ShortcutPresetPicker.svelte';
   import ConflictHowtoModal from './onboarding/ConflictHowtoModal.svelte';
   import { formatFirstRunConflict } from '../models/settingsMeta.js';
   import { defaultSlotCombo, formatComboReadable } from '../models/shortcutDisplay.js';
@@ -12,8 +13,10 @@
     ONBOARDING_STEP_COUNT,
     canAdvanceStep,
     canJumpToStep,
+    createPracticeTracker,
     getOnboardingSteps,
     resolveInitialStep,
+    stepPracticeTracker,
   } from '../models/onboarding.js';
   import { syncLang, t } from '../i18n/index.svelte.js';
 
@@ -47,6 +50,8 @@
   let justGrantedAx = $state(false);
   let prevScreen = $state(/** @type {boolean | undefined} */ (undefined));
   let prevAx = $state(/** @type {boolean | undefined} */ (undefined));
+  let practiceDone = $state(false);
+  let practiceTracker = createPracticeTracker(0);
 
   function runAction(action) {
     return client.run(/** @type {any} */ (action));
@@ -83,6 +88,12 @@
     client.getState().then(applyState);
     const off = client.subscribe((e) => {
       if (e.type === 'state') applyState(e.state);
+      if (currentId === 'ready') {
+        practiceTracker = stepPracticeTracker(practiceTracker, e);
+        if (practiceTracker.completed) {
+          practiceDone = true;
+        }
+      }
     });
     return () => {
       alive = false;
@@ -95,6 +106,15 @@
       stepInitialized = false;
       skipModalOpen = false;
       howtoOpen = false;
+      practiceDone = false;
+      practiceTracker = createPracticeTracker(0);
+    }
+  });
+
+  $effect(() => {
+    if (currentId !== 'ready') {
+      practiceDone = false;
+      practiceTracker = createPracticeTracker(state?.pins ?? 0);
     }
   });
 
@@ -537,6 +557,8 @@
           </div>
         </div>
 
+        <ShortcutPresetPicker {client} {shortcuts} {platform} compact={true} />
+
         <div class="ink-first-group">
           {#each CORE_ITEMS as item (item.id)}
             {@const combo = comboFor(item)}
@@ -593,24 +615,74 @@
           </div>
         {/if}
 
-        <div class="ink-practice-card">
-          <div class="ink-practice-top">
-            <span class="ink-practice-badge">{t('onboarding.ready.practiceBadge')}</span>
-            {#if regionCombo}
-              <Keycap combo={regionCombo} {platform} />
-            {/if}
-          </div>
-          <p class="ink-practice-title">{t('onboarding.ready.practiceTitle')}</p>
-          <p class="ink-practice-desc">
-            {regionCombo
-              ? t('onboarding.ready.practiceDesc', { key: formatComboReadable(regionCombo, platform) || regionCombo })
-              : t('onboarding.ready.practiceDescNoKey')}
-          </p>
+        <div class="ink-practice-card" data-done={practiceDone ? 'true' : undefined}>
+          {#if practiceDone}
+            <div class="ink-practice-done" role="status">
+              <span class="ink-practice-done-icon" aria-hidden="true">
+                <Icon name="check-circle" size={24} />
+              </span>
+              <div class="ink-practice-done-copy">
+                <p class="ink-practice-title">{t('onboarding.ready.practiceDoneTitle')}</p>
+                <p class="ink-practice-desc">{t('onboarding.ready.practiceDoneDesc')}</p>
+              </div>
+            </div>
+            <div class="ink-practice-next">
+              <span class="ink-practice-next-label">{t('onboarding.ready.practiceNextKeys')}</span>
+              <div class="ink-practice-next-items">
+                {#each CORE_ITEMS.slice(1) as item (item.id)}
+                  {@const nextCombo = comboFor(item)}
+                  <span class="ink-practice-next-item">
+                    <span>{t(item.labelKey)}</span>
+                    {#if nextCombo}
+                      <Keycap combo={nextCombo} {platform} variant="dim" />
+                    {/if}
+                  </span>
+                {/each}
+              </div>
+            </div>
+          {:else}
+            <div class="ink-practice-top">
+              <span class="ink-practice-badge">{t('onboarding.ready.practiceBadge')}</span>
+              {#if regionCombo}
+                <Keycap combo={regionCombo} {platform} />
+              {/if}
+            </div>
+            <div class="ink-practice-target" aria-hidden="true">
+              <span class="ink-practice-corner tl"></span>
+              <span class="ink-practice-corner tr"></span>
+              <span class="ink-practice-corner bl"></span>
+              <span class="ink-practice-corner br"></span>
+              <Icon name="region" size={18} />
+              <span class="ink-practice-target-text">{t('onboarding.ready.practiceSampleLabel')}</span>
+            </div>
+            <p class="ink-practice-title">{t('onboarding.ready.practiceTitle')}</p>
+            <p class="ink-practice-desc">
+              {regionCombo
+                ? t('onboarding.ready.practicePrompt', { key: formatComboReadable(regionCombo, platform) || regionCombo })
+                : t('onboarding.ready.practicePromptNoKey')}
+            </p>
+            <div class="ink-practice-actions">
+              <button
+                type="button"
+                class="ink-first-howto ink-focus"
+                onclick={() => runAction('capture.region')}
+              >
+                {t('onboarding.ready.practiceTryBtn')}
+              </button>
+              <button
+                type="button"
+                class="ink-practice-mark ink-focus"
+                onclick={() => (practiceDone = true)}
+              >
+                {t('onboarding.ready.practiceMarkDone')}
+              </button>
+            </div>
+          {/if}
         </div>
       {/if}
 
       <div class="ink-first-footer">
-        <div class="ink-first-dots" role="tablist" aria-label={t('onboarding.dialogAria')}>
+        <div class="ink-first-dots" role="group" aria-label={t('onboarding.dialogAria')}>
           {#each steps as stepId, idx (stepId)}
             {@const jumpAllowed = canJumpToStep(idx, step, platform, permissions, skippedPermissions)}
             <button
@@ -644,6 +716,14 @@
               onclick={handleNext}
             >
               {t('onboarding.nav.next')}
+            </button>
+          {:else if practiceDone}
+            <button
+              type="button"
+              class="ink-first-btn ink-first-btn-pri ink-focus"
+              onclick={() => completeAndClose(false)}
+            >
+              {t('onboarding.nav.finish')}
             </button>
           {:else}
             <button
@@ -1140,7 +1220,137 @@
     background: var(--ink-raised);
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
+  }
+
+  .ink-practice-card[data-done='true'] {
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--ink-ok) 48%, transparent);
+    background: color-mix(in srgb, var(--ink-ok) 10%, transparent);
+  }
+
+  .ink-practice-target {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 46px;
+    border-radius: var(--ink-r-row);
+    background: var(--ink-surface);
+    color: var(--ink-text-2);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .ink-practice-corner {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-color: var(--ink-accent-icon);
+    border-style: solid;
+    border-width: 0;
+  }
+
+  .ink-practice-corner.tl {
+    top: 4px;
+    left: 4px;
+    border-top-width: 2px;
+    border-left-width: 2px;
+  }
+
+  .ink-practice-corner.tr {
+    top: 4px;
+    right: 4px;
+    border-top-width: 2px;
+    border-right-width: 2px;
+  }
+
+  .ink-practice-corner.bl {
+    bottom: 4px;
+    left: 4px;
+    border-bottom-width: 2px;
+    border-left-width: 2px;
+  }
+
+  .ink-practice-corner.br {
+    bottom: 4px;
+    right: 4px;
+    border-bottom-width: 2px;
+    border-right-width: 2px;
+  }
+
+  .ink-practice-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 2px;
+  }
+
+  .ink-practice-mark {
+    padding: 4px 2px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-sub);
+    font-family: inherit;
+    font-size: 12px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+
+  .ink-practice-mark:hover {
+    color: var(--ink-text);
+  }
+
+  .ink-practice-done {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ink-practice-done-icon {
+    display: inline-flex;
+    color: var(--ink-ok);
+    flex: none;
+  }
+
+  .ink-practice-done-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .ink-practice-next {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 6px;
+    border-top: 1px solid color-mix(in srgb, var(--ink-ok) 22%, transparent);
+    flex-wrap: wrap;
+  }
+
+  .ink-practice-next-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink-sub);
+  }
+
+  .ink-practice-next-items {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .ink-practice-next-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--ink-text-2);
   }
 
   .ink-practice-top {
