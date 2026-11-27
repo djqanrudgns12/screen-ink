@@ -297,6 +297,47 @@ pub fn app_active() -> bool {
     b.as_bool()
 }
 
+/// 글자 입력 진단(R2-TXT-0 맥 한글 조합 버그 조사): 키 창·첫 응답자·지금 입력 문맥의 주인·입력 소스.
+/// 반환 = (키 창 포인터, 한 줄 설명). 창 제목·입력한 글자는 담지 않는다.
+pub fn input_state() -> (usize, String) {
+    let Some(app) = app() else { return (0, "not main thread".into()) };
+    let class_of = |o: *mut AnyObject| -> String {
+        if o.is_null() {
+            return "nil".into();
+        }
+        // SAFETY: 살아 있는 객체의 클래스 이름 읽기.
+        unsafe { (*o).class().name().to_string_lossy().into_owned() }
+    };
+    // SAFETY: NSApplication·NSWindow·NSTextInputContext 공개 메서드, 메인 스레드.
+    unsafe {
+        let active: Bool = msg_send![&*app, isActive];
+        let key: *mut AnyObject = msg_send![&*app, keyWindow];
+        let fr: *mut AnyObject = if key.is_null() { std::ptr::null_mut() } else { msg_send![key, firstResponder] };
+        let ctx: *mut AnyObject = msg_send![objc2::class!(NSTextInputContext), currentInputContext];
+        let client: *mut AnyObject = if ctx.is_null() { std::ptr::null_mut() } else { msg_send![ctx, client] };
+        let src: *mut AnyObject = if ctx.is_null() { std::ptr::null_mut() } else { msg_send![ctx, selectedKeyboardInputSource] };
+        let src_name = if src.is_null() {
+            "nil".to_string()
+        } else {
+            let c: *const std::ffi::c_char = msg_send![src, UTF8String];
+            if c.is_null() { "?".into() } else { std::ffi::CStr::from_ptr(c).to_string_lossy().into_owned() }
+        };
+        let fr_ctx: *mut AnyObject = if fr.is_null() { std::ptr::null_mut() } else { msg_send![fr, inputContext] };
+        (
+            key as usize,
+            format!(
+                "active {}, key {} ({}), first responder {}, current ctx client {}, responder ctx is current {}, source {src_name}",
+                active.as_bool(),
+                class_of(key),
+                !key.is_null(),
+                class_of(fr),
+                class_of(client),
+                !fr_ctx.is_null() && fr_ctx == ctx
+            ),
+        )
+    }
+}
+
 /// 모드가 끝나면 포커스를 원래 앱(전체 화면 앱 등)으로 돌려준다.
 pub fn deactivate() {
     let Some(app) = app() else { return };

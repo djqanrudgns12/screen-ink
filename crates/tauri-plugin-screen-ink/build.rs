@@ -9,6 +9,7 @@ const COMMANDS: &[&str] = &[
     "shortcut_capture",
     "save_pdf",
     "system_fonts",
+    "debug_input",
     "run",
     "preview_import",
     "apply_import",

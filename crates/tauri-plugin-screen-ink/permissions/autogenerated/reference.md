@@ -14,6 +14,7 @@ screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있
 - `allow-shortcut-capture`
 - `allow-save-pdf`
 - `allow-system-fonts`
+- `allow-debug-input`
 - `allow-run`
 - `allow-preview-import`
 - `allow-apply-import`
@@ -143,6 +144,32 @@ Enables the capture_input command without any pre-configured scope.
 <td>
 
 Denies the capture_input command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-debug-input`
+
+</td>
+<td>
+
+Enables the debug_input command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-debug-input`
+
+</td>
+<td>
+
+Denies the debug_input command without any pre-configured scope.
 
 </td>
 </tr>

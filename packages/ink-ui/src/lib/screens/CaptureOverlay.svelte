@@ -630,12 +630,27 @@
       else if (a.engine.editing) a.engine.commitText();
       applyToolStyleToEngine(next, a.engine, annotStyle);
       a.engine.notify();
-      panelOpen = true;
+      // 도구를 고를 때 색·굵기 패널을 저절로 열지 않는다 — 패널이 범위(그릴 자리)를 가린다(2026-11-27 실기).
+      // 패널은 색·굵기 단추로만 연다.
     } else {
       flushAnnotText();
       panelOpen = false;
     }
     annotTool = next;
+  }
+
+  /**
+   * 패널이 열린 채로 패널·툴바 바깥(범위·그림)을 누르면 패널만 닫고, 그 누름은 그대로 도구 동작으로 흘려보낸다.
+   * 잡는 단계(capture)에서 보므로 표시 층이 누름을 먼저 받아도 닫힌다.
+   * @param {PointerEvent} e
+   */
+  function closePanelOnOutsidePress(e) {
+    // 스포이트로 색을 따는 누름은 그대로(따고 나면 패널이 다시 열린다)
+    if (!panelOpen || eyedropperActive) return;
+    const el = /** @type {Element | null} */ (e.target instanceof Element ? e.target : null);
+    if (el?.closest('.ink-cw-panel, [role="toolbar"]')) return;
+    panelOpen = false;
+    eyedropperActive = false;
   }
 
   function toggleStylePanel() {
@@ -1415,6 +1430,7 @@
     role="application"
     aria-label={t('capture.overlay.label')}
     onpointerdown={handlePointerDown}
+    onpointerdowncapture={closePanelOnOutsidePress}
     onpointermove={handlePointerMove}
     onpointerup={handlePointerUp}
     onpointerleave={handlePointerLeave}

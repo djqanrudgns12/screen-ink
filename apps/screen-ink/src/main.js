@@ -23,3 +23,10 @@ mount(App, {
   target: document.getElementById('app'),
   props: { client: createTauriClient(), view, firstRun: params.get('first') === '1', monitorId: Number(params.get('monitor') ?? 0), pinId: Number(params.get('pin') ?? 0) },
 });
+
+// 글자 입력 진단(R2-TXT-0, 개발 실행만): 글 상자가 초점을 받으면 맥 입력 상태를 앱 기록에
+if (import.meta.env.DEV) {
+  window.addEventListener('ink-debug-input', (e) => {
+    void invoke('plugin:screen-ink|debug_input', { place: String(e.detail ?? '') }).catch(() => {});
+  });
+}

@@ -395,6 +395,8 @@
     ta.value = ed.text;
     ta.focus();
     ta.setSelectionRange(ta.value.length, ta.value.length);
+    // 진단(R2-TXT-0, 개발 실행만): 앱이 맥 입력 상태를 기록에 남긴다
+    if (import.meta.env?.DEV && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('ink-debug-input', { detail: 'annot-text' }));
   });
 
   let textBox = $derived.by(() => {
@@ -466,10 +468,16 @@
       style:font-weight={textBox.weight}
       style:color={textBox.color}
       oninput={handleTextInput}
-      onkeydown={handleTextKey}
+      onkeydown={(ev) => {
+        if (import.meta.env?.DEV) console.error(`[ime] keydown code=${ev.code} composing=${ev.isComposing}`);
+        handleTextKey(ev);
+      }}
       onkeyup={(ev) => ev.stopPropagation()}
       onpointerdown={(ev) => ev.stopPropagation()}
-      oncompositionstart={() => engine.compositionStart()}
+      oncompositionstart={() => {
+        if (import.meta.env?.DEV) console.error('[ime] compositionstart');
+        engine.compositionStart();
+      }}
       oncompositionend={(ev) => engine.compositionEnd(ev.timeStamp)}
     ></textarea>
   {/if}

@@ -862,6 +862,23 @@ fn capture_commit_annotated(ink: State<'_, Ink>, request: tauri::ipc::Request<'_
 }
 
 /// 판서 배경을 그렸다 → 진입 계측(M4) `mode enter draw [N ms]` 한 줄.
+/// 글자 입력 진단(R2-TXT-0): 화면의 글 상자가 초점을 받을 때(개발 실행만 부름) 맥 입력 상태를 기록에 한 줄.
+#[tauri::command]
+fn debug_input<R: Runtime>(app: AppHandle<R>, window: tauri::WebviewWindow<R>, place: String) {
+    #[cfg(target_os = "macos")]
+    {
+        let from = window.label().to_string();
+        let h = app.clone();
+        let _ = app.run_on_main_thread(move || {
+            let (key, info) = ink_platform_macos::window::input_state();
+            let key_label = h.webview_windows().into_iter().find(|(_, w)| w.ns_window().is_ok_and(|p| p as usize == key)).map(|(l, _)| l);
+            log::info!("input state [{place}] from {from}: key window label {key_label:?}, {info}");
+        });
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = (app, window, place);
+}
+
 /// 이 컴퓨터 글꼴 집 이름(글자 도구 글꼴 고르기 R2-TXT-4) — 이름만, 화면에만(로그·파일에 쓰지 않는다).
 /// 맥 = `NSFontManager.availableFontFamilies`, Windows = 레지스트리 글꼴 목록에서 집 이름만. 숨은 글꼴(`.`으로 시작)은 뺀다.
 #[tauri::command]
@@ -1652,6 +1669,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             shortcut_capture,
             save_pdf,
             system_fonts,
+            debug_input,
             run,
             preview_import,
             apply_import,
