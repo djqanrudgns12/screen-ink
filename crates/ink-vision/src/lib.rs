@@ -182,7 +182,7 @@ impl Prepared {
         let ly0 = local.y;
         let ly1 = local.bottom();
 
-        let snap_axis = |orig: i32, span0: i32, span1: i32, horizontal: bool| -> i32 {
+        let snap_axis = |orig: i32, span0: i32, span1: i32, horizontal: bool, is_min_edge: bool| -> i32 {
             let span = (span1 - span0).max(0);
             if span <= 0 {
                 return orig;
@@ -202,6 +202,26 @@ impl Prepared {
                     };
                 if touches_occ {
                     continue;
+                }
+                if !local_occ.is_empty() {
+                    let expanded = if is_min_edge && c < orig {
+                        Some(if horizontal {
+                            PhysRect::from_edges(span0, c, span1, orig)
+                        } else {
+                            PhysRect::from_edges(c, span0, orig, span1)
+                        })
+                    } else if !is_min_edge && c > orig {
+                        Some(if horizontal {
+                            PhysRect::from_edges(span0, orig, span1, c)
+                        } else {
+                            PhysRect::from_edges(orig, span0, c, span1)
+                        })
+                    } else {
+                        None
+                    };
+                    if expanded.is_some_and(|strip| rect_overlaps_occluders(strip, &local_occ)) {
+                        continue;
+                    }
                 }
                 let hits = if horizontal {
                     self.data.h_edge_count(c, span0, span1)
@@ -232,22 +252,22 @@ impl Prepared {
             best
         };
 
-        let mut nt = snap_axis(ly0, lx0, lx1, true);
-        let mut nb = snap_axis(ly1, lx0, lx1, true);
+        let mut nt = snap_axis(ly0, lx0, lx1, true, true);
+        let mut nb = snap_axis(ly1, lx0, lx1, true, false);
         if nb <= nt {
             nt = ly0;
             nb = ly1;
         }
-        let mut nl = snap_axis(lx0, nt, nb, false);
-        let mut nr = snap_axis(lx1, nt, nb, false);
+        let mut nl = snap_axis(lx0, nt, nb, false, true);
+        let mut nr = snap_axis(lx1, nt, nb, false, false);
         if nr <= nl {
             nl = lx0;
             nr = lx1;
         }
         // 가로 변이 세로 보정 뒤 더 정확히 붙을 수 있으면 1회 다듬기
         if nl != lx0 || nr != lx1 {
-            let rt = snap_axis(ly0, nl, nr, true);
-            let rb = snap_axis(ly1, nl, nr, true);
+            let rt = snap_axis(ly0, nl, nr, true, true);
+            let rb = snap_axis(ly1, nl, nr, true, false);
             if rb > rt {
                 nt = rt;
                 nb = rb;
@@ -327,6 +347,11 @@ fn rect_iou(a: PhysRect, b: PhysRect) -> f64 {
     } else {
         inter / uni
     }
+}
+
+#[inline]
+fn rect_overlaps_occluders(r: PhysRect, occluders: &[PhysRect]) -> bool {
+    !r.is_empty() && occluders.iter().any(|o| r.intersect(o).is_some_and(|i| i.area() > 0))
 }
 
 #[cfg(test)]

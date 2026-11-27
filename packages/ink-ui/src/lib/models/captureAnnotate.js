@@ -467,15 +467,18 @@ export function annotKeyRoute(event, o) {
  * - 확정 상태에서는 R·O·A·P·H·M·T·E로 도구를 고르고, 도구가 켜진 중에는 `[` `]`(⇧ 큰 단계)·비충돌 색 키(Y·G·B·L·K·W)를 받는다.
  * @param {import('../ink/drawKeys.js').KeyEventLike} event
  * @param {{ editing?: boolean, eyedropper?: boolean, confirmed?: boolean, toolActive?: boolean, panelOpen?: boolean }} o
- * @returns {{ type: 'text' | 'cancelEyedropper' } | { type: 'tool', id: string } | { type: 'color', code: string } | { type: 'size', dir: -1 | 1, large: boolean } | null}
+ * @returns {{ type: 'text' | 'commitText' | 'cancelEyedropper' } | { type: 'tool', id: string } | { type: 'color', code: string } | { type: 'size', dir: -1 | 1, large: boolean } | null}
  */
 export function matchCaptureAnnotKey(event, o) {
   if (!event || event.isComposing) return null;
-  if (o.editing) return { type: 'text' };
   const hasPrimaryMod = Boolean(event.ctrlKey || event.metaKey || event.altKey);
+  const esc = event.code === 'Escape' || event.key === 'Escape';
+  if (o.editing) {
+    if (esc && !hasPrimaryMod && !event.shiftKey) return { type: 'commitText' };
+    return { type: 'text' };
+  }
   if (hasPrimaryMod) return null;
 
-  const esc = event.code === 'Escape' || event.key === 'Escape';
   if (o.eyedropper && esc && !event.shiftKey) return { type: 'cancelEyedropper' };
 
   const code = event.code || '';

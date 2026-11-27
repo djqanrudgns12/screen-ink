@@ -498,3 +498,34 @@ fn 평탄도_이미지_경계_재측정_여백_그림자_둥근모서리_3종() 
     let p4 = prepare(&c4.bgra, c4.w, c4.h);
     assert_eq!(p4.refine_image(tight), tight);
 }
+
+#[test]
+fn 앞_창에_맞닿은_요소는_앞_창_안쪽_3px_경계로_끌리지_않는다() {
+    // 가로 방향: 앞 창 아래 y=160에 맞닿은 요소가 앞 창 안쪽 3 px(y=157) 경계로 끌려 들어가면 안 된다
+    let mut c = Canvas::new(800, 600, [245, 245, 245]);
+    let occ = [PhysRect::new(0, 0, 800, 160)];
+    c.fill_rect(occ[0], [50, 55, 65]);
+    c.fill_rect(PhysRect::new(0, 157, 800, 3), [220, 220, 220]);
+    let photo = PhysRect::new(160, 160, 320, 220);
+    c.fill_rect(PhysRect::new(160, 160, 320, 10), [235, 235, 235]);
+    c.fill_rect(PhysRect::new(160, 170, 320, 210), [80, 120, 170]);
+
+    let p = prepare(&c.bgra, c.w, c.h);
+    let snapped = p.snap_with_occluders(photo, 3, &occ);
+    assert_eq!(snapped.y, 160, "앞 창 안쪽 3 px 경계로 끌려 들어가면 안 된다: {snapped:?}");
+    assert_eq!(snapped.intersect(&occ[0]).map_or(0, |i| i.area()), 0);
+
+    // 세로 방향: 왼쪽 앞 창 x=160에 맞닿은 요소가 앞 창 안쪽 3 px(x=157) 경계로 끌려 들어가면 안 된다
+    let mut c_l = Canvas::new(800, 600, [245, 245, 245]);
+    let occ_l = [PhysRect::new(0, 0, 160, 600)];
+    c_l.fill_rect(occ_l[0], [50, 55, 65]);
+    c_l.fill_rect(PhysRect::new(157, 0, 3, 600), [220, 220, 220]);
+    let photo_l = PhysRect::new(160, 140, 320, 220);
+    c_l.fill_rect(PhysRect::new(160, 140, 10, 220), [235, 235, 235]);
+    c_l.fill_rect(PhysRect::new(170, 140, 310, 220), [80, 120, 170]);
+
+    let p_l = prepare(&c_l.bgra, c_l.w, c_l.h);
+    let snapped_l = p_l.snap_with_occluders(photo_l, 3, &occ_l);
+    assert_eq!(snapped_l.x, 160, "왼쪽 앞 창 안쪽 3 px 경계로 끌려 들어가면 안 된다: {snapped_l:?}");
+    assert_eq!(snapped_l.intersect(&occ_l[0]).map_or(0, |i| i.area()), 0);
+}

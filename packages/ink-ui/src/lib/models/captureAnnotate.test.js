@@ -290,3 +290,11 @@ test('글꼴 전달·document.fonts.load() 대기·실패 시 기본 글꼴 폴�
   assert.deepEqual(slowOut.failed, ['Paperlogy']);
   assert.equal(/** @type {any} */ (slowOut.items[0]).fontFamily, 'Freesentation');
 });
+
+test('글 상자 편집 중 초점이 상자 밖이어도 Esc는 글자 확정(commitText), 조합 중·수정키는 제외', () => {
+  const k = (/** @type {string} */ code, mods = {}) => ({ code, key: code.replace('Key', '').toLowerCase(), ctrlKey: false, altKey: false, shiftKey: false, metaKey: false, ...mods });
+  assert.deepEqual(matchCaptureAnnotKey({ ...k('Escape'), key: 'Escape' }, { confirmed: true, toolActive: true, editing: true }), { type: 'commitText' });
+  assert.equal(matchCaptureAnnotKey({ ...k('Escape'), key: 'Escape', isComposing: true }, { confirmed: true, toolActive: true, editing: true }), null);
+  assert.deepEqual(matchCaptureAnnotKey({ ...k('Escape'), key: 'Escape', ctrlKey: true }, { confirmed: true, toolActive: true, editing: true }), { type: 'text' });
+  assert.deepEqual(matchCaptureAnnotKey(k('KeyR'), { confirmed: true, toolActive: true, editing: true }), { type: 'text' });
+});

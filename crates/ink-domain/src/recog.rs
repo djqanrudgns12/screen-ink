@@ -289,19 +289,45 @@ pub fn touches_occluder_edge(r: PhysRect, occluders: &[PhysRect]) -> bool {
         || v_edge_touches_occluders(r.right(), r.y, r.bottom(), occluders)
 }
 
-/// 앞 창에 잘린 변은 원래 잘린 좌표를 유지하고, 안 잘린 변도 앞 창 경계 ±2 px로 끌려 붙으면 되돌린다(R2-CAP-2).
+#[inline]
+fn rect_overlaps_occluders(r: PhysRect, occluders: &[PhysRect]) -> bool {
+    !r.is_empty() && occluders.iter().any(|o| r.intersect(o).is_some_and(|i| i.area() > 0))
+}
+
+/// 앞 창에 잘린 변은 원래 잘린 좌표를 유지하고, 안 잘린 변도 앞 창 경계 ±2 px로 끌리거나
+/// 원래보다 앞 창과 더 겹치게 되면 그 변만 되돌린다(R2-CAP-2).
 fn snap_safe(orig: PhysRect, snapped: PhysRect, clipped: (bool, bool, bool, bool), occluders: &[PhysRect]) -> PhysRect {
     if occluders.is_empty() {
         return snapped;
     }
-    let pick = |clipped_side: bool, o: i32, s: i32, touches: bool| -> i32 {
-        if clipped_side || (s != o && touches) { o } else { s }
+    let pick = |clipped_side: bool, o: i32, s: i32, blocked: bool| -> i32 {
+        if clipped_side || (s != o && blocked) { o } else { s }
     };
     let (cl, ct, cr, cb) = clipped;
-    let l = pick(cl, orig.x, snapped.x, v_edge_touches_occluders(snapped.x, orig.y, orig.bottom(), occluders));
-    let t = pick(ct, orig.y, snapped.y, h_edge_touches_occluders(snapped.y, orig.x, orig.right(), occluders));
-    let r = pick(cr, orig.right(), snapped.right(), v_edge_touches_occluders(snapped.right(), orig.y, orig.bottom(), occluders));
-    let b = pick(cb, orig.bottom(), snapped.bottom(), h_edge_touches_occluders(snapped.bottom(), orig.x, orig.right(), occluders));
+    let t_blocked = h_edge_touches_occluders(snapped.y, orig.x, orig.right(), occluders)
+        || (snapped.y < orig.y
+            && rect_overlaps_occluders(PhysRect::from_edges(orig.x, snapped.y, orig.right(), orig.y), occluders));
+    let b_blocked = h_edge_touches_occluders(snapped.bottom(), orig.x, orig.right(), occluders)
+        || (snapped.bottom() > orig.bottom()
+            && rect_overlaps_occluders(PhysRect::from_edges(orig.x, orig.bottom(), orig.right(), snapped.bottom()), occluders));
+    let mut t = pick(ct, orig.y, snapped.y, t_blocked);
+    let mut b = pick(cb, orig.bottom(), snapped.bottom(), b_blocked);
+    if b <= t {
+        t = orig.y;
+        b = orig.bottom();
+    }
+    let l_blocked = v_edge_touches_occluders(snapped.x, t, b, occluders)
+        || (snapped.x < orig.x
+            && rect_overlaps_occluders(PhysRect::from_edges(snapped.x, t, orig.x, b), occluders));
+    let r_blocked = v_edge_touches_occluders(snapped.right(), t, b, occluders)
+        || (snapped.right() > orig.right()
+            && rect_overlaps_occluders(PhysRect::from_edges(orig.right(), t, snapped.right(), b), occluders));
+    let mut l = pick(cl, orig.x, snapped.x, l_blocked);
+    let mut r = pick(cr, orig.right(), snapped.right(), r_blocked);
+    if r <= l {
+        l = orig.x;
+        r = orig.right();
+    }
     let out = PhysRect::from_edges(l, t, r, b);
     if out.is_empty() { orig } else { out }
 }
@@ -428,15 +454,20 @@ pub fn build_chain_with(ev: &Evidence, opts: &RecogOptions) -> Vec<Node> {
         }
         raw.push(Node { rect: r, kind, score: 0.0, sources, hidden_container: false });
     };
-    // 요소·자식 창: 앞 창 가림 제거(R2-CAP-1) → Image면 평탄도 재측정(R2-CAP-3) → 앞 창 경계 보호 경계 맞춤(R2-CAP-2)
+    // 요소·자식 창: 앞 창 가림 제거(R2-CAP-1) → Image면 창·모니터로 자른 뒤 평탄도 재측정(R2-CAP-3) → 앞 창 경계 보호 경계 맞춤(R2-CAP-2)
     for e in ev.elements {
         if let Some(vis) = visible_part(e.rect, ev.occluders, p) {
             let base = if e.control == Control::Image {
                 if let Some(refine) = opts.refine_image {
-                    let cand = refine(vis);
-                    vis.intersect(&cand)
-                        .filter(|r| r.contains(p) && r.w >= MIN_SIDE && r.h >= MIN_SIDE && r.area() >= MIN_AREA)
-                        .unwrap_or(vis)
+                    if let Some(bounded) = vis.intersect(&clip_to).and_then(|r| r.intersect(&ev.monitor)) {
+                        let cand = refine(bounded);
+                        bounded
+                            .intersect(&cand)
+                            .filter(|r| r.contains(p) && r.w >= MIN_SIDE && r.h >= MIN_SIDE && r.area() >= MIN_AREA)
+                            .unwrap_or(bounded)
+                    } else {
+                        vis
+                    }
                 } else {
                     vis
                 }
@@ -444,10 +475,10 @@ pub fn build_chain_with(ev: &Evidence, opts: &RecogOptions) -> Vec<Node> {
                 vis
             };
             let clipped = (
-                base.x != e.rect.x,
-                base.y != e.rect.y,
-                base.right() != e.rect.right(),
-                base.bottom() != e.rect.bottom(),
+                vis.x != e.rect.x,
+                vis.y != e.rect.y,
+                vis.right() != e.rect.right(),
+                vis.bottom() != e.rect.bottom(),
             );
             let snapped = snap_safe(base, snap(base), clipped, ev.occluders);
             push(snapped, NodeKind::Element(e.control), if e.from_msaa { src::M } else { src::A });
@@ -918,5 +949,87 @@ mod tests {
         assert!(m.occluded_ratio > 0.05 && m.occluded_ratio < 0.15);
         assert_eq!(m.picked_level, picked);
         assert_eq!(m.chain_len, chain.len());
+    }
+
+    #[test]
+    fn snap_safe는_앞_창_안쪽_3px로_끌려_겹치는_변만_되돌린다() {
+        let p = PhysPoint { x: 300, y: 300 };
+        let occ = [PhysRect::new(0, 0, 1920, 160)];
+        let els = [ElementCand { rect: PhysRect::new(160, 160, 320, 220), control: Control::Image, from_msaa: false }];
+        let snap = |r: PhysRect| PhysRect::from_edges(r.x, r.y - 3, r.right() + 1, r.bottom());
+        let ev = Evidence {
+            point: p,
+            window: Some(WIN),
+            children: &[],
+            elements: &els,
+            vision: &[],
+            monitor: MON,
+            virtual_bounds: MON,
+            occluders: &occ,
+            support: None,
+            snap: Some(&snap),
+        };
+        let chain = build_chain(&ev);
+        let img = chain.iter().find(|n| matches!(n.kind, NodeKind::Element(Control::Image))).unwrap();
+        assert_eq!(img.rect, PhysRect::from_edges(160, 160, 481, 380));
+    }
+
+    #[test]
+    fn 이미지_여백_재측정_변은_앞_창_가림이_있어도_스냅을_막지_않는다() {
+        let p = PhysPoint { x: 300, y: 250 };
+        let elem = PhysRect::new(100, 100, 400, 300);
+        let els = [ElementCand { rect: elem, control: Control::Image, from_msaa: false }];
+        let occ = [PhysRect::new(900, 100, 300, 300)];
+        let inner = PhysRect::new(120, 120, 360, 260);
+        let snapped_inner = PhysRect::new(121, 121, 358, 258);
+        let snap = |r: PhysRect| if r == inner { snapped_inner } else { r };
+        let ev = Evidence {
+            point: p,
+            window: Some(WIN),
+            children: &[],
+            elements: &els,
+            vision: &[],
+            monitor: MON,
+            virtual_bounds: MON,
+            occluders: &occ,
+            support: None,
+            snap: Some(&snap),
+        };
+        let opts = RecogOptions { refine_image: Some(&|_| inner) };
+        let chain = build_chain_with(&ev, &opts);
+        let img = chain.iter().find(|n| matches!(n.kind, NodeKind::Element(Control::Image))).unwrap();
+        assert_eq!(img.rect, snapped_inner);
+    }
+
+    #[test]
+    fn refine_image는_창과_모니터로_자른_영역만_받는다() {
+        use std::cell::Cell;
+        let mon = PhysRect::new(0, 0, 900, 700);
+        let win = PhysRect::new(100, 100, 900, 700);
+        let elem = PhysRect::new(50, 50, 1000, 750);
+        let els = [ElementCand { rect: elem, control: Control::Image, from_msaa: false }];
+        let p = PhysPoint { x: 300, y: 250 };
+        let received = Cell::new(None);
+        let refine = |r: PhysRect| {
+            received.set(Some(r));
+            PhysRect::new(120, 120, 700, 500)
+        };
+        let ev = Evidence {
+            point: p,
+            window: Some(win),
+            children: &[],
+            elements: &els,
+            vision: &[],
+            monitor: mon,
+            virtual_bounds: mon,
+            occluders: &[],
+            support: None,
+            snap: None,
+        };
+        let opts = RecogOptions { refine_image: Some(&refine) };
+        let chain = build_chain_with(&ev, &opts);
+        assert_eq!(received.get(), Some(PhysRect::new(100, 100, 800, 600)));
+        let img = chain.iter().find(|n| matches!(n.kind, NodeKind::Element(Control::Image))).unwrap();
+        assert_eq!(img.rect, PhysRect::new(120, 120, 700, 500));
     }
 }

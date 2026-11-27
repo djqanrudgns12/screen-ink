@@ -1334,6 +1334,11 @@
       panelOpen: toolbarVisible && panelOpen,
     });
     if (annotKey) {
+      if (annotKey.type === 'commitText') {
+        e.preventDefault();
+        flushAnnotText();
+        return;
+      }
       if (annotKey.type === 'text') return;
       e.preventDefault();
       if (annotKey.type === 'cancelEyedropper') {
@@ -1374,9 +1379,6 @@
     }
     if (shouldPreventCaptureKey(e)) {
       e.preventDefault();
-    }
-    if (e.key === 'Escape' || e.code === 'Escape') {
-      flushAnnotText();
     }
     sendCaptureInput(toCaptureKeyInput(e));
   }
