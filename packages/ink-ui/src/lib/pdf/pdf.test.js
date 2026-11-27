@@ -11,6 +11,7 @@ import {
   extractTextFragments,
   loadPdfFonts,
   suggestedShortcutPdfName,
+  localDateStamp,
 } from './index.js';
 import { assertTrueTypeBytes } from './fonts.js';
 
@@ -264,4 +265,10 @@ test('exportShortcutSheetPdf는 client.savePdf에 PDF 바이트와 언어별 파
   assert.equal(calls[0].name, 'shookshok-shortcuts-2026-11-27.pdf');
   assert.ok(calls[0].bytes instanceof Uint8Array);
   assert.equal(new TextDecoder().decode(calls[0].bytes.subarray(0, 5)), '%PDF-');
+});
+
+test('PDF 날짜는 이 컴퓨터 시간대의 오늘(세계 표준시 아님)', () => {
+  // 지역 시각 2026-11-28 00:30 — 한국이라면 세계 표준시로는 아직 11-27
+  assert.equal(localDateStamp(new Date(2026, 10, 28, 0, 30)), '2026-11-28');
+  assert.equal(localDateStamp(new Date(2026, 0, 5, 23, 59)), '2026-01-05');
 });

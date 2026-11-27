@@ -178,6 +178,16 @@ const WIN_KEY_MAP = {
  * 미국 지역 여부 판별 (영어 + 미국 지역이면 Letter 용지 사용).
  * @param {string | undefined} region
  */
+/**
+ * 이 컴퓨터 시간대의 오늘 날짜 `YYYY-MM-DD`(파일 이름·PDF 아래 줄). `toISOString()`은 세계 표준시라
+ * 한국 아침 9시 전에는 어제 날짜가 된다(2026-11-28 맥 실기에서 발견).
+ * @param {Date} [now]
+ */
+export function localDateStamp(now = new Date()) {
+  const p = (/** @type {number} */ n) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+}
+
 export function isUsRegion(region) {
   if (!region) return false;
   const s = String(region).trim().toUpperCase();
@@ -313,7 +323,7 @@ export function buildShortcutSheetModel({
   const osKey = normalizeOs(os);
   const tr = (key, params) => translate(l, key, params, osKey);
 
-  const dateStr = date || new Date().toISOString().slice(0, 10);
+  const dateStr = date || localDateStamp();
   const verRaw = String(version || '0.1.0').trim();
   const verStr = verRaw.startsWith('v') ? verRaw : `v${verRaw}`;
   const osLabel = tr(osKey === 'mac' ? 'pdf.os.mac' : 'pdf.os.win');

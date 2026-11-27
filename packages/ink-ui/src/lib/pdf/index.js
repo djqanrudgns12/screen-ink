@@ -6,6 +6,7 @@ export {
   extractTextFragments,
   isShortcutModified,
   isUsRegion,
+  localDateStamp,
 } from './layoutModel.js';
 export { buildShortcutSheetPdf } from './renderPdf.js';
 export { exportShortcutSheetPdf, suggestedShortcutPdfName } from './download.js';

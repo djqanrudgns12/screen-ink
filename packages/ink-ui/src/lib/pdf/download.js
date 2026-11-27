@@ -1,6 +1,7 @@
 // 단축키 PDF 파일명 생성 및 저장(Tauri savePdf 우선, 없으면 브라우저 Blob 내려받기)
 import { normalizeLang } from '../i18n/core.js';
 import { buildShortcutSheetPdf } from './renderPdf.js';
+import { localDateStamp } from './layoutModel.js';
 
 /**
  * 날짜와 언어에 따른 제안 PDF 파일명을 반환한다.
@@ -9,7 +10,7 @@ import { buildShortcutSheetPdf } from './renderPdf.js';
  */
 export function suggestedShortcutPdfName(lang = 'ko', date) {
   const l = normalizeLang(lang);
-  const d = date || new Date().toISOString().slice(0, 10);
+  const d = date || localDateStamp();
   return l === 'en' ? `shookshok-shortcuts-${d}.pdf` : `슉쇽-단축키-${d}.pdf`;
 }
 
@@ -27,7 +28,7 @@ export function suggestedShortcutPdfName(lang = 'ko', date) {
  * @returns {Promise<{ ok: boolean, name: string }>}
  */
 export async function exportShortcutSheetPdf(client, options = {}) {
-  const date = options.date || new Date().toISOString().slice(0, 10);
+  const date = options.date || localDateStamp();
   const name = suggestedShortcutPdfName(options.lang, date);
   const bytes = await buildShortcutSheetPdf({ ...options, date });
 
