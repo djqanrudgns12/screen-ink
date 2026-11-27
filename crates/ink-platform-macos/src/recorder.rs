@@ -366,18 +366,19 @@ fn list_audio_inputs() -> Vec<(String, String)> {
 /// 반환: `None` = 사용 안 함/장치 없음, `Some(None)` = 시스템 기본 마이크, `Some(Some(id))` = 지정 마이크.
 fn resolve_mic_device(requested: Option<&str>) -> Option<Option<String>> {
     let req = requested?;
-    let cls = AnyClass::get(c"AVCaptureDevice")?;
-    let media = unsafe { AVMediaTypeAudio }?;
+    // 기본 마이크: 장치를 미리 찾지 않고 SCK에 맡긴다(`microphoneCaptureDeviceID` = nil이면 시스템 기본 입력).
+    // 기본 입력이 정말 없으면 스트림 시작이 실패하고, 부르는 쪽이 영상만으로 다시 시작한다.
     if req.is_empty() {
-        // SAFETY: `defaultDeviceWithMediaType:`는 기본 오디오 입력 장치가 없으면 nil.
-        let dev: Option<Retained<AnyObject>> = unsafe { msg_send![cls, defaultDeviceWithMediaType: media] };
-        dev.map(|_| None)
-    } else {
+        return Some(None);
+    }
+    let found = AnyClass::get(c"AVCaptureDevice").zip(unsafe { AVMediaTypeAudio }).and_then(|(cls, _)| {
         let ns_id = NSString::from_str(req);
         // SAFETY: `deviceWithUniqueID:`는 연결된 장치가 없으면 nil.
         let dev: Option<Retained<AnyObject>> = unsafe { msg_send![cls, deviceWithUniqueID: &*ns_id] };
-        dev.map(|_| Some(req.to_string()))
-    }
+        dev
+    });
+    // 고른 마이크가 빠져 있으면 녹음을 포기하지 않고 기본 마이크로
+    Some(found.map(|_| req.to_string()))
 }
 
 /// 완료 처리기 하나를 기다린다(오류 코드 또는 성공).
