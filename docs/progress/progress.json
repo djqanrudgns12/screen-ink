@@ -28,7 +28,7 @@
             { "id": "0.1", "title": "cargo·npm 워크스페이스, 폴더 구조", "platform": "common", "days": 0.25, "status": "done" },
             { "id": "0.2", "title": "ink-domain geometry·naming·shortcuts + DEFAULTS 생성", "platform": "common", "days": 0.25, "status": "done" },
             { "id": "0.3", "title": "포트 trait + Noop·Fake", "platform": "common", "days": 0.25, "status": "done" },
-            { "id": "0.4", "title": "토큰 라이트·다크, 글꼴, 테마 전환", "platform": "common", "days": 0.25, "status": "verify", "note": "하드코딩 색 린트·F02 대조 확인 남음", "level": "easy" },
+            { "id": "0.4", "title": "토큰 라이트·다크, 글꼴, 테마 전환", "platform": "common", "days": 0.25, "status": "done", "note": "토큰 라이트·다크·글꼴·테마 + 하드코딩 색 정적 검사(위반 0)·F02 대조 49d567a", "level": "easy" },
             { "id": "0.4b", "title": "아이콘 24종·부품 14종", "platform": "common", "days": 0.25, "status": "done", "note": "아이콘·부품 + 대비 자동 검사(글자 4.5:1·아이콘 3:1, 146쌍) afee97e", "level": "easy" },
             { "id": "0.4c", "title": "앱 아이콘·트레이 4상태·맥 템플릿", "platform": "common", "days": 0.25, "status": "verify", "note": "16px 눈 검사 3명 안 함", "level": "easy" },
             { "id": "0.5", "title": "Tauri 껍데기(single-instance·autostart)", "platform": "common", "days": 0.25, "status": "done" },
@@ -44,7 +44,7 @@
             { "id": "1.3", "title": "트레이 팝오버(S01)", "platform": "common", "days": 0.3125, "status": "verify", "note": "열기 140 ms 측정 안 함", "level": "easy" },
             { "id": "1.4", "title": "shortcuts::analyze(입력표 판정 이식)", "platform": "common", "days": 0.3125, "status": "done" },
             { "id": "1.5", "title": "단축키 즉시 등록 트랜잭션·원인 찾기", "platform": "common", "days": 0.3125, "status": "done" },
-            { "id": "1.6", "title": "설정 창 S02~S05 바로 반영·되돌리기", "platform": "common", "days": 0.3125, "status": "verify", "note": "실제 창 = F04~F07 대조 남음", "level": "easy" },
+            { "id": "1.6", "title": "설정 창 S02~S05 바로 반영·되돌리기", "platform": "common", "days": 0.3125, "status": "done", "note": "설정 창 S02~S05 바로 반영·되돌리기 + 시안 v3 대조(제목 글꼴 고침) 49d567a, 단축키 되돌리기 값 복원 f6ca494", "level": "easy" },
             { "id": "1.7", "title": "첫 실행 시트·단축키 한 장", "platform": "common", "days": 0.3125, "status": "done" },
             { "id": "1.8", "title": "설정 내보내기·가져오기·모두 처음으로", "platform": "common", "days": 0.3125, "status": "done" }
           ]
@@ -149,7 +149,7 @@
             { "id": "7.4", "title": "200회 진입·종료(메모리·핸들)", "platform": "win", "days": 0.35, "status": "todo", "level": "easy" },
             { "id": "7.5", "title": "릴리스 체크리스트(R-NET-2·R-LOG-1 등)", "platform": "win", "days": 0.35, "status": "todo", "level": "mid" },
             { "id": "7.6", "title": "NSIS 설치본·포터블 ZIP", "platform": "win", "days": 0.36, "status": "todo", "level": "mid" },
-            { "id": "7.7", "title": "디자인 관문(S01~S17 = v3)", "platform": "common", "days": 0.36, "status": "todo", "level": "mid" }
+            { "id": "7.7", "title": "디자인 관문(S01~S17 = v3)", "platform": "common", "days": 0.36, "status": "verify", "note": "디자인 관문 docs/qa/2026-11-27/design-gate.md(49d567a): 미리보기 168장 넘침·잘림·겹침 0. 남음: 실제 창(S07 다중 모니터·S10 둥근 귀·S11 꺾쇠·S13 확대·S15 창 고정) 눈 확인", "level": "mid" }
           ]
         }
       ]
