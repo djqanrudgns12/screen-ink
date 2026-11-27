@@ -24,6 +24,7 @@ use ink_app::{
 use ink_app::SystemEvent;
 #[cfg(all(not(windows), not(target_os = "macos")))]
 use ink_domain::shortcuts::LiveBinding;
+use ink_domain::i18n::Lang;
 use ink_domain::shortcuts::{catalog, Platform};
 use ink_domain::snapshot::CaptureKind;
 use overlay::{FrameStore, TauriOverlayHost};
@@ -133,6 +134,10 @@ struct TauriNotifier<R: Runtime> {
     app: AppHandle<R>,
     /// 마지막으로 그린 (상태, 밝은 작업 표시줄) — 같으면 아이콘을 다시 그리지 않는다
     tray_mode: Mutex<Option<(TrayMode, bool)>>,
+    /// 마지막으로 설정한 트레이 툴팁 — 바뀌거나 언어가 바뀔 때만 갱신
+    tray_tooltip: Mutex<Option<String>>,
+    /// 마지막으로 창 제목에 반영한 언어 — 언어가 바뀌면 열린 창 제목도 갱신
+    last_lang: Mutex<Option<Lang>>,
 }
 
 impl<R: Runtime> Notifier for TauriNotifier<R> {
@@ -148,10 +153,45 @@ impl<R: Runtime> Notifier for TauriNotifier<R> {
             TrayMode::Off
         };
         let key = (mode, light_taskbar());
-        let mut last = self.tray_mode.lock().unwrap_or_else(|e| e.into_inner());
-        if *last != Some(key) {
-            *last = Some(key);
-            set_tray_icon(&self.app, mode, state);
+        let icon_changed = {
+            let mut last = self.tray_mode.lock().unwrap_or_else(|e| e.into_inner());
+            if *last != Some(key) {
+                *last = Some(key);
+                true
+            } else {
+                false
+            }
+        };
+        if icon_changed {
+            set_tray_icon(&self.app, mode);
+        }
+        let tip = tooltip(state);
+        let tip_changed = {
+            let mut last = self.tray_tooltip.lock().unwrap_or_else(|e| e.into_inner());
+            if last.as_deref() != Some(tip.as_str()) {
+                *last = Some(tip.clone());
+                true
+            } else {
+                false
+            }
+        };
+        if tip_changed {
+            if let Some(tray) = self.app.tray_by_id(TRAY_ID) {
+                let _ = tray.set_tooltip(Some(tip));
+            }
+        }
+        let lang = state_lang(state);
+        let lang_changed = {
+            let mut last = self.last_lang.lock().unwrap_or_else(|e| e.into_inner());
+            if *last != Some(lang) {
+                *last = Some(lang);
+                true
+            } else {
+                false
+            }
+        };
+        if lang_changed {
+            refresh_window_titles(&self.app, lang);
         }
     }
 
@@ -362,23 +402,56 @@ fn tray_image(mode: TrayMode) -> Image<'static> {
     Image::new_owned(rgba, w, h)
 }
 
-fn tooltip(state: &InkState) -> String {
-    let mut t = String::from(APP_NAME);
-    if !state.hotkeys_enabled {
-        t.push_str(" · 단축키 꺼짐");
-    } else if state.conflicts.count > 0 {
-        t.push_str(&format!(" · 키 {}개 겹침", state.conflicts.count));
+fn tooltip_for(lang: Lang, hotkeys_enabled: bool, conflicts: usize, pinned_count: u32) -> String {
+    let mut t = tr_for(lang, "common.appTitle");
+    if !hotkeys_enabled {
+        t.push_str(" · ");
+        t.push_str(&tr_for(lang, "plugin.tray.paused"));
+    } else if conflicts == 1 {
+        t.push_str(" · ");
+        t.push_str(&tr_for(lang, "plugin.tray.conflicts.one"));
+    } else if conflicts > 1 {
+        t.push_str(" · ");
+        t.push_str(&trf_for(lang, "plugin.tray.conflicts.other", &[("n", &conflicts)]));
     }
-    if state.pinned_count > 0 {
-        t.push_str(&format!(" · 고정한 창 {}", state.pinned_count));
+    if pinned_count == 1 {
+        t.push_str(" · ");
+        t.push_str(&tr_for(lang, "plugin.tray.topmost.one"));
+    } else if pinned_count > 1 {
+        t.push_str(" · ");
+        t.push_str(&trf_for(lang, "plugin.tray.topmost.other", &[("n", &pinned_count)]));
     }
     t
 }
 
-fn set_tray_icon<R: Runtime>(app: &AppHandle<R>, mode: TrayMode, state: &InkState) {
+fn tooltip(state: &InkState) -> String {
+    tooltip_for(state_lang(state), state.hotkeys_enabled, state.conflicts.count, state.pinned_count)
+}
+
+fn set_tray_icon<R: Runtime>(app: &AppHandle<R>, mode: TrayMode) {
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
         let _ = tray.set_icon(Some(tray_image(mode)));
-        let _ = tray.set_tooltip(Some(tooltip(state)));
+    }
+}
+
+fn refresh_window_titles<R: Runtime>(app: &AppHandle<R>, lang: Lang) {
+    for (label, key) in [
+        (POPOVER, "plugin.window.popover"),
+        (ISLAND, "plugin.window.island"),
+        (SETTINGS, "plugin.window.settings"),
+        (rec_frame::REC_FRAME, "plugin.window.recFrame"),
+        (zoom_hud::LABEL, "plugin.window.zoomHud"),
+    ] {
+        if let Some(w) = app.get_webview_window(label) {
+            let _ = w.set_title(&tr_for(lang, key));
+        }
+    }
+    for (label, w) in app.webview_windows() {
+        if overlay::is_overlay_label(&label) {
+            let _ = w.set_title(&tr_for(lang, "plugin.window.overlay"));
+        } else if label.starts_with(pins::PREFIX) {
+            let _ = w.set_title(&tr_for(lang, "plugin.window.pin"));
+        }
     }
 }
 
@@ -422,7 +495,7 @@ fn show_island<R: Runtime>(app: &AppHandle<R>) {
 
 fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let popover = WebviewWindowBuilder::new(app, POPOVER, WebviewUrl::App("index.html?view=popover".into()))
-        .title(APP_NAME)
+        .title(tr(app, "plugin.window.popover"))
         // 카드 252 × 약 418~448 + 둘레 투명 여백 8씩(App.svelte `.popover-shell`) — 창 = 카드 + 그림자만(R2-UI-TRAY-1)
         .inner_size(268.0, 464.0)
         .resizable(false)
@@ -449,7 +522,7 @@ fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     });
 
     WebviewWindowBuilder::new(app, ISLAND, WebviewUrl::App("index.html?view=island".into()))
-        .title(format!("{APP_NAME} 안내"))
+        .title(tr(app, "plugin.window.island"))
         .inner_size(560.0, 88.0)
         .resizable(false)
         .decorations(false)
@@ -569,7 +642,7 @@ fn open_settings_with<R: Runtime>(app: &AppHandle<R>, first_run: bool) {
     }
     let url = if first_run { "index.html?view=settings&first=1" } else { "index.html?view=settings" };
     let built = WebviewWindowBuilder::new(app, SETTINGS, WebviewUrl::App(url.into()))
-        .title(format!("{APP_NAME} 설정"))
+        .title(tr(app, "plugin.window.settings"))
         .inner_size(900.0, 600.0)
         .resizable(false)
         .maximizable(false)
@@ -671,8 +744,11 @@ fn release_capture_frame_later<R: Runtime>(app: &AppHandle<R>) {
 
 /// 아직 만들지 않은 모드(단계 2 이후) — 눌린 것은 알려 준다.
 fn not_ready<R: Runtime>(app: &AppHandle<R>, slot_or_action: &str) {
-    let label = catalog().slot(slot_or_action).map(|s| s.label.clone()).unwrap_or_else(|| slot_or_action.to_string());
-    app.state::<Ink>().lock().island(IslandEvent::new(IslandKind::Info, "준비 중이에요").detail(label));
+    let ink = app.state::<Ink>();
+    let s = ink.lock();
+    let lang = s.lang();
+    let label = catalog().slot_label(slot_or_action, lang).unwrap_or_else(|| slot_or_action.to_string());
+    s.island(IslandEvent::new(IslandKind::Info, tr_for(lang, "plugin.notReady")).detail(label));
 }
 
 fn on_hotkey<R: Runtime>(app: &AppHandle<R>, slot: &str, pressed: Instant) {
@@ -708,14 +784,21 @@ fn export_meta(headers: &tauri::http::HeaderMap) -> Result<ink_app::DrawExportMe
 fn sync_autostart<R: Runtime>(app: &AppHandle<R>, on: bool) {
     let channel = app.state::<Ink>().lock().install_channel();
     match ink_domain::package::autostart_backend(channel) {
-        ink_domain::package::AutostartBackend::StartupTask => match app.state::<Ink>().lock().sync_autostart_via_port(on) {
-            Ok(notice) => {
-                if let Some(msg) = &notice.guidance_ko {
-                    log::info!("startup task notice: {msg}");
+        ink_domain::package::AutostartBackend::StartupTask => {
+            let (lang, res) = {
+                let ink = app.state::<Ink>();
+                let mut s = ink.lock();
+                (s.lang(), s.sync_autostart_via_port(on))
+            };
+            match res {
+                Ok(notice) => {
+                    if let Some(msg) = notice.guidance(lang) {
+                        log::info!("startup task notice: {msg}");
+                    }
                 }
+                Err(e) => log::warn!("startup task sync failed: {e}"),
             }
-            Err(e) => log::warn!("startup task sync failed: {e}"),
-        },
+        }
         ink_domain::package::AutostartBackend::RegistryRun => {
             app.state::<Ink>().lock().set_autostart_notice(None);
             use tauri_plugin_autostart::ManagerExt;
@@ -954,10 +1037,25 @@ fn windows_font_families() -> Vec<String> {
 static LAST_PDF: std::sync::Mutex<Option<std::path::PathBuf>> = std::sync::Mutex::new(None);
 const ACTION_PDF_OPEN: &str = "pdf.open";
 
+pub(crate) fn state_lang(state: &InkState) -> Lang {
+    state.settings.get("general.lang").and_then(|v| v.as_str()).map(Lang::from_setting).unwrap_or(Lang::Ko)
+}
+
+pub(crate) fn lang_of<R: Runtime>(app: &AppHandle<R>) -> Lang {
+    app.state::<Ink>().lock().lang()
+}
+
+pub(crate) fn tr_for(lang: Lang, key: &str) -> String {
+    ink_domain::i18n::tr_os(lang, Platform::current(), key)
+}
+
+pub(crate) fn trf_for(lang: Lang, key: &str, args: &[(&str, &dyn std::fmt::Display)]) -> String {
+    ink_domain::i18n::trf_os(lang, Platform::current(), key, args)
+}
+
 /// 지금 언어·OS의 글(플러그인이 만드는 섬·대화상자 글 — R2-I18N).
 pub(crate) fn tr<R: Runtime>(app: &AppHandle<R>, key: &str) -> String {
-    let lang = app.state::<Ink>().lock().lang();
-    ink_domain::i18n::tr_os(lang, ink_domain::shortcuts::Platform::current(), key)
+    tr_for(lang_of(app), key)
 }
 
 /// 화면이 만든 PDF(내 단축키 한 장, R2-PDF)를 저장 대화상자로 받아 쓴다. 이름은 화면이 정하고(경로 글자는 지움),
@@ -1096,21 +1194,22 @@ struct ImportPick {
     preview: Option<ImportPreview>,
 }
 
-fn read_json_file(path: &std::path::Path) -> Result<Value, String> {
-    let bytes = std::fs::read(path).map_err(|_| "파일을 읽을 수 없어요".to_string())?;
+fn read_json_file(path: &std::path::Path, lang: Lang) -> Result<Value, String> {
+    let bytes = std::fs::read(path).map_err(|_| tr_for(lang, "plugin.settings.readError"))?;
     let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes);
-    serde_json::from_slice(bytes).map_err(|_| format!("이 파일은 {APP_NAME} 설정이 아니에요"))
+    serde_json::from_slice(bytes).map_err(|_| tr_for(lang, "error.settings.notSettings"))
 }
 
 /// 가져오기 1단계: 파일 고르기 → 무엇이 바뀌는지(시트). 저장은 하지 않는다.
 #[tauri::command]
 async fn preview_import<R: Runtime>(app: AppHandle<R>) -> Result<ImportPick, String> {
     use tauri_plugin_dialog::DialogExt;
-    let Some(picked) = app.dialog().file().add_filter(format!("{APP_NAME} 설정"), &["json"]).blocking_pick_file() else {
+    let lang = lang_of(&app);
+    let Some(picked) = app.dialog().file().add_filter(tr_for(lang, "plugin.settings.fileFilter"), &["json"]).blocking_pick_file() else {
         return Ok(ImportPick { cancelled: true, path: None, preview: None });
     };
     let path = picked.into_path().map_err(|e| e.to_string())?;
-    let preview = match read_json_file(&path) {
+    let preview = match read_json_file(&path, lang) {
         Ok(file) => app.state::<Ink>().lock().preview_import(&file),
         Err(e) => ImportPreview { ok: false, error: Some(e), changes: vec![], warnings: vec![] },
     };
@@ -1120,7 +1219,8 @@ async fn preview_import<R: Runtime>(app: AppHandle<R>) -> Result<ImportPick, Str
 /// 가져오기 2단계: 시트에서 [가져오기]를 눌렀을 때.
 #[tauri::command]
 fn apply_import(ink: State<'_, Ink>, path: String) -> UpdateResult {
-    match read_json_file(std::path::Path::new(&path)) {
+    let lang = ink.lock().lang();
+    match read_json_file(std::path::Path::new(&path), lang) {
         Ok(file) => ink.lock().apply_import(&file),
         Err(e) => UpdateResult { ok: false, error: Some(e), state: ink.lock().state() },
     }
@@ -1144,7 +1244,7 @@ pub(crate) fn today() -> String {
 async fn export_settings<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
     use tauri_plugin_dialog::DialogExt;
     let name = format!("{APP_DIR}-settings-{}.json", today());
-    let Some(picked) = app.dialog().file().add_filter(format!("{APP_NAME} 설정"), &["json"]).set_file_name(&name).blocking_save_file() else {
+    let Some(picked) = app.dialog().file().add_filter(tr(app, "plugin.settings.fileFilter"), &["json"]).set_file_name(&name).blocking_save_file() else {
         return Ok(());
     };
     let path = picked.into_path().map_err(|e| e.to_string())?;
@@ -1152,8 +1252,15 @@ async fn export_settings<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
     let ok = std::fs::write(&path, body).is_ok();
     let h = app.clone();
     app.run_on_main_thread(move || {
-        let ev = if ok { IslandEvent::new(IslandKind::Result, "설정을 내보냈어요") } else { IslandEvent::new(IslandKind::Problem, "내보내지 못했어요") };
-        h.state::<Ink>().lock().island(ev);
+        let ink = h.state::<Ink>();
+        let s = ink.lock();
+        let lang = s.lang();
+        let ev = if ok {
+            IslandEvent::new(IslandKind::Result, tr_for(lang, "plugin.settings.exported"))
+        } else {
+            IslandEvent::new(IslandKind::Problem, tr_for(lang, "plugin.settings.exportFailed"))
+        };
+        s.island(ev);
     })
     .map_err(|e| e.to_string())
 }
@@ -1239,8 +1346,13 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             app.run_on_main_thread(move || {
                 let ink = h.state::<Ink>();
                 let mut s = ink.lock();
+                let lang = s.lang();
                 let n = s.clear_ranges();
-                let text = if n == 0 { "지울 기록이 없어요".to_string() } else { format!("캡처 기록 {n}개를 지웠어요") };
+                let text = match n {
+                    0 => tr_for(lang, "plugin.history.empty"),
+                    1 => tr_for(lang, "plugin.history.cleared.one"),
+                    _ => trf_for(lang, "plugin.history.cleared.other", &[("n", &n)]),
+                };
                 s.island(IslandEvent::new(IslandKind::Info, text));
             })
             .map_err(|e| e.to_string())?;
@@ -1350,13 +1462,14 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             app.run_on_main_thread(move || {
                 let ink = h.state::<Ink>();
                 let mut s = ink.lock();
+                let lang = s.lang();
                 s.end_capture();
                 ink_platform_macos::permissions::request_screen();
                 // 켠 뒤에는 다시 시작해야 반영된다(그 순간 macOS도 "종료 후 다시 열기"를 묻는다)
                 s.island(
-                    IslandEvent::new(IslandKind::Info, format!("화면 기록에서 {APP_NAME}을 켜 주세요"))
-                        .detail("켰으면 다시 시작해요")
-                        .button("다시 시작", ACTION_RELAUNCH, None)
+                    IslandEvent::new(IslandKind::Info, tr_for(lang, "plugin.perm.screenGuide"))
+                        .detail(tr_for(lang, "plugin.perm.relaunchDetail"))
+                        .button(&tr_for(lang, "plugin.perm.relaunchBtn"), ACTION_RELAUNCH, None)
                         .duration_ms(PERMISSION_WAIT.as_millis() as u32),
                 );
             })
@@ -1369,11 +1482,12 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             app.run_on_main_thread(move || {
                 let ink = h.state::<Ink>();
                 let mut s = ink.lock();
+                let lang = s.lang();
                 s.end_capture();
                 ink_platform_macos::permissions::request_accessibility();
                 s.island(
-                    IslandEvent::new(IslandKind::Info, format!("손쉬운 사용에서 {APP_NAME}을 켜 주세요"))
-                        .detail("켜는 순간 알아서 이어져요")
+                    IslandEvent::new(IslandKind::Info, tr_for(lang, "plugin.perm.axGuide"))
+                        .detail(tr_for(lang, "plugin.perm.axDetail"))
                         .duration_ms(PERMISSION_WAIT.as_millis() as u32),
                 );
             })
@@ -1389,8 +1503,9 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
                         let _ = h.run_on_main_thread(move || {
                             let ink = app.state::<Ink>();
                             let mut s = ink.lock();
+                            let lang = s.lang();
                             s.refresh_permissions();
-                            s.island(IslandEvent::new(IslandKind::Result, "손쉬운 사용을 켰어요 · 이제 요소까지 잡아요"));
+                            s.island(IslandEvent::new(IslandKind::Result, tr_for(lang, "plugin.perm.axGranted")));
                             let _ = app.emit(EVT_STATE, &s.state());
                         });
                         return;
@@ -1466,7 +1581,12 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         hotkeys: Box::new(TauriHotkeys { app: app.clone() }),
         probe: probe(),
         store: Box::new(ink_store::JsonFileStore::new(dir, portable)),
-        notifier: Box::new(TauriNotifier { app: app.clone(), tray_mode: Mutex::new(None) }),
+        notifier: Box::new(TauriNotifier {
+            app: app.clone(),
+            tray_mode: Mutex::new(None),
+            tray_tooltip: Mutex::new(None),
+            last_lang: Mutex::new(None),
+        }),
         screen,
         windows,
         monitors,
@@ -1726,5 +1846,60 @@ mod tests {
         assert_eq!((m.action, m.w, m.h, m.session, m.bgra), (ink_app::ExportAction::Save, 1920, 1080, Some(4), false));
         h.remove("x-ink-w");
         assert!(export_meta(&h).is_err());
+    }
+
+    #[test]
+    fn 트레이_툴팁은_언어와_상태에_따라_바뀐다() {
+        assert_eq!(tooltip_for(Lang::Ko, true, 0, 0), "슉쇽");
+        assert_eq!(tooltip_for(Lang::En, true, 0, 0), "ShookShok");
+        assert_eq!(tooltip_for(Lang::Ko, false, 2, 1), "슉쇽 · 단축키 꺼짐 · 맨 위 창 1개");
+        assert_eq!(tooltip_for(Lang::En, false, 2, 1), "ShookShok · Shortcuts paused · 1 window on top");
+        assert_eq!(tooltip_for(Lang::Ko, true, 1, 3), "슉쇽 · 키 1개 겹침 · 맨 위 창 3개");
+        assert_eq!(tooltip_for(Lang::En, true, 2, 2), "ShookShok · 2 key conflicts · 2 windows on top");
+    }
+
+    #[test]
+    fn 플러그인_번역_키가_모두_카탈로그에_있다() {
+        let keys = [
+            "common.appTitle",
+            "error.settings.notSettings",
+            "plugin.history.cleared.one",
+            "plugin.history.cleared.other",
+            "plugin.history.empty",
+            "plugin.notReady",
+            "plugin.perm.axDetail",
+            "plugin.perm.axGranted",
+            "plugin.perm.axGuide",
+            "plugin.perm.relaunchBtn",
+            "plugin.perm.relaunchDetail",
+            "plugin.perm.screenGuide",
+            "plugin.pinMenu.close",
+            "plugin.pinMenu.closeAll",
+            "plugin.pinMenu.copy",
+            "plugin.pinMenu.save",
+            "plugin.settings.exportFailed",
+            "plugin.settings.exported",
+            "plugin.settings.fileFilter",
+            "plugin.settings.readError",
+            "plugin.tray.conflicts.one",
+            "plugin.tray.conflicts.other",
+            "plugin.tray.paused",
+            "plugin.tray.topmost.one",
+            "plugin.tray.topmost.other",
+            "plugin.window.island",
+            "plugin.window.overlay",
+            "plugin.window.pin",
+            "plugin.window.popover",
+            "plugin.window.recFrame",
+            "plugin.window.settings",
+            "plugin.window.zoomHud",
+        ];
+        for key in keys {
+            let ko = tr_for(Lang::Ko, key);
+            let en = tr_for(Lang::En, key);
+            assert_ne!(ko, key, "ko missing: {key}");
+            assert_ne!(en, key, "en missing: {key}");
+            assert!(!en.chars().any(|c| ('가'..='힣').contains(&c)), "en has hangul for {key}: {en}");
+        }
     }
 }

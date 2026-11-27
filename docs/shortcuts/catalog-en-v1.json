@@ -1,0 +1,1627 @@
+{
+  "schema": "screen-ink.shortcuts.catalog-en",
+  "version": 1,
+  "slots": {
+    "region": "Capture area",
+    "window": "Capture window",
+    "record": "Start/stop screen recording",
+    "draw": "Draw",
+    "zoom": "Zoom",
+    "board": "Board",
+    "last": "Capture last area",
+    "full": "Capture full screen",
+    "active": "Capture current window",
+    "delay": "Delayed capture",
+    "restore": "Reopen last drawing",
+    "pause": "Toggle shortcuts",
+    "topmost": "Keep window on top",
+    "pin": "Pin to screen",
+    "pinToggle": "Show/hide pins",
+    "timer": "Timer",
+    "c-detect": "Switch window / element",
+    "c-copy": "Copy and finish",
+    "c-save": "Save",
+    "c-quick": "Quick save to folder",
+    "c-cancel": "Cancel",
+    "c-last": "Use last area",
+    "c-prev": "Previous area (back)",
+    "c-next": "Previous area (next)",
+    "c-full": "Select full screen",
+    "c-cursor": "Show/hide cursor",
+    "c-color": "Copy loupe color",
+    "d-pen": "Pen",
+    "d-marker": "Highlighter",
+    "d-text": "Text",
+    "d-select": "Select & move",
+    "d-eraser": "Eraser (by stroke)",
+    "d-clear": "Clear all",
+    "d-red": "Color: Red",
+    "d-yellow": "Color: Yellow",
+    "d-green": "Color: Green",
+    "d-orange": "Color: Orange",
+    "d-blue": "Color: Blue",
+    "d-lime": "Color: Lime",
+    "d-white": "Whiteboard",
+    "d-black": "Blackboard",
+    "d-undo": "Undo",
+    "d-redo": "Redo",
+    "d-copy": "Copy drawing",
+    "d-save": "Save drawing",
+    "d-restore": "Load last drawing",
+    "d-center": "Center cursor",
+    "d-zin": "Zoom in",
+    "d-zout": "Zoom out",
+    "d-wup": "Thicker stroke",
+    "d-wdown": "Thinner stroke",
+    "d-help": "Show cheat sheet",
+    "d-exit": "Exit drawing",
+    "d-spot": "Spotlight focus",
+    "d-check": "Check stamp",
+    "d-number": "Number stamp (1, 2, 3…)",
+    "z-exit": "Exit zoom"
+  },
+  "sources": {
+    "win": "Windows",
+    "ime": "Korean IME",
+    "winapp": "App shortcut",
+    "hwp": "Hangul (HWP)",
+    "ppt": "Slide Show",
+    "pt": "PowerToys",
+    "ptaot": "PowerToys Always on Top",
+    "snip": "Snipaste",
+    "icz": "iCanZoomIt",
+    "zi": "ZoomIt",
+    "mac": "macOS",
+    "macapp": "Mac app shortcut"
+  },
+  "refs": [
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Shift+S",
+      "what": "Snipping Tool — Area snip"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "PrtScn",
+      "what": "Snipping Tool (Windows 11 default · turn off in Settings > Accessibility > Keyboard)"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+PrtScn",
+      "what": "Save full screen to Pictures"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Alt+PrtScn",
+      "what": "Copy current window"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Shift+R",
+      "what": "Snipping Tool screen recording (Windows 11)"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+G",
+      "what": "Xbox Game Bar"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Alt+R",
+      "what": "Game Bar start/stop recording"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Alt+G",
+      "what": "Game Bar record last moments"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Alt+PrtScn",
+      "what": "Game Bar screenshot"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Plus",
+      "what": "Turn on Magnifier and zoom in"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Minus",
+      "what": "Magnifier zoom out"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Esc",
+      "what": "Turn off Magnifier"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+M",
+      "what": "Switch Magnifier view (when active)"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+F",
+      "what": "Magnifier full-screen view (when active)"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+L",
+      "what": "Magnifier lens view (when active)"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+D",
+      "what": "Magnifier docked view (when active)"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Win+Enter",
+      "what": "Narrator"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+V",
+      "what": "Clipboard history"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+.",
+      "what": "Emoji panel"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+H",
+      "what": "Voice typing"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+L",
+      "what": "Lock screen"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+Delete",
+      "what": "Security options screen"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Shift+Esc",
+      "what": "Task Manager"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Alt+Tab",
+      "what": "Switch windows"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Alt+F4",
+      "what": "Close window"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Alt+Esc",
+      "what": "Cycle through windows"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Esc",
+      "what": "Start menu"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Alt+Space",
+      "what": "Window menu (may conflict with PowerToys Run)"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+D",
+      "what": "Show desktop"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+M",
+      "what": "Minimize all windows"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+E",
+      "what": "File Explorer"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+R",
+      "what": "Run dialog"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+I",
+      "what": "Settings"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+A",
+      "what": "Quick Settings"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+N",
+      "what": "Notifications"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+S",
+      "what": "Search"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+X",
+      "what": "Quick Link menu"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Tab",
+      "what": "Task View"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+W",
+      "what": "Widgets"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Win+D",
+      "what": "New virtual desktop"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Win+Left",
+      "what": "Previous desktop"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Win+Right",
+      "what": "Next desktop"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Win+F4",
+      "what": "Close virtual desktop"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Up",
+      "what": "Maximize window"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Down",
+      "what": "Restore or minimize window"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Left",
+      "what": "Snap window left"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Right",
+      "what": "Snap window right"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Shift+Win+Left",
+      "what": "Move window to another display"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Shift+Win+Right",
+      "what": "Move window to another display"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Z",
+      "what": "Snap layouts"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+P",
+      "what": "Display projection (Duplicate / Extend)"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+K",
+      "what": "Cast to wireless display"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+1~9",
+      "what": "Open taskbar app"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+T",
+      "what": "Cycle through taskbar apps"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+B",
+      "what": "Focus taskbar notification area"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Win+Space",
+      "what": "Switch input language"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Shift+Win+B",
+      "what": "Restart graphics driver"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Shift+F10",
+      "what": "Context menu"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+Up",
+      "what": "Rotate screen (some graphics drivers)"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+Down",
+      "what": "Rotate screen (some graphics drivers)"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+Left",
+      "what": "Rotate screen (some graphics drivers)"
+    },
+    {
+      "src": "win",
+      "platform": "win",
+      "combo": "Ctrl+Alt+Right",
+      "what": "Rotate screen (some graphics drivers)"
+    },
+    {
+      "src": "ime",
+      "platform": "win",
+      "combo": "한/영",
+      "what": "Switch Hangul / English"
+    },
+    {
+      "src": "ime",
+      "platform": "win",
+      "combo": "한자",
+      "what": "Convert to Hanja"
+    },
+    {
+      "src": "ime",
+      "platform": "win",
+      "combo": "Shift+Space",
+      "what": "Switch Hangul / English (depends on IME settings)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F1",
+      "what": "Help (most apps)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F2",
+      "what": "Rename (Explorer) · Edit cell (Excel)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F3",
+      "what": "Find (Explorer · browsers)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F4",
+      "what": "Address bar (Explorer) · Toggle reference (Excel)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F5",
+      "what": "Refresh · PowerPoint Start from Beginning"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Shift+F5",
+      "what": "PowerPoint Start from Current Slide"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F6",
+      "what": "Move between panes · Address bar"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F7",
+      "what": "Spelling (Office) · Caret browsing (browsers)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F8",
+      "what": "Extend selection (Excel)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F9",
+      "what": "Calculate all (Excel)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F10",
+      "what": "Menu bar"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F11",
+      "what": "Full screen (browsers · Explorer)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "F12",
+      "what": "Save As (Office) · DevTools (browsers)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+1~8",
+      "what": "Switch browser tab · Format Cells (Excel Ctrl+1)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+9",
+      "what": "Last browser tab"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Shift+1~8",
+      "what": "Explorer view · Excel number formats"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Alt+1~9",
+      "what": "Office Quick Access Toolbar"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Shift+S",
+      "what": "Microsoft Edge Web capture"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Shift+T",
+      "what": "Reopen closed browser tab"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Shift+N",
+      "what": "Private window · New folder (Explorer)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Shift+Delete",
+      "what": "Clear browsing data"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+C",
+      "what": "Copy"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+V",
+      "what": "Paste"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+X",
+      "what": "Cut"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Z",
+      "what": "Undo"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Y",
+      "what": "Redo"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+A",
+      "what": "Select all"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+S",
+      "what": "Save"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+F",
+      "what": "Find"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+P",
+      "what": "Print"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+N",
+      "what": "New document / window"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+O",
+      "what": "Open"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+W",
+      "what": "Close tab / document"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+T",
+      "what": "New browser tab"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+D",
+      "what": "Add bookmark (browsers)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+H",
+      "what": "Browser history · Replace (Word)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+R",
+      "what": "Refresh · Align right"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+L",
+      "what": "Address bar · Align left"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+E",
+      "what": "Center align · Browser search"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+B",
+      "what": "Bold"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+I",
+      "what": "Italic"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+U",
+      "what": "Underline"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+K",
+      "what": "Insert link"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Shift+V",
+      "what": "Paste as plain text (browsers · Office)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+Shift+P",
+      "what": "InPrivate / private browser window"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+F1",
+      "what": "Collapse/expand Office ribbon"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Shift+F1",
+      "what": "Reveal Formatting (Word)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Alt+F1",
+      "what": "Insert embedded chart (Excel)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+F2",
+      "what": "Print Preview (Office)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Shift+F2",
+      "what": "Edit comment/note (Excel)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Shift+F3",
+      "what": "Change Case (Word) · Insert Function (Excel)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+F4",
+      "what": "Close document / tab"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Ctrl+F5",
+      "what": "Hard reload (browsers)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Alt+F8",
+      "what": "Macros (Office)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Alt+F11",
+      "what": "VBA Editor (Office)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Shift+F11",
+      "what": "Insert new worksheet (Excel)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Shift+F12",
+      "what": "Save (Office)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Alt+Shift+D",
+      "what": "Insert date (Word)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Alt+Shift+T",
+      "what": "Insert time (Word)"
+    },
+    {
+      "src": "winapp",
+      "platform": "win",
+      "combo": "Alt+Shift+P",
+      "what": "Insert page number (Word)"
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "F3",
+      "what": "Select block"
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "F5",
+      "what": "Select table cell"
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "F6",
+      "what": "Styles"
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "F7",
+      "what": "Page setup"
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "Alt+L",
+      "what": "Font format"
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "Alt+T",
+      "what": "Paragraph format"
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "Alt+S",
+      "what": "Save"
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "Alt+V",
+      "what": "Save as"
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "Alt+P",
+      "what": "Print"
+    },
+    {
+      "src": "hwp",
+      "platform": "win",
+      "combo": "Ctrl+F10",
+      "what": "Character map"
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "Ctrl+P",
+      "what": "Pen (Slide Show)"
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "Ctrl+A",
+      "what": "Arrow pointer (Slide Show)"
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "Ctrl+E",
+      "what": "Eraser (Slide Show)"
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "Ctrl+I",
+      "what": "Highlighter (Slide Show)"
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "Ctrl+L",
+      "what": "Laser pointer (Slide Show)"
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "Ctrl+M",
+      "what": "Show/hide ink (Slide Show)"
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "Ctrl+H",
+      "what": "Hide pointer (Slide Show)"
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "B",
+      "what": "Black screen (Slide Show)"
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "W",
+      "what": "White screen (Slide Show)"
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "E",
+      "what": "Erase all ink (Slide Show)"
+    },
+    {
+      "src": "ppt",
+      "platform": "win",
+      "combo": "G",
+      "what": "See all slides (Slide Show)"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Shift+Win+V",
+      "what": "Advanced Paste"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Ctrl+Alt+Win+V",
+      "what": "Paste as Plain Text"
+    },
+    {
+      "src": "ptaot",
+      "platform": "win",
+      "combo": "Alt+Shift+D",
+      "what": "Always on Top (custom key; default Win+Ctrl+T)"
+    },
+    {
+      "src": "ptaot",
+      "platform": "win",
+      "combo": "Ctrl+Win+=",
+      "what": "Increase Always on Top opacity (default)"
+    },
+    {
+      "src": "ptaot",
+      "platform": "win",
+      "combo": "Ctrl+Win+-",
+      "what": "Decrease Always on Top opacity (default)"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Shift+Win+C",
+      "what": "Color Picker"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Ctrl+Shift+Win+R",
+      "what": "Crop and Lock (Reparent)"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Ctrl+Shift+Win+T",
+      "what": "Crop and Lock (Thumbnail)"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Shift+Win+`",
+      "what": "FancyZones Editor"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Win+PgDn",
+      "what": "FancyZones next window"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Win+PgUp",
+      "what": "FancyZones previous window"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Shift+Win+F",
+      "what": "Find My Mouse"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Ctrl+Shift+Win+M",
+      "what": "Screen Ruler"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Shift+Win+H",
+      "what": "Mouse Highlighter"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Ctrl+Space",
+      "what": "Peek preview"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Alt+Space",
+      "what": "PowerToys Run"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Shift+Win+/",
+      "what": "Shortcut Guide"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Ctrl+Win+`",
+      "what": "Workspaces"
+    },
+    {
+      "src": "pt",
+      "platform": "win",
+      "combo": "Alt+Win+Space",
+      "what": "Command Palette (default)"
+    },
+    {
+      "src": "snip",
+      "platform": "win",
+      "combo": "F1",
+      "what": "Snip"
+    },
+    {
+      "src": "snip",
+      "platform": "win",
+      "combo": "Ctrl+F1",
+      "what": "Snip and copy"
+    },
+    {
+      "src": "snip",
+      "platform": "win",
+      "combo": "Shift+F1",
+      "what": "Custom snip"
+    },
+    {
+      "src": "snip",
+      "platform": "win",
+      "combo": "F3",
+      "what": "Paste (pin to screen)"
+    },
+    {
+      "src": "snip",
+      "platform": "win",
+      "combo": "Shift+F3",
+      "what": "Show/hide all pinned images"
+    },
+    {
+      "src": "snip",
+      "platform": "win",
+      "combo": "Ctrl+F3",
+      "what": "Switch image group"
+    },
+    {
+      "src": "icz",
+      "platform": "win",
+      "combo": "Ctrl+1",
+      "what": "Zoom"
+    },
+    {
+      "src": "icz",
+      "platform": "win",
+      "combo": "Ctrl+2",
+      "what": "Draw"
+    },
+    {
+      "src": "icz",
+      "platform": "win",
+      "combo": "Ctrl+3",
+      "what": "Timer"
+    },
+    {
+      "src": "icz",
+      "platform": "win",
+      "combo": "Ctrl+4",
+      "what": "Live zoom"
+    },
+    {
+      "src": "icz",
+      "platform": "win",
+      "combo": "Ctrl+Shift+F12",
+      "what": "Invert screen colors"
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+1",
+      "what": "Zoom"
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+2",
+      "what": "Draw"
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+3",
+      "what": "Break timer"
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+4",
+      "what": "LiveZoom"
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+Shift+4",
+      "what": "LiveDraw"
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+5",
+      "what": "Record"
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+6",
+      "what": "Snip (copy area)"
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+Shift+6",
+      "what": "Save snip"
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+Alt+6",
+      "what": "Text capture snip"
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+7",
+      "what": "DemoType"
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+Shift+7",
+      "what": "Reset DemoType"
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+8",
+      "what": "Panorama"
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+Shift+8",
+      "what": "Save panorama"
+    },
+    {
+      "src": "zi",
+      "platform": "win",
+      "combo": "Ctrl+9",
+      "what": "Mirror"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Shift+Cmd+3",
+      "what": "Capture entire screen"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Shift+Cmd+4",
+      "what": "Capture selection (Space for window)"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Shift+Cmd+5",
+      "what": "Screenshot & recording toolbar"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Shift+Cmd+6",
+      "what": "Capture Touch Bar"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Shift+Cmd+3",
+      "what": "Copy entire screen"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Shift+Cmd+4",
+      "what": "Copy selection"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+Space",
+      "what": "Spotlight"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+Cmd+Space",
+      "what": "Finder search window"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Space",
+      "what": "Select previous input source"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Option+Space",
+      "what": "Select next input source"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+Tab",
+      "what": "Switch apps"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+`",
+      "what": "Switch windows in current app"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+Q",
+      "what": "Quit app"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+W",
+      "what": "Close window"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+H",
+      "what": "Hide app"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+Cmd+H",
+      "what": "Hide other apps"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+M",
+      "what": "Minimize window"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+Cmd+Esc",
+      "what": "Force Quit"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Cmd+Q",
+      "what": "Lock screen"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Shift+Cmd+Q",
+      "what": "Log out"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Cmd+F",
+      "what": "Toggle full screen"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Up",
+      "what": "Mission Control"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Down",
+      "what": "App Exposé"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Left",
+      "what": "Move left a space"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Right",
+      "what": "Move right a space"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+1~9",
+      "what": "Switch to Desktop 1–9 (if enabled)"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+Cmd+8",
+      "what": "Toggle Zoom (if enabled in Accessibility)"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+Cmd+=",
+      "what": "Zoom in (if enabled)"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+Cmd+-",
+      "what": "Zoom out (if enabled)"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+Cmd+F5",
+      "what": "Accessibility Shortcuts"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+F5",
+      "what": "VoiceOver"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+Cmd+Space",
+      "what": "Emoji & Symbols"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+1~9",
+      "what": "Special characters (¡ ™ £ ¢ ∞ § ¶ • ª · blocked if overridden)"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Option+0",
+      "what": "Special character (º)"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "F1~12",
+      "what": "Media keys (hold fn for F keys)"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Cmd+F1",
+      "what": "Toggle display mirroring"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+F1",
+      "what": "Toggle keyboard navigation"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+F2",
+      "what": "Move focus to menu bar (if keyboard navigation is on)"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Ctrl+F3",
+      "what": "Move focus to Dock (if enabled)"
+    },
+    {
+      "src": "mac",
+      "platform": "mac",
+      "combo": "Caps Lock",
+      "what": "Switch input language (depending on settings)"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+C",
+      "what": "Copy"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+V",
+      "what": "Paste"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+X",
+      "what": "Cut"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+Z",
+      "what": "Undo"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Shift+Cmd+Z",
+      "what": "Redo"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+A",
+      "what": "Select all"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+S",
+      "what": "Save"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+F",
+      "what": "Find"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+P",
+      "what": "Print"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+N",
+      "what": "New document / window"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+O",
+      "what": "Open"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+T",
+      "what": "New browser tab"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+R",
+      "what": "Refresh"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+L",
+      "what": "Address bar"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+D",
+      "what": "Add bookmark"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+B",
+      "what": "Bold"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+I",
+      "what": "Italic"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+U",
+      "what": "Underline"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+K",
+      "what": "Insert link"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Ctrl+A",
+      "what": "Move to beginning of line"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Ctrl+E",
+      "what": "Move to end of line"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Ctrl+K",
+      "what": "Delete to end of line"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Ctrl+D",
+      "what": "Delete forward character"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Ctrl+H",
+      "what": "Delete backward character"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+1~9",
+      "what": "Browser tab · Switch Finder view"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Shift+Cmd+/",
+      "what": "Help menu"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Cmd+,",
+      "what": "App settings"
+    },
+    {
+      "src": "macapp",
+      "platform": "mac",
+      "combo": "Shift+Cmd+T",
+      "what": "Reopen closed browser tab"
+    }
+  ]
+}

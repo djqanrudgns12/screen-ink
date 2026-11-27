@@ -96,7 +96,7 @@ impl<R: Runtime> ink_app::PinHost for TauriPinHost<R> {
         let app = self.app.clone();
         std::thread::spawn(move || {
             let built = WebviewWindowBuilder::new(&app, label(id), WebviewUrl::App(format!("index.html?view=pin&pin={id}").into()))
-                .title("슉쇽 고정")
+                .title(crate::tr(&app, "plugin.window.pin"))
                 .decorations(false)
                 .transparent(true)
                 .shadow(false)
@@ -183,10 +183,17 @@ pub fn zoom<R: Runtime>(win: &tauri::WebviewWindow<R>, store: &PinStore, id: u64
 /// 오른쪽 클릭 메뉴 [복사][저장] | [닫기][모두 닫기] — 고르면 `pin:<동작>:<id>` 메뉴 사건.
 pub fn popup_menu<R: Runtime>(win: &tauri::WebviewWindow<R>, id: u64) -> tauri::Result<()> {
     let app = win.app_handle();
-    let item = |action: &str, text: &str| MenuItem::with_id(app, format!("{MENU_PREFIX}{action}:{id}"), text, true, None::<&str>);
+    let lang = crate::lang_of(app);
+    let item = |action: &str, key: &str| MenuItem::with_id(app, format!("{MENU_PREFIX}{action}:{id}"), crate::tr_for(lang, key), true, None::<&str>);
     let menu = Menu::with_items(
         app,
-        &[&item("copy", "복사")?, &item("save", "저장")?, &PredefinedMenuItem::separator(app)?, &item("close", "닫기")?, &item("closeAll", "모두 닫기")?],
+        &[
+            &item("copy", "plugin.pinMenu.copy")?,
+            &item("save", "plugin.pinMenu.save")?,
+            &PredefinedMenuItem::separator(app)?,
+            &item("close", "plugin.pinMenu.close")?,
+            &item("closeAll", "plugin.pinMenu.closeAll")?,
+        ],
     )?;
     win.popup_menu(&menu)
 }

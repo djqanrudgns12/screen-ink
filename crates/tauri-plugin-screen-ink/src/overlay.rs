@@ -84,6 +84,10 @@ pub fn label(monitor: u32) -> String {
     format!("{PREFIX}{monitor}")
 }
 
+pub(crate) fn is_overlay_label(label: &str) -> bool {
+    label.starts_with(PREFIX)
+}
+
 /// 오버레이 창 이름 → 모니터 id(`label`의 반대). 오버레이 창이 아니면 None.
 /// 지금은 맥 입력 경로만 쓴다(순수 함수라 시험은 모든 OS에서 돈다).
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
@@ -189,7 +193,7 @@ pub fn ensure_overlays<R: Runtime>(app: &AppHandle<R>, layout: &MonitorLayout) {
         let w = match app.get_webview_window(&l) {
             Some(w) => w,
             None => match WebviewWindowBuilder::new(app, &l, WebviewUrl::App(format!("index.html?view=overlay&monitor={}", m.id).into()))
-                .title("슉쇽 화면")
+                .title(crate::tr(app, "plugin.window.overlay"))
                 .decorations(false)
                 .transparent(true)
                 .shadow(false)

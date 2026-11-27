@@ -10,6 +10,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::OnceLock;
 
 const CATALOG_JSON: &str = include_str!("../../../docs/shortcuts/catalog-v1.json");
+const CATALOG_EN_JSON: &str = include_str!("../../../docs/shortcuts/catalog-en-v1.json");
 const DEFAULTS_JSON: &str = include_str!("../../../docs/shortcuts/defaults-v1.json");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -360,6 +361,8 @@ enum SourceLevel {
 #[serde(rename_all = "camelCase")]
 struct SourceDef {
     label: String,
+    #[serde(skip)]
+    label_en: Option<String>,
     level: SourceLevel,
     keep_key: Option<String>,
 }
@@ -390,6 +393,24 @@ struct CatalogFile {
     refs: Vec<RefDef>,
 }
 
+#[derive(Debug, Default, Deserialize)]
+struct CatalogEnFile {
+    #[serde(default)]
+    slots: BTreeMap<String, String>,
+    #[serde(default)]
+    sources: BTreeMap<String, String>,
+    #[serde(default)]
+    refs: Vec<RefEnDef>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RefEnDef {
+    src: String,
+    platform: Platform,
+    combo: String,
+    what: String,
+}
+
 #[derive(Debug, Deserialize)]
 struct DefaultSlot {
     win: Option<String>,
@@ -405,12 +426,14 @@ struct DefaultsFile {
 struct RefHit {
     src: String,
     what: String,
+    what_en: Option<String>,
     level: Option<Level>,
 }
 
 pub struct Catalog {
     rules: Rules,
     slots: Vec<SlotDef>,
+    slot_labels_en: HashMap<String, String>,
     sources: BTreeMap<String, SourceDef>,
     index: [HashMap<String, Vec<RefHit>>; 2],
     defaults: BTreeMap<String, DefaultSlot>,
@@ -419,7 +442,7 @@ pub struct Catalog {
 /// 빌드에 박힌 확정본 v1 카탈로그(한 번만 읽는다).
 pub fn catalog() -> &'static Catalog {
     static CATALOG: OnceLock<Catalog> = OnceLock::new();
-    CATALOG.get_or_init(|| Catalog::from_json(CATALOG_JSON, DEFAULTS_JSON).expect("catalog-v1.json / defaults-v1.json 형식"))
+    CATALOG.get_or_init(|| Catalog::from_json(CATALOG_JSON, CATALOG_EN_JSON, DEFAULTS_JSON).expect("catalog-v1.json / catalog-en-v1.json / defaults-v1.json 형식"))
 }
 
 /// 판정에 필요한 이 PC의 사실 — 어댑터가 채운다.
@@ -517,19 +540,35 @@ fn issue(level: Level, source: &str, what: impl Into<String>) -> Issue {
 }
 
 impl Catalog {
-    fn from_json(catalog: &str, defaults: &str) -> Result<Self, serde_json::Error> {
-        let file: CatalogFile = serde_json::from_str(catalog)?;
+    fn from_json(catalog: &str, catalog_en: &str, defaults: &str) -> Result<Self, serde_json::Error> {
+        let mut file: CatalogFile = serde_json::from_str(catalog)?;
+        let en: CatalogEnFile = serde_json::from_str(catalog_en)?;
         let defaults: DefaultsFile = serde_json::from_str(defaults)?;
+        for (k, v) in en.sources {
+            if let Some(src) = file.sources.get_mut(&k) {
+                src.label_en = Some(v);
+            }
+        }
+        let refs_en: HashMap<(String, Platform, String), String> =
+            en.refs.into_iter().map(|r| ((r.src, r.platform, r.combo), r.what)).collect();
         let mut index: [HashMap<String, Vec<RefHit>>; 2] = [HashMap::new(), HashMap::new()];
         for r in &file.refs {
+            let what_en = refs_en.get(&(r.src.clone(), r.platform, r.combo.clone())).cloned();
             for c in expand(&r.combo) {
                 index[r.platform.idx()]
                     .entry(normalize(&c, r.platform))
                     .or_default()
-                    .push(RefHit { src: r.src.clone(), what: r.what.clone(), level: r.level });
+                    .push(RefHit { src: r.src.clone(), what: r.what.clone(), what_en: what_en.clone(), level: r.level });
             }
         }
-        Ok(Catalog { rules: file.rules, slots: file.slots, sources: file.sources, index, defaults: defaults.slots })
+        Ok(Catalog {
+            rules: file.rules,
+            slots: file.slots,
+            slot_labels_en: en.slots.into_iter().collect(),
+            sources: file.sources,
+            index,
+            defaults: defaults.slots,
+        })
     }
 
     pub fn slots(&self) -> &[SlotDef] {
@@ -543,6 +582,25 @@ impl Catalog {
 
     pub fn slot(&self, id: &str) -> Option<&SlotDef> {
         self.slots.iter().find(|s| s.id == id)
+    }
+
+    /// 칸 표시 이름(영어면 영어 덧씌우기, 없으면 한국어).
+    pub fn slot_label(&self, id: &str, lang: Lang) -> Option<String> {
+        let slot = self.slot(id)?;
+        Some(match lang {
+            Lang::En => self.slot_labels_en.get(id).cloned().unwrap_or_else(|| slot.label.clone()),
+            Lang::Ko => slot.label.clone(),
+        })
+    }
+
+    fn source_label<'a>(&'a self, src: &'a str, lang: Lang) -> &'a str {
+        let Some(def) = self.sources.get(src) else {
+            return src;
+        };
+        match lang {
+            Lang::En => def.label_en.as_deref().unwrap_or(&def.label),
+            Lang::Ko => &def.label,
+        }
     }
 
     /// 대체 앱 기본 정책(선택기 `DEFAULT_KEEP`).
@@ -565,14 +623,14 @@ impl Catalog {
         self.slots_for(p).map(|s| (s.id.clone(), self.default_combo(&s.id, p))).collect()
     }
 
-    fn source_level(&self, hit: &RefHit, env: &Environment) -> (Level, Option<String>) {
+    fn source_level(&self, hit: &RefHit, env: &Environment, lang: Lang) -> (Level, Option<String>) {
         let Some(src) = self.sources.get(&hit.src) else {
             return (hit.level.unwrap_or(Level::Warn), None);
         };
         match src.level {
             SourceLevel::Keep => {
                 let kept = src.keep_key.as_ref().and_then(|k| env.keep.get(k)).copied().unwrap_or(false);
-                (if kept { Level::Block } else { Level::Repl }, Some(src.label.clone()))
+                (if kept { Level::Block } else { Level::Repl }, Some(self.source_label(&hit.src, lang).to_string()))
             }
             SourceLevel::Block => (hit.level.unwrap_or(Level::Block), None),
             SourceLevel::Warn => (hit.level.unwrap_or(Level::Warn), None),
@@ -614,14 +672,18 @@ impl Catalog {
 
         if let Some(hits) = self.index[p.idx()].get(&combo) {
             for h in hits {
-                let (lv, owner) = self.source_level(h, env);
+                let (lv, owner) = self.source_level(h, env, lang);
                 // 모드 안 키는 그 화면이 떠 있을 때만 쓰므로 다른 앱 기능과는 겹쳐도 된다 — 운영체제 예약만 본다.
                 if !global && (!self.rules.mode_check_sources.contains(&h.src) || lv != Level::Block) {
                     continue;
                 }
-                let label = self.sources.get(&h.src).map(|s| s.label.as_str()).unwrap_or(h.src.as_str());
+                let label = self.source_label(&h.src, lang);
+                let what = match lang {
+                    Lang::En => h.what_en.as_deref().unwrap_or(&h.what),
+                    Lang::Ko => &h.what,
+                };
                 let verifiable = owner.is_some();
-                items.push(Issue { level: lv, source: label.to_string(), what: h.what.clone(), owner, verifiable });
+                items.push(Issue { level: lv, source: label.to_string(), what: what.to_string(), owner, verifiable });
             }
         }
 
@@ -633,7 +695,7 @@ impl Catalog {
         }
 
         // 맥에서 ⌥(·⇧) + 글자·숫자·기호는 특수 문자 입력 — 목록에 없는 조합도 알려 준다.
-        let mac_label = self.sources.get("mac").map(|s| s.label.as_str()).unwrap_or("macOS");
+        let mac_label = self.source_label("mac", lang);
         if global
             && p == Platform::Mac
             && mods.iter().any(|m| m == "Option")
@@ -652,12 +714,13 @@ impl Catalog {
             if v.is_empty() || normalize(v, p) != combo {
                 continue;
             }
+            let other_label = self.slot_label(&other.id, lang).unwrap_or_else(|| other.label.clone());
             if other.scope == slot.scope {
-                items.push(issue(Level::Block, &src_table, trf(lang, "shortcut.rule.sameScope", &[("name", &other.label)])));
+                items.push(issue(Level::Block, &src_table, trf(lang, "shortcut.rule.sameScope", &[("name", &other_label)])));
             } else if global {
-                items.push(issue(Level::Warn, &src_table, trf(lang, "shortcut.rule.globalShadowsMode", &[("name", &other.label)])));
+                items.push(issue(Level::Warn, &src_table, trf(lang, "shortcut.rule.globalShadowsMode", &[("name", &other_label)])));
             } else if other.is_global() {
-                items.push(issue(Level::Block, &src_table, trf(lang, "shortcut.rule.shadowedByGlobal", &[("name", &other.label)])));
+                items.push(issue(Level::Block, &src_table, trf(lang, "shortcut.rule.shadowedByGlobal", &[("name", &other_label)])));
             }
         }
 
@@ -880,5 +943,71 @@ mod tests {
         assert_eq!(combo_from_vk(true, false, false, false, 0x70).as_deref(), Some("Ctrl+F1"));
         assert_eq!(spoken("Shift+F2", Platform::Win), "Shift F2");
         assert_eq!(spoken("Option+Shift+1", Platform::Mac), "⌥⇧1");
+    }
+
+    #[test]
+    fn 영어_카탈로그_덧씌우기_키_짝이_맞는다() {
+        let ko: CatalogFile = serde_json::from_str(CATALOG_JSON).unwrap();
+        let en: CatalogEnFile = serde_json::from_str(CATALOG_EN_JSON).unwrap();
+        let ko_slot_ids: Vec<&str> = ko.slots.iter().map(|s| s.id.as_str()).collect();
+        let en_slot_ids: Vec<&str> = en.slots.keys().map(String::as_str).collect();
+        assert_eq!(ko_slot_ids.len(), en_slot_ids.len());
+        let ko_slot_set: BTreeSet<&str> = ko_slot_ids.into_iter().collect();
+        let en_slot_set: BTreeSet<&str> = en_slot_ids.into_iter().collect();
+        assert_eq!(en_slot_set, ko_slot_set, "slots 키 집합 일치");
+        assert_eq!(en.sources.keys().collect::<BTreeSet<_>>(), ko.sources.keys().collect::<BTreeSet<_>>(), "sources 키 집합 일치");
+
+        let ko_refs: Vec<(&str, Platform, &str)> = ko.refs.iter().map(|r| (r.src.as_str(), r.platform, r.combo.as_str())).collect();
+        let en_refs: Vec<(&str, Platform, &str)> = en.refs.iter().map(|r| (r.src.as_str(), r.platform, r.combo.as_str())).collect();
+        assert_eq!(en_refs, ko_refs, "refs 258개 (src, platform, combo) 일치");
+
+        let has_hangul = |s: &str| s.chars().any(|c| ('가'..='힣').contains(&c));
+        for (id, v) in &en.slots {
+            assert!(!v.trim().is_empty() && !has_hangul(v), "slot {id}: {v}");
+        }
+        for (id, v) in &en.sources {
+            assert!(!v.trim().is_empty() && !has_hangul(v), "source {id}: {v}");
+        }
+        for r in &en.refs {
+            assert!(!r.what.trim().is_empty() && !has_hangul(&r.what), "ref {:?}/{}: {}", r.platform, r.combo, r.what);
+        }
+    }
+
+    #[test]
+    fn 영어_전환시_카탈로그_설명과_칸_이름이_영어로_나온다() {
+        let c = catalog();
+        assert_eq!(c.slot_label("draw", Lang::En).as_deref(), Some("Draw"));
+        assert_eq!(c.slot_label("draw", Lang::Ko).as_deref(), Some("판서"));
+
+        let s = c.slot("active").unwrap();
+        let assigned = c.defaults(Platform::Win);
+        let win_shift_s = c.analyze_for(s, Platform::Win, "Win+Shift+S", &assigned, &env_default(), Lang::En);
+        assert_eq!(win_shift_s.top().unwrap().what, "Snipping Tool — Area snip");
+
+        let mut env = env_default();
+        env.keep.insert("snipaste".into(), true);
+        let f1 = c.analyze_for(c.slot("region").unwrap(), Platform::Win, "F1", &assigned, &env, Lang::En);
+        assert_eq!(f1.reason_for(Lang::En).as_deref(), Some("Used by Snipaste"));
+
+        env.keep.insert("powertoysAot".into(), true);
+        let aot = c.analyze_for(c.slot("topmost").unwrap(), Platform::Win, "Alt+Shift+D", &assigned, &env, Lang::En);
+        assert_eq!(aot.top().unwrap().source, "PowerToys Always on Top");
+        assert_eq!(aot.top().unwrap().what, "Always on Top (custom key; default Win+Ctrl+T)");
+        assert_eq!(aot.reason_for(Lang::En).as_deref(), Some("Used by PowerToys Always on Top"));
+
+        let mac_assigned = c.defaults(Platform::Mac);
+        let spotlight = c.analyze_for(c.slot("active").unwrap(), Platform::Mac, "Cmd+Space", &mac_assigned, &env_default(), Lang::En);
+        assert_eq!(spotlight.top().unwrap().what, "Spotlight");
+        let mission = c.analyze_for(c.slot("active").unwrap(), Platform::Mac, "Ctrl+Up", &mac_assigned, &env_default(), Lang::En);
+        assert_eq!(mission.top().unwrap().what, "Mission Control");
+
+        let internal = c.analyze_for(s, Platform::Win, "Alt+1", &assigned, &env_default(), Lang::En);
+        assert!(internal.top().unwrap().what.contains("Draw"), "{}", internal.top().unwrap().what);
+
+        // 영어 덧씌우기가 비어 있으면 한국어로 대체
+        let fallback = Catalog::from_json(CATALOG_JSON, "{}", DEFAULTS_JSON).unwrap();
+        assert_eq!(fallback.slot_label("draw", Lang::En).as_deref(), Some("판서"));
+        let fb = fallback.analyze_for(s, Platform::Win, "Win+Shift+S", &assigned, &env_default(), Lang::En);
+        assert_eq!(fb.top().unwrap().what, "캡처 도구 — 영역 캡처");
     }
 }
