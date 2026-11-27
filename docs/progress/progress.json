@@ -147,8 +147,8 @@
             { "id": "7.2", "title": "시나리오 카드 S1~S15", "platform": "win", "days": 0.36, "status": "todo", "level": "mid" },
             { "id": "7.3", "title": "인식 회귀·CI 기준선 고정", "platform": "common", "days": 0.36, "status": "partial", "note": "합성 사례 14종(cap_cases)이 CI(Linux·Windows·맥)에서 전부 맞춤·중복 0·앞 창 오염 0을 단언 = 합성 기준선 고정. 남음: 실제 창 사례(RB 17종, Windows) 기준선", "level": "easy" },
             { "id": "7.4", "title": "200회 진입·종료(메모리·핸들)", "platform": "win", "days": 0.35, "status": "todo", "level": "easy" },
-            { "id": "7.5", "title": "릴리스 체크리스트(R-NET-2·R-LOG-1 등)", "platform": "win", "days": 0.35, "status": "todo", "level": "mid" },
-            { "id": "7.6", "title": "NSIS 설치본·포터블 ZIP", "platform": "win", "days": 0.36, "status": "todo", "level": "mid" },
+            { "id": "7.5", "title": "릴리스 체크리스트(R-NET-2·R-LOG-1 등)", "platform": "win", "days": 0.35, "status": "partial", "note": "릴리스 점검표 Windows 몫(docs/release/checklist-2.md): 기록에 창 제목 0 통과, 업데이트 끈 상태 통신 0은 WebView2 하위 프로세스 2건으로 미통과 → W14에서 고치는 중", "level": "mid" },
+            { "id": "7.6", "title": "NSIS 설치본·포터블 ZIP", "platform": "win", "days": 0.36, "status": "verify", "note": "NSIS 설치본(5.1 MB)·포터블 ZIP(설정을 실행 파일 옆에) 생성, scripts/package-portable.ps1(4ce8bf1). 남음: 설치·제거 실기", "level": "mid" },
             { "id": "7.7", "title": "디자인 관문(S01~S17 = v3)", "platform": "common", "days": 0.36, "status": "verify", "note": "디자인 관문 docs/qa/2026-11-27/design-gate.md(49d567a): 미리보기 168장 넘침·잘림·겹침 0. 남음: 실제 창(S07 다중 모니터·S10 둥근 귀·S11 꺾쇠·S13 확대·S15 창 고정) 눈 확인", "level": "mid" }
           ]
         }
@@ -208,7 +208,7 @@
           "items": [
             { "id": "D1", "title": "개발자 계정(개인, 무료: 신분증·셀카)", "platform": "common", "days": 0.25, "status": "partial", "note": "게시자 표시 이름 찰떡쌤. 신분증 인증 때문에 등록 보류(사용자가 신분증 지참 후 진행)", "level": "easy" },
             { "id": "D2", "title": "MSIX 포장 파이프라인(Tauri 빌드 → 매니페스트·아이콘·makeappx)", "platform": "win", "days": 1, "status": "done", "note": "scripts/package-msix.ps1 + 매니페스트 템플릿, store·direct 포장·풀기 검증 통과(서명 없음)" },
-            { "id": "D3", "title": "패키지 모드 대응: 자동 실행 StartupTask·포터블 표시 무시·저장 위치", "platform": "win", "days": 0.5, "status": "verify", "note": "패키지 판정·StartupTask·저장 위치·로그 연결, 실제 MSIX 설치 확인 남음(사용자 승인)", "level": "mid" },
+            { "id": "D3", "title": "패키지 모드 대응: 자동 실행 StartupTask·포터블 표시 무시·저장 위치", "platform": "win", "days": 0.5, "status": "verify", "note": "패키지 판정·StartupTask·저장 위치 정적 점검·시험 14개 통과(4ce8bf1). 남음: 실제 MSIX 설치 확인(사람 승인)", "level": "mid" },
             { "id": "D4", "title": "스토어 등록 자료(설명·스크린숏·개인정보 처리방침 URL·연령 등급)", "platform": "common", "days": 0.5, "status": "partial", "note": "초안 docs/store/microsoft-store-listing.md. 남은 것: 스크린숏(실제 화면)·로고·게시자 표시 이름", "level": "easy" },
             { "id": "D5", "title": "인증 제출·통과", "platform": "win", "days": 0.5, "status": "todo", "level": "mid" },
             { "id": "D6", "title": "winget(msstore) 설치 확인·학교 PC Store 허용 여부 확인", "platform": "win", "days": 0.25, "status": "partial", "note": "학교 PC 스토어 열림 확인(사용자 2026-11-26), winget 확인 남음", "level": "easy" }
@@ -219,7 +219,7 @@
           "name": "파일 직접 공유(선택)",
           "items": [
             { "id": "D7", "title": "저장소 공개: 라이선스 → 라이선스 필드 → 공개 전환", "platform": "common", "days": 0.25, "status": "done", "note": "MIT, 2026-11-26 공개 전환" },
-            { "id": "D8", "title": "서명한 MSIX 한 파일 배포판(직접 배포 Publisher·WebView2 없을 때 안내·내려받은 파일 경고 확인)", "platform": "win", "days": 0.5, "status": "todo", "note": "D2·D7 다음, 11-distribution §6", "level": "mid" },
+            { "id": "D8", "title": "서명한 MSIX 한 파일 배포판(직접 배포 Publisher·WebView2 없을 때 안내·내려받은 파일 경고 확인)", "platform": "win", "days": 0.5, "status": "verify", "note": "무서명 MSIX 한 파일·MakeAppx unpack·WebView2 부재 안내 확인(4ce8bf1). 남음: 배포 인증서로 서명·설치·다운로드 경고 실기(사람 승인)", "level": "mid" },
             { "id": "D9", "title": "자동 업데이트: .appinstaller 호스팅·릴리스 스크립트·실행 중 적용 시점 확인", "platform": "win", "days": 0.5, "status": "verify", "note": "업데이트 확인(latest-win.json)·.appinstaller·릴리스 초안 스크립트 scripts/release-win.ps1(74861b2). 남음: 서명한 MSIX로 실제 설치·업데이트(사람 승인)", "level": "mid" },
             { "id": "D10", "title": "업데이트 팝업: 준비되면 바로 띄우고 클릭 한 번에 몇 초 안 설치·자동 재시작(모드·전체 화면 중엔 미룸)", "platform": "win", "days": 1, "status": "verify", "note": "새 판 알림 섬·[지금 업데이트]·모드·녹화·전체 화면 중 미룸·자동 확인 끄면 통신 0(74861b2). 남음: 실제 적용·자동 재시작 실기(사람 승인)", "level": "hard" },
             { "id": "D11", "title": "SignPath Foundation 신청: 서명 정책 문구·GitHub Actions 릴리스 빌드·2단계 인증", "platform": "common", "days": 0.5, "status": "todo", "note": "11 §10.3, D7 다음", "level": "mid" },
