@@ -105,6 +105,21 @@ pub struct InkState {
     /// 맥 화면 기록·손쉬운 사용 권한(M10). Windows는 없음
     #[serde(skip_serializing_if = "Option::is_none")]
     pub permissions: Option<Permissions>,
+    /// 녹화 마이크 권한(맥·Windows 공통). 녹화기가 마이크를 못 쓰는 OS·판이면 `Unsupported`
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub microphone: Option<MicStatus>,
+}
+
+/// 녹화 마이크 권한 상태 — 설정 › 일반 › 권한 점검의 마이크 줄.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum MicStatus {
+    Granted,
+    /// 아직 묻지 않음 — [허용 요청]이 OS 허용 창을 띄운다
+    NotDetermined,
+    /// 꺼짐·막힘 — 시스템 설정에서 켜야 한다
+    Denied,
+    Unsupported,
 }
 
 /// 맥 권한 상태(M10). `*_revoked` = 전에는 있었는데 지금 없음(업데이트·재서명 뒤 풀림 감지).

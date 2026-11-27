@@ -1,9 +1,8 @@
 {
   "general.title": "General",
-
   "general.checkup.title": "Checkup",
   "general.checkup.title~mac": "Permission check",
-  "general.checkup.title~win": "Shortcuts & startup check",
+  "general.checkup.title~win": "Shortcuts & permissions",
   "general.checkup.summaryAllOk": "Everything is ready",
   "general.checkup.summaryIssues": "{n} item(s) need attention",
   "general.checkup.screenLabel": "Screen Recording",
@@ -27,7 +26,6 @@
   "general.checkup.autostartOn": "On · Starts automatically when you sign in",
   "general.checkup.autostartOff": "Off · Open manually when needed",
   "general.checkup.enableBtn": "Turn on",
-
   "general.appearance.title": "Appearance",
   "general.appearance.theme": "Theme",
   "general.appearance.themeSystem": "System",
@@ -36,7 +34,6 @@
   "general.appearance.lang": "Language",
   "general.appearance.langKo": "한국어",
   "general.appearance.langEn": "English",
-
   "general.startup.title": "Startup",
   "general.startup.autostart": "Launch at sign-in",
   "general.startup.autostartSub": "Starts quietly in the background",
@@ -44,7 +41,6 @@
   "general.startup.autostartSub~win": "Quietly in the taskbar",
   "general.startup.firstRun": "First-run guide",
   "general.startup.reviewBtn": "Show again",
-
   "general.topmost.title": "Keep on top",
   "general.topmost.tag": "WINDOWS",
   "general.topmost.border": "Pinned window border",
@@ -54,7 +50,6 @@
   "general.topmost.pinned": "Pinned windows",
   "general.topmost.pinnedCount": "{n}",
   "general.topmost.releaseAll": "Release all",
-
   "general.data.title": "Data",
   "general.data.location": "Settings file",
   "general.data.openBtn": "Open",
@@ -77,7 +72,6 @@
   "general.data.reset": "Reset all settings",
   "general.data.resetSub": "All shortcuts and preferences return to defaults",
   "general.data.resetBtn": "Reset all",
-
   "general.importSheet.titleCount": "{n} item(s) will change",
   "general.importSheet.titleEmpty": "No changes found",
   "general.importSheet.descCount": "Only items that differ from your current settings are shown.",
@@ -85,9 +79,15 @@
   "general.importSheet.confirm": "Import",
   "general.importSheet.cancel": "Cancel",
   "general.importSheet.emptyKey": "Unset",
-
   "general.resetSheet.title": "Reset all settings to defaults?",
   "general.resetSheet.desc": "All customized shortcuts and preferences will be reset.",
   "general.resetSheet.confirm": "Reset all",
-  "general.resetSheet.cancel": "Cancel"
+  "general.resetSheet.cancel": "Cancel",
+  "general.checkup.micLabel": "Microphone",
+  "general.checkup.micOk": "On · recordings can include your voice",
+  "general.checkup.micAsk": "Not allowed yet · allow it to record your voice",
+  "general.checkup.micOff": "Off · turn it on in settings to record your voice",
+  "general.checkup.micOff~mac": "Off · turn on Shookshok in System Settings › Microphone",
+  "general.checkup.micOff~win": "Off · turn it on in Windows Settings › Privacy › Microphone",
+  "general.checkup.micRequestBtn": "Allow"
 }

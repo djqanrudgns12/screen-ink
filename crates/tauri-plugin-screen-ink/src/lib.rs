@@ -2034,7 +2034,11 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String, id: Option<u64>) -> 
         #[cfg(target_os = "macos")]
         ink_app::ACTION_PERM_MIC => {
             hide(POPOVER);
-            ink_platform_macos::permissions::open_microphone_settings();
+            // 아직 묻지 않았으면 macOS 허용 창, 이미 정해졌으면(꺼짐) 시스템 설정 › 마이크 칸
+            let asked = app.state::<Ink>().lock().request_microphone_if_undetermined();
+            if !asked {
+                ink_platform_macos::permissions::open_microphone_settings();
+            }
         }
         #[cfg(windows)]
         ink_app::ACTION_PERM_MIC => {

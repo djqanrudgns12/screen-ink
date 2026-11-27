@@ -110,3 +110,37 @@ fn 첫_실행_카드_위치는_숨은_설정으로_남는다() {
     assert_eq!(s.state().settings["onboarding.step"], 2);
     assert!(!s.update_setting("onboarding.step", &serde_json::json!(9)).ok, "0~4만");
 }
+
+/// 권한 점검의 마이크 줄: 두 OS 모두 상태에 싣고, 아직 안 물었으면 [허용 요청]이 OS 허용 창을 띄운다.
+#[test]
+fn 마이크_권한은_상태에_싣고_안_물었을_때만_허용_창을_띄운다() {
+    use ink_app::{MicAccess, MicStatus};
+    let w = FakeWorld::new();
+    {
+        let mut r = w.recorder.0.lock().unwrap();
+        r.mic = true;
+        r.mic_access = MicAccess::NotDetermined;
+    }
+    let mut s = service(&w);
+    w.install_recorder(&mut s);
+    assert_eq!(s.refresh_microphone(), MicStatus::NotDetermined);
+    assert_eq!(s.state().microphone, Some(MicStatus::NotDetermined));
+    assert!(s.request_microphone_if_undetermined(), "아직 안 물었으면 허용 창");
+    assert_eq!(w.recorder.0.lock().unwrap().mic_requests, 1);
+    let sent = || w.notifier.0.lock().unwrap().states;
+    let n = sent();
+    w.recorder.0.lock().unwrap().mic_access = MicAccess::Granted;
+    assert!(s.poll_permissions(), "허용한 순간 상태를 보낸다");
+    assert_eq!(sent(), n + 1);
+    assert_eq!(s.state().microphone, Some(MicStatus::Granted));
+    assert!(!s.poll_permissions(), "그대로면 보내지 않는다");
+    w.recorder.0.lock().unwrap().mic_access = MicAccess::Denied;
+    assert!(!s.request_microphone_if_undetermined(), "꺼짐이면 묻지 않고 설정 칸(어댑터)으로");
+    assert_eq!(w.recorder.0.lock().unwrap().mic_requests, 1);
+    // 마이크를 못 쓰는 녹화기(가짜 기본값)
+    let w2 = FakeWorld::new();
+    let mut s2 = service(&w2);
+    w2.install_recorder(&mut s2);
+    assert_eq!(s2.refresh_microphone(), MicStatus::Unsupported);
+    assert!(!s2.request_microphone_if_undetermined());
+}

@@ -171,6 +171,7 @@ pub struct InkService {
     pub(crate) rec: crate::record::RecordState,
     // ── 맥 권한(M10) ──
     pub(crate) permissions: Option<crate::state::Permissions>,
+    pub(crate) microphone: Option<crate::state::MicStatus>,
     /// 손쉬운 사용 칩을 이번 실행에 보였음(캡처 모드 섬에 한 번만)
     pub(crate) ax_chip_shown: bool,
 }
@@ -315,6 +316,7 @@ impl InkService {
             pkg: Default::default(),
             rec: Default::default(),
             permissions: None,
+            microphone: None,
             ax_chip_shown: false,
         };
         svc.refresh_environment();
@@ -374,6 +376,7 @@ impl InkService {
             notices: self.notices.iter().map(|n| n.render(self.lang())).collect(),
             mode: self.mode,
             permissions: self.permissions,
+            microphone: self.microphone,
         }
     }
 
@@ -455,12 +458,39 @@ impl InkService {
         Some(p)
     }
 
+    /// 녹화 마이크 권한을 다시 읽는다(맥·Windows 공통, 권한 점검 마이크 줄).
+    pub fn refresh_microphone(&mut self) -> crate::state::MicStatus {
+        use crate::state::MicStatus;
+        let status = if !self.rec.recorder.mic_supported() {
+            MicStatus::Unsupported
+        } else {
+            match self.rec.recorder.mic_access() {
+                crate::ports::MicAccess::Granted => MicStatus::Granted,
+                crate::ports::MicAccess::NotDetermined => MicStatus::NotDetermined,
+                crate::ports::MicAccess::Denied => MicStatus::Denied,
+            }
+        };
+        self.microphone = Some(status);
+        status
+    }
+
+    /// 권한 점검의 마이크 [허용 요청]: 아직 묻지 않았으면 OS 허용 창을 띄우고 true. 이미 정해졌으면 false
+    /// (그때는 어댑터가 시스템 설정의 마이크 칸을 연다 — 거기서만 켤 수 있다).
+    pub fn request_microphone_if_undetermined(&mut self) -> bool {
+        if self.refresh_microphone() == crate::state::MicStatus::NotDetermined {
+            self.rec.recorder.request_mic_access();
+            return true;
+        }
+        false
+    }
+
     /// 권한을 다시 읽고 **바뀌었으면** 상태를 보낸다(R2-ONB-2). 켜지는 순간 카드에 체크가 뜨게 하는 감시용. 바뀌었으면 true.
-    /// 권한 개념이 없는 OS(Windows·시험 기본)는 아무 일도 없다.
+    /// 화면 기록·손쉬운 사용은 맥만, 마이크는 두 OS 모두.
     pub fn poll_permissions(&mut self) -> bool {
-        let before = self.permissions;
+        let before = (self.permissions, self.microphone);
         let now = self.refresh_permissions();
-        let changed = now.is_some() && now != before;
+        let mic = self.refresh_microphone();
+        let changed = (now.is_some() && now != before.0) || Some(mic) != before.1;
         if changed {
             self.emit_state();
         }
@@ -488,6 +518,7 @@ impl InkService {
 
     pub fn refresh_environment(&mut self) {
         self.refresh_permissions();
+        self.refresh_microphone();
         let running: BTreeSet<String> = self.ports.probe.running_apps().into_iter().map(|s| s.to_lowercase()).collect();
         let mut env = catalog().default_environment();
         for v in env.keep.values_mut() {

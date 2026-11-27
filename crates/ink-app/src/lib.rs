@@ -35,4 +35,4 @@ pub use state::{
 };
 pub use live_zoom::{ZoomHandoff, ZoomInput};
 pub use ports::{Magnifier, NoMagnifier, ZOOM_UNSUPPORTED};
-pub use state::LiveZoomState;
+pub use state::{LiveZoomState, MicStatus};

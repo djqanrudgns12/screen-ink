@@ -99,6 +99,36 @@ test('설정 일반 점검 요약은 맥 권한 상태와 Windows 겹침·시작
   assert.equal(winWarn.items[1].status, 'off');
 });
 
+test('권한 점검 마이크 줄은 두 OS 모두 상태를 보이고, 녹화 마이크를 켠 사람에게만 확인 필요로 센다', () => {
+  const ask = summarizeCheckup({
+    platform: 'macos',
+    permissions: { screen: true, accessibility: true, screenRevoked: false, accessibilityRevoked: false },
+    microphone: 'notDetermined',
+    settings: { 'record.mic': true },
+  });
+  assert.equal(ask.mic.status, 'ask');
+  assert.equal(ask.mic.isIssue, true);
+  assert.equal(ask.issueCount, 1);
+  assert.equal(ask.allOk, false);
+
+  const offButNotWanted = summarizeCheckup({
+    platform: 'macos',
+    permissions: { screen: true, accessibility: true, screenRevoked: false, accessibilityRevoked: false },
+    microphone: 'denied',
+    settings: { 'record.mic': false },
+  });
+  assert.equal(offButNotWanted.mic.status, 'off');
+  assert.equal(offButNotWanted.mic.isIssue, false, '녹화 마이크를 안 쓰면 문제로 세지 않는다');
+  assert.equal(offButNotWanted.allOk, true);
+
+  const winOk = summarizeCheckup({ platform: 'windows', microphone: 'granted', settings: { 'general.autostart': true, 'record.mic': true } });
+  assert.equal(winOk.mic.status, 'ok');
+  assert.equal(winOk.allOk, true);
+
+  const unknown = summarizeCheckup({ platform: 'windows', settings: { 'general.autostart': true } });
+  assert.equal(unknown.mic.status, 'unsupported', '상태가 없으면(구판 Rust) 줄을 숨긴다');
+});
+
 test('첫 실행 연습 카드 추적기는 캡처 진입 뒤 결과/잔상/핀 증가 시 완료로 판정하고 취소는 미완료로 둔다', () => {
   // 1) 진입 → afterimage 이벤트로 완료
   let t = createPracticeTracker(0);

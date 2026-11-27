@@ -177,6 +177,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       mode,
       // 맥 권한(M10·R2-ONB) — 미리보기 ?perm=screen-off 등으로 넘긴다
       ...(perms ? { permissions: { ...perms } } : {}),
+      // 녹화 마이크 권한(두 OS) — 미리보기 기본은 허용됨
+      microphone: 'granted',
     };
   };
   // 가져오기 장면: 다른 PC/Mac에서 내보낸 파일(3개가 다름)

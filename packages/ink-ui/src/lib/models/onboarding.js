@@ -89,8 +89,23 @@ export function getConflictHowtoKind(appName) {
  * @param {any} state
  * @param {{ screenAsked?: boolean }} [opts]
  */
+/**
+ * 녹화 마이크 권한 항목(맥·Windows 공통). 녹화 마이크를 켠 사람에게만 "확인 필요"로 센다.
+ * status: ok(허용됨) · ask(아직 안 물음 → [허용 요청]) · off(꺼짐 → [열기]) · unsupported(이 OS에서 못 씀)
+ * @param {any} state
+ */
+export function summarizeMicItem(state) {
+  const raw = state?.microphone;
+  /** @type {'ok' | 'ask' | 'off' | 'unsupported'} */
+  const status = raw === 'granted' ? 'ok' : raw === 'notDetermined' ? 'ask' : raw === 'denied' ? 'off' : 'unsupported';
+  const wanted = Boolean(state?.settings?.['record.mic']);
+  return { id: 'mic', status, wanted, action: 'perm.microphone', isIssue: wanted && (status === 'ask' || status === 'off') };
+}
+
 export function summarizeCheckup(state, { screenAsked = false } = {}) {
   const platform = state?.platform ?? 'windows';
+  const mic = summarizeMicItem(state);
+  const micIssue = mic.isIssue ? 1 : 0;
   if (platform === 'macos') {
     const perms = state?.permissions ?? {
       screen: true,
@@ -127,10 +142,11 @@ export function summarizeCheckup(state, { screenAsked = false } = {}) {
         canRelaunch: false,
       },
     ];
-    const issueCount = items.filter((item) => item.status !== 'ok').length;
+    const issueCount = items.filter((item) => item.status !== 'ok').length + micIssue;
     return {
       platform: 'macos',
       items,
+      mic,
       issueCount,
       allOk: issueCount === 0,
     };
@@ -155,10 +171,11 @@ export function summarizeCheckup(state, { screenAsked = false } = {}) {
       notice: autostartNotice,
     },
   ];
-  const issueCount = (conflictCount > 0 ? 1 : 0) + (autostartNotice ? 1 : 0);
+  const issueCount = (conflictCount > 0 ? 1 : 0) + (autostartNotice ? 1 : 0) + micIssue;
   return {
     platform: 'windows',
     items,
+    mic,
     issueCount,
     allOk: issueCount === 0,
   };

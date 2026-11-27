@@ -67,9 +67,24 @@
   }
 
   function refreshPermsIfMac() {
-    if (state?.platform === 'macos') {
+    // 이름은 그대로 두되 두 OS 모두 — 마이크 권한은 Windows에도 있다
+    void runAction('perm.refresh');
+  }
+
+  /** @type {ReturnType<typeof setInterval> | null} */
+  let micWatch = null;
+  /** 마이크 [허용 요청]·[열기] 뒤 30초 동안 1.5초마다 다시 읽어 OS 허용 창·설정에서 켠 순간 줄이 바뀌게 한다. */
+  function watchMicPermission() {
+    if (micWatch) clearInterval(micWatch);
+    let left = 20;
+    micWatch = setInterval(() => {
       void runAction('perm.refresh');
-    }
+      left -= 1;
+      if (left <= 0 || state?.microphone === 'granted') {
+        if (micWatch) clearInterval(micWatch);
+        micWatch = null;
+      }
+    }, 1500);
   }
 
   $effect(() => {
@@ -77,7 +92,7 @@
     client.getState().then((s) => {
       if (!alive) return;
       state = s;
-      if (s?.platform === 'macos') void runAction('perm.refresh');
+      void runAction('perm.refresh');
     });
     const off = client.subscribe((e) => {
       if (e.type === 'state') state = e.state;
@@ -85,6 +100,7 @@
     return () => {
       alive = false;
       off();
+      if (micWatch) clearInterval(micWatch);
     };
   });
 
@@ -303,6 +319,32 @@
               </button>
             {/if}
           </Row>
+        {/if}
+
+        {#if checkup.mic && checkup.mic.status !== 'unsupported'}
+          {@const micItem = checkup.mic}
+          <div data-setting-id="general.checkup.mic">
+            <Row
+              label={t('general.checkup.micLabel')}
+              sub={micItem.status === 'ok'
+                ? t('general.checkup.micOk')
+                : micItem.status === 'ask'
+                  ? t('general.checkup.micAsk')
+                  : t('general.checkup.micOff')}
+              status={micItem.status === 'ok' ? 'ok' : micItem.isIssue ? 'attn' : ''}
+            >
+              <button
+                type="button"
+                class="ink-sec-btn ink-focus"
+                onclick={() => {
+                  void runAction('perm.microphone');
+                  watchMicPermission();
+                }}
+              >
+                {micItem.status === 'ask' ? t('general.checkup.micRequestBtn') : t('general.checkup.openBtn')}
+              </button>
+            </Row>
+          </div>
         {/if}
       </Group>
     </section>
