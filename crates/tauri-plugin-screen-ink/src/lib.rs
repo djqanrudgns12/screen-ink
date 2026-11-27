@@ -1986,6 +1986,11 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String, id: Option<u64>) -> 
             hide(POPOVER);
             ink_platform_macos::permissions::open_microphone_settings();
         }
+        #[cfg(windows)]
+        ink_app::ACTION_PERM_MIC => {
+            hide(POPOVER);
+            ink_platform_windows::microphone::open_settings()?;
+        }
         ACTION_RELAUNCH => app.restart(),
         other => {
             hide(POPOVER);

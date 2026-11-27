@@ -850,4 +850,17 @@ Denies the zoom_input command without any pre-configured scope.
 
 </td>
 </tr>
+
+<tr>
+<td>
+
+`screen-ink:windows-audio-inputs`
+
+</td>
+<td>
+
+Windows 설정 창에서 녹화용 마이크 목록을 읽는다.
+
+</td>
+</tr>
 </table>

@@ -267,6 +267,8 @@ impl InkService {
             return;
         }
         let actual_mic = if mic_on { self.rec.recorder.mic_active().unwrap_or(true) } else { false };
+        #[cfg(windows)]
+        let mic_access = if self.platform == Platform::Win && mic_on && !actual_mic { self.rec.recorder.mic_access() } else { mic_access };
         let now = self.clock_ms();
         self.rec.phase = RecPhase::Recording;
         self.rec.monitor_bounds = target.monitor_id().and_then(|id| layout.monitors.iter().find(|m| m.id == id)).map(|m| m.bounds);
@@ -308,6 +310,10 @@ impl InkService {
         } else if mic_wanted && mic_supported && mic_access != MicAccess::Granted {
             let mut ev = IslandEvent::new(IslandKind::Info, self.t("island.record.micDenied")).detail(self.t("island.record.videoOnly"));
             if self.platform == Platform::Mac {
+                ev = ev.button(&self.t("island.perm.openScreenBtn"), crate::ACTION_PERM_MIC, None);
+            }
+            #[cfg(windows)]
+            if self.platform == Platform::Win {
                 ev = ev.button(&self.t("island.perm.openScreenBtn"), crate::ACTION_PERM_MIC, None);
             }
             self.island(ev);

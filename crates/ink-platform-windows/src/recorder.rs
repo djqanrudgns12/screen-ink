@@ -10,7 +10,8 @@
 //! - 로그에 창 제목·파일 이름을 쓰지 않는다(R-LOG-1).
 
 use crate::gpu::{self, Gpu};
-use ink_app::{RecStartOpts, RecStats, Recorder, SavedFile, REC_ENCODER_FAILED, REC_WINDOW_CLOSED};
+use crate::microphone::{self, Microphone};
+use ink_app::{MicAccess, RecStartOpts, RecStats, Recorder, SavedFile, REC_ENCODER_FAILED, REC_WINDOW_CLOSED};
 use ink_domain::naming;
 use ink_domain::recording::{self, Leftover, RecTarget};
 use std::ffi::c_void;
@@ -26,11 +27,12 @@ use windows::Foundation::TypedEventHandler;
 use windows::Graphics::Capture::{Direct3D11CaptureFrame, Direct3D11CaptureFramePool, GraphicsCaptureItem, GraphicsCaptureSession};
 use windows::Graphics::DirectX::DirectXPixelFormat;
 use windows::Graphics::SizeInt32;
-use windows::Win32::Foundation::{HWND, POINT, RECT};
+use windows::Win32::Foundation::{E_ACCESSDENIED, HWND, POINT, RECT};
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_RATIONAL, DXGI_SAMPLE_DESC};
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromPoint, MONITORINFO, MONITOR_DEFAULTTONEAREST};
 use windows::Win32::Media::MediaFoundation::*;
+use windows::Win32::System::Performance::{QueryPerformanceCounter, QueryPerformanceFrequency};
 use windows::Win32::System::WinRT::Direct3D11::IDirect3DDxgiInterfaceAccess;
 use windows::Win32::System::WinRT::Graphics::Capture::IGraphicsCaptureItemInterop;
 use windows::Win32::System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED};
@@ -62,10 +64,13 @@ fn ensure_mf() -> Result<(), String> {
 
 #[derive(Default)]
 struct Shared {
+    mic_active: AtomicBool,
+    mic_denied: AtomicBool,
+    paused: AtomicBool,
+    elapsed_ticks: AtomicU64,
     frames: AtomicU64,
     width: AtomicU32,
     height: AtomicU32,
-    t0: Mutex<Option<Instant>>,
     failure: Mutex<Option<String>>,
 }
 
@@ -88,6 +93,11 @@ impl WinRecorder {
         WinRecorder { temp_dir, default_folder, live: None, shared: Arc::new(Shared::default()) }
     }
 
+    /// 녹화 스레드가 다음 장면에서 영상·마이크를 함께 정지하거나 재개한다.
+    pub fn set_paused(&self, paused: bool) {
+        self.shared.paused.store(paused, Ordering::Release);
+    }
+
     fn halt(&mut self) -> Option<(PathBuf, Result<RecStats, String>)> {
         let mut live = self.live.take()?;
         live.stop.store(true, Ordering::SeqCst);
@@ -100,6 +110,26 @@ impl WinRecorder {
 }
 
 impl Recorder for WinRecorder {
+    fn mic_supported(&self) -> bool {
+        true
+    }
+
+    fn mic_access(&self) -> MicAccess {
+        if self.live.is_some() && self.shared.mic_denied.load(Ordering::Acquire) {
+            MicAccess::Denied
+        } else {
+            microphone::access()
+        }
+    }
+
+    fn mic_active(&self) -> Option<bool> {
+        self.live.as_ref().map(|_| self.shared.mic_active.load(Ordering::Acquire))
+    }
+
+    fn audio_inputs(&self) -> Vec<(String, String)> {
+        microphone::inputs().unwrap_or_default()
+    }
+
     /// F3 고르기 중: MF·장치·하드웨어 인코더를 미리 깨운다(준비 0.35~0.7 s를 숨김, 함정 6).
     fn prepare(&mut self) {
         static WARMED: AtomicBool = AtomicBool::new(false);
@@ -119,7 +149,7 @@ impl Recorder for WinRecorder {
                 std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
                 let path = dir.join(format!("warm-{}.mp4", std::process::id()));
                 // 싱크 라이터 + 입력 형식까지(인코더 MFT를 실제로 띄움) 만들고 바로 버린다
-                let r = Encoder::open(&gpu, &path, 1920, 1080, 30, recording::bitrate(1920, 1080, 30), false).map(drop);
+                let r = Encoder::open(&gpu, &path, 1920, 1080, 30, recording::bitrate(1920, 1080, 30), Tracks::Warm).map(drop);
                 let _ = std::fs::remove_file(&path);
                 r
             };
@@ -143,8 +173,9 @@ impl Recorder for WinRecorder {
         let (ready_tx, ready_rx) = channel();
         let temp = opts.temp_path.clone();
         let (stop2, shared2) = (stop.clone(), shared.clone());
+        let timeout = if opts.mic_device.is_some() { Duration::from_secs(10) } else { START_TIMEOUT };
         let thread = std::thread::Builder::new().name("shookshok-rec".into()).spawn(move || run(opts, stop2, shared2, ready_tx)).map_err(|e| e.to_string())?;
-        match ready_rx.recv_timeout(START_TIMEOUT) {
+        match ready_rx.recv_timeout(timeout) {
             Ok(Ok(())) => {
                 self.live = Some(Live { stop, thread: Some(thread), temp });
                 Ok(())
@@ -162,7 +193,7 @@ impl Recorder for WinRecorder {
 
     fn stats(&self) -> RecStats {
         let s = &self.shared;
-        let elapsed_ms = s.t0.lock().unwrap_or_else(|e| e.into_inner()).map(|t| t.elapsed().as_millis() as u64).unwrap_or(0);
+        let elapsed_ms = s.elapsed_ticks.load(Ordering::Relaxed) / 10_000;
         let bytes = self.live.as_ref().and_then(|l| std::fs::metadata(&l.temp).ok()).map(|m| m.len()).unwrap_or(0);
         RecStats { elapsed_ms, bytes, frames: s.frames.load(Ordering::Relaxed), width: s.width.load(Ordering::Relaxed), height: s.height.load(Ordering::Relaxed) }
     }
@@ -229,10 +260,19 @@ fn run(opts: RecStartOpts, stop: Arc<AtomicBool>, shared: Arc<Shared>, ready: Se
             return Err(e);
         }
     };
-    let _ = ready.send(Ok(()));
-    let result = record(&opts, &src, &stop, &shared, began);
+    // 마이크를 요청한 경우에만 장치와 AAC 스트림의 실제 시작 결과를 기다린다.
+    let ready = if opts.mic_device.is_some() {
+        Some(ready)
+    } else {
+        let _ = ready.send(Ok(()));
+        None
+    };
+    let result = record(&opts, &src, &stop, &shared, began, ready.as_ref());
     src.close();
     if let Err(e) = &result {
+        if let Some(ready) = ready {
+            let _ = ready.send(Err(e.clone()));
+        }
         let mut f = shared.failure.lock().unwrap_or_else(|e| e.into_inner());
         if f.is_none() && !stop.load(Ordering::SeqCst) {
             *f = Some(format!("{REC_ENCODER_FAILED}: {e}"));
@@ -244,6 +284,8 @@ fn run(opts: RecStartOpts, stop: Arc<AtomicBool>, shared: Arc<Shared>, ready: Se
 /// WGC 쪽: 항목·풀·세션 + 창 닫힘·프레임 도착 신호.
 struct Source {
     gpu: Arc<Gpu>,
+    item: GraphicsCaptureItem,
+    closed_token: i64,
     pool: Direct3D11CaptureFramePool,
     session: GraphicsCaptureSession,
     closed: Arc<AtomicBool>,
@@ -306,21 +348,20 @@ impl Source {
         let _ = session.SetMinUpdateInterval(windows::Foundation::TimeSpan { Duration: 10_000_000 / opts.fps.max(1) as i64 });
         let closed = Arc::new(AtomicBool::new(false));
         let flag = closed.clone();
-        let _ = item.Closed(&TypedEventHandler::<GraphicsCaptureItem, IInspectable>::new(move |_, _| {
+        let closed_token = item.Closed(&TypedEventHandler::<GraphicsCaptureItem, IInspectable>::new(move |_, _| {
             flag.store(true, Ordering::SeqCst);
             Ok(())
-        }));
+        })).map_err(hr("GraphicsCaptureItem::Closed"))?;
         let (tx, arrived) = sync_channel::<()>(1);
         let _ = pool.FrameArrived(&TypedEventHandler::<Direct3D11CaptureFramePool, IInspectable>::new(move |_, _| {
             let _ = tx.try_send(());
             Ok(())
         }));
-        // 항목은 세션이 쥐고 있다(Closed 처리기도 그 수명 동안)
-        drop(item);
-        Ok(Source { gpu, pool, session, closed, arrived, size, crop, video })
+        Ok(Source { gpu, item, closed_token, pool, session, closed, arrived, size, crop, video })
     }
 
     fn close(&self) {
+        let _ = self.item.RemoveClosed(self.closed_token);
         let _ = self.session.Close();
         let _ = self.pool.Close();
     }
@@ -341,23 +382,98 @@ fn frame_texture(f: &Direct3D11CaptureFrame) -> Result<ID3D11Texture2D, String> 
     unsafe { access.GetInterface() }.map_err(hr("GetInterface"))
 }
 
-fn record(opts: &RecStartOpts, src: &Source, stop: &AtomicBool, shared: &Shared, began: Instant) -> Result<RecStats, String> {
+struct Qpc(i64);
+
+/// QPC 원점과 현재 녹화 구간. 정지 중 밀린 장면·소리는 재개 뒤에도 버린다.
+#[derive(Clone, Copy)]
+pub(crate) struct Timeline {
+    origin: i64,
+    since: i64,
+    paused_at: Option<i64>,
+}
+
+impl Timeline {
+    pub(crate) fn new(origin: i64) -> Self {
+        Self { origin, since: origin, paused_at: None }
+    }
+
+    fn update(&mut self, now: i64, paused: bool) {
+        match (paused, self.paused_at) {
+            (true, None) => self.paused_at = Some(now),
+            (false, Some(at)) => {
+                self.origin += now - at;
+                self.since = now;
+                self.paused_at = None;
+            }
+            _ => {}
+        }
+    }
+
+    fn elapsed(&self, now: i64) -> i64 {
+        self.paused_at.unwrap_or(now) - self.origin
+    }
+
+    pub(crate) fn sample(&self, qpc: i64) -> Option<i64> {
+        (self.paused_at.is_none() && qpc >= self.since).then(|| qpc - self.origin)
+    }
+}
+
+impl Qpc {
+    fn new() -> Result<Self, String> {
+        let mut hz = 0;
+        unsafe { QueryPerformanceFrequency(&mut hz) }.map_err(hr("QueryPerformanceFrequency"))?;
+        Ok(Self(hz))
+    }
+
+    fn now(&self) -> Result<i64, String> {
+        let mut count = 0;
+        unsafe { QueryPerformanceCounter(&mut count) }.map_err(hr("QueryPerformanceCounter"))?;
+        Ok((i128::from(count) * 10_000_000 / i128::from(self.0)) as i64)
+    }
+}
+
+fn record(opts: &RecStartOpts, src: &Source, stop: &AtomicBool, shared: &Shared, began: Instant, ready: Option<&Sender<Result<(), String>>>) -> Result<RecStats, String> {
     let (vw, vh) = src.video;
     let t = Instant::now();
-    let enc = Encoder::open(&src.gpu, &opts.temp_path, vw, vh, opts.fps, opts.bitrate, true)?;
+    let open = |tracks| Encoder::open(&src.gpu, &opts.temp_path, vw, vh, opts.fps, opts.bitrate, tracks);
+    // 장치를 실제로 열거나 시작할 때 비로소 드러나는 권한 거부도 안내 섬으로 전달한다.
+    let mut mic = opts.mic_device.as_deref().and_then(|id| {
+        let input = Microphone::open(id).and_then(|input| {
+            input.start()?;
+            Ok(input)
+        });
+        if input.as_ref().is_err_and(|e| e.code() == E_ACCESSDENIED) {
+            shared.mic_denied.store(true, Ordering::Release);
+        }
+        input.ok()
+    });
+    let enc = if mic.is_some() {
+        match open(Tracks::VideoMic) {
+            Ok(enc) => enc,
+            Err(_) => {
+                mic = None;
+                open(Tracks::Video)?
+            }
+        }
+    } else {
+        open(Tracks::Video)?
+    };
     log::info!("encoder ready in {:.0} ms ({vw}x{vh} {}fps, {} kbps)", t.elapsed().as_secs_f64() * 1000.0, opts.fps, opts.bitrate / 1000);
     shared.width.store(vw, Ordering::Relaxed);
     shared.height.store(vh, Ordering::Relaxed);
     let ring = Ring::new(&src.gpu, vw, vh)?;
     let mut fit = Fitter::default();
+    let clock = Qpc::new()?;
+    shared.mic_active.store(mic.is_some(), Ordering::Release);
+    if let Some(ready) = ready {
+        ready.send(Ok(())).map_err(|_| "녹화 시작 대기가 끝났어요".to_owned())?;
+    }
     if let Some(left) = SETTLE.checked_sub(began.elapsed()) {
         std::thread::sleep(left);
     }
+    let mut timeline = Timeline::new(clock.now()?);
     src.session.StartCapture().map_err(hr("StartCapture"))?;
-    let t0 = Instant::now();
-    *shared.t0.lock().unwrap_or_else(|e| e.into_inner()) = Some(t0);
     let dur = 10_000_000i64 / opts.fps.max(1) as i64;
-    let ts_now = || (t0.elapsed().as_nanos() / 100) as i64;
     let mut size = src.size;
     let mut slot = 0usize;
     let mut last: Option<(usize, i64, Instant)> = None;
@@ -386,11 +502,39 @@ fn record(opts: &RecStartOpts, src: &Source, stop: &AtomicBool, shared: &Shared,
     };
 
     while !stop.load(Ordering::SeqCst) {
-        if src.closed.load(Ordering::SeqCst) {
+        // 창을 닫은 뒤 WGC 알림이 늦어져도 마이크가 계속 녹음되지 않게 한다.
+        let gone = matches!(opts.target, RecTarget::Window { handle, .. } if unsafe {
+            windows_sys::Win32::UI::WindowsAndMessaging::IsWindow(handle as usize as *mut c_void) == 0
+        });
+        if gone || src.closed.load(Ordering::SeqCst) {
             *shared.failure.lock().unwrap_or_else(|e| e.into_inner()) = Some(REC_WINDOW_CLOSED.into());
             break;
         }
-        let _ = src.arrived.recv_timeout(Duration::from_millis(100));
+        let _ = src.arrived.recv_timeout(Duration::from_millis(if mic.is_some() { 15 } else { 100 }));
+        let now = clock.now()?;
+        let paused = shared.paused.load(Ordering::Acquire);
+        let changed = timeline.paused_at.is_some() != paused;
+        timeline.update(now, paused);
+        shared.elapsed_ticks.store(timeline.elapsed(now) as u64, Ordering::Relaxed);
+        if let (Some(input), Some(stream)) = (&mut mic, enc.audio_stream) {
+            let result = if changed && paused {
+                input.pause()
+            } else if changed {
+                input.start()
+            } else if paused {
+                Ok(())
+            } else {
+                input.drain(&enc.writer, stream, timeline, now)
+            };
+            if result.is_err() {
+                input.stop();
+                mic = None;
+                shared.mic_active.store(false, Ordering::Release);
+                unsafe {
+                    let _ = enc.writer.NotifyEndOfSegment(stream);
+                }
+            }
+        }
         // 밀린 프레임은 버리고 가장 새것만
         let mut newest: Option<Direct3D11CaptureFrame> = None;
         while let Ok(f) = src.pool.TryGetNextFrame() {
@@ -398,13 +542,22 @@ fn record(opts: &RecStartOpts, src: &Source, stop: &AtomicBool, shared: &Shared,
                 let _ = old.Close();
             }
         }
-        let ts = ts_now();
+        if paused {
+            if let Some(f) = newest {
+                let _ = f.Close();
+            }
+            continue;
+        }
         let Some(frame) = newest else {
             if let Some((s, _, at)) = last {
                 if at.elapsed() >= REPEAT_EVERY {
-                    write(s, ts, &mut last, &mut frames)?;
+                    write(s, timeline.elapsed(now), &mut last, &mut frames)?;
                 }
             }
+            continue;
+        };
+        let Some(ts) = timeline.sample(frame.SystemRelativeTime().map(|t| t.Duration).unwrap_or(now)) else {
+            let _ = frame.Close();
             continue;
         };
         // 초당 장면 수 맞춤(모니터는 60 Hz로 올 수 있다)
@@ -417,10 +570,18 @@ fn record(opts: &RecStartOpts, src: &Source, stop: &AtomicBool, shared: &Shared,
         slot = (slot + 1) % RING;
     }
 
+    let end = clock.now()?;
+    let elapsed = timeline.elapsed(end);
+    if let (Some(input), Some(stream)) = (&mut mic, enc.audio_stream) {
+        input.stop();
+        if timeline.paused_at.is_none() {
+            let _ = input.drain(&enc.writer, stream, timeline, end);
+        }
+    }
     // 시작 1초 안 중지: 첫 프레임을 조금 기다리고, 없으면 검은 장면(링은 검정으로 시작)
     if frames == 0 {
         let deadline = Instant::now() + FIRST_FRAME_WAIT;
-        while Instant::now() < deadline {
+        while timeline.paused_at.is_none() && Instant::now() < deadline {
             if let Ok(f) = src.pool.TryGetNextFrame() {
                 grab(f, 0, &mut size)?;
                 break;
@@ -431,10 +592,10 @@ fn record(opts: &RecStartOpts, src: &Source, stop: &AtomicBool, shared: &Shared,
     }
     // 끝 장면을 멈춘 순간에 한 번 더 — 정지 화면이 길었어도 영상 길이 = 실제 길이
     if let Some((s, _, _)) = last {
-        write(s, ts_now(), &mut last, &mut frames)?;
+        write(s, elapsed, &mut last, &mut frames)?;
     }
     enc.finalize()?;
-    Ok(RecStats { elapsed_ms: t0.elapsed().as_millis() as u64, bytes: 0, frames, width: vw, height: vh })
+    Ok(RecStats { elapsed_ms: elapsed as u64 / 10_000, bytes: 0, frames, width: vw, height: vh })
 }
 
 // ───────────── 텍스처 링 · 맞춤 ─────────────
@@ -627,7 +788,15 @@ impl Scaler {
 pub(crate) struct Encoder {
     writer: IMFSinkWriter,
     stream: u32,
+    audio_stream: Option<u32>,
     _manager: IMFDXGIDeviceManager,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Tracks {
+    Warm,
+    Video,
+    VideoMic,
 }
 
 // CODECAPI 값(codecapi.h): 속도 조절 방식 = 최대 제한 VBR(평균 = 목표, 최대 = 2배).
@@ -650,8 +819,8 @@ fn video_type(subtype: &GUID, w: u32, h: u32, fps: u32) -> windows::core::Result
 }
 
 impl Encoder {
-    /// 싱크 라이터를 만들고 입력 형식까지 정한다. `begin`이면 쓰기를 시작한다(아니면 미리 깨우기용).
-    pub(crate) fn open(gpu: &Gpu, path: &Path, w: u32, h: u32, fps: u32, bitrate: u32, begin: bool) -> Result<Encoder, String> {
+    /// 한 파일의 모든 스트림을 등록한 뒤 쓰기를 시작한다.
+    fn open(gpu: &Gpu, path: &Path, w: u32, h: u32, fps: u32, bitrate: u32, tracks: Tracks) -> Result<Encoder, String> {
         ensure_mf()?;
         // SAFETY: MF 객체를 만들고 값만 넣는다. 장치 관리자는 인코더 수명 동안 쥔다.
         unsafe {
@@ -683,10 +852,11 @@ impl Encoder {
             let _ = params.SetUINT32(&CODECAPI_AVEncCommonMaxBitRate, bitrate.saturating_mul(2));
             let _ = params.SetUINT32(&CODECAPI_AVEncMPVGOPSize, fps * 2);
             writer.SetInputMediaType(stream, &in_t, &params).map_err(hr("SetInputMediaType"))?;
-            if begin {
+            let audio_stream = if tracks == Tracks::VideoMic { Some(microphone::add_stream(&writer).map_err(hr("AAC"))?) } else { None };
+            if tracks != Tracks::Warm {
                 writer.BeginWriting().map_err(hr("BeginWriting"))?;
             }
-            Ok(Encoder { writer, stream, _manager: mgr })
+            Ok(Encoder { writer, stream, audio_stream, _manager: mgr })
         }
     }
 
@@ -805,6 +975,140 @@ pub fn free_bytes(dir: &Path) -> Option<u64> {
 mod tests {
     use super::*;
 
+    #[test]
+    fn 두_트랙이_정지한_동안은_시간이_멈추고_밀린_표본은_재개_뒤에도_버린다() {
+        let mut clock = Timeline::new(100);
+        assert_eq!(clock.sample(110), Some(10));
+        clock.update(120, true);
+        clock.update(150, true);
+        assert_eq!(clock.sample(140), None);
+        assert_eq!(clock.elapsed(160), 20);
+        clock.update(200, false);
+        assert_eq!(clock.sample(190), None);
+        assert_eq!(clock.sample(205), Some(25));
+        clock.update(210, true);
+        clock.update(230, false);
+        assert_eq!(clock.sample(235), Some(35));
+    }
+
+    #[test]
+    fn 합성_무음과_영상을_같은_mp4에_쓰고_두_트랙을_다시_연다() {
+        let gpu = gpu::shared().unwrap();
+        let ring = Ring::new(&gpu, 640, 360).unwrap();
+        let path = std::env::temp_dir().join(format!("screen-ink-aac-{}.mp4", std::process::id()));
+        let enc = Encoder::open(&gpu, &path, 640, 360, 30, 1_000_000, Tracks::VideoMic).unwrap();
+        for n in 0..30 {
+            let ts = n * 10_000_000 / 30;
+            enc.write(&ring.tex[0], ts, 333_333).unwrap();
+            microphone::write_pcm(&enc.writer, enc.audio_stream.unwrap(), &[0; 1600 * 4], ts, 333_333).unwrap();
+        }
+        enc.finalize().unwrap();
+        drop(enc);
+        assert!(recording::mp4_playable(&mp4_kinds(&path)));
+        unsafe {
+            let reader = MFCreateSourceReaderFromURL(&HSTRING::from(path.as_os_str()), None).unwrap();
+            let audio = reader.GetNativeMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM.0 as u32, 0).unwrap();
+            assert_eq!(audio.GetGUID(&MF_MT_SUBTYPE).unwrap(), MFAudioFormat_AAC);
+            assert_eq!(audio.GetUINT32(&MF_MT_AUDIO_NUM_CHANNELS).unwrap(), 2);
+            assert_eq!(audio.GetUINT32(&MF_MT_AUDIO_SAMPLES_PER_SECOND).unwrap(), 48_000);
+            let video = reader.GetNativeMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM.0 as u32, 0).unwrap();
+            assert_eq!(video.GetGUID(&MF_MT_SUBTYPE).unwrap(), MFVideoFormat_H264);
+        }
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    #[ignore = "실제 마이크 5초 녹음 동의가 있을 때만 실행"]
+    fn 실제_마이크와_시험창_5초_녹화_뒤_자동_중지와_복구() {
+        assert_eq!(microphone::access(), MicAccess::Granted, "Windows 마이크 권한이 꺼져 있어요");
+        assert!(!microphone::inputs().unwrap().is_empty(), "연결된 마이크가 없어요");
+        window_trial("", true);
+    }
+
+    #[test]
+    #[ignore = "화면 세션에서 시험 창을 띄워 실행"]
+    fn 없는_마이크를_골라도_시험창을_녹화하고_닫으면_복구할_수_있다() {
+        window_trial("screen-ink-test-missing-endpoint", false);
+    }
+
+    fn window_trial(device_id: &str, expect_mic: bool) {
+        use windows::core::w;
+        use windows_sys::Win32::UI::WindowsAndMessaging::*;
+        // 시험 창만 녹화한다. 실패 시에도 창과 음성이 담긴 임시 파일을 회수한다.
+        struct Trial(PathBuf, windows_sys::Win32::Foundation::HWND);
+        impl Drop for Trial {
+            fn drop(&mut self) {
+                if !self.1.is_null() {
+                    unsafe { let _ = DestroyWindow(self.1); }
+                }
+                let _ = std::fs::remove_file(&self.0);
+                let _ = std::fs::remove_dir(self.0.parent().unwrap());
+            }
+        }
+        let root = std::env::temp_dir().join(format!("screen-ink-mic-test-{}", std::process::id()));
+        std::fs::create_dir(&root).unwrap();
+        let mut trial = Trial(root.join("rec-1.mp4"), std::ptr::null_mut());
+        trial.1 = unsafe {
+            CreateWindowExW(WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW, w!("STATIC").as_ptr(), w!("마이크 녹화 시험").as_ptr(), WS_POPUP | WS_VISIBLE,
+                0, 0, 320, 180, std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null())
+        };
+        assert!(!trial.1.is_null());
+        let rect = ink_domain::geometry::PhysRect { x: 0, y: 0, w: 320, h: 180 };
+        let mut recorder = WinRecorder::new(root.clone(), root);
+        recorder
+            .start(RecStartOpts {
+                target: RecTarget::Window { handle: trial.1 as usize as u64, rect },
+                temp_path: trial.0.clone(),
+                fps: 30,
+                bitrate: 1_000_000,
+                mic_device: Some(device_id.into()),
+                capture_cursor: false,
+            })
+            .unwrap();
+        assert_eq!(recorder.mic_active(), Some(expect_mic), "시작한 마이크 상태");
+        if expect_mic {
+            std::thread::sleep(Duration::from_secs(5));
+        } else {
+            std::thread::sleep(Duration::from_secs(2));
+            recorder.set_paused(true);
+            std::thread::sleep(Duration::from_secs(1));
+            recorder.set_paused(false);
+            std::thread::sleep(Duration::from_secs(3));
+        }
+        assert_ne!(unsafe { DestroyWindow(trial.1) }, 0);
+        trial.1 = std::ptr::null_mut();
+        let limit = Instant::now() + Duration::from_secs(3);
+        loop {
+            if let Some(reason) = recorder.take_failure() {
+                assert_eq!(reason, REC_WINDOW_CLOSED);
+                break;
+            }
+            assert!(Instant::now() < limit, "시험 창 닫힘을 받지 못했어요");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        recorder.stop().unwrap();
+        assert!(recorder.leftovers().iter().any(|f| f.playable));
+        let folder = trial.0.parent().unwrap().to_string_lossy();
+        let saved = recorder.keep_file(&trial.0, &folder, "복구 시험").unwrap();
+        trial.0 = PathBuf::from(saved.path);
+        assert!(recorder.leftovers().is_empty());
+        let meta = std::process::Command::new("ffprobe")
+            .args(["-v", "error", "-show_entries", "stream=duration:format=nb_streams", "-of", "json"])
+            .arg(&trial.0)
+            .output()
+            .unwrap();
+        assert!(meta.status.success());
+        let info: serde_json::Value = serde_json::from_slice(&meta.stdout).unwrap();
+        let count = if expect_mic { 2 } else { 1 };
+        assert_eq!(info["format"]["nb_streams"], count);
+        let lengths: Vec<f64> = info["streams"].as_array().unwrap().iter().map(|s| s["duration"].as_str().unwrap().parse().unwrap()).collect();
+        eprintln!("트랙 {count}개 · 길이(초) {lengths:.2?}");
+        assert!(lengths.iter().all(|s| (4.5..5.5).contains(s)));
+        if expect_mic {
+            assert!((lengths[0] - lengths[1]).abs() < 0.2);
+        }
+    }
+
     /// 화면이 아닌 합성 프레임 — `D:\dev-cache\screen-ink\out\`에만 쓴다(일꾼 규칙).
     fn out_dir() -> PathBuf {
         let d = PathBuf::from(r"D:\dev-cache\screen-ink\out\window-record");
@@ -838,7 +1142,7 @@ mod tests {
         let path = out_dir().join("synth-3s.mp4");
         let _ = std::fs::remove_file(&path);
         let t = Instant::now();
-        let enc = Encoder::open(&gpu, &path, w, h, fps, bitrate, true).expect("encoder");
+        let enc = Encoder::open(&gpu, &path, w, h, fps, bitrate, Tracks::Video).expect("encoder");
         let setup = t.elapsed();
         let dur = 10_000_000 / fps as i64;
         for n in 0..(3 * fps) as usize {
@@ -860,7 +1164,7 @@ mod tests {
         let ring = Ring::new(&gpu, 640, 360).expect("ring");
         let path = out_dir().join("synth-one-frame.mp4");
         let _ = std::fs::remove_file(&path);
-        let enc = Encoder::open(&gpu, &path, 640, 360, 30, 1_000_000, true).expect("encoder");
+        let enc = Encoder::open(&gpu, &path, 640, 360, 30, 1_000_000, Tracks::Video).expect("encoder");
         enc.write(&ring.tex[0], 0, 333_333).expect("write");
         enc.write(&ring.tex[0], 3_000_000, 333_333).expect("write last");
         enc.finalize().expect("finalize");

@@ -31,6 +31,8 @@ pub mod gpu;
 pub mod wgc_window;
 #[cfg(windows)]
 pub mod recorder;
+#[cfg(windows)]
+pub mod microphone;
 
 use ink_app::SystemProbe;
 use ink_domain::shortcuts::LiveBinding;
