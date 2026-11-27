@@ -1,4 +1,9 @@
 {
+  "about.diag.bundleBtn": "기록 묶기",
+  "about.diag.bundlingBtn": "묶는 중…",
+  "about.diag.includeShortcuts": "단축키 포함",
+  "about.diag.label": "문제 보고용 기록 묶기",
+  "about.diag.sub": "기록·환경·설정을 zip으로 묶어요 · 창 제목과 화면 그림은 넣지 않아요",
   "about.opensource.fontsLabel": "글꼴",
   "about.opensource.fontsSub": "Freesentation · Paperlogy · IBM Plex Mono (SIL OFL 1.1)",
   "about.opensource.iconsLabel": "아이콘",

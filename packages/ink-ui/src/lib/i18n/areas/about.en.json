@@ -1,4 +1,9 @@
 {
+  "about.diag.bundleBtn": "Bundle logs",
+  "about.diag.bundlingBtn": "Bundling…",
+  "about.diag.includeShortcuts": "Include shortcuts",
+  "about.diag.label": "Bundle diagnostic logs",
+  "about.diag.sub": "Saves logs, system info, and settings as a zip · No window titles or screenshots",
   "about.opensource.fontsLabel": "Fonts",
   "about.opensource.fontsSub": "Freesentation · Paperlogy · IBM Plex Mono (SIL OFL 1.1)",
   "about.opensource.iconsLabel": "Icons",

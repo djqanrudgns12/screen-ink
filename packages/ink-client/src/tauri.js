@@ -56,9 +56,10 @@ export function createTauriClient() {
     drawIsland: (patch) => cmd('draw_island', { patch }),
     drawPenMetrics: (sample) => cmd('draw_pen_metrics', { sample }),
     zoomInput: (input) => cmd('zoom_input', { input }),
-    captureAnnotations: (session, monitorId, items) => cmd('capture_annotations', { session, monitorId, items }),
+    captureAnnotations: (session, monitorId, items, data) => cmd('capture_annotations', data !== undefined ? { session, monitorId, items, data } : { session, monitorId, items }),
     // 원본 바이트 IPC(tauri::ipc::Request body) — base64 없음
     captureCommitAnnotated: (meta, rgba) => invoke('plugin:screen-ink|capture_commit_annotated', encodeAnnotatedCommit(meta, rgba)),
+    exportDiagnostics: (opts) => cmd('export_diagnostics', { includeShortcuts: opts?.includeShortcuts ?? true }),
     subscribe(handler) {
       // 창마다 듣기는 한 번만(hub.js — 구독마다 listen을 걸면 등록 전에 온 사건을 놓친다)
       hub ??= createEventHub(listen);

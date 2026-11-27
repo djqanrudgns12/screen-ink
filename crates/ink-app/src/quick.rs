@@ -79,6 +79,7 @@ impl InkService {
 
     /// 지금 화면을 찍어 F1 확정과 같은 길(`finish`)로 — 잠깐 스냅숏을 쥐었다가 버린다.
     fn capture_rect_now(&mut self, rect: PhysRect, layout: MonitorLayout) {
+        self.clear_discarded_capture();
         let frames = match self.ports.screen.capture(&layout) {
             Ok(f) if !f.is_empty() => f,
             Err(e) if e.starts_with(NO_SCREEN_PERMISSION) => {

@@ -132,6 +132,9 @@ pub struct OverlaySession {
     /// 첫 강조(가상 화면 물리 px) — 단계 2는 커서 아래 창, 단계 3에서 요소까지
     #[serde(skip_serializing_if = "Option::is_none")]
     pub highlight: Option<ink_domain::geometry::PhysRect>,
+    /// 캡처 주석 되살리기(R2-UNDO-1): 복원할 주석 스냅숏 목록(모니터 id · anchor · InkDocument JSON)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub restored_annotations: Option<serde_json::Value>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]

@@ -221,6 +221,7 @@ impl InkService {
         if self.rec.phase != RecPhase::Idle {
             return;
         }
+        self.clear_discarded_capture();
         let fps = self.settings.get("record.fps").and_then(|v| v.as_u64()).unwrap_or(30) as u32;
         let r = target.rect();
         let (w, h) = recording::even_size(r.w.max(0) as u32, r.h.max(0) as u32);
@@ -451,6 +452,7 @@ impl InkService {
     }
 
     pub fn tick_at(&mut self, now: u64) {
+        self.expire_discarded_capture();
         self.tick_delay(now);
         if self.rec.leftovers_pending && self.rec.phase == RecPhase::Idle && self.mode == Mode::Idle {
             self.rec.leftovers_pending = false;

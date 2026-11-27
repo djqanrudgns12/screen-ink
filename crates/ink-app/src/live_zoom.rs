@@ -204,8 +204,9 @@ impl InkService {
         }
         let start_ms = ms(t.elapsed());
 
-        // 확대 섬이 결과 섬을 덮는다 — [판서로]로 쥐어 둔 프레임을 놓는다
+        // 확대 섬이 결과 섬을 덮는다 — [판서로]·되살리기로 쥐어 둔 프레임을 놓는다
         self.cap.handoff = None;
+        self.clear_discarded_capture();
         self.session_seq += 1;
         let session = self.session_seq;
         self.mode = Mode::LiveZoom { session, monitor_id: monitor.id, started_ms: self.epoch.elapsed().as_millis() as u64 };

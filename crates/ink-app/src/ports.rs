@@ -220,6 +220,12 @@ pub trait OverlayHost: Send {
     /// 강조(어둡게 한 바탕에서 밝게 뚫을 사각형, 가상 화면 물리 px)를 옮긴다.
     fn highlight(&mut self, session: u64, rect: Option<ink_domain::geometry::PhysRect>);
     fn hide(&mut self, session: u64);
+    /// 버린 캡처 되살리기(R2-UNDO-1): 오버레이 창은 숨기되 이 세션의 정지 프레임은 5초간 더 붙들어 둔다.
+    fn hide_keep_frames(&mut self, session: u64) {
+        self.hide(session);
+    }
+    /// 붙들어 둔 정지 프레임을 즉시 놓는다(5초 만료·다른 모드 시작·시스템 사건).
+    fn drop_held_frames(&mut self, _session: u64) {}
     /// 결과 섬 썸네일을 쥐고 주소를 돌려준다(작은 BGRA).
     fn thumbnail(&mut self, _w: u32, _h: u32, _bgra: Vec<u8>) -> Option<String> {
         None

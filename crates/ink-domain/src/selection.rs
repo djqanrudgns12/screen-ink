@@ -219,6 +219,12 @@ impl Selector {
         self
     }
 
+    /// 확정한 범위로 바로 시작(캡처 주석 되살리기 R2-UNDO-1).
+    pub fn with_confirmed(mut self, rect: PhysRect) -> Selector {
+        self.state = State::Confirmed { rect };
+        self
+    }
+
     /// 지금 범위.
     pub fn rect(&self) -> Option<PhysRect> {
         match &self.state {
@@ -765,5 +771,16 @@ mod tests {
         assert_eq!(v.evidence.iter().find(|e| e.current).map(|e| e.rect), v.rect);
         assert_eq!(source_letters(src::W | src::A | src::V), "W·A·V");
         assert_eq!(source_letters(0), "");
+    }
+
+    #[test]
+    fn 확정_범위로_바로_시작할_수_있다() {
+        let c = ctx();
+        let rect = PhysRect::new(120, 140, 320, 180);
+        let s = Selector::new(PhysPoint { x: 200, y: 200 }, &c).with_confirmed(rect);
+        let v = s.view();
+        assert_eq!(v.phase, Phase::Confirmed);
+        assert_eq!(s.rect(), Some(rect));
+        assert_eq!(v.rect, Some(rect));
     }
 }

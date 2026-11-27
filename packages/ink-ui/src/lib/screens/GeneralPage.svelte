@@ -35,6 +35,20 @@
   let screenAsked = $state(false);
   let howtoOpen = $state(false);
   let checkingUpdate = $state(false);
+  let includeShortcutsInDiag = $state(true);
+  let bundlingDiag = $state(false);
+
+  async function handleExportDiagnostics() {
+    if (bundlingDiag || typeof client?.exportDiagnostics !== 'function') return;
+    bundlingDiag = true;
+    try {
+      await client.exportDiagnostics({ includeShortcuts: includeShortcutsInDiag });
+    } catch {
+      // 실패 안내는 Rust 섬에서 처리
+    } finally {
+      bundlingDiag = false;
+    }
+  }
 
   function runAction(action) {
     return client.run(/** @type {any} */ (action));
@@ -445,6 +459,28 @@
             </button>
           </Row>
         </div>
+        <div data-setting-id="about.diag">
+          <Row label={t('about.diag.label')} sub={t('about.diag.sub')}>
+            <div class="ink-inline-actions">
+              <label class="ink-diag-check">
+                <input
+                  type="checkbox"
+                  class="ink-diag-checkbox ink-focus"
+                  bind:checked={includeShortcutsInDiag}
+                />
+                <span>{t('about.diag.includeShortcuts')}</span>
+              </label>
+              <button
+                type="button"
+                class="ink-sec-btn ink-focus"
+                disabled={bundlingDiag || typeof client?.exportDiagnostics !== 'function'}
+                onclick={handleExportDiagnostics}
+              >
+                {bundlingDiag ? t('about.diag.bundlingBtn') : t('about.diag.bundleBtn')}
+              </button>
+            </div>
+          </Row>
+        </div>
         <div data-setting-id="general.reset">
           <Row
             label={t('general.data.reset')}
@@ -631,6 +667,25 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+  }
+
+  .ink-diag-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--ink-text-2);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .ink-diag-checkbox {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    accent-color: var(--ink-accent);
+    cursor: pointer;
   }
 
   .ink-sec-btn {

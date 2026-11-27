@@ -895,8 +895,13 @@ impl InkService {
 
     // ───────────── 캡처 진입(단계 2): 정지 스냅숏 → 오버레이 ─────────────
 
-    fn now_ms(&self) -> u64 {
+    pub(crate) fn now_ms(&self) -> u64 {
         self.epoch.elapsed().as_millis() as u64
+    }
+
+    /// 현재 모니터 배치(진단 기록 묶기 R2-DIAG-1용 — 장치 이름 없이 해상도·배율만).
+    pub fn monitor_layout(&self) -> MonitorLayout {
+        self.ports.monitors.layout()
     }
 
     pub fn mode(&self) -> Mode {
@@ -946,8 +951,9 @@ impl InkService {
             }
             return;
         }
-        // 새 캡처가 지난 결과 섬([판서로])을 덮는다 — 쥐어 둔 프레임을 놓는다
+        // 새 캡처가 지난 결과 섬([판서로])·버린 주석 되살리기를 덮는다 — 쥐어 둔 프레임을 놓는다
         self.cap.handoff = None;
+        self.clear_discarded_capture();
         let t = Instant::now();
         self.prepare_overlays();
         let layout = self.prepared.clone().unwrap_or_default();
@@ -1006,6 +1012,7 @@ impl InkService {
                 .iter()
                 .map(|m| OverlayMonitor { id: m.id, bounds: m.bounds, work: m.work, scale: m.scale, primary: m.primary, frame_url: None })
                 .collect(),
+            restored_annotations: None,
         };
 
         // 자르기·V 전처리용으로 쥐어 둔다(픽셀은 Arc라 복사 없음)
@@ -1073,7 +1080,7 @@ impl InkService {
         Some(timing)
     }
 
-    fn record_timing(&mut self, timing: &EntryTiming) {
+    pub(crate) fn record_timing(&mut self, timing: &EntryTiming) {
         log::info!("{}", timing.log_line());
         if self.ready_samples.len() == TIMING_KEEP {
             self.ready_samples.pop_front();
@@ -1109,9 +1116,10 @@ impl InkService {
     pub fn on_system_event(&mut self, ev: SystemEvent) {
         self.draw_on_system_event(ev);
         self.zoom_system_event(ev);
-        // 잠금·절전·화면 구성 변경 뒤의 [판서로]는 쓸 수 없다 — 쥐어 둔 범위·프레임을 놓는다
+        // 잠금·절전·화면 구성 변경 뒤의 [판서로]·되살리기는 쓸 수 없다 — 쥐어 둔 범위·프레임을 놓는다
         if matches!(ev, SystemEvent::Lock | SystemEvent::Suspend | SystemEvent::DisplayChange) {
             self.cap.handoff = None;
+            self.clear_discarded_capture();
         }
         // 단계 6: 잠금·절전·모니터 해제 → 녹화 자동 중지·저장(05 §8). 배치를 다시 맞추기 전에 본다
         self.record_on_system_event(ev);

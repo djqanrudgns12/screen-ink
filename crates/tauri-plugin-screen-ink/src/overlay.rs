@@ -328,6 +328,32 @@ impl<R: Runtime> TauriOverlayHost<R> {
             false
         }
     }
+
+    fn hide_windows(&mut self) {
+        self.bump_afterimage_gen();
+        #[cfg(windows)]
+        self.freeze.hide_all();
+        // 맥: 창을 숨기기 전에 커서를 화살표로(판서 `cursor: none`·캡처 십자가 숨긴 뒤에도 남지 않게).
+        // on_main은 아래 Tauri hide()보다 먼저 메인 대기열에 들어간다.
+        #[cfg(target_os = "macos")]
+        on_main(&self.app, || {
+            ink_platform_macos::window::reset_cursor();
+            ink_platform_macos::freeze::hide_all();
+        });
+        for (l, w) in self.app.webview_windows() {
+            if l.starts_with(PREFIX) {
+                let _ = show_raw(&w, false);
+                let _ = w.set_ignore_cursor_events(false);
+                // R-SYS-6: 투명 배경 다시 지정은 숨긴 뒤에(다음 진입의 시간을 쓰지 않게)
+                let _ = w.set_background_color(Some(Color(0, 0, 0, 0)));
+            }
+        }
+        // 맥: 설정 창을 쓰는 중이 아니면 포커스를 원래 앱으로(전체 화면 앱에서 키가 계속 먹게)
+        #[cfg(target_os = "macos")]
+        if !self.app.get_webview_window(crate::SETTINGS).is_some_and(|w| w.is_visible().unwrap_or(false)) {
+            ink_platform_macos::window::deactivate();
+        }
+    }
 }
 
 /// 맥: 정지 화면 창은 메인 스레드에서만 만진다 — 다른 스레드면 메인 대기열로 넘긴다.
@@ -454,30 +480,16 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
     }
 
     fn hide(&mut self, session: u64) {
-        self.bump_afterimage_gen();
-        #[cfg(windows)]
-        self.freeze.hide_all();
-        // 맥: 창을 숨기기 전에 커서를 화살표로(판서 `cursor: none`·캡처 십자가 숨긴 뒤에도 남지 않게).
-        // on_main은 아래 Tauri hide()보다 먼저 메인 대기열에 들어간다.
-        #[cfg(target_os = "macos")]
-        on_main(&self.app, || {
-            ink_platform_macos::window::reset_cursor();
-            ink_platform_macos::freeze::hide_all();
-        });
-        for (l, w) in self.app.webview_windows() {
-            if l.starts_with(PREFIX) {
-                let _ = show_raw(&w, false);
-                let _ = w.set_ignore_cursor_events(false);
-                // R-SYS-6: 투명 배경 다시 지정은 숨긴 뒤에(다음 진입의 시간을 쓰지 않게)
-                let _ = w.set_background_color(Some(Color(0, 0, 0, 0)));
-            }
-        }
+        self.hide_windows();
         self.frames.drop_session(session);
-        // 맥: 설정 창을 쓰는 중이 아니면 포커스를 원래 앱으로(전체 화면 앱에서 키가 계속 먹게)
-        #[cfg(target_os = "macos")]
-        if !self.app.get_webview_window(crate::SETTINGS).is_some_and(|w| w.is_visible().unwrap_or(false)) {
-            ink_platform_macos::window::deactivate();
-        }
+    }
+
+    fn hide_keep_frames(&mut self, _session: u64) {
+        self.hide_windows();
+    }
+
+    fn drop_held_frames(&mut self, session: u64) {
+        self.frames.drop_session(session);
     }
 
     fn flash_afterimage(&mut self, session: u64, rect: PhysRect, layout: &MonitorLayout) {
@@ -618,6 +630,9 @@ mod tests {
         s.put(1, &[Frame { monitor_id: 0, width: 1, height: 1, bgra: Arc::new(vec![1]) }]);
         s.put(2, &[Frame { monitor_id: 0, width: 1, height: 1, bgra: Arc::new(vec![2]) }]);
         assert!(s.get(1, 0).is_none());
+        assert_eq!(s.get(2, 0).unwrap().bgra.as_slice(), &[2]);
+        // 되살리기 대기 중 다른 세션으로 drop_session을 불러도 지금 세션(2)은 남고, 자기 세션(2)이나 새 put으로 비워진다
+        s.drop_session(1);
         assert_eq!(s.get(2, 0).unwrap().bgra.as_slice(), &[2]);
         s.drop_session(2);
         assert!(s.get(2, 0).is_none());

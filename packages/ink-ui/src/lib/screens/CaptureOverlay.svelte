@@ -208,8 +208,9 @@
   let toolbarAnchorX = $state(null);
   let badgeW = $state(92);
   let badgeH = $state(24);
-  /** 마지막으로 Rust에 알린 주석 개수(0 ↔ n이 바뀔 때만 알린다) */
+  /** 마지막으로 Rust에 알린 주석 개수·문서 버전(개수 변화 또는 항목 변경 시 스냅숏 전달) */
   let annotReported = 0;
+  let annotReportedDocRev = -1;
   let annotWheel = 0;
   /** 모자이크 미리보기 원본(정지 이미지를 문서 원점에서 시작하게 옮긴 캔버스) */
   /** @type {HTMLCanvasElement | null} */
@@ -460,23 +461,52 @@
   }
 
   /**
-   * 엔진이 바뀔 때마다: 단추 상태 + 주석 개수가 0 ↔ n으로 바뀌면 Rust에 알린다(결과 경로를 고름).
+   * 되살리기(R2-UNDO-1)용 주석 스냅숏 직렬화.
+   * @param {{ anchor: { x: number, y: number }, engine: import('../ink/inkEngine.js').InkEngine }} a
+   * @param {import('@screen-ink/client').OverlayMonitor} mon
+   */
+  function serializeAnnotSnapshot(a, mon) {
+    return {
+      monitorId: mon.id,
+      anchor: { x: a.anchor.x, y: a.anchor.y },
+      document: a.engine.exportDocument(),
+    };
+  }
+
+  /**
+   * @param {any} list
+   * @param {number} targetMonitorId
+   */
+  function findRestoredAnnotation(list, targetMonitorId) {
+    if (Array.isArray(list)) {
+      return list.find((item) => item && item.monitorId === targetMonitorId && item.document) ?? null;
+    }
+    if (list && typeof list === 'object' && list.monitorId === targetMonitorId && list.document) {
+      return list;
+    }
+    return null;
+  }
+
+  /**
+   * 엔진이 바뀔 때마다: 단추 상태 + 주석 개수·스냅숏이 바뀌면 Rust에 알린다(결과 경로 및 되살리기).
    * @param {import('../ink/inkEngine.js').InkEngine} engine
    */
   function syncAnnot(engine) {
     const a = annot;
     if (!a || a.engine !== engine) return;
     const n = itemCount(engine.doc);
+    const docRev = engine.revs.doc;
     annotCanUndo = engine.canUndo;
     annotCanRedo = engine.canRedo;
     annotEditing = Boolean(engine.editing);
     annotHasMosaic = engine.items.some((it) => it.kind === 'mosaic');
     annotColor = engine.color;
     annotWidth = engine.widthPx;
-    if (n > 0 !== annotReported > 0) {
+    if (n !== annotReported || (n > 0 && docRev !== annotReportedDocRev)) {
       annotReported = n;
+      annotReportedDocRev = docRev;
       if (monitor && activeSession === a.session && typeof client.captureAnnotations === 'function') {
-        client.captureAnnotations(a.session, monitor.id, n);
+        client.captureAnnotations(a.session, monitor.id, n, n > 0 ? serializeAnnotSnapshot(a, monitor) : null);
       }
     }
   }
@@ -495,6 +525,7 @@
     const a = { session: activeSession, engine, anchor: { x: rect.x, y: rect.y }, off: () => {} };
     annot = a;
     annotReported = 0;
+    annotReportedDocRev = -1;
     a.off = engine.subscribe(syncAnnot);
     syncAnnot(engine);
     return a;
@@ -597,6 +628,7 @@
     annotEditing = false;
     annotHasMosaic = false;
     annotReported = 0;
+    annotReportedDocRev = -1;
     annotWheel = 0;
     annotFontPreview = null;
     panelOpen = false;
@@ -946,6 +978,37 @@
             loadMs: 0,
             paintStartAt: sessionReceivedAt,
           });
+        }
+
+        const restored = findRestoredAnnotation(e.overlay.restoredAnnotations, mon.id);
+        if (restored) {
+          const baseRect = e.overlay.highlight ?? mon.bounds;
+          const anchor =
+            restored.anchor && typeof restored.anchor.x === 'number' && typeof restored.anchor.y === 'number'
+              ? { x: restored.anchor.x, y: restored.anchor.y }
+              : { x: baseRect.x, y: baseRect.y };
+          const doc = restored.document;
+          const engine = createInkEngine({
+            docOptions: {
+              ...annotDocOptions(e.overlay.session, baseRect, mon),
+              pages: Array.isArray(doc.pages) ? doc.pages : undefined,
+              activePage: typeof doc.activePage === 'number' ? doc.activePage : 0,
+            },
+            platform,
+            shortcuts: shortcutRows.length ? shortcutRows : undefined,
+            settings: annotEngineSettings(drawSettings),
+          });
+          const a = { session: e.overlay.session, engine, anchor, off: () => {} };
+          annot = a;
+          annotReported = itemCount(engine.doc);
+          annotReportedDocRev = engine.revs.doc;
+          annotCanUndo = engine.canUndo;
+          annotCanRedo = engine.canRedo;
+          annotEditing = Boolean(engine.editing);
+          annotHasMosaic = engine.items.some((it) => it.kind === 'mosaic');
+          annotColor = engine.color;
+          annotWidth = engine.widthPx;
+          a.off = engine.subscribe(syncAnnot);
         }
       } else if (e.type === 'capture') {
         if (activeSession !== null && e.view?.session === activeSession) {
@@ -1311,6 +1374,9 @@
     }
     if (shouldPreventCaptureKey(e)) {
       e.preventDefault();
+    }
+    if (e.key === 'Escape' || e.code === 'Escape') {
+      flushAnnotText();
     }
     sendCaptureInput(toCaptureKeyInput(e));
   }

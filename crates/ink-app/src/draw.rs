@@ -641,8 +641,9 @@ impl InkService {
             }
             return;
         }
-        // 새 모드에 들어가면 결과 섬 [판서로]는 더 누를 수 없다 — 쥐어 둔 프레임을 놓는다
+        // 새 모드에 들어가면 결과 섬 [판서로]·되살리기는 더 누를 수 없다 — 쥐어 둔 프레임을 놓는다
         self.cap.handoff = None;
+        self.clear_discarded_capture();
         self.prepare_overlays();
         let layout = self.prepared.clone().unwrap_or_default();
         let cursor = self.ports.monitors.cursor();

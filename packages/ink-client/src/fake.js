@@ -94,10 +94,14 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   /** 다음 판서 진입의 시작 보기(확대 → 판서 · [판서로]) */
   let nextView = null;
   /**
-   * 캡처 주석(4.9) 흉내: 창(모니터) → 주석 개수, 부탁 순번·기다리는 부탁, 받은 답(시험용).
-   * @type {{ session: number, items: Map<number, number>, seq: number, pending: any, answers: any[], bypass: boolean }}
+   * 캡처 주석(4.9 · R2-UNDO-1) 흉내: 창(모니터) → 주석 개수·스냅숏, 부탁 순번·기다리는 부탁, 받은 답(시험용).
+   * @type {{ session: number, items: Map<number, number>, snapshots: Map<number, any>, seq: number, pending: any, answers: any[], bypass: boolean }}
    */
-  const annot = { session: 0, items: new Map(), seq: 0, pending: null, answers: [], bypass: false };
+  const annot = { session: 0, items: new Map(), snapshots: new Map(), seq: 0, pending: null, answers: [], bypass: false };
+  /** @type {{ kind: 'region'|'window'|'record', rect: any, items: Map<number, number>, snapshots: Map<number, any>, at: number } | null} */
+  let discarded = null;
+  /** @type {any[]} */
+  const diagLog = [];
   const annotated = () => mode.mode === 'capture' && annot.session === mode.session && [...annot.items.values()].some((n) => n > 0);
   /** 주석 없이(또는 답을 받은 뒤) 그 결과를 지금 경로로 */
   const runPlain = async (self, action) => {
@@ -217,9 +221,17 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     island({ kind: 'end', text: '' });
     changed();
   };
+  const endCaptureQuiet = () => {
+    if (mode.mode !== 'capture') return;
+    mode = { mode: 'idle' };
+    capture = null;
+    changed();
+    island({ kind: 'end', text: '' });
+  };
   const startZoom = () => {
     endZoom();
-    if (mode.mode === 'capture') { mode = { mode: 'idle' }; capture = null; island({ kind: 'end', text: '' }); }
+    discarded = null;
+    if (mode.mode === 'capture') endCaptureQuiet();
     sessionSeq += 1;
     mode = { mode: 'liveZoom', session: sessionSeq, monitorId: 0, startedMs: Date.now() };
     zoomScale = 2;
@@ -385,7 +397,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       }
       if (input.type === 'command' && input.name === 'pin') {
         const r = s.rect ?? chainAt(s.p)[s.level].r;
-        await this.run('capture.cancel');
+        discarded = null;
+        endCaptureQuiet();
         pinSeq += 1;
         pins.set(pinSeq, { w: r.w, h: r.h, zoom: 100 });
         changed();
@@ -394,7 +407,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       if (input.type === 'command' && (input.name === 'save' || input.name === 'quickSave')) {
         const r = s.rect ?? chainAt(s.p)[s.level].r;
         const finishedSession = mode.session;
-        await this.run('capture.cancel');
+        discarded = null;
+        endCaptureQuiet();
         emit({ type: 'afterimage', afterimage: { session: finishedSession, rect: r, durationMs: 400 } });
         lastRange = r;
         island({ kind: 'result', variant: 'result', text: '저장했어요', value: `${r.w}×${r.h}`, detail: '수업_2026-03-04_090507.png', thumbUrl: frameUrl, button: { label: '폴더 열기', action: 'folder.open' }, ...toDrawButton() });
@@ -404,7 +418,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         const r = s.rect ?? chainAt(s.p)[s.level].r;
         const finishedSession = mode.session;
         lastHex = '#FFFFFF';
-        await this.run('capture.cancel');
+        discarded = null;
+        endCaptureQuiet();
         emit({ type: 'afterimage', afterimage: { session: finishedSession, rect: r, durationMs: 400 } });
         lastRange = r;
         island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${r.w}×${r.h}`, detail: isMac ? '한글·PPT에 ⌘V' : '한글·PPT에 Ctrl+V', thumbUrl: frameUrl, button: { label: '저장', action: 'capture.saveLast' }, buttonKey: isMac ? 'Cmd+S' : 'Ctrl+S', chip: { label: `${lastHex} 복사`, action: 'capture.copyHex' }, ...toDrawButton() });
@@ -450,21 +465,44 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     async overlayReady(session) {
       if (mode.mode === 'capture' && mode.session === session) readyLog.push(session);
     },
-    async captureAnnotations(session, monitorId, items) {
+    async captureAnnotations(session, monitorId, items, data) {
       if (mode.mode !== 'capture' || mode.session !== session) return;
       if (annot.session !== session) {
         annot.session = session;
         annot.items = new Map();
+        annot.snapshots = new Map();
         annot.pending = null;
       }
-      if (items > 0) annot.items.set(monitorId, items);
-      else annot.items.delete(monitorId);
+      if (items > 0) {
+        annot.items.set(monitorId, items);
+        if (data !== undefined && data !== null) annot.snapshots.set(monitorId, data);
+      } else {
+        annot.items.delete(monitorId);
+        annot.snapshots.delete(monitorId);
+      }
       if (!annotated() && annot.pending) {
         const p = annot.pending;
         annot.pending = null;
         await runPlain(this, p.action);
       }
     },
+    async exportDiagnostics(opts) {
+      const includeShortcuts = opts?.includeShortcuts ?? true;
+      const date = new Date().toISOString().slice(0, 10);
+      const isEn = settings['general.lang'] === 'en';
+      const name = isEn ? `Shookshok-logs-${date}.zip` : `Shookshok-기록-${date}.zip`;
+      diagLog.push({ name, includeShortcuts });
+      island({
+        kind: 'result',
+        variant: 'result',
+        text: isEn ? 'Saved to Downloads' : '다운로드 폴더에 저장했어요',
+        detail: name,
+        button: { label: isEn ? (isMac ? 'Show in Finder' : 'Open in Explorer') : (isMac ? 'Finder에서 보기' : '탐색기에서 열기'), action: 'diag.openFolder' },
+      });
+      return { ok: true, name };
+    },
+    /** 시험용: 진단 기록 묶기 내보내기 기록 */
+    get diagLog() { return diagLog.map((d) => ({ ...d })); },
     async captureCommitAnnotated(meta, rgba) {
       const p = annot.pending;
       if (!p || mode.mode !== 'capture' || meta.session !== p.session || meta.seq !== p.seq) return;
@@ -603,7 +641,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         const view = kind === 'draw' ? nextView ?? (mode.mode === 'liveZoom' ? zoomHandoffView() : null) : null;
         nextView = null;
         lastRange = null;
-        if (mode.mode === 'capture') await this.run('capture.cancel');
+        discarded = null;
+        if (mode.mode === 'capture') endCaptureQuiet();
         if (mode.mode === 'draw') endDraw(true);
         endZoom();
         if (!settings['draw.keep']) kept = null;
@@ -628,6 +667,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         if (mode.mode === 'draw') endDraw(true);
         endZoom();
         lastRange = null;
+        discarded = null;
         const kind = CAPTURE_ACTION[action];
         sessionSeq += 1;
         mode = { mode: 'capture', session: sessionSeq, kind, startedMs: Date.now() };
@@ -647,14 +687,62 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         island({ kind: 'mode', mode: kind, ...CAPTURE_ISLAND[kind] });
         return;
       }
-      if (action === 'capture.cancel') {
-        if (mode.mode !== 'capture') return;
-        mode = { mode: 'idle' };
-        capture = null;
+      if (action === 'capture.restore') {
+        const d = discarded;
+        discarded = null;
+        if (!d || Date.now() - d.at >= 5000) return;
+        if (mode.mode === 'draw') endDraw(true);
+        endZoom();
+        lastRange = null;
+        sessionSeq += 1;
+        mode = { mode: 'capture', session: sessionSeq, kind: d.kind, startedMs: Date.now() };
+        capture = { phase: 'confirmed', level: 3, p: { x: 760, y: 420 }, rect: d.rect, down: null, help: false };
+        annot.session = sessionSeq;
+        annot.items = new Map(d.items);
+        annot.snapshots = new Map(d.snapshots);
+        annot.pending = null;
+        const bounds = { x: 0, y: 0, w: 1920, h: 1080 };
+        emit({
+          type: 'overlay',
+          overlay: {
+            session: sessionSeq,
+            kind: d.kind,
+            cursor: { x: 760, y: 420 },
+            nativeFrame: false,
+            highlight: d.rect,
+            monitors: [{ id: 0, bounds, work: { ...bounds, h: 1040 }, scale: 1, primary: true, frameUrl }],
+            restoredAnnotations: [...d.snapshots.values()],
+          },
+        });
         changed();
-        island({ kind: 'end', text: '' });
+        island({ kind: 'mode', mode: d.kind, ...CAPTURE_ISLAND[d.kind] });
+        emit({
+          type: 'capture',
+          view: { session: sessionSeq, phase: 'confirmed', rect: d.rect, path: [], level: -1, guides: [], magnet: true, cursorIncluded: false, help: false },
+        });
         return;
       }
+      if (action === 'capture.cancel') {
+        if (mode.mode !== 'capture') return;
+        const hasAnnot = annotated();
+        const rect = capture?.rect ?? { x: 480, y: 220, w: 960, h: 560 };
+        const snap = hasAnnot
+          ? { kind: mode.kind, rect, items: new Map(annot.items), snapshots: new Map(annot.snapshots), at: Date.now() }
+          : null;
+        endCaptureQuiet();
+        if (snap) {
+          discarded = snap;
+          const isEn = settings['general.lang'] === 'en';
+          island({
+            kind: 'info',
+            text: isEn ? 'Markup discarded' : '주석을 지웠어요',
+            button: { label: isEn ? 'Restore' : '되살리기', action: 'capture.restore' },
+            durationMs: 5000,
+          });
+        }
+        return;
+      }
+      if (action === 'diag.openFolder') return;
       if (action === 'folder.pick') {
         history.push({ kind: 'setting', path: 'output.folder', prev: settings['output.folder'] });
         settings['output.folder'] = isMac ? '~/Desktop/수업자료/캡처' : 'D:\\수업자료\\캡처'; changed(); return;

@@ -204,6 +204,9 @@ impl<R: Runtime> Notifier for TauriNotifier<R> {
         if event.secondary_button.as_ref().is_some_and(|b| b.action == ACTION_TO_DRAW) {
             release_capture_frame_later(&self.app);
         }
+        if event.button.as_ref().is_some_and(|b| b.action == ink_app::capture::ACTION_CAPTURE_RESTORE) {
+            release_discarded_capture_later(&self.app);
+        }
         let _ = self.app.emit(EVT_ISLAND, event);
     }
 
@@ -742,6 +745,22 @@ fn release_capture_frame_later<R: Runtime>(app: &AppHandle<R>) {
     });
 }
 
+/// 주석을 버린 뒤 띄운 5초 [되살리기] 대기가 끝나면 정지 프레임을 놓는다(R2-UNDO-1).
+fn release_discarded_capture_later<R: Runtime>(app: &AppHandle<R>) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(ink_app::capture::CAPTURE_UNDO_TTL + Duration::from_millis(100));
+        let h = app.clone();
+        let _ = app.run_on_main_thread(move || {
+            if let Some(ink) = h.try_state::<Ink>() {
+                if ink.lock().expire_discarded_capture() {
+                    log::debug!("discarded capture frames released (undo ttl expired)");
+                }
+            }
+        });
+    });
+}
+
 /// 아직 만들지 않은 모드(단계 2 이후) — 눌린 것은 알려 준다.
 fn not_ready<R: Runtime>(app: &AppHandle<R>, slot_or_action: &str) {
     let ink = app.state::<Ink>();
@@ -926,10 +945,10 @@ fn capture_input<R: Runtime>(window: tauri::WebviewWindow<R>, ink: State<'_, Ink
     ink.lock().capture_input(input);
 }
 
-/// 캡처 주석(4.9): 오버레이 창(모니터)이 자기 주석 개수를 알린다(0 ↔ n이 바뀔 때).
+/// 캡처 주석(4.9): 오버레이 창(모니터)이 자기 주석 개수와 되살리기용 주석 데이터를 알린다.
 #[tauri::command]
-fn capture_annotations(ink: State<'_, Ink>, session: u64, monitor_id: u32, items: u32) {
-    ink.lock().capture_annotations(session, monitor_id, items);
+fn capture_annotations(ink: State<'_, Ink>, session: u64, monitor_id: u32, items: u32, data: Option<Value>) {
+    ink.lock().capture_annotations_with_data(session, monitor_id, items, data);
 }
 
 /// 캡처 주석(4.9): `screen-ink://capture-commit` 부탁에 대한 답 — 원본 바이트 본문
@@ -1042,6 +1061,373 @@ fn windows_font_families() -> Vec<String> {
 /// 마지막으로 저장한 PDF(저장 섬 [열기]가 연다).
 static LAST_PDF: std::sync::Mutex<Option<std::path::PathBuf>> = std::sync::Mutex::new(None);
 const ACTION_PDF_OPEN: &str = "pdf.open";
+/// 마지막으로 저장한 문제 보고용 기록 zip(저장 섬 [폴더 열기]가 선택해 연다).
+static LAST_DIAG_ZIP: std::sync::Mutex<Option<std::path::PathBuf>> = std::sync::Mutex::new(None);
+const ACTION_DIAG_OPEN_FOLDER: &str = "diag.openFolder";
+
+// ───────────────────────── 문제 보고용 기록 묶기(R2-DIAG-1) ─────────────────────────
+
+mod diag {
+    use ink_domain::geometry::MonitorLayout;
+    use ink_domain::i18n::Lang;
+    use ink_domain::package::InstallChannel;
+    use serde_json::{json, Value};
+    use std::io::Read;
+    use std::path::Path;
+
+    const MAX_LOG_BYTES_PER_FILE: usize = 2 * 1024 * 1024;
+    const MAX_LOG_FILES: usize = 5;
+
+    pub(crate) struct DiagInput<'a> {
+        pub version: &'a str,
+        pub channel: InstallChannel,
+        pub lang: Lang,
+        pub layout: &'a MonitorLayout,
+        pub exported_settings: &'a Value,
+        pub include_shortcuts: bool,
+        pub logs: &'a [String],
+        pub date: &'a str,
+    }
+
+    pub(crate) fn diag_zip_name(lang: Lang, date: &str) -> String {
+        match lang {
+            Lang::Ko => format!("{}-기록-{date}.zip", crate::APP_DIR),
+            Lang::En => format!("{}-logs-{date}.zip", crate::APP_DIR),
+        }
+    }
+
+    /// 설정 JSON에서 폴더 경로·파일 이름 패턴·예외 앱 목록 같은 개인정보 가능 항목을 가린다.
+    pub(crate) fn sanitize_settings_for_diag(exported: &Value, include_shortcuts: bool) -> Value {
+        let mut root = exported.clone();
+        if let Some(settings) = root.get_mut("settings").and_then(Value::as_object_mut) {
+            if !include_shortcuts {
+                settings.remove("shortcuts");
+            }
+            if let Some(values) = settings.get_mut("values").and_then(Value::as_object_mut) {
+                for key in ["output.folder", "output.template", "record.micDevice"] {
+                    if let Some(v) = values.get_mut(key) {
+                        if v.as_str().is_some_and(|s| !s.is_empty()) {
+                            *v = Value::String("<redacted>".into());
+                        }
+                    }
+                }
+                if let Some(excluded) = values.get_mut("capture.excluded") {
+                    if let Some(arr) = excluded.as_array() {
+                        let count = arr.len();
+                        *excluded = Value::Array(Vec::new());
+                        values.insert("capture.excludedCount".into(), json!(count));
+                    }
+                }
+            }
+        }
+        if let Some(obj) = root.as_object_mut() {
+            obj.insert("shortcutsIncluded".into(), Value::Bool(include_shortcuts));
+        }
+        root
+    }
+
+    fn redact_user_segment(mut s: String, prefix: &str, sep: char) -> String {
+        let mut out = String::with_capacity(s.len());
+        let mut rest = s.as_str();
+        while let Some(idx) = rest.find(prefix) {
+            let after_idx = idx + prefix.len();
+            out.push_str(&rest[..after_idx]);
+            let tail = &rest[after_idx..];
+            if let Some(end) = tail.find(sep) {
+                if end > 0 && !tail[..end].contains(char::is_whitespace) {
+                    out.push_str("<user>");
+                    rest = &tail[end..];
+                    continue;
+                }
+            }
+            rest = tail;
+        }
+        out.push_str(rest);
+        s.clear();
+        s.push_str(&out);
+        s
+    }
+
+    fn redact_windows_user_paths(input: &str) -> String {
+        let lower = input.to_ascii_lowercase();
+        let bytes = input.as_bytes();
+        let lbytes = lower.as_bytes();
+        let needle = b":\\users\\";
+        let mut out = String::with_capacity(input.len());
+        let mut pos = 0;
+        while let Some(rel) = lbytes[pos..].windows(needle.len()).position(|w| w == needle) {
+            let abs = pos + rel;
+            if abs > 0 && bytes[abs - 1].is_ascii_alphabetic() {
+                let after = abs + needle.len();
+                if let Some(end) = input[after..].find(['\\', '/']) {
+                    if end > 0 && !input[after..after + end].contains(char::is_whitespace) {
+                        out.push_str(&input[pos..after]);
+                        out.push_str("<user>");
+                        pos = after + end;
+                        continue;
+                    }
+                }
+            }
+            out.push_str(&input[pos..abs + needle.len()]);
+            pos = abs + needle.len();
+        }
+        out.push_str(&input[pos..]);
+        out
+    }
+
+    /// 로그에서 창 제목 관련 줄과 OS 경로 안의 사용자 이름을 가린다.
+    pub(crate) fn sanitize_log_text(raw: &str) -> String {
+        let mut lines = Vec::new();
+        for line in raw.lines() {
+            let lower = line.to_ascii_lowercase();
+            if lower.contains("window_title") || lower.contains("windowtitle") || lower.contains("title=") {
+                continue;
+            }
+            let s = redact_user_segment(line.to_string(), "/Users/", '/');
+            let s = redact_user_segment(s, "/home/", '/');
+            let s = redact_windows_user_paths(&s);
+            lines.push(s);
+        }
+        let mut out = lines.join("\n");
+        if !out.is_empty() && raw.ends_with('\n') {
+            out.push('\n');
+        }
+        out
+    }
+
+    pub(crate) fn build_diag_entries(input: &DiagInput<'_>) -> Vec<(String, Vec<u8>)> {
+        let scales: Vec<f64> = input.layout.monitors.iter().map(|m| m.scale).collect();
+        let resolutions: Vec<Value> = input
+            .layout
+            .monitors
+            .iter()
+            .map(|m| json!({ "w": m.bounds.w, "h": m.bounds.h, "scale": m.scale, "primary": m.primary }))
+            .collect();
+        let env_json = json!({
+            "app": "ShookShok",
+            "version": input.version,
+            "os": std::env::consts::OS,
+            "arch": std::env::consts::ARCH,
+            "channel": input.channel,
+            "lang": input.lang.code(),
+            "monitors": {
+                "count": input.layout.monitors.len(),
+                "scales": scales,
+                "resolutions": resolutions,
+            },
+            "generatedDate": input.date,
+        });
+        let settings_json = sanitize_settings_for_diag(input.exported_settings, input.include_shortcuts);
+        let mut entries = vec![
+            ("environment.json".to_string(), serde_json::to_vec_pretty(&env_json).unwrap_or_default()),
+            ("settings.json".to_string(), serde_json::to_vec_pretty(&settings_json).unwrap_or_default()),
+        ];
+        for (idx, raw) in input.logs.iter().enumerate() {
+            let clean = sanitize_log_text(raw);
+            entries.push((format!("logs/shookshok-{}.log", idx + 1), clean.into_bytes()));
+        }
+        entries
+    }
+
+    pub(crate) fn crc32(data: &[u8]) -> u32 {
+        let mut crc = 0xFFFF_FFFFu32;
+        for &b in data {
+            crc ^= u32::from(b);
+            for _ in 0..8 {
+                let mask = (crc & 1).wrapping_neg();
+                crc = (crc >> 1) ^ (0xEDB8_8320 & mask);
+            }
+        }
+        !crc
+    }
+
+    /// 외부 의존성 없이 순수 Rust로 PKZIP(Stored, Method 0, UTF-8 이름)을 만든다.
+    pub(crate) fn encode_zip_stored(entries: &[(String, Vec<u8>)]) -> Vec<u8> {
+        let mut out = Vec::new();
+        let mut central = Vec::new();
+        for (name, data) in entries {
+            let name_bytes = name.as_bytes();
+            let name_len = name_bytes.len().min(u16::MAX as usize) as u16;
+            let data_len = data.len().min(u32::MAX as usize) as u32;
+            let crc = crc32(&data[..data_len as usize]);
+            let offset = out.len() as u32;
+
+            // Local File Header (30 bytes + name)
+            out.extend_from_slice(&0x0403_4B50u32.to_le_bytes());
+            out.extend_from_slice(&20u16.to_le_bytes()); // version needed
+            out.extend_from_slice(&0x0800u16.to_le_bytes()); // UTF-8 flag
+            out.extend_from_slice(&0u16.to_le_bytes()); // method = Stored
+            out.extend_from_slice(&0u16.to_le_bytes()); // mod time
+            out.extend_from_slice(&0u16.to_le_bytes()); // mod date
+            out.extend_from_slice(&crc.to_le_bytes());
+            out.extend_from_slice(&data_len.to_le_bytes());
+            out.extend_from_slice(&data_len.to_le_bytes());
+            out.extend_from_slice(&name_len.to_le_bytes());
+            out.extend_from_slice(&0u16.to_le_bytes()); // extra len
+            out.extend_from_slice(&name_bytes[..name_len as usize]);
+            out.extend_from_slice(&data[..data_len as usize]);
+
+            // Central Directory Header (46 bytes + name)
+            central.extend_from_slice(&0x0201_4B50u32.to_le_bytes());
+            central.extend_from_slice(&20u16.to_le_bytes()); // version made by
+            central.extend_from_slice(&20u16.to_le_bytes()); // version needed
+            central.extend_from_slice(&0x0800u16.to_le_bytes()); // UTF-8 flag
+            central.extend_from_slice(&0u16.to_le_bytes()); // method = Stored
+            central.extend_from_slice(&0u16.to_le_bytes()); // mod time
+            central.extend_from_slice(&0u16.to_le_bytes()); // mod date
+            central.extend_from_slice(&crc.to_le_bytes());
+            central.extend_from_slice(&data_len.to_le_bytes());
+            central.extend_from_slice(&data_len.to_le_bytes());
+            central.extend_from_slice(&name_len.to_le_bytes());
+            central.extend_from_slice(&0u16.to_le_bytes()); // extra len
+            central.extend_from_slice(&0u16.to_le_bytes()); // comment len
+            central.extend_from_slice(&0u16.to_le_bytes()); // disk number start
+            central.extend_from_slice(&0u16.to_le_bytes()); // internal file attrs
+            central.extend_from_slice(&0u32.to_le_bytes()); // external file attrs
+            central.extend_from_slice(&offset.to_le_bytes());
+            central.extend_from_slice(&name_bytes[..name_len as usize]);
+        }
+
+        let cd_offset = out.len() as u32;
+        let cd_size = central.len() as u32;
+        let count = entries.len().min(u16::MAX as usize) as u16;
+        out.extend_from_slice(&central);
+
+        // End of Central Directory (22 bytes)
+        out.extend_from_slice(&0x0605_4B50u32.to_le_bytes());
+        out.extend_from_slice(&0u16.to_le_bytes()); // disk number
+        out.extend_from_slice(&0u16.to_le_bytes()); // start disk
+        out.extend_from_slice(&count.to_le_bytes());
+        out.extend_from_slice(&count.to_le_bytes());
+        out.extend_from_slice(&cd_size.to_le_bytes());
+        out.extend_from_slice(&cd_offset.to_le_bytes());
+        out.extend_from_slice(&0u16.to_le_bytes()); // comment len
+        out
+    }
+
+    pub(crate) fn build_diag_zip(input: &DiagInput<'_>) -> Vec<u8> {
+        encode_zip_stored(&build_diag_entries(input))
+    }
+
+    fn read_log_tail(path: &Path) -> Option<String> {
+        let mut f = std::fs::File::open(path).ok()?;
+        let len = f.metadata().ok()?.len() as usize;
+        let mut buf = Vec::new();
+        if len > MAX_LOG_BYTES_PER_FILE {
+            use std::io::{Seek, SeekFrom};
+            f.seek(SeekFrom::End(-(MAX_LOG_BYTES_PER_FILE as i64))).ok()?;
+            f.read_to_end(&mut buf).ok()?;
+            let s = String::from_utf8_lossy(&buf);
+            Some(s.split_once('\n').map(|(_, rest)| rest.to_string()).unwrap_or_else(|| s.into_owned()))
+        } else {
+            f.read_to_end(&mut buf).ok()?;
+            Some(String::from_utf8_lossy(&buf).into_owned())
+        }
+    }
+
+    /// 로그 폴더에서 최근 `.log` 파일 내용을 읽는다(원래 파일 이름은 쓰지 않는다).
+    pub(crate) fn collect_log_texts(log_dir: &Path) -> Vec<String> {
+        let Ok(rd) = std::fs::read_dir(log_dir) else { return Vec::new() };
+        let mut files: Vec<(std::time::SystemTime, String, std::path::PathBuf)> = rd
+            .filter_map(|e| e.ok())
+            .filter_map(|e| {
+                let p = e.path();
+                if !p.is_file() || p.extension().and_then(|s| s.to_str()) != Some("log") {
+                    return None;
+                }
+                let modified = e.metadata().ok().and_then(|m| m.modified().ok()).unwrap_or(std::time::UNIX_EPOCH);
+                let name = p.file_name()?.to_string_lossy().into_owned();
+                Some((modified, name, p))
+            })
+            .collect();
+        files.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+        files.truncate(MAX_LOG_FILES);
+        files.into_iter().filter_map(|(_, _, p)| read_log_tail(&p)).collect()
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DiagExportResult {
+    ok: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+}
+
+fn write_unique_zip(dir: &std::path::Path, file_name: &str, bytes: &[u8]) -> std::io::Result<std::path::PathBuf> {
+    std::fs::create_dir_all(dir)?;
+    let stem = file_name.strip_suffix(".zip").unwrap_or(file_name);
+    let unique = ink_domain::naming::unique_file_name(stem, "zip", |n| dir.join(n).exists());
+    let path = dir.join(unique);
+    let mut f = std::fs::OpenOptions::new().write(true).create_new(true).open(&path)?;
+    std::io::Write::write_all(&mut f, bytes)?;
+    Ok(path)
+}
+
+/// 설정 › 정보(일반) [기록 묶기](R2-DIAG-1): 앱 로그·환경·설정을 zip 하나로 다운로드 폴더에 저장한다. 통신 없음.
+#[tauri::command]
+async fn export_diagnostics<R: Runtime>(app: AppHandle<R>, include_shortcuts: Option<bool>) -> DiagExportResult {
+    let include = include_shortcuts.unwrap_or(true);
+    let (version, channel, lang, exported_settings, layout) = {
+        let ink = app.state::<Ink>();
+        let s = ink.lock();
+        let st = s.state();
+        (st.version, st.channel, s.lang(), s.export_file(), s.monitor_layout())
+    };
+    let logs = app.path().app_log_dir().ok().map(|d| diag::collect_log_texts(&d)).unwrap_or_default();
+    let date = today();
+    let bytes = diag::build_diag_zip(&diag::DiagInput {
+        version: &version,
+        channel,
+        lang,
+        layout: &layout,
+        exported_settings: &exported_settings,
+        include_shortcuts: include,
+        logs: &logs,
+        date: &date,
+    });
+    let dir = app
+        .path()
+        .download_dir()
+        .or_else(|_| app.path().document_dir())
+        .or_else(|_| app.path().home_dir())
+        .map_err(|e| e.to_string());
+    let saved = dir.and_then(|d| {
+        let wanted = diag::diag_zip_name(lang, &date);
+        write_unique_zip(&d, &wanted, &bytes).map_err(|e| e.to_string())
+    });
+    match saved {
+        Ok(path) => {
+            let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+            *LAST_DIAG_ZIP.lock().unwrap_or_else(|e| e.into_inner()) = Some(path);
+            let h = app.clone();
+            let detail = name.clone();
+            let _ = app.run_on_main_thread(move || {
+                let ink = h.state::<Ink>();
+                let s = ink.lock();
+                let l = s.lang();
+                let ev = IslandEvent::new(IslandKind::Result, tr_for(l, "island.diag.saved"))
+                    .variant("result")
+                    .detail(detail)
+                    .button(&tr_for(l, "island.action.openFolder"), ACTION_DIAG_OPEN_FOLDER, None);
+                s.island(ev);
+            });
+            DiagExportResult { ok: true, name: Some(name), error: None }
+        }
+        Err(e) => {
+            log::warn!("diag export failed: {e}");
+            let h = app.clone();
+            let _ = app.run_on_main_thread(move || {
+                let ink = h.state::<Ink>();
+                let s = ink.lock();
+                s.island(IslandEvent::new(IslandKind::Problem, tr_for(s.lang(), "island.diag.failed")));
+            });
+            DiagExportResult { ok: false, name: None, error: Some(e) }
+        }
+    }
+}
 
 pub(crate) fn state_lang(state: &InkState) -> Lang {
     state.settings.get("general.lang").and_then(|v| v.as_str()).map(Lang::from_setting).unwrap_or(Lang::Ko)
@@ -1335,6 +1721,22 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
             if let Some(p) = LAST_PDF.lock().unwrap_or_else(|e| e.into_inner()).clone() {
                 open_file(&p);
             }
+        }
+        ACTION_DIAG_OPEN_FOLDER => {
+            let last = LAST_DIAG_ZIP.lock().unwrap_or_else(|e| e.into_inner()).clone();
+            if let Some(p) = last {
+                reveal_path(&p);
+            } else if let Ok(dir) = app.path().download_dir() {
+                open_folder(&dir);
+            }
+        }
+        ink_app::capture::ACTION_CAPTURE_RESTORE => {
+            hide(POPOVER);
+            let h = app.clone();
+            app.run_on_main_thread(move || {
+                h.state::<Ink>().lock().restore_discarded_capture();
+            })
+            .map_err(|e| e.to_string())?;
         }
         // 설정 › 일반 › 설정 위치 [열기](R2-FIX-1): 저장 폴더가 아니라 설정 파일이 있는 곳을 그 파일을 고른 채로
         "settings.reveal" => {
@@ -1815,6 +2217,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             zoom_input,
             capture_annotations,
             capture_commit_annotated,
+            export_diagnostics,
             ui_log
         ])
         .register_uri_scheme_protocol(overlay::SCHEME, |ctx, req| overlay::serve(ctx, req))
@@ -1870,6 +2273,11 @@ mod tests {
         let keys = [
             "common.appTitle",
             "error.settings.notSettings",
+            "island.action.openFolder",
+            "island.capture.annotDiscarded",
+            "island.capture.annotRestoreBtn",
+            "island.diag.failed",
+            "island.diag.saved",
             "plugin.history.cleared.one",
             "plugin.history.cleared.other",
             "plugin.history.empty",
@@ -1908,5 +2316,97 @@ mod tests {
             assert_ne!(en, key, "en missing: {key}");
             assert!(!en.chars().any(|c| ('가'..='힣').contains(&c)), "en has hangul for {key}: {en}");
         }
+    }
+
+    #[test]
+    fn 진단_zip은_언어별_이름과_개인정보_제외_규칙을_지킨다() {
+        use ink_domain::geometry::{Monitor, MonitorLayout, PhysRect};
+        use ink_domain::package::InstallChannel;
+
+        assert_eq!(diag::diag_zip_name(Lang::Ko, "2026-11-27"), "Shookshok-기록-2026-11-27.zip");
+        assert_eq!(diag::diag_zip_name(Lang::En, "2026-11-27"), "Shookshok-logs-2026-11-27.zip");
+
+        let layout = MonitorLayout::new(vec![
+            Monitor { id: 0, bounds: PhysRect::new(0, 0, 2560, 1440), work: PhysRect::new(0, 0, 2560, 1400), scale: 2.0, primary: true },
+        ]);
+        let exported = serde_json::json!({
+            "schemaVersion": 1,
+            "app": "shookshok",
+            "settings": {
+                "values": {
+                    "output.folder": "/Users/alice/Pictures/SecretClass",
+                    "output.template": "비밀수업_{n}",
+                    "record.micDevice": "Alice AirPods",
+                    "capture.excluded": [{ "exe": "SecretApp", "mode": "exclude", "auto": false }],
+                    "general.lang": "ko"
+                },
+                "shortcuts": { "region": "Option+F1" }
+            }
+        });
+        let logs = vec![
+            "[INFO] capture ready 12 ms\n[DEBUG] window_title=개인정보문서\n[WARN] failed /Users/alice/Desktop/a.png and C:\\Users\\bob\\doc.hwp\n".to_string(),
+        ];
+
+        // 단축키 제외 옵션
+        let entries_no_sc = diag::build_diag_entries(&diag::DiagInput {
+            version: "0.2.0",
+            channel: InstallChannel::Unpackaged,
+            lang: Lang::Ko,
+            layout: &layout,
+            exported_settings: &exported,
+            include_shortcuts: false,
+            logs: &logs,
+            date: "2026-11-27",
+        });
+        let names: Vec<&str> = entries_no_sc.iter().map(|(n, _)| n.as_str()).collect();
+        assert_eq!(names, ["environment.json", "settings.json", "logs/shookshok-1.log"]);
+
+        let env_v: Value = serde_json::from_slice(&entries_no_sc[0].1).unwrap();
+        assert_eq!(env_v["version"], "0.2.0");
+        assert_eq!(env_v["monitors"]["count"], 1);
+        assert_eq!(env_v["monitors"]["scales"], serde_json::json!([2.0]));
+        assert_eq!(env_v["os"], std::env::consts::OS);
+
+        let set_v: Value = serde_json::from_slice(&entries_no_sc[1].1).unwrap();
+        assert_eq!(set_v["shortcutsIncluded"], false);
+        assert!(set_v["settings"].get("shortcuts").is_none());
+        assert_eq!(set_v["settings"]["values"]["output.folder"], "<redacted>");
+        assert_eq!(set_v["settings"]["values"]["output.template"], "<redacted>");
+        assert_eq!(set_v["settings"]["values"]["record.micDevice"], "<redacted>");
+        assert_eq!(set_v["settings"]["values"]["capture.excludedCount"], 1);
+        let set_raw = String::from_utf8(entries_no_sc[1].1.clone()).unwrap();
+        assert!(!set_raw.contains("alice") && !set_raw.contains("SecretClass") && !set_raw.contains("SecretApp"));
+
+        let log_raw = String::from_utf8(entries_no_sc[2].1.clone()).unwrap();
+        assert!(!log_raw.contains("개인정보문서"));
+        assert!(!log_raw.contains("/Users/alice/"));
+        assert!(!log_raw.contains("\\Users\\bob\\"));
+        assert!(log_raw.contains("/Users/<user>/"));
+        assert!(log_raw.contains("\\Users\\<user>\\"));
+
+        // 단축키 포함 + ZIP 포맷 검증(로컬 헤더·중앙 디렉터리·EOCD·CRC32)
+        let zip = diag::build_diag_zip(&diag::DiagInput {
+            version: "0.2.0",
+            channel: InstallChannel::Unpackaged,
+            lang: Lang::En,
+            layout: &layout,
+            exported_settings: &exported,
+            include_shortcuts: true,
+            logs: &logs,
+            date: "2026-11-27",
+        });
+        assert_eq!(&zip[0..4], &[0x50, 0x4B, 0x03, 0x04]);
+        let eocd = zip.windows(4).rposition(|w| w == [0x50, 0x4B, 0x05, 0x06]).expect("EOCD");
+        let total_entries = u16::from_le_bytes([zip[eocd + 10], zip[eocd + 11]]);
+        assert_eq!(total_entries, 3);
+        let cd_offset = u32::from_le_bytes([zip[eocd + 16], zip[eocd + 17], zip[eocd + 18], zip[eocd + 19]]) as usize;
+        assert_eq!(&zip[cd_offset..cd_offset + 4], &[0x50, 0x4B, 0x01, 0x02]);
+        // 첫 번째 파일(environment.json) 크기·CRC 검증
+        let crc_stored = u32::from_le_bytes([zip[14], zip[15], zip[16], zip[17]]);
+        let size_stored = u32::from_le_bytes([zip[18], zip[19], zip[20], zip[21]]) as usize;
+        let name_len = u16::from_le_bytes([zip[26], zip[27]]) as usize;
+        let data_start = 30 + name_len;
+        assert_eq!(&zip[30..data_start], b"environment.json");
+        assert_eq!(diag::crc32(&zip[data_start..data_start + size_stored]), crc_stored);
     }
 }

@@ -32,5 +32,6 @@ permissions = [
   "allow-zoom-input",
   "allow-capture-annotations",
   "allow-capture-commit-annotated",
+  "allow-export-diagnostics",
   "allow-ui-log",
 ]

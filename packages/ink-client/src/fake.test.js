@@ -430,3 +430,44 @@ test('맥 미리보기 OS 분기: 추천 키·예외 앱·경로·가져오기·
   const fonts = await mac.systemFonts();
   assert.ok(Array.isArray(fonts) && fonts.includes('Apple SD Gothic Neo'));
 });
+
+test('캡처 주석 되살리기(R2-UNDO-1)와 문제 보고용 기록 묶기(R2-DIAG-1)', async () => {
+  const c = createFakeClient({ platform: 'macos', frameUrl: 'frame.png' });
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+
+  await c.run('capture.region');
+  const s1 = seen.find((e) => e.type === 'overlay').overlay.session;
+  await c.captureInput({ type: 'down', x: 100, y: 100, button: 0 });
+  await c.captureInput({ type: 'move', x: 400, y: 300 });
+  await c.captureInput({ type: 'up', x: 400, y: 300, button: 0 });
+  const doc = { monitorId: 0, anchor: { x: 100, y: 100 }, document: { pages: [{ id: 'page-1', items: [{ id: 's1' }] }] } };
+  await c.captureAnnotations(s1, 0, 1, doc);
+
+  await c.captureInput({ type: 'command', name: 'cancel' });
+  assert.equal((await c.getState()).mode.mode, 'idle');
+  const undoIsland = seen.filter((e) => e.type === 'island').at(-1).island;
+  assert.equal(undoIsland.text, '주석을 지웠어요');
+  assert.equal(undoIsland.button?.action, 'capture.restore');
+  assert.equal(undoIsland.durationMs, 5000);
+
+  await c.run('capture.restore');
+  assert.equal((await c.getState()).mode.mode, 'capture');
+  const restoredOv = seen.filter((e) => e.type === 'overlay').at(-1).overlay;
+  assert.deepEqual(restoredOv.restoredAnnotations, [doc]);
+  assert.equal(seen.filter((e) => e.type === 'capture').at(-1).view.phase, 'confirmed');
+
+  // 기록 묶기: 한국어/영어 이름·단축키 포함 여부·저장 섬
+  const rKo = await c.exportDiagnostics({ includeShortcuts: true });
+  assert.equal(rKo.ok, true);
+  assert.match(rKo.name, /^Shookshok-기록-\d{4}-\d{2}-\d{2}\.zip$/);
+  const diagIsl = seen.filter((e) => e.type === 'island').at(-1).island;
+  assert.equal(diagIsl.text, '다운로드 폴더에 저장했어요');
+  assert.equal(diagIsl.button?.action, 'diag.openFolder');
+
+  await c.updateSetting('general.lang', 'en');
+  const rEn = await c.exportDiagnostics({ includeShortcuts: false });
+  assert.equal(rEn.ok, true);
+  assert.match(rEn.name, /^Shookshok-logs-\d{4}-\d{2}-\d{2}\.zip$/);
+  assert.deepEqual(c.diagLog.map((d) => d.includeShortcuts), [true, false]);
+});

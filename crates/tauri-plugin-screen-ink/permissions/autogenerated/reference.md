@@ -33,6 +33,7 @@ screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있
 - `allow-zoom-input`
 - `allow-capture-annotations`
 - `allow-capture-commit-annotated`
+- `allow-export-diagnostics`
 - `allow-ui-log`
 
 ## Permission Table
@@ -300,6 +301,32 @@ Enables the draw_restore command without any pre-configured scope.
 <td>
 
 Denies the draw_restore command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-export-diagnostics`
+
+</td>
+<td>
+
+Enables the export_diagnostics command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-export-diagnostics`
+
+</td>
+<td>
+
+Denies the export_diagnostics command without any pre-configured scope.
 
 </td>
 </tr>

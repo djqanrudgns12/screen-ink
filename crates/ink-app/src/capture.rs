@@ -5,7 +5,7 @@
 
 use crate::ports::{ElementSource, Frame, MonitorProbe, Ports, VisionSource, WindowCatalog};
 use crate::service::InkService;
-use crate::state::{CaptureView, IslandButton, IslandEvent, IslandKind};
+use crate::state::{CaptureView, IslandButton, IslandEvent, IslandKind, OverlayMonitor, OverlaySession};
 use ink_domain::geometry::{PhysPoint, PhysRect};
 use ink_domain::history::{History, HistoryEntry};
 use ink_domain::image::{self, FrameRef};
@@ -16,7 +16,7 @@ use ink_domain::recog::{build_chain, Evidence, Node};
 use ink_domain::modekeys::CaptureKeys;
 use ink_domain::selection::{Button, Command, Context, Effect, Input, Key, Selector};
 use ink_domain::settings::ExcludedApp;
-use ink_domain::snapshot::{RawWindow, Snapshot};
+use ink_domain::snapshot::{CaptureKind, RawWindow, Snapshot};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
@@ -78,6 +78,25 @@ pub(crate) struct LastCapture {
 /// 그 뒤 [판서로]는 지금 화면을 새로 찍어 같은 배율 공식으로 연다.
 pub const CAPTURE_FRAME_TTL: std::time::Duration = std::time::Duration::from_secs(30);
 
+/// 주석이 있는 캡처를 닫기·Esc로 버린 뒤 섬 [되살리기]로 복원할 수 있는 시간(R2-UNDO-1).
+pub const CAPTURE_UNDO_TTL: std::time::Duration = std::time::Duration::from_secs(5);
+pub const ACTION_CAPTURE_RESTORE: &str = "capture.restore";
+
+/// 주석이 있던 캡처를 버릴 때 5초간만 붙들어 두는 상태(R2-UNDO-1).
+/// 5초가 지나거나 다른 모드가 시작되거나 시스템 사건이 오면 즉시 비워 메모리를 0으로 돌려준다.
+#[derive(Clone)]
+pub(crate) struct DiscardedCapture {
+    pub old_session: u64,
+    pub kind: CaptureKind,
+    pub snapshot: Snapshot,
+    pub frames: Vec<Frame>,
+    pub cursor_sprite: Option<image::CursorSprite>,
+    pub rect: PhysRect,
+    pub annot_items: BTreeMap<u32, u32>,
+    pub annot_snapshots: BTreeMap<u32, serde_json::Value>,
+    pub at: Instant,
+}
+
 /// 결과 섬 [판서로](3e-handoff): 방금 고른 범위와 그 모니터 전체 정지 프레임(Arc — 복사 없음, 4K ≈ 33 MB 한 장).
 /// 다음 모드 진입·잠금·화면 구성 변경이면 통째로 버리고, 30초가 지나면 프레임만 놓는다.
 #[derive(Clone)]
@@ -120,6 +139,8 @@ pub struct CaptureState {
     pub(crate) pin_seq: u64,
     /// 캡처 주석(4.9): 오버레이가 알린 주석 개수·결과 부탁·지금 합칠 층
     pub(crate) annot: AnnotState,
+    /// 주석이 있던 캡처를 버린 직후 5초간 되살리기용으로 붙들어 둔 상태(R2-UNDO-1)
+    pub(crate) discarded: Option<DiscardedCapture>,
 }
 
 /// 한 번의 고르기 동안 잰 것(08 §4.7 "첫 강조 ≤ 진입 + 30 ms", "커서 이동 질의 ≤ 5 ms").
@@ -287,6 +308,25 @@ impl InkService {
         self.emit_capture();
     }
 
+    /// 되살리기 진입(R2-UNDO-1): 확정 범위 그대로 고르기 상태 기계를 열고 강조를 맞춘다.
+    pub(crate) fn start_selection_confirmed(&mut self, frames: Vec<Frame>, cursor: PhysPoint, rect: PhysRect) {
+        let Some(snap) = self.snapshot.take() else { return };
+        self.cap.frames = frames;
+        let keys = CaptureKeys::from_lookup(|id| self.settings.shortcut(id).to_string());
+        let evidence = self.settings.bool("capture.evidence");
+        let sel = {
+            let ctx = ctx!(self, &snap);
+            Selector::new(cursor, &ctx).with_keys(keys).with_evidence(evidence).with_confirmed(rect)
+        };
+        self.cap.selector = Some(sel);
+        self.snapshot = Some(snap);
+        self.cap.drawn = Some(rect);
+        if let Some(session) = self.session() {
+            self.ports.overlay.highlight(session, Some(rect));
+        }
+        self.emit_capture();
+    }
+
     /// 모드 끝: 색인·전처리·이미지를 버린다.
     pub(crate) fn end_selection(&mut self) {
         if let Some(line) = self.cap.probe.line() {
@@ -418,7 +458,7 @@ impl InkService {
                 self.redraw();
             }
             Effect::Notice(key) => self.island(IslandEvent::new(IslandKind::Info, self.t(key))),
-            Effect::Cancel => self.end_capture(),
+            Effect::Cancel => self.cancel_capture(),
             // 주석이 없으면 commit = 지금 경로 그대로(finish·pin_rect), 있으면 오버레이에 주석 층을 부탁
             Effect::Copy(rect) => self.commit(CommitAction::Copy, rect),
             Effect::Save { rect, quick } => self.commit(if quick { CommitAction::QuickSave } else { CommitAction::Save }, rect),
@@ -844,6 +884,8 @@ pub(crate) struct AnnotState {
     session: u64,
     /// 모니터(오버레이 창) → 그 창 주석 개수
     items: BTreeMap<u32, u32>,
+    /// 모니터(오버레이 창) → 되살리기용 직렬화 주석(anchor · InkDocument JSON)
+    snapshots: BTreeMap<u32, serde_json::Value>,
     seq: u64,
     pending: Option<CommitRequest>,
     layer: Option<AnnotLayer>,
@@ -853,6 +895,11 @@ impl InkService {
     /// 오버레이가 주석 개수를 알린다(0 ↔ n이 바뀔 때). 지금 세션이 아니면 무시.
     /// 부탁해 둔 결과가 있는데 주석이 모두 사라졌으면(창이 주석을 버림) 기다리지 않고 지금 경로로 끝낸다.
     pub fn capture_annotations(&mut self, session: u64, monitor: u32, items: u32) {
+        self.capture_annotations_with_data(session, monitor, items, None);
+    }
+
+    /// 오버레이가 주석 개수와 되살리기용 주석 직렬화 데이터를 함께 알린다(R2-UNDO-1).
+    pub fn capture_annotations_with_data(&mut self, session: u64, monitor: u32, items: u32, data: Option<serde_json::Value>) {
         if self.session() != Some(session) {
             return;
         }
@@ -862,14 +909,147 @@ impl InkService {
         }
         if items == 0 {
             a.items.remove(&monitor);
+            a.snapshots.remove(&monitor);
         } else {
             a.items.insert(monitor, items);
+            if let Some(d) = data {
+                a.snapshots.insert(monitor, d);
+            }
         }
         if !self.annotated() {
             if let Some(req) = self.cap.annot.pending.take() {
                 self.commit_plain(req.action, req.rect);
             }
         }
+    }
+
+    /// [닫기]·Esc로 캡처를 버릴 때: 주석이 하나라도 있으면 5초간 프레임·범위·주석을 붙들고 [되살리기] 섬을 띄운다(R2-UNDO-1).
+    pub(crate) fn cancel_capture(&mut self) {
+        let Mode::Capture { session, kind, .. } = self.mode else { return };
+        let rect = self.cap.selector.as_ref().and_then(|s| s.rect());
+        if !self.annotated() || self.snapshot.is_none() || self.cap.frames.is_empty() || rect.is_none() {
+            self.end_capture();
+            return;
+        }
+        let rect = rect.unwrap();
+        self.clear_discarded_capture();
+        let snapshot = self.snapshot.take().expect("checked above");
+        let frames = std::mem::take(&mut self.cap.frames);
+        let cursor_sprite = self.cap.cursor.take();
+        let annot_items = self.cap.annot.items.clone();
+        let annot_snapshots = self.cap.annot.snapshots.clone();
+        self.ports.overlay.hide_keep_frames(session);
+        self.mode = self.rest_mode();
+        self.end_selection();
+        self.after_capture_end();
+        if let Some((_, timing)) = self.pending.take() {
+            if timing.frame_ms.is_some() {
+                self.record_timing(&timing);
+            }
+        }
+        self.cap.discarded = Some(DiscardedCapture {
+            old_session: session,
+            kind,
+            snapshot,
+            frames,
+            cursor_sprite,
+            rect,
+            annot_items,
+            annot_snapshots,
+            at: Instant::now(),
+        });
+        self.island(IslandEvent::new(IslandKind::End, ""));
+        let ev = IslandEvent::new(IslandKind::Info, self.t("island.capture.annotDiscarded"))
+            .button(&self.t("island.capture.annotRestoreBtn"), ACTION_CAPTURE_RESTORE, None)
+            .duration_ms(CAPTURE_UNDO_TTL.as_millis() as u32);
+        self.island(ev);
+        self.emit_state();
+    }
+
+    /// 버린 주석 캡처를 같은 정지 화면·같은 범위·같은 주석으로 다시 연다(R2-UNDO-1).
+    pub fn restore_discarded_capture(&mut self) -> bool {
+        self.restore_discarded_capture_at(Instant::now())
+    }
+
+    /// `now` = 지금 시각(5초 만료 판정용, 시험은 나중 시각을 넘긴다).
+    pub fn restore_discarded_capture_at(&mut self, now: Instant) -> bool {
+        let Some(d) = self.cap.discarded.take() else { return false };
+        if now.saturating_duration_since(d.at) >= CAPTURE_UNDO_TTL || self.ports.probe.secure_desktop() {
+            self.ports.overlay.drop_held_frames(d.old_session);
+            return false;
+        }
+        self.prepare_overlays();
+        let layout = self.prepared.clone().unwrap_or_default();
+        if layout.fingerprint() != d.snapshot.layout.fingerprint() {
+            self.ports.overlay.drop_held_frames(d.old_session);
+            return false;
+        }
+        self.end_zoom_settled();
+        self.end_capture();
+
+        self.session_seq += 1;
+        let session = self.session_seq;
+        let restored_annotations = (!d.annot_snapshots.is_empty()).then(|| serde_json::Value::Array(d.annot_snapshots.values().cloned().collect()));
+        let overlay = OverlaySession {
+            session,
+            kind: d.kind,
+            cursor: d.snapshot.cursor,
+            native_frame: false,
+            highlight: Some(d.rect),
+            monitors: layout
+                .monitors
+                .iter()
+                .map(|m| OverlayMonitor { id: m.id, bounds: m.bounds, work: m.work, scale: m.scale, primary: m.primary, frame_url: None })
+                .collect(),
+            restored_annotations,
+        };
+        let kept = d.frames.clone();
+        self.warm_evidence(&d.snapshot, &kept, d.snapshot.cursor);
+        if let Err(e) = self.ports.overlay.show(&overlay, d.frames) {
+            log::warn!("capture restore overlay show failed: {e}");
+            self.ports.overlay.drop_held_frames(d.old_session);
+            self.ports.overlay.hide(session);
+            self.end_selection();
+            self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.openError")));
+            return false;
+        }
+        let mut snap = d.snapshot;
+        snap.id = session;
+        let cursor = snap.cursor;
+        self.snapshot = Some(snap);
+        self.cap.cursor = d.cursor_sprite;
+        self.mode = Mode::Capture { session, kind: d.kind, started_ms: self.now_ms() };
+        self.cap.annot = AnnotState { session, items: d.annot_items, snapshots: d.annot_snapshots, ..Default::default() };
+        self.island(self.capture_island(d.kind));
+        self.emit_state();
+        self.start_selection_confirmed(kept, cursor, d.rect);
+        self.after_entry(d.kind, cursor);
+        true
+    }
+
+    /// 5초가 지난 되살리기 대기를 비우고 정지 프레임을 놓는다. 놓았으면 true.
+    pub fn expire_discarded_capture(&mut self) -> bool {
+        self.expire_discarded_capture_at(Instant::now())
+    }
+
+    pub fn expire_discarded_capture_at(&mut self, now: Instant) -> bool {
+        let Some(d) = self.cap.discarded.as_ref() else { return false };
+        if now.saturating_duration_since(d.at) < CAPTURE_UNDO_TTL {
+            return false;
+        }
+        self.clear_discarded_capture()
+    }
+
+    /// 다른 모드가 시작되거나 시스템 사건이 오면 붙들어 둔 정지 프레임을 즉시 놓는다(메모리 남김 0).
+    pub fn clear_discarded_capture(&mut self) -> bool {
+        let Some(d) = self.cap.discarded.take() else { return false };
+        self.ports.overlay.drop_held_frames(d.old_session);
+        true
+    }
+
+    /// 버린 주석 캡처의 프레임을 아직 붙들고 있는지(시험·진단).
+    pub fn discarded_capture_held(&self) -> bool {
+        self.cap.discarded.is_some()
     }
 
     /// 지금 세션에 주석이 하나라도 있는지.
@@ -1087,5 +1267,198 @@ mod tests {
         assert!(AnnotatedCommit::decode(&body(r#"{"session":1,"seq":1,"action":"print"}"#, &[])).is_err(), "모르는 동작");
         let huge = ((MAX_COMMIT_META + 1) as u32).to_le_bytes();
         assert!(AnnotatedCommit::decode(&huge).is_err(), "머리 한도");
+    }
+
+    #[test]
+    fn 주석_버릴때만_5초_되살리기_섬과_복원_및_만료_해제() {
+        use crate::ports::*;
+        use crate::state::{InkState, OverlaySession};
+        use ink_domain::geometry::{Monitor, MonitorLayout};
+        use ink_domain::naming::NameContext;
+        use ink_domain::shortcuts::Platform;
+        use ink_domain::snapshot::CaptureKind;
+        use std::sync::Mutex;
+
+        #[derive(Clone, Default)]
+        struct Rec {
+            events: Vec<String>,
+            shown: Vec<OverlaySession>,
+            islands: Vec<IslandEvent>,
+            captures: usize,
+        }
+
+        #[derive(Clone, Default)]
+        struct Fake(Arc<Mutex<Rec>>);
+
+        impl OverlayHost for Fake {
+            fn prepare(&mut self, _layout: &MonitorLayout) {}
+            fn show(&mut self, session: &OverlaySession, _frames: Vec<Frame>) -> Result<Option<Instant>, String> {
+                let mut g = self.0.lock().unwrap();
+                g.events.push(format!("show:{}", session.session));
+                g.shown.push(session.clone());
+                Ok(None)
+            }
+            fn highlight(&mut self, _session: u64, _rect: Option<PhysRect>) {}
+            fn hide(&mut self, session: u64) {
+                self.0.lock().unwrap().events.push(format!("hide:{session}"));
+            }
+            fn hide_keep_frames(&mut self, session: u64) {
+                self.0.lock().unwrap().events.push(format!("hide_keep:{session}"));
+            }
+            fn drop_held_frames(&mut self, session: u64) {
+                self.0.lock().unwrap().events.push(format!("drop_held:{session}"));
+            }
+        }
+        impl Notifier for Fake {
+            fn state(&self, _s: &InkState) {}
+            fn island(&self, e: &IslandEvent) {
+                self.0.lock().unwrap().islands.push(e.clone());
+            }
+        }
+        impl ScreenSource for Fake {
+            fn capture(&mut self, layout: &MonitorLayout) -> Result<Vec<Frame>, String> {
+                self.0.lock().unwrap().captures += 1;
+                Ok(layout
+                    .monitors
+                    .iter()
+                    .map(|m| Frame { monitor_id: m.id, width: m.bounds.w as u32, height: m.bounds.h as u32, bgra: Arc::new(vec![7; (m.bounds.w * m.bounds.h * 4) as usize]) })
+                    .collect())
+            }
+        }
+        struct Stub;
+        impl HotkeyRegistry for Stub {
+            fn register(&mut self, _s: &str, _a: &str) -> Result<(), HotkeyError> { Ok(()) }
+            fn unregister(&mut self, _a: &str) {}
+        }
+        impl SystemProbe for Stub {
+            fn running_apps(&self) -> Vec<String> { vec![] }
+            fn live_bindings(&self) -> Option<Vec<ink_domain::shortcuts::LiveBinding>> { Some(vec![]) }
+        }
+        impl SettingsStore for Stub {
+            fn load(&mut self) -> Loaded { Loaded::default() }
+            fn save_section(&mut self, _n: &str, _d: &serde_json::Value) -> Result<(), StoreError> { Ok(()) }
+            fn location(&self) -> StoreLocation { StoreLocation::default() }
+        }
+        impl WindowCatalog for Stub {
+            fn windows(&self) -> Vec<RawWindow> { vec![] }
+        }
+        impl MonitorProbe for Stub {
+            fn layout(&self) -> MonitorLayout {
+                MonitorLayout::new(vec![Monitor { id: 0, bounds: PhysRect::new(0, 0, 128, 96), work: PhysRect::new(0, 0, 128, 96), scale: 1.0, primary: true }])
+            }
+            fn cursor(&self) -> PhysPoint { PhysPoint { x: 20, y: 20 } }
+        }
+        impl ElementSource for Stub {
+            fn request(&self, _w: u64, _e: &str) {}
+            fn elements_at(&self, _w: u64, _p: PhysPoint) -> Vec<ink_domain::recog::ElementCand> { vec![] }
+            fn clear(&self) {}
+        }
+        impl Clipboard for Stub {
+            fn set_image(&mut self, _w: u32, _h: u32, _bgra: &[u8]) -> Result<(), String> { Ok(()) }
+            fn set_text(&mut self, _t: &str) -> Result<(), String> { Ok(()) }
+        }
+        impl FileSink for Stub {
+            fn save_png(&mut self, _f: &str, stem: &str, _w: u32, _h: u32, _bgra: &[u8]) -> Result<SavedFile, String> {
+                Ok(SavedFile { name: format!("{stem}.png"), path: format!("{stem}.png"), fell_back: false })
+            }
+        }
+        impl Clock for Stub {
+            fn local(&self) -> NameContext { NameContext { year: 2026, month: 11, day: 27, hour: 15, minute: 0, second: 0, app: None, n: 0 } }
+            fn unix(&self) -> u64 { 0 }
+        }
+
+        let make_svc = |rec: &Fake| {
+            let ports = Ports {
+                hotkeys: Box::new(Stub),
+                probe: Box::new(Stub),
+                store: Box::new(Stub),
+                notifier: Box::new(rec.clone()),
+                screen: Box::new(rec.clone()),
+                windows: Box::new(Stub),
+                monitors: Box::new(Stub),
+                overlay: Box::new(rec.clone()),
+                elements: Box::new(Stub),
+                vision: Box::new(NoVision),
+                clipboard: Box::new(Stub),
+                files: Box::new(Stub),
+                pins: Box::new(NoPins),
+                clock: Box::new(Stub),
+            };
+            InkService::new(ports, Platform::Mac, "test")
+        };
+
+        // 1) 주석이 없으면 지금처럼 그냥 닫힌다
+        let rec = Fake::default();
+        let mut svc = make_svc(&rec);
+        svc.start_capture(CaptureKind::Region);
+        svc.capture_input(CaptureInput::Command { name: "cancel".into() });
+        assert_eq!(svc.mode(), Mode::Idle);
+        assert!(!svc.discarded_capture_held());
+        {
+            let g = rec.0.lock().unwrap();
+            assert!(g.events.contains(&"hide:1".to_string()));
+            assert!(!g.events.iter().any(|e| e.starts_with("hide_keep:")));
+            assert!(!g.islands.iter().any(|i| i.button.as_ref().is_some_and(|b| b.action == ACTION_CAPTURE_RESTORE)));
+        }
+
+        // 2) 주석이 있을 때 Esc/닫기 → 5초 되살리기 섬 + 프레임 유지 → 되살리기(화면 재찍기 0회)
+        let rec = Fake::default();
+        let mut svc = make_svc(&rec);
+        svc.start_capture(CaptureKind::Region);
+        // 드래그로 범위 확정
+        svc.capture_input(CaptureInput::Down { x: 10, y: 12, button: 0 });
+        svc.capture_input(CaptureInput::Move { x: 70, y: 52 });
+        svc.capture_input(CaptureInput::Up { x: 70, y: 52, button: 0 });
+        let want_rect = svc.cap.selector.as_ref().unwrap().rect().unwrap();
+        let snap_json = serde_json::json!({ "monitorId": 0, "anchor": { "x": want_rect.x, "y": want_rect.y }, "document": { "pages": [{ "id": "page-1", "items": [{ "id": "s1" }] }] } });
+        svc.capture_annotations_with_data(1, 0, 1, Some(snap_json.clone()));
+        let captures_before_cancel = rec.0.lock().unwrap().captures;
+
+        svc.capture_input(CaptureInput::Command { name: "cancel".into() });
+        assert_eq!(svc.mode(), Mode::Idle);
+        assert!(svc.discarded_capture_held());
+        {
+            let g = rec.0.lock().unwrap();
+            assert!(g.events.contains(&"hide_keep:1".to_string()));
+            let isl = g.islands.last().unwrap();
+            assert_eq!(isl.text, "주석을 지웠어요");
+            assert_eq!(isl.duration_ms, Some(5000));
+            let btn = isl.button.as_ref().unwrap();
+            assert_eq!(btn.label, "되살리기");
+            assert_eq!(btn.action, ACTION_CAPTURE_RESTORE);
+        }
+
+        assert!(svc.restore_discarded_capture());
+        assert!(!svc.discarded_capture_held());
+        assert!(matches!(svc.mode(), Mode::Capture { session: 2, .. }));
+        assert!(svc.capture_annotated());
+        assert_eq!(svc.cap.selector.as_ref().unwrap().rect(), Some(want_rect));
+        assert_eq!(svc.cap.selector.as_ref().unwrap().view().phase, ink_domain::selection::Phase::Confirmed);
+        {
+            let g = rec.0.lock().unwrap();
+            assert_eq!(g.captures, captures_before_cancel, "정지 프레임을 재사용해 새로 찍지 않음");
+            let shown = g.shown.last().unwrap();
+            assert_eq!(shown.session, 2);
+            assert_eq!(shown.highlight, Some(want_rect));
+            assert_eq!(shown.restored_annotations, Some(serde_json::json!([snap_json])));
+        }
+
+        // 3) 5초 만료되면 프레임을 놓고 되살리기 불가
+        svc.capture_input(CaptureInput::Command { name: "cancel".into() });
+        assert!(svc.discarded_capture_held());
+        let future = svc.cap.discarded.as_ref().unwrap().at + CAPTURE_UNDO_TTL;
+        assert!(svc.expire_discarded_capture_at(future));
+        assert!(!svc.discarded_capture_held());
+        assert!(!svc.restore_discarded_capture_at(future));
+        assert!(rec.0.lock().unwrap().events.contains(&"drop_held:2".to_string()));
+
+        // 4) 다른 모드가 시작되거나 시스템 잠금이면 즉시 놓음
+        svc.start_capture(CaptureKind::Region);
+        svc.capture_annotations_with_data(3, 0, 1, Some(snap_json));
+        svc.capture_input(CaptureInput::Command { name: "cancel".into() });
+        assert!(svc.discarded_capture_held());
+        svc.start_capture(CaptureKind::Region);
+        assert!(!svc.discarded_capture_held());
+        assert!(rec.0.lock().unwrap().events.contains(&"drop_held:3".to_string()));
     }
 }

@@ -74,9 +74,9 @@
  *
  * @typedef {'capture.region'|'capture.window'|'record.toggle'|'draw'|'zoom'|'board'|'pin.toggle'|'pin.releaseAll'|'draw.restore'|'folder.open'|'settings.open'|'firstRun.open'|'app.quit'|'snipaste.howto'
  *   |'folder.pick'|'logs.open'|'settings.export'|'capture.history.clear'|'capture.saveLast'|'capture.copyHex'|'pins.closeAll'
- *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'|'draw.acceptSuggestion'|'draw.undo'|'capture.toDraw'
+ *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'|'capture.restore'|'draw.acceptSuggestion'|'draw.undo'|'capture.toDraw'
  *   |'record.stop'|'record.discard'|'record.recoverSave'|'record.recoverDelete'|'perm.screen'|'perm.accessibility'|'app.relaunch'
- *   |'perm.refresh'|'settings.reveal'|'capture.full'|'update.check'|'update.install'|'update.snooze'|'pdf.open'} InkAction
+ *   |'perm.refresh'|'settings.reveal'|'capture.full'|'update.check'|'update.install'|'update.snooze'|'pdf.open'|'diag.openFolder'} InkAction
  *   perm.screen·perm.accessibility = 맥 권한 요청 + 정확한 설정 칸 열기(M10) · app.relaunch = 다시 시작(화면 기록 반영)
  *   draw.acceptSuggestion·draw.undo = 판서 섬 단추([바꾸기]·[되돌리기]) → Rust가 'drawCommand' 이벤트로 오버레이 엔진에
  *   capture.cancel = 오버레이에서 Esc·우클릭(모드 끝, 정지 이미지 버림)
@@ -165,6 +165,7 @@
  * @property {boolean} nativeFrame  true = 네이티브 창이 이미 정지 화면(50% 어둡게 + 강조만 밝게)을 그림 →
  *   UI는 이미지·어둡게를 깔지 않고 투명 층(테두리·꺾쇠·확대경·크기)만. 이미지는 확대경용으로 늦게 읽음
  * @property {PhysRect} [highlight] 첫 강조(물리 px) — 진입 순간 = 커서 모니터 전체(F1·F3), F2 = 커서 아래 창
+ * @property {any} [restoredAnnotations]  버린 주석 되살리기(R2-UNDO-1): 복원할 주석 스냅숏 목록
  *
  * @typedef {Object} CaptureView  고르기 상태(Rust가 정함 → 모든 오버레이·섬이 같은 것을 그림)
  * @property {number} session
@@ -296,8 +297,9 @@
  * @property {(patch: DrawIslandPatch) => Promise<void>} drawIsland
  * @property {(sample: PenSample) => Promise<void>} drawPenMetrics  로그 한 줄 `pen latency n=.. p50=.. p95=.. max=.. ms`
  * @property {(input: ZoomInput) => Promise<void>} zoomInput  실시간 확대 입력(휠·확대 안 키·끝). 결과는 'zoom'·'island' 이벤트로
- * @property {(session: number, monitorId: number, items: number) => Promise<void>} [captureAnnotations]  캡처 주석(4.9): 이 창의 주석 개수(0 ↔ n이 바뀔 때). 0개면 결과는 지금 경로 그대로
+ * @property {(session: number, monitorId: number, items: number, data?: any) => Promise<void>} [captureAnnotations]  캡처 주석(4.9 · R2-UNDO-1): 이 창의 주석 개수와 되살리기용 직렬화 데이터. 0개면 결과는 지금 경로 그대로
  * @property {(meta: CaptureCommitMeta, rgba: Uint8Array | Uint8ClampedArray | null) => Promise<void>} [captureCommitAnnotated]  'captureCommit' 부탁의 답 — 투명 주석 층(곧은 알파 RGBA, getImageData 그대로) + 모자이크 사각형. Rust가 원본에 합성
+ * @property {(opts?: { includeShortcuts?: boolean }) => Promise<{ok: boolean, name?: string, error?: string}>} [exportDiagnostics]  문제 보고용 기록 묶기(R2-DIAG-1) — zip 하나로 다운로드 폴더에 저장
  * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView} | {type: 'afterimage', afterimage: AfterimageEvent} | {type: 'zoom', zoom: LiveZoomState | null} | {type: 'draw', draw: DrawSession} | ({type: 'drawCommand'} & DrawCommand) | {type: 'captureCommit', request: CaptureCommitRequest}) => void) => () => void} subscribe
  */
 
