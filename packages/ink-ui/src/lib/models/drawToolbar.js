@@ -5,6 +5,7 @@ import { defaultDrawCombo, normalizeCombo } from '../ink/drawKeys.js';
 import { clamp } from '../ink/coords.js';
 import { BASIC_COLOR_CODES } from './palette.js';
 import { clampToolSize, getToolSizeSpec } from './inkSize.js';
+import { computeTopIslandRect, placeAnchoredPopover } from './popoverPlacement.js';
 import { formatComboReadable, modifierKeyLabel } from './shortcutDisplay.js';
 
 /** 도구 막대가 손대지 않은 뒤 흐려지는 시간(ms). */
@@ -237,37 +238,60 @@ export function isNearRect(cursor, rect, margin = DRAW_TOOLBAR_PROXIMITY_PX) {
 }
 
 /**
- * 그리기 도구 막대 위 색·굵기 패널 자리 계산(CSS px).
- * 아래 가운데 도구 막대 바로 위(10px) 우선 배치, 화면 가장자리 8px 클램프.
+ * 그리기 도구 막대 위 색·굵기 패널 자리 계산(CSS px, G19 상단 섬 회피 반영).
+ * 아래 가운데 도구 막대 바로 위(10px) 우선 배치, 위가 모자라거나 상단 섬(560×88)과 겹치면 아래로 뒤집고 화면 가장자리 8px 안으로 민다.
  * @param {{ left: number, top: number, width: number, height: number }} barRect
  * @param {{ w: number, h: number }} panelSize
- * @param {{ w: number, h: number }} viewport
+ * @param {{ w: number, h: number, left?: number, top?: number }} viewport
  * @param {number | null} [anchorCenterX]  뷰포트 기준 단추 가운데 X(없으면 막대 가운데)
+ * @param {{
+ *   avoidTopIsland?: boolean,
+ *   avoidRects?: ReadonlyArray<import('./popoverPlacement.js').RectLike | null | undefined>,
+ *   monitor?: import('./popoverPlacement.js').MonitorBoundsLike | null,
+ * }} [opts]
  * @returns {{ x: number, y: number, side: 'above' | 'below', arrowX: number }}
  */
-export function placeDrawColorPanel(barRect, panelSize, viewport, anchorCenterX = null) {
+export function placeDrawColorPanel(barRect, panelSize, viewport, anchorCenterX = null, opts = {}) {
   const vw = Math.max(0, viewport.w);
   const vh = Math.max(0, viewport.h);
   const pw = Math.max(0, panelSize.w);
   const ph = Math.max(0, panelSize.h);
+  const bounds = {
+    left: Number.isFinite(viewport.left) ? /** @type {number} */ (viewport.left) : 0,
+    top: Number.isFinite(viewport.top) ? /** @type {number} */ (viewport.top) : 0,
+    w: vw,
+    h: vh,
+  };
+  const avoidRects =
+    opts.avoidRects !== undefined
+      ? opts.avoidRects
+      : opts.avoidTopIsland === false
+        ? []
+        : (() => {
+            const island = computeTopIslandRect(bounds, opts.monitor ?? null);
+            return island ? [island] : [];
+          })();
+
   const targetCx =
     typeof anchorCenterX === 'number' && Number.isFinite(anchorCenterX)
       ? anchorCenterX
       : barRect.left + barRect.width / 2;
 
-  const maxX = Math.max(DRAW_TOOLBAR_EDGE_PX, vw - DRAW_TOOLBAR_EDGE_PX - pw);
-  const x = Math.round(Math.min(maxX, Math.max(DRAW_TOOLBAR_EDGE_PX, targetCx - pw / 2)));
-
-  const aboveY = barRect.top - DRAW_TOOLBAR_GAP_PX - ph;
-  const belowY = barRect.top + barRect.height + DRAW_TOOLBAR_GAP_PX;
-  const fitsAbove = aboveY >= DRAW_TOOLBAR_EDGE_PX;
-  const fitsBelow = belowY + ph <= vh - DRAW_TOOLBAR_EDGE_PX;
-  const side = fitsAbove || !fitsBelow ? 'above' : 'below';
-  const maxY = Math.max(DRAW_TOOLBAR_EDGE_PX, vh - DRAW_TOOLBAR_EDGE_PX - ph);
-  const rawY = side === 'above' ? aboveY : belowY;
-  const y = Math.round(Math.min(maxY, Math.max(DRAW_TOOLBAR_EDGE_PX, rawY)));
+  const placed = placeAnchoredPopover(
+    barRect,
+    { width: pw, height: ph, minHeight: ph },
+    bounds,
+    {
+      gap: DRAW_TOOLBAR_GAP_PX,
+      edge: DRAW_TOOLBAR_EDGE_PX,
+      align: 'center',
+      targetCenterX: targetCx,
+      preferredSide: 'above',
+      avoidRects,
+    },
+  );
 
   const arrowPad = Math.min(18, Math.max(8, pw / 4));
-  const arrowX = Math.round(Math.min(Math.max(arrowPad, targetCx - x), Math.max(arrowPad, pw - arrowPad)));
-  return { x, y, side, arrowX };
+  const arrowX = Math.round(Math.min(Math.max(arrowPad, targetCx - placed.left), Math.max(arrowPad, pw - arrowPad)));
+  return { x: placed.left, y: placed.top, side: placed.side, arrowX };
 }

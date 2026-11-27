@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { computeTopIslandRect, rectsOverlap } from './popoverPlacement.js';
 import {
   ANNOT_COLORS,
   ANNOT_WIDTHS,
@@ -146,4 +147,41 @@ test('단추 순서: 취소 · 고정 · 저장 · 복사(주황)', () => {
   assert.deepEqual(TOOLBAR_ACTIONS.map((a) => a.id), ['cancel', 'pin', 'save', 'copy']);
   assert.equal(toolbarTooltip(TOOLBAR_ACTIONS[1], {}), '화면에 고정', '키 없는 단추는 이름만');
   assert.equal(TOOLBAR_ACTIONS.filter((a) => a.primary).map((a) => a.id).join(), 'copy');
+});
+
+test('색·굵기 패널(G19): 상단 섬(560×88)과 겹치면 툴바 아래로 뒤집고 양쪽 모자람·모니터 경계를 지킨다', () => {
+  const vp = { w: 1280, h: 820 };
+  const island = computeTopIslandRect(vp);
+  const bar = { w: 540, h: 40 };
+  const panel = { w: 284, h: 228 };
+
+  // 툴바 y=268 → 위(y=32..260)는 화면엔 들어가지만 상단 섬(360..920, 12..100)과 겹침 → 아래로 뒤집기
+  const flipped = placeToolOptions({ x: 377, y: 268, side: 'below' }, bar, panel, vp, 220);
+  assert.equal(flipped.side, 'below');
+  assert.equal(flipped.y, 268 + 40 + TOOLBAR_OPTIONS_GAP);
+  assert.equal(rectsOverlap({ x: flipped.x, y: flipped.y, w: panel.w, h: panel.h }, island), false);
+
+  // 넓은 화면 왼쪽 끝(섬 680..1240 바깥) → 위 공간이 충분하면 위 유지
+  const wide = { w: 1920, h: 1080 };
+  const wideIsland = computeTopIslandRect(wide);
+  const leftSide = placeToolOptions({ x: 8, y: 268, side: 'below' }, bar, panel, wide, 120);
+  assert.equal(leftSide.side, 'above');
+  assert.equal(leftSide.y, 268 - TOOLBAR_OPTIONS_GAP - panel.h);
+  assert.equal(rectsOverlap({ x: leftSide.x, y: leftSide.y, w: panel.w, h: panel.h }, wideIsland), false);
+
+  // 양쪽 모자람(420px 화면, 중앙 툴바 y=200, 텍스트 패널 h=268) → 섬 아래·화면 안으로 밀기
+  const shortVp = { w: 1280, h: 420 };
+  const shortIsland = computeTopIslandRect(shortVp);
+  const textPanel = { w: 284, h: 268 };
+  const tight = placeToolOptions({ x: 377, y: 200, side: 'below' }, bar, textPanel, shortVp, 220);
+  assert.equal(tight.side, 'below');
+  assert.ok(tight.y >= (shortIsland?.bottom ?? 0), '상단 섬과 겹치지 않음');
+  assert.ok(tight.y + textPanel.h <= shortVp.h - TOOLBAR_EDGE, '화면 아래 경계 안');
+
+  // 두 모니터 경계(오른쪽 모니터 left=1920)에서 왼쪽·오른쪽 경계 모두 유지
+  const rightMon = { left: 1920, top: 0, w: 1920, h: 1080 };
+  const seamLeft = placeToolOptions({ x: 1928, y: 500, side: 'below' }, bar, panel, rightMon, 16);
+  assert.equal(seamLeft.x, 1920 + TOOLBAR_EDGE);
+  const seamRight = placeToolOptions({ x: 3290, y: 500, side: 'below' }, bar, panel, rightMon, 530);
+  assert.equal(seamRight.x + panel.w, 1920 + 1920 - TOOLBAR_EDGE);
 });

@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { computeTopIslandRect, rectsOverlap } from './popoverPlacement.js';
 import {
   BUNDLED_FONTS,
   DEFAULT_FONT_FAMILY,
@@ -176,8 +177,31 @@ test('키보드 탐색(↑↓·←→·Home/End·글자 치면 검색) 및 팝�
   assert.equal(below.side, 'below');
   assert.ok(below.left + below.width <= 1280 - 8, '오른쪽 경계 클램프');
 
-  // 위 220px(minHeight 180 이상, 아래보다 넓음) → 위 유지 + 높이 압축
-  const squeezed = placeFontPopover({ left: 200, top: 234, width: 150, height: 28 }, { w: 1280, h: 420 });
+  // 섬 바깥(왼쪽)에서 위 220px(minHeight 180 이상, 아래보다 넓음) → 위 유지 + 높이 압축
+  const squeezed = placeFontPopover({ left: 40, top: 234, width: 150, height: 28 }, { w: 1280, h: 420 });
   assert.equal(squeezed.side, 'above');
   assert.equal(squeezed.maxHeight, 220);
+
+  // G19: 화면 위쪽 범위(트리거 top=348, 가운데)에서 상단 섬(560×88)과 겹치면 아래로 뒤집어 연다
+  const island820 = computeTopIslandRect({ w: 1280, h: 820 });
+  const flipBelow = placeFontPopover({ left: 467, top: 348, width: 260, height: 30 }, { w: 1280, h: 820 });
+  assert.equal(flipBelow.side, 'below');
+  assert.equal(flipBelow.maxHeight, FONT_POPOVER_HEIGHT);
+  assert.equal(flipBelow.top, 348 + 30 + 6);
+  assert.equal(rectsOverlap({ ...flipBelow, height: flipBelow.maxHeight }, island820), false);
+
+  // 양쪽 모자람 + 상단 섬 겹침 구역 → 아래로 밀고 섬·화면 경계 모두 회피
+  const island420 = computeTopIslandRect({ w: 1280, h: 420 });
+  const bothTight = placeFontPopover({ left: 200, top: 234, width: 150, height: 28 }, { w: 1280, h: 420 });
+  assert.equal(bothTight.side, 'below');
+  assert.equal(bothTight.clamped, true);
+  assert.equal(rectsOverlap({ ...bothTight, height: bothTight.maxHeight }, island420), false);
+  assert.ok(bothTight.top + bothTight.maxHeight <= 420 - 8);
+
+  // 두 모니터 경계(오른쪽 모니터 1920..3840)에서 경계 밖으로 나가지 않음
+  const seam = placeFontPopover(
+    { left: 1915, top: 500, width: 150, height: 28 },
+    { left: 1920, top: 0, w: 1920, h: 1080 },
+  );
+  assert.equal(seam.left, 1920 + 8);
 });

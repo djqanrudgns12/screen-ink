@@ -28,6 +28,10 @@
    *   recentFonts?: ReadonlyArray<string>,
    *   systemFonts?: ReadonlyArray<string>,
    *   anchorEl?: HTMLElement | null,
+   *   preferredSide?: 'above' | 'below',
+   *   avoidRects?: ReadonlyArray<import('../models/popoverPlacement.js').RectLike | null | undefined> | null,
+   *   avoidTopIsland?: boolean,
+   *   layoutKey?: string | number,
    *   onSelect?: (family: string, weight: number) => void,
    *   onPreview?: (preview: { family: string, weight: number } | null) => void,
    *   onClose?: () => void,
@@ -40,6 +44,10 @@
     recentFonts = [],
     systemFonts = [],
     anchorEl = null,
+    preferredSide = 'above',
+    avoidRects = undefined,
+    avoidTopIsland = true,
+    layoutKey = '',
     onSelect = () => {},
     onPreview = () => {},
     onClose = () => {},
@@ -65,9 +73,12 @@
 
   let pos = $state({
     offsetLeft: 0,
+    offsetTop: 0,
+    offsetBottom: 0,
     width: FONT_POPOVER_WIDTH,
     maxHeight: FONT_POPOVER_HEIGHT,
     side: /** @type {'above' | 'below'} */ ('above'),
+    clamped: false,
     ready: false,
   });
 
@@ -85,12 +96,28 @@
   function updatePlacement() {
     if (!open || typeof window === 'undefined' || !anchorEl) return;
     const rect = anchorEl.getBoundingClientRect();
-    const placed = placeFontPopover(rect, { w: window.innerWidth, h: window.innerHeight });
+    const parentEl =
+      rootEl?.offsetParent instanceof HTMLElement
+        ? rootEl.offsetParent
+        : anchorEl.parentElement;
+    const parentRect = parentEl ? parentEl.getBoundingClientRect() : rect;
+    const placed = placeFontPopover(
+      rect,
+      { w: window.innerWidth, h: window.innerHeight },
+      {
+        preferredSide,
+        avoidTopIsland,
+        ...(avoidRects != null ? { avoidRects } : {}),
+      },
+    );
     pos = {
-      offsetLeft: Math.round(placed.left - rect.left),
+      offsetLeft: Math.round(placed.left - parentRect.left),
+      offsetTop: Math.round(placed.top - parentRect.top),
+      offsetBottom: Math.round(parentRect.bottom - (placed.top + placed.maxHeight)),
       width: placed.width,
       maxHeight: placed.maxHeight,
       side: placed.side,
+      clamped: placed.clamped,
       ready: true,
     };
   }
@@ -280,6 +307,16 @@
   });
 
   $effect(() => {
+    void layoutKey;
+    void preferredSide;
+    void avoidRects;
+    void avoidTopIsland;
+    if (!open) return;
+    updatePlacement();
+    void tick().then(updatePlacement);
+  });
+
+  $effect(() => {
     void filtered;
     void tick().then(updateScrollFade);
   });
@@ -304,14 +341,15 @@
     bind:this={rootEl}
     class="ink-fp"
     data-side={pos.side}
+    data-clamped={pos.clamped ? 'true' : undefined}
     data-ready={pos.ready ? 'true' : undefined}
     role="dialog"
     tabindex="-1"
     aria-label={t('font.picker.label')}
     style:position="absolute"
     style:left={`${pos.offsetLeft}px`}
-    style:top={pos.side === 'below' ? 'calc(100% + 6px)' : 'auto'}
-    style:bottom={pos.side === 'above' ? 'calc(100% + 6px)' : 'auto'}
+    style:top={pos.side === 'below' || pos.clamped ? `${pos.offsetTop}px` : 'auto'}
+    style:bottom={pos.side === 'above' && !pos.clamped ? `${pos.offsetBottom}px` : 'auto'}
     style:width={`${pos.width}px`}
     style:max-height={`${pos.maxHeight}px`}
     onpointerdown={(e) => e.stopPropagation()}

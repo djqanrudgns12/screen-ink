@@ -54,6 +54,7 @@
    *   y?: number,
    *   side?: 'above' | 'below',
    *   arrowX?: number,
+   *   avoidRects?: ReadonlyArray<import('../models/popoverPlacement.js').RectLike | null | undefined> | null,
    *   onColor?: (codeOrHex: string, opts?: { recordRecent?: boolean }) => void,
    *   onSize?: (val: number) => void,
    *   onFont?: (family: string, weight: number) => void,
@@ -83,6 +84,7 @@
     y = 0,
     side = 'above',
     arrowX = 140,
+    avoidRects = undefined,
     onColor = () => {},
     onSize = () => {},
     onFont = undefined,
@@ -461,6 +463,9 @@
         recentFonts={activeRecentFonts}
         systemFonts={activeSystemFonts}
         anchorEl={fontBtnEl}
+        preferredSide={side}
+        {avoidRects}
+        layoutKey={`${x}:${y}:${side}:${boxHeight}`}
         onSelect={handleFontSelect}
         onPreview={handleFontPreview}
         onClose={() => setFontOpen(false)}

@@ -1,6 +1,8 @@
 // 글꼴 고르기 순수 모델(R2-TXT-1~4, 6 · Tidy식 묶음·굵기 알약·검색·최근 3개·키보드·팝오버 배치).
 // 개인정보 원칙(PRD §2·R-LOG-1): 시스템 글꼴 이름은 화면 표시용으로만 쓰고 로그/외부에 남기지 않는다.
 
+import { computeTopIslandRect, placeAnchoredPopover } from './popoverPlacement.js';
+
 export const DEFAULT_FONT_FAMILY = 'Freesentation';
 export const DEFAULT_FONT_WEIGHT = 400;
 export const FONT_SETTING_MAX_BYTES = 200;
@@ -623,11 +625,21 @@ export function shouldStartTypeSearch(ev) {
 }
 
 /**
- * 글꼴 팝오버 배치(트리거 바로 위 우선, 공간이 모자라면 아래 + 높이 압축, 화면 안 클램프).
+ * 글꼴 팝오버 배치(트리거 바로 위 우선, 위가 모자라거나 상단 섬 560×88과 겹치면 아래로 뒤집기, 양쪽 모자라면 화면 안으로 밀기).
  * @param {{ left: number, top: number, width: number, height: number }} anchorRect
- * @param {{ w: number, h: number }} viewport
- * @param {{ width?: number, height?: number, minHeight?: number, gap?: number, edge?: number }} [opts]
- * @returns {{ left: number, top: number, width: number, maxHeight: number, side: 'above' | 'below' }}
+ * @param {{ w: number, h: number, left?: number, top?: number }} viewport
+ * @param {{
+ *   width?: number,
+ *   height?: number,
+ *   minHeight?: number,
+ *   gap?: number,
+ *   edge?: number,
+ *   preferredSide?: 'above' | 'below',
+ *   avoidTopIsland?: boolean,
+ *   avoidRects?: ReadonlyArray<import('./popoverPlacement.js').RectLike | null | undefined>,
+ *   monitor?: import('./popoverPlacement.js').MonitorBoundsLike | null,
+ * }} [opts]
+ * @returns {{ left: number, top: number, width: number, maxHeight: number, side: 'above' | 'below', clamped: boolean }}
  */
 export function placeFontPopover(anchorRect, viewport, opts = {}) {
   const width = opts.width ?? FONT_POPOVER_WIDTH;
@@ -636,41 +648,44 @@ export function placeFontPopover(anchorRect, viewport, opts = {}) {
   const gap = opts.gap ?? 6;
   const edge = opts.edge ?? 8;
 
-  const vw = Math.max(width + edge * 2, viewport.w || 1280);
-  const vh = Math.max(minHeight + edge * 2, viewport.h || 720);
+  const vw = Number.isFinite(viewport?.w) && viewport.w > 0 ? viewport.w : 1280;
+  const vh = Number.isFinite(viewport?.h) && viewport.h > 0 ? viewport.h : 720;
+  const bounds = {
+    left: Number.isFinite(viewport?.left) ? /** @type {number} */ (viewport.left) : 0,
+    top: Number.isFinite(viewport?.top) ? /** @type {number} */ (viewport.top) : 0,
+    w: vw,
+    h: vh,
+  };
 
-  const availAbove = Math.max(0, anchorRect.top - gap - edge);
-  const availBelow = Math.max(0, vh - edge - (anchorRect.top + anchorRect.height + gap));
+  const avoidRects =
+    opts.avoidRects !== undefined
+      ? opts.avoidRects
+      : opts.avoidTopIsland === false
+        ? []
+        : (() => {
+            const island = computeTopIslandRect(bounds, opts.monitor ?? null);
+            return island ? [island] : [];
+          })();
 
-  /** @type {'above' | 'below'} */
-  let side = 'above';
-  let maxHeight = height;
+  const placed = placeAnchoredPopover(
+    anchorRect,
+    { width, height, minHeight },
+    bounds,
+    {
+      gap,
+      edge,
+      align: 'start',
+      preferredSide: opts.preferredSide ?? 'above',
+      avoidRects,
+    },
+  );
 
-  if (availAbove >= height) {
-    side = 'above';
-    maxHeight = height;
-  } else if (availAbove >= minHeight && availAbove >= availBelow) {
-    side = 'above';
-    maxHeight = availAbove;
-  } else if (availBelow >= height) {
-    side = 'below';
-    maxHeight = height;
-  } else if (availBelow >= availAbove) {
-    side = 'below';
-    maxHeight = Math.max(Math.min(height, availBelow), Math.min(minHeight, vh - edge * 2));
-  } else {
-    side = 'above';
-    maxHeight = Math.max(Math.min(height, availAbove), Math.min(minHeight, vh - edge * 2));
-  }
-
-  const rawLeft = anchorRect.left;
-  const maxLeft = Math.max(edge, vw - edge - width);
-  const left = Math.round(Math.min(maxLeft, Math.max(edge, rawLeft)));
-
-  const top =
-    side === 'above'
-      ? Math.max(edge, Math.round(anchorRect.top - gap - maxHeight))
-      : Math.min(Math.max(edge, vh - edge - maxHeight), Math.round(anchorRect.top + anchorRect.height + gap));
-
-  return { left, top, width, maxHeight: Math.round(maxHeight), side };
+  return {
+    left: placed.left,
+    top: placed.top,
+    width: placed.width,
+    maxHeight: placed.maxHeight,
+    side: placed.side,
+    clamped: placed.clamped,
+  };
 }

@@ -59,6 +59,7 @@
     pushRecentFont,
     serializeFontSetting,
   } from '../models/fontPicker.js';
+  import { computeTopIslandRect } from '../models/popoverPlacement.js';
   import { TEXT_SIZE_MUL, createInkEngine, itemCount } from '../ink/inkEngine.js';
   import { evidenceBoxes } from '../models/evidence.js';
   import {
@@ -1521,8 +1522,17 @@
   });
   let effectiveFont = $derived(annotFontPreview?.family ?? annotFont);
   let effectiveFontWeight = $derived(annotFontPreview?.weight ?? annotFontWeight);
+  let topIslandRect = $derived(computeTopIslandRect({ w: viewportW, h: viewportH }, monitor));
+  let panelAvoidRects = $derived(topIslandRect ? [topIslandRect] : []);
   let optsPos = $derived(
-    placeToolOptions(toolbarPos, toolbarSize, { w: optsW || 284, h: optsH || 216 }, { w: viewportW, h: viewportH }, toolbarAnchorX),
+    placeToolOptions(
+      toolbarPos,
+      toolbarSize,
+      { w: optsW || 284, h: optsH || 216 },
+      { w: viewportW, h: viewportH },
+      toolbarAnchorX,
+      { avoidRects: panelAvoidRects },
+    ),
   );
   let sizeBadgeText = $derived(activeFrame && captureView?.rect ? formatSizeBadge(captureView.rect) : '');
   let sizeBadgePos = $derived(
@@ -1723,6 +1733,7 @@
           y={optsPos.y}
           side={optsPos.side}
           arrowX={optsPos.arrowX}
+          avoidRects={panelAvoidRects}
           bind:boxWidth={optsW}
           bind:boxHeight={optsH}
           onColor={setAnnotColor}

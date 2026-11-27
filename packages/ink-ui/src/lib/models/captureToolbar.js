@@ -1,6 +1,7 @@
 // 선택 툴바(R2-UI-TB, 04 S08) 순수 모델 — 어느 모니터에 띄울지, 어디에 붙일지, 단추·툴팁·크기 배지.
 // 좌표: 사각형·모니터 = 가상 화면 물리 px, 배치 = 그 모니터 오버레이 창의 CSS px.
 
+import { computeTopIslandRect, placeAnchoredPopover } from './popoverPlacement.js';
 import { defaultSlotCombo, formatComboReadable } from './shortcutDisplay.js';
 
 /** 범위와 툴바 사이(CSS px) */
@@ -227,40 +228,62 @@ export function annotOptionsKind(toolId) {
 }
 
 /**
- * 색·굵기 패널 자리(CSS px, R2-FIX-11):
+ * 색·굵기 패널 자리(CSS px, R2-FIX-11 · G19):
  * - `anchorX`(툴바 왼쪽 기준 단추 가운데 X)가 있으면 그 단추 위에 중앙 정렬, 없으면 툴바 오른쪽 끝에 맞춤.
- * - 세로는 툴바 **위(`above`)** 우선(툴바 위 8px), 위 공간이 모자라면 툴바 아래(`below`).
- * - 가로·세로 모두 화면 가장자리 안으로 클램프하고 삼각 꼬리 위치 `arrowX`를 돌려준다.
+ * - 세로는 툴바 **위(`above`)** 우선(툴바 위 8px), 위 공간이 모자라거나 상단 섬(560×88)과 겹치면 툴바 **아래(`below`)**로 뒤집는다.
+ * - 양쪽 다 모자라면 화면 가장자리 및 섬 바깥 안쪽으로 밀어 넣고 삼각 꼬리 위치 `arrowX`를 돌려준다.
  * @param {{ x: number, y: number, side: 'below' | 'above' | 'inside' }} bar  placeToolbar 결과
  * @param {{ w: number, h: number }} barSize
  * @param {{ w: number, h: number }} optsSize
- * @param {{ w: number, h: number }} viewport
+ * @param {{ w: number, h: number, left?: number, top?: number }} viewport
  * @param {number | null} [anchorX]  툴바 왼쪽 기준 단추 중심 X
+ * @param {{
+ *   avoidTopIsland?: boolean,
+ *   avoidRects?: ReadonlyArray<import('./popoverPlacement.js').RectLike | null | undefined>,
+ *   monitor?: import('./popoverPlacement.js').MonitorBoundsLike | null,
+ * }} [opts]
  * @returns {{ x: number, y: number, side: 'above' | 'below', arrowX: number }}
  */
-export function placeToolOptions(bar, barSize, optsSize, viewport, anchorX = null) {
+export function placeToolOptions(bar, barSize, optsSize, viewport, anchorX = null, opts = {}) {
   const vw = Math.max(0, viewport.w);
   const vh = Math.max(0, viewport.h);
-  const maxX = Math.max(TOOLBAR_EDGE, vw - TOOLBAR_EDGE - optsSize.w);
-  const rawX =
-    typeof anchorX === 'number' && Number.isFinite(anchorX)
-      ? bar.x + anchorX - optsSize.w / 2
-      : bar.x + barSize.w - optsSize.w;
-  const x = Math.min(maxX, Math.max(TOOLBAR_EDGE, Math.round(rawX)));
+  const bounds = {
+    left: Number.isFinite(viewport.left) ? /** @type {number} */ (viewport.left) : 0,
+    top: Number.isFinite(viewport.top) ? /** @type {number} */ (viewport.top) : 0,
+    w: vw,
+    h: vh,
+  };
+  const avoidRects =
+    opts.avoidRects !== undefined
+      ? opts.avoidRects
+      : opts.avoidTopIsland === false
+        ? []
+        : (() => {
+            const island = computeTopIslandRect(bounds, opts.monitor ?? null);
+            return island ? [island] : [];
+          })();
 
-  const above = bar.y - TOOLBAR_OPTIONS_GAP - optsSize.h;
-  const below = bar.y + barSize.h + TOOLBAR_OPTIONS_GAP;
-  const fitsAbove = above >= TOOLBAR_EDGE;
-  const fitsBelow = below + optsSize.h <= vh - TOOLBAR_EDGE;
-  const side = fitsAbove || !fitsBelow ? 'above' : 'below';
-  const maxY = Math.max(TOOLBAR_EDGE, vh - TOOLBAR_EDGE - optsSize.h);
-  const y = side === 'above' ? Math.min(maxY, Math.max(TOOLBAR_EDGE, above)) : Math.min(maxY, Math.max(TOOLBAR_EDGE, below));
+  const hasAnchorX = typeof anchorX === 'number' && Number.isFinite(anchorX);
+  const placed = placeAnchoredPopover(
+    { left: bar.x, top: bar.y, width: barSize.w, height: barSize.h },
+    { width: optsSize.w, height: optsSize.h, minHeight: optsSize.h },
+    bounds,
+    {
+      gap: TOOLBAR_OPTIONS_GAP,
+      edge: TOOLBAR_EDGE,
+      align: hasAnchorX ? 'center' : 'end',
+      targetCenterX: hasAnchorX ? bar.x + anchorX : null,
+      preferredSide: 'above',
+      avoidRects,
+    },
+  );
 
-  const targetCenter =
-    typeof anchorX === 'number' && Number.isFinite(anchorX) ? bar.x + anchorX : bar.x + barSize.w - 20;
+  const targetCenter = hasAnchorX ? bar.x + anchorX : bar.x + barSize.w - 20;
   const arrowPad = Math.min(18, Math.max(8, optsSize.w / 4));
-  const arrowX = Math.round(Math.min(Math.max(arrowPad, targetCenter - x), Math.max(arrowPad, optsSize.w - arrowPad)));
-  return { x, y, side, arrowX };
+  const arrowX = Math.round(
+    Math.min(Math.max(arrowPad, targetCenter - placed.left), Math.max(arrowPad, optsSize.w - arrowPad)),
+  );
+  return { x: placed.left, y: placed.top, side: placed.side, arrowX };
 }
 
 /**

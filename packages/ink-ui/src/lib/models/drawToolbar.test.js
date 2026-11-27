@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { computeTopIslandRect, rectsOverlap } from './popoverPlacement.js';
 import {
   DRAW_TOOLBAR_DIM_OPACITY,
   DRAW_TOOLBAR_HISTORY,
@@ -150,4 +151,17 @@ test('색·굵기 패널은 도구 막대 위 가운데에 붙고 화면 안으�
   );
   assert.equal(clamped.x, 8);
   assert.ok(clamped.arrowX >= 18);
+
+  // G19: 위쪽 배치 시 상단 섬(560×88)과 겹치면 아래로 뒤집는다
+  const vp = { w: 1280, h: 820 };
+  const island = computeTopIslandRect(vp);
+  const flipped = placeDrawColorPanel(
+    { left: 400, top: 280, width: 480, height: 42 },
+    { w: 284, h: 216 },
+    vp,
+    640,
+  );
+  assert.equal(flipped.side, 'below');
+  assert.equal(flipped.y, 280 + 42 + 10);
+  assert.equal(rectsOverlap({ x: flipped.x, y: flipped.y, w: 284, h: 216 }, island), false);
 });
