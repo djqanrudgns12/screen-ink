@@ -552,8 +552,12 @@ impl InkService {
             return Ok(());
         }
         let Some(slot) = self.slot(id) else { return Ok(()) };
+        if !slot.is_global() || (!self.hotkeys_enabled && id != PAUSE_SLOT) {
+            return Ok(());
+        }
         let r = self.try_register(slot, combo);
         match &r {
+            Ok(accel) if self.capturing_keys => self.ports.hotkeys.unregister(accel),
             Ok(accel) => {
                 self.registered.insert(id.to_string(), accel.clone());
             }
@@ -562,6 +566,13 @@ impl InkService {
             }
         }
         r.map(|_| ())
+    }
+
+    /// 이미 저장했던 값은 다른 앱이 키를 먼저 잡았어도 복원한다. 등록 결과는 해당 줄에 남긴다.
+    fn restore_shortcut(&mut self, id: &str, prev: &str) {
+        self.settings.shortcuts.insert(id.to_string(), prev.to_string());
+        self.offered.remove(id);
+        let _ = self.register_slot(id, prev);
     }
 
     /// 판정 → 가속기 → 운영체제 등록. 성공하면 가속기.
@@ -671,7 +682,7 @@ impl InkService {
         match self.apply_shortcut(slot, &combo) {
             Ok(status) => {
                 if let Err(f) = self.save() {
-                    let _ = self.apply_shortcut(slot, &prev);
+                    self.restore_shortcut(id, &prev);
                     self.island(IslandEvent::new(IslandKind::Problem, self.t("island.capture.saveError")));
                     return self.fail_result(None, f);
                 }
@@ -728,10 +739,7 @@ impl InkService {
             }
             match self.apply_shortcut(slot, &def) {
                 Ok(_) => done.push(Undo::Shortcut { id: slot.id.clone(), prev }),
-                Err(f) => {
-                    failed += 1;
-                    self.failures.insert(slot.id.clone(), f);
-                }
+                Err(_) => failed += 1,
             }
         }
         if !done.is_empty() {
@@ -748,6 +756,8 @@ impl InkService {
                 self.tp("island.settings.shortcutsRestoredPartial", failed as u64)
             };
             self.island(IslandEvent::new(IslandKind::Result, text).undo_button_for(self.lang()));
+        } else if failed > 0 {
+            self.island(IslandEvent::new(IslandKind::Problem, self.tp("island.settings.shortcutsRestoredPartial", failed as u64)));
         }
         self.emit_state();
         self.state()
@@ -1212,8 +1222,13 @@ impl InkService {
         let Some(entry) = self.history.pop() else {
             return UpdateResult { ok: false, error: None, state: self.state() };
         };
-        self.revert(entry);
+        let current = self.settings.clone();
+        self.revert(entry.clone());
         let saved = self.save();
+        if saved.is_err() {
+            self.revert(Undo::Whole(Box::new(current)));
+            self.history.push(entry);
+        }
         self.emit_state();
         UpdateResult { ok: saved.is_ok(), error: saved.err().map(|f| f.reason), state: self.state() }
     }
@@ -1227,13 +1242,7 @@ impl InkService {
                     self.update_border_style();
                 }
             }
-            Undo::Shortcut { id, prev } => {
-                if let Some(slot) = self.slot(&id) {
-                    if let Err(f) = self.apply_shortcut(slot, &prev) {
-                        self.failures.insert(id, f);
-                    }
-                }
-            }
+            Undo::Shortcut { id, prev } => self.restore_shortcut(&id, &prev),
             Undo::Batch(list) => {
                 for e in list.into_iter().rev() {
                     self.revert(e);

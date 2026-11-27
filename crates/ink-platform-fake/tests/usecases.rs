@@ -87,6 +87,70 @@ fn 바꾸기는_새_키_등록_후_옛_키_해제_그리고_되돌리기() {
 }
 
 #[test]
+fn 점유된_예전_키는_되돌리면_설정과_실패_목록에_함께_돌아온다() {
+    for (platform, preset, accel) in [(Platform::Win, "Alt+Q", "Alt+KeyQ"), (Platform::Mac, "Ctrl+Option+Q", "Control+Alt+KeyQ")] {
+        let w = FakeWorld::new();
+        w.running(&["Snipaste.exe"]).taken(&["F1"]);
+        let mut s = InkService::new(w.ports(), platform, "test");
+        s.start();
+        let initial = s.state();
+        assert!(s.set_shortcut("region", preset).ok);
+        assert!(w.is_registered(accel));
+
+        w.store.0.lock().unwrap().fail_writes = true;
+        let failed = s.undo();
+        assert!(!failed.ok && s.can_undo());
+        assert_eq!(row(&failed.state, "region").combo, preset);
+        assert!(w.is_registered(accel));
+        w.store.0.lock().unwrap().fail_writes = false;
+
+        let undo = s.undo();
+        assert!(undo.ok);
+        assert_eq!(row(&undo.state, "region").combo, "F1");
+        assert_eq!(row(&undo.state, "region"), row(&initial, "region"));
+        assert_eq!(undo.state.conflicts.combos, ["F1"]);
+        assert_eq!(w.saved().unwrap()["sections"]["settings"]["data"]["shortcuts"]["region"], "F1");
+        assert!(!w.is_registered(accel) && !w.is_registered("F1"));
+        w.taken(&[]);
+        s.refresh_environment();
+        assert!(w.is_registered("F1"));
+        assert_eq!(s.state().conflicts.count, 0);
+    }
+}
+
+#[test]
+fn 점유된_예전_키는_새_설정_저장에_실패해도_보존한다() {
+    let w = FakeWorld::new();
+    w.taken(&["F1"]);
+    let mut s = service(&w);
+    w.store.0.lock().unwrap().fail_writes = true;
+    assert!(!s.set_shortcut("region", "Alt+Q").ok);
+    assert_eq!(s.settings().shortcut("region"), "F1");
+    assert_eq!(s.state().conflicts.combos, ["F1"]);
+    assert!(!w.is_registered("Alt+KeyQ") && !s.can_undo());
+}
+
+#[test]
+fn 점유된_기본값을_건너뛴_묶음은_유효한_현재_키를_겹침으로_보고하지_않는다() {
+    let w = FakeWorld::new();
+    let mut s = service(&w);
+    assert!(s.set_shortcut("region", "Alt+Q").ok);
+    assert!(s.set_shortcut("window", "Alt+W").ok);
+    w.taken(&["F1"]);
+    s.begin_settings_session();
+    let state = s.reset_shortcut_group("capture");
+    assert_eq!(row(&state, "region").combo, "Alt+Q");
+    assert!(w.is_registered("Alt+KeyQ") && w.is_registered("F2"));
+    assert!(state.conflicts.combos.is_empty());
+    w.taken(&["F1", "Alt+KeyW"]);
+    let undo = s.undo();
+    assert!(undo.ok);
+    assert_eq!(row(&undo.state, "window").combo, "Alt+W");
+    assert_eq!(undo.state.conflicts.combos, ["Alt+W"]);
+    assert!(!w.is_registered("F2") && !s.can_undo());
+}
+
+#[test]
 fn 다른_앱이_쥔_키는_옛_키를_지키고_등록_가능한_추천_3개() {
     let w = FakeWorld::new();
     w.taken(&["Control+Alt+F2", "Alt+Digit4", "Alt+Digit5"]);
