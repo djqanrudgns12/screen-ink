@@ -147,7 +147,7 @@
             { "id": "7.2", "title": "시나리오 카드 S1~S15", "platform": "win", "days": 0.36, "status": "todo", "level": "mid" },
             { "id": "7.3", "title": "인식 회귀·CI 기준선 고정", "platform": "common", "days": 0.36, "status": "partial", "note": "합성 사례 14종(cap_cases)이 CI(Linux·Windows·맥)에서 전부 맞춤·중복 0·앞 창 오염 0을 단언 = 합성 기준선 고정. 남음: 실제 창 사례(RB 17종, Windows) 기준선", "level": "easy" },
             { "id": "7.4", "title": "200회 진입·종료(메모리·핸들)", "platform": "win", "days": 0.35, "status": "todo", "level": "easy" },
-            { "id": "7.5", "title": "릴리스 체크리스트(R-NET-2·R-LOG-1 등)", "platform": "win", "days": 0.35, "status": "partial", "note": "릴리스 점검표 Windows 몫(docs/release/checklist-2.md): 기록에 창 제목 0 통과, 업데이트 끈 상태 통신 0은 WebView2 하위 프로세스 2건으로 미통과 → W14에서 고치는 중", "level": "mid" },
+            { "id": "7.5", "title": "릴리스 체크리스트(R-NET-2·R-LOG-1 등)", "platform": "win", "days": 0.35, "status": "verify", "note": "릴리스 점검표 Windows 몫(docs/release/checklist-2.md): 기록에 창 제목 0, 업데이트 끈 상태 통신 0(WebView2 백그라운드 통신 차단 5a264b6, 187초 관측 TCP·UDP 0)·맥 60초 0(1ad2dcd). 남음: 서명·설치형 MSIX 실기(사람 승인)", "level": "mid" },
             { "id": "7.6", "title": "NSIS 설치본·포터블 ZIP", "platform": "win", "days": 0.36, "status": "verify", "note": "NSIS 설치본(5.1 MB)·포터블 ZIP(설정을 실행 파일 옆에) 생성, scripts/package-portable.ps1(4ce8bf1). 남음: 설치·제거 실기", "level": "mid" },
             { "id": "7.7", "title": "디자인 관문(S01~S17 = v3)", "platform": "common", "days": 0.36, "status": "verify", "note": "디자인 관문 docs/qa/2026-11-27/design-gate.md(49d567a): 미리보기 168장 넘침·잘림·겹침 0. 남음: 실제 창(S07 다중 모니터·S10 둥근 귀·S11 꺾쇠·S13 확대·S15 창 고정) 눈 확인", "level": "mid" }
           ]
