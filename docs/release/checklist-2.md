@@ -114,9 +114,11 @@
   - 설정 › 일반 › 업데이트에서 **자동 업데이트 확인 끄기** 설정 후 앱 재실행.
   - macOS: `SCREEN_INK_UPDATE_DELAY_SECS=5`로 릴리스 `.app` 실행 후 30초 이상 관찰하며 `lsof -i -a -p <PID>` 및 `nettop -p <PID>`에서 외부 소켓 생성·송수신 바이트 **0** 확인.
   - Windows: MSIX/비패키지 모두 `update.auto = false` 또는 비패키지 경로에서 앱 프로세스 외부 연결 **0** 확인.
-- [ ] **Windows PE Import 검사 (1차 7.5)**:
+  - **Windows 포터블 0.2.0 미통과.** Windows 11 25H2에서 자동 확인을 끈 채 새 WebView2 프로필로 두 번 시작했다. 첫 확인 시각을 5초로 당기고, 실행 직후부터 앱과 자식 프로세스의 IPv4·IPv6 소켓을 조회했다. 37.1초(258회)와 36.9초(262회) 모두 본체 외부 TCP 연결은 0건, 하위 프로세스는 각각 2건이었다. 두 번째 실행에서 연결 소유자가 `msedgewebview2.exe`임을 확인했다. 패킷 전수·바이트 계측과 설치형 MSIX 실기는 미실행이다.
+- [x] **Windows PE Import 검사 (1차 7.5)**:
   - `target/release/screen-ink.exe` (또는 `Shookshok.exe`)에서 `winhttp.dll` · `wininet.dll` · `ws2_32.dll` import가 없는지 `dumpbin /imports` / `llvm-objdump -p` / `rea inspect-pe-imports`로 확인.
   - WebView2 런타임 백그라운드 통신 억제 옵션 적용 여부 기록.
+  - 0.2.0 x64 릴리스 사본에서 `dumpbin /imports /headers`로 위 DLL 3종과 `VCRUNTIME140.dll` 직접 가져오기 0건을 확인했다. Windows 활성 의존 그래프에서도 위 HTTP 크레이트 0건이다. 앱의 `connect-src`에는 로컬 주소만 있고, WebView2 백그라운드 통신을 억제하는 앱 옵션은 찾지 못했다.
 - [ ] 학교망(SSL 검사)·오프라인 환경에서 앱 실행·캡처·그리기·단축키 PDF 저장 시 오류·지연 0건 확인.
 
 ---
@@ -129,6 +131,7 @@
     - 카나리아 창 제목: **0건**
     - 사용자 계정명/홈 경로 안 개인 파일명: **0건**
     - 이 컴퓨터 시스템 글꼴 이름(`system_fonts` 응답): **0건** (화면 목록에만 쓰고 로그·파일에 기록하지 않음)
+  - **Windows 0.2.0 창 제목 0건.** 고유 제목의 시험 창을 띄우고 포터블 릴리스에서 범위·창 캡처, 녹화 범위 선택, 판서, 글꼴 목록 열기, 트레이 클릭 통지를 실행했다. F1·F3 점유가 있어 모드 진입은 앱의 트레이 명령을 사용했다. 전체 앱 로그에서 시험 창 제목은 0건이었다. 기능 검사 중 추가된 20줄에는 계정명과 이 PC에서 조회한 글꼴 246개의 이름도 0건이었다.
 - [ ] 로그 순환·기본 레벨 확인 (`apps/screen-ink/src-tauri/src/lib.rs`):
   - `SCREEN_INK_LOG` 미설정 시 기본 `Info` 레벨, 파일 상한 2 MB, `RotationStrategy::KeepOne` 동작 확인.
   - 트레이 클릭 계측(`tray click: ...`)은 숫자·참거짓만 남고 창 제목이 없는지 확인.
@@ -182,7 +185,7 @@
 ## 8. Windows MSIX · 스토어 · 직접 배포 · 비패키지 (1차 7.5·7.6 + H 시안)
 
 ### 8.1 MSIX 포장 및 매니페스트 (`D2` · `D3`)
-- [ ] `apps/screen-ink/src-tauri/packaging/msix/` 설정 일치 확인:
+- [x] 직접 배포용 0.2.0.0 x64 MSIX의 매니페스트와 자산을 `MakeAppx unpack`으로 검사했다. 게시자 서명 승인은 §8.3에 기록했다.
   - `AppxManifest.template.xml`: `Identity Name`, `Publisher`, 4자리 `Version`(`X.Y.Z.0`), `ProcessorArchitecture="x64"`, `TargetDeviceFamily MinVersion="10.0.19041.0"`, `runFullTrust`, `windows.startupTask`(`ShookshokStartup`), WGC 기능 선언.
   - `msix.config.json`: 표시 이름(`슉쇽 (ShookShok)`), 게시자 표시 이름(`찰떡쌤`), 실행 파일명 일치.
   - `apps/screen-ink/src-tauri/icons/` 타일·스토어 PNG 자산 전 크기 누락 없음.
@@ -190,6 +193,8 @@
   - `Shookshok.portable` / `screen-ink.portable` 표시 파일 무시 (설치 폴더 읽기 전용).
   - 로그인 자동 실행이 `StartupTask("ShookshokStartup")`로 동작하고, 사용자가 Windows 설정에서 끈 경우(`DisabledByUser`) 설정 › 일반에 한 줄 안내 표시.
   - 설정 › 일반 › 설정 위치에 `"MSIX 패키지"` 표기.
+  - **D3 정적 확인 완료.** `GetCurrentPackageFullName`으로 패키지 여부를 판정한 뒤 App Installer URI와 서명 종류로 채널을 나눈다. 두 MSIX 채널은 포터블 표시 파일을 무시하고 사용자 설정 경로를 선택한다. 앱이 요청하는 `ShookshokStartup`과 압축을 푼 매니페스트의 시작 작업 ID·실행 파일이 일치했다. 패키지에서는 `GetAsync`로 작업을 찾아 `RequestEnableAsync` 또는 `Disable`을 호출한다. 사용자 차단 상태의 안내와 일반 설정의 ‘MSIX 패키지’ 표시 분기도 확인했다.
+  - `ink-domain`의 패키지 시험 5개, `ink-store` 시험 5개, `ink-platform-windows`의 비패키지 환경 시험 4개 통과. 설치 후 시작 앱 목록, 사용자 차단 안내, 저장 경로 가상화 실기는 사람 승인 필요.
 
 ### 8.2 Microsoft Store 채널 (`MsixStore` · `D5` · `D6`)
 - [ ] 스토어용 무서명 `.msix` 빌드·검증 통과: `npm run msix:store` (`-Verify`).
@@ -199,18 +204,35 @@
 - [ ] 스토어 공개 후 `winget install <StoreID> --source msstore` 설치·실행 확인.
 
 ### 8.3 직접 배포 MSIX & `.appinstaller` (`MsixDirect` · `D8` · `D9` · `D11`)
-- [ ] 루트 `README.md`의 `## Code Signing Policy` 절(SignPath Foundation 필수 문구) 유지 확인.
+- [x] 루트 `README.md`의 `## Code Signing Policy` 절(SignPath Foundation 필수 문구) 유지 확인.
 - [ ] `.github/workflows/release-msix.yml`에서 SignPath 서명된 `.msix` + `shookshok.appinstaller` 생성·검증 통과 (`Publisher`가 SignPath 인증서 주체와 글자 단위 일치).
-- [ ] `shookshok.appinstaller`의 패키지 `Uri`가 `latest` 리디렉션이 아닌 **버전 고정 태그 URL**(`.../releases/download/v<ver>/...`)을 가리키는지 확인.
+- [x] 별도 검증 폴더에서 생성한 `shookshok.appinstaller`의 패키지 `Uri`가 `.../releases/download/v0.2.0/shookshok_0.2.0.0_x64_direct.msix`와 일치했다.
 - [ ] 다른 Windows PC에서 브라우저로 `.msix` / `.appinstaller`를 내려받아 실행 → 인증서 수동 설치 없이 `[설치]` 진행 및 SmartScreen 경고 여부 기록.
+  - **사람 승인 필요(인증서).** 이 노드에는 직접 배포 정책에 맞는 인증서가 없어 매니페스트의 `CN=REPLACE_WITH_SIGNPATH_SUBJECT`를 유지해 무서명 MSIX를 만들었다. `signtool verify /pa /v`는 서명 없음으로 종료했다(코드 1). 배포 전 승인된 인증서 주체를 `-Publisher`에 넣어 다시 포장하고, 서명된 파일을 검증한 뒤 SHA-256을 다시 산출한다.
+  - Microsoft는 인터넷에서 설치할 때 앱 설치 관리자가 출처를 신뢰할 수 없으면 설치하지 말라는 배너를 표시한다고 안내한다. SmartScreen의 URL 평판 검사와 학교의 보안 영역 정책도 적용될 수 있다. 브라우저로 내려받은 이 버전을 더블클릭했을 때의 한국어 경고 문구·게시자 표시는 서명 후 다른 PC에서 기록한다. [Microsoft 앱 설치 관리자 보안 기능](https://learn.microsoft.com/en-us/windows/msix/app-installer/app-installer-security-features)
 - [ ] 이전 판 → 새 판 `.appinstaller` 업그레이드 실기: `settings.json` 유지, `RegisterApplicationRestart` 자동 재시작 확인.
 
 ### 8.4 비패키지(NSIS · 포터블 ZIP) & 보안·호환 (1차 7.5·7.6)
-- [ ] **UPX 패킹 절대 금지**: PE 섹션에 `UPX0`·`UPX1` 없음 확인.
+- [x] 0.2.0 x64 앱 실행 파일의 PE 섹션에서 `UPX0`·`UPX1` 0건 확인.
 - [ ] **표준 사용자 계정**(관리자 권한 없음)에서 NSIS `currentUser` 설치·실행·전역 단축키·제거가 깨끗하게 동작.
 - [ ] **포터블 ZIP**(`Shookshok.exe` + 0바이트 `screen-ink.portable` 또는 `Shookshok.portable` + `LICENSE`)을 다른 폴더로 옮겨 실행 시 같은 폴더 `data/`만 사용하고 `%APPDATA%`에 쓰지 않음 확인.
-- [ ] WebView2 런타임 부재 환경 안내(`MessageBoxW`) 확인.
+  - 0.2.0 ZIP의 실행 파일·0바이트 표시 파일·MIT 라이선스를 대조했다. 실제 앱 상태에서 포터블 모드와 실행 파일 옆 `data/settings.json` 경로를 확인했고 같은 폴더에 백업이 생성됐다. 앱 로그는 `%LOCALAPPDATA%\com.ssamuniverse.shookshok\logs\Shookshok.log`에 기록됐다.
+- [x] 실행 사본에만 빈 WebView2 런타임 경로를 지정해, 런타임을 찾을 수 없다는 기본 안내 창을 확인했다. 해당 안내를 보면 Microsoft Edge WebView2 Evergreen 런타임을 설치한 뒤 슉쇽을 다시 연다. 인터넷을 사용할 수 없는 PC는 독립 실행형 설치본을 쓸 수 있다. [Microsoft WebView2 배포 안내](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution)
 - [ ] Windows Defender(최신 정의) 검사 및 오탐 0건 확인.
+
+**2026-11-27 Windows 배포물** · 앱 소스 `8dab316`, Windows 11 25H2(26200.9974), Windows SDK 10.0.26100.0. 세 파일의 SHA-256을 인계 폴더의 `SHA256SUMS.txt`와 다시 대조했다.
+
+| 파일 | 바이트 | 검사 |
+|---|---:|---|
+| `shookshok_0.2.0.0_x64_direct.msix` | 6,545,865 | 무서명. 압축 해제, 매니페스트, 아이콘, 실행 파일 해시 일치 |
+| `Shookshok_0.2.0_x64-setup.exe` | 5,139,458 | `tauri build --bundles nsis` 성공. 설치 범위 `currentUser`, 설치·제거 미실행 |
+| `Shookshok_0.2.0_x64-portable.zip` | 6,556,190 | 실행 파일·라이선스 해시 일치. 표시 파일과 실제 설정 경로 확인 |
+
+포터블 ZIP은 같은 빌드에서 복사해 둔 실행 파일로 만든다.
+
+```powershell
+.\scripts\package-portable.ps1 -ExePath C:\agents\runs\W12-dist\app\Shookshok.exe -OutDir C:\agents\runs\W12-dist\upload
+```
 
 ---
 
@@ -239,8 +261,8 @@
 | 기준 커밋 SHA | | | |
 | macOS 서명 신원 & DR 일치 | `Shookshok Self Sign` / 일치(예·아니오) | | |
 | macOS `.app.zip` SHA-256 | | | |
-| Windows MSIX (store / direct) SHA-256 | | | |
-| 업데이트 끈 상태 통신 0 실측 | macOS / Windows | | |
-| 로그 카나리아(창 제목 0건) | macOS / Windows | | |
+| Windows MSIX (store / direct) SHA-256 | 직접 배포용 무서명 `73e09cd31c49a42d9c03c23740a5a4e6ea0bcee958d2fbd17e42c7a0281294e6` | W12-dist | 2026-11-27 |
+| 업데이트 끈 상태 통신 0 실측 | Windows 포터블 미통과. 두 번 모두 본체 0건, 하위 프로세스 2건(§4) | W12-dist | 2026-11-27 |
+| 로그 카나리아(창 제목 0건) | Windows 포터블 0건(§5) | W12-dist | 2026-11-27 |
 | 자동 스냅숏·성능 예산 통과 | [snapshots.md](../qa/2026-11-27/snapshots.md) · [perf.md](../qa/2026-11-27/perf.md) | | |
 | 최종 게시 승인 (GitHub / Store) | 초안 확인 후 사람 게시 | | |

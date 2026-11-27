@@ -420,7 +420,11 @@ try {
 
       $unpackedManifestPath = Join-Path $unpackDir 'AppxManifest.xml'
       if (-not (Test-Path $unpackedManifestPath)) { throw "검증 실패: AppxManifest.xml 누락" }
-      if (-not (Test-Path (Join-Path $unpackDir $actualExeName))) { throw "검증 실패: $actualExeName 누락" }
+      $unpackedExe = Join-Path $unpackDir $actualExeName
+      if (-not (Test-Path $unpackedExe)) { throw "검증 실패: $actualExeName 누락" }
+      if ((Get-FileHash -LiteralPath $unpackedExe).Hash -ne (Get-FileHash -LiteralPath $resolvedExe).Hash) {
+        throw "압축을 푼 실행 파일의 SHA-256이 입력 파일과 다릅니다."
+      }
       foreach ($icon in $requiredIcons) {
         if (-not (Test-Path (Join-Path $unpackDir "Assets\$icon"))) {
           throw "검증 실패: Assets\$icon 누락"
@@ -431,6 +435,7 @@ try {
       $ns = New-Object System.Xml.XmlNamespaceManager($doc.NameTable)
       $ns.AddNamespace('m', 'http://schemas.microsoft.com/appx/manifest/foundation/windows10')
       $ns.AddNamespace('uap', 'http://schemas.microsoft.com/appx/manifest/uap/windows10')
+      $ns.AddNamespace('uap11', 'http://schemas.microsoft.com/appx/manifest/uap/windows10/11')
       $ns.AddNamespace('d', 'http://schemas.microsoft.com/appx/manifest/desktop/windows10')
       $ns.AddNamespace('r', 'http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities')
 
@@ -438,18 +443,23 @@ try {
       $props = $doc.SelectSingleNode('/m:Package/m:Properties', $ns)
       $appNode = $doc.SelectSingleNode('/m:Package/m:Applications/m:Application', $ns)
       $visual = $doc.SelectSingleNode('/m:Package/m:Applications/m:Application/uap:VisualElements', $ns)
-      $startup = $doc.SelectSingleNode('//d:StartupTask', $ns)
+      $startup = $doc.SelectSingleNode("//d:Extension[@Category='windows.startupTask']/d:StartupTask", $ns)
       $fullTrust = $doc.SelectSingleNode("//r:Capability[@Name='runFullTrust']", $ns)
 
       if ($ident.Name -ne $resolvedPackageName) { throw "매니페스트 Identity.Name 불일치" }
       if ($ident.Publisher -ne $resolvedPublisher) { throw "매니페스트 Identity.Publisher 불일치" }
       if ($ident.Version -ne $resolvedVersion) { throw "매니페스트 Identity.Version 불일치" }
+      if ($ident.ProcessorArchitecture -ne $Arch) { throw "매니페스트의 프로세서 아키텍처가 다릅니다." }
       if ($props.DisplayName -ne $resolvedDisplayName) { throw "매니페스트 DisplayName 불일치" }
       if ($props.PublisherDisplayName -ne $resolvedPublisherDisplayName) { throw "매니페스트 PublisherDisplayName 불일치" }
       if (-not $appNode -or $appNode.Executable -ne $actualExeName) { throw "매니페스트 Application.Executable 불일치" }
       if (-not $visual -or $visual.DisplayName -ne $resolvedDisplayName) { throw "매니페스트 VisualElements.DisplayName 불일치" }
       if (-not $startup -or $startup.TaskId -ne $resolvedStartupTaskId) { throw "매니페스트 StartupTask($resolvedStartupTaskId) 누락" }
+      if ($startup.ParentNode.Executable -ne $actualExeName) { throw "시작 작업의 실행 파일이 다릅니다." }
       if (-not $fullTrust) { throw "매니페스트 runFullTrust 기능 누락" }
+      foreach ($capture in 'graphicsCaptureWithoutBorder', 'graphicsCaptureProgrammatic') {
+        if (-not $doc.SelectSingleNode("//uap11:Capability[@Name='$capture']", $ns)) { throw "캡처 기능 누락 ($capture)" }
+      }
 
       if ($appInstallerOut) {
         [xml]$aiDoc = Get-Content -Path $appInstallerOut -Raw -Encoding UTF8
