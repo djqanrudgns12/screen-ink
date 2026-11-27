@@ -365,6 +365,11 @@ pub fn ensure_text_input(ns_window: *mut c_void) -> Option<String> {
     let w = window(ns_window)?;
     // SAFETY: NSWindow·NSTextInputContext 공개 메서드, 메인 스레드.
     unsafe {
+        // 그사이 숨겨진 창(Esc·모드 끝)이면 아무것도 하지 않는다 — 지금 키 창(설정 창 등)의 입력을 빼앗지 않게
+        let visible: Bool = msg_send![w, isVisible];
+        if !visible.as_bool() {
+            return None;
+        }
         let was_key: Bool = msg_send![w, isKeyWindow];
         if !was_key.as_bool() {
             let _: () = msg_send![w, makeKeyWindow];
