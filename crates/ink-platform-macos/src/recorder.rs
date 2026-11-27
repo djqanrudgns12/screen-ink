@@ -5,7 +5,8 @@
 //! - 우리 섬·빨간 꺾쇠·정지 패널은 창 공유 끔(`NSWindowSharingNone`)이라 영상에 안 찍힌다. 판서·확대 오버레이는 찍힌다
 //!   (녹화 중 Alt+1·Alt+2는 녹화를 끊지 않는다 — 수업 판서를 함께 남기려는 것)
 //! - SCK는 화면이 바뀔 때만 완전한 프레임을 준다 → 완전한 프레임(`SCFrameStatus::Complete`)만 넣는다
-//! - 마무리 = 스트림 정지 → 입력 끝 → `finishWriting`(moov). 실패하면 임시 파일은 남긴다(다음 시작 때 복구 제안)
+//! - 마무리 = 스트림 정지 → 마지막 프레임을 끝 시각까지 늘림([`hold_last_frame_to_end`]) → 입력 끝 → `finishWriting`(moov).
+//!   실패하면 임시 파일은 남긴다(다음 시작 때 복구 제안)
 //! - 마이크(단계 6.5): macOS 15+ SCK `captureMicrophone` + `SCStreamOutputType::Microphone` → AVAssetWriter AAC 트랙(영상·소리 같은 시계).
 //!   권한 없음·장치 없음·시작 실패 때는 소리 없이 영상만 녹화를 이어 간다. 마이크 장치 이름·ID는 로그에 남기지 않는다.
 //! - 창 추적(단계 6.4): 대상 창 위치·크기 변화와 숨김(최소화·다른 Space)을 감시해 빨간 꺾쇠 갱신 사건을 낸다.
@@ -24,14 +25,15 @@ use objc2_av_foundation::{
     AVVideoCodecTypeH264, AVVideoCompressionPropertiesKey, AVVideoExpectedSourceFrameRateKey, AVVideoHeightKey, AVVideoMaxKeyFrameIntervalKey,
     AVVideoProfileLevelH264HighAutoLevel, AVVideoProfileLevelKey, AVVideoWidthKey,
 };
-use objc2_core_foundation::{CFArray, CGPoint, CGRect, CGSize};
-use objc2_core_media::{CMSampleBuffer, CMTime};
+use objc2_core_foundation::{CFArray, CFRetained, CGPoint, CGRect, CGSize};
+use objc2_core_media::{kCMTimeInvalid, CMClock, CMSampleBuffer, CMSampleTimingInfo, CMTime};
 use objc2_foundation::{NSArray, NSCopying, NSDictionary, NSError, NSNumber, NSObjectProtocol, NSProcessInfo, NSString, NSURL};
 use objc2_screen_capture_kit::{
     SCContentFilter, SCFrameStatus, SCStream, SCStreamConfiguration, SCStreamDelegate, SCStreamFrameInfoStatus, SCStreamOutput, SCStreamOutputType,
 };
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread::JoinHandle;
@@ -164,6 +166,10 @@ struct Sink {
     /// 스트림이 스스로 멈춘 까닭(창 닫힘 등)
     failure: Mutex<Option<String>>,
     window_target: bool,
+    /// 마지막으로 넣은 화면 프레임 — 화면이 멈추면 SCK가 프레임을 보내지 않으므로 마무리 때 끝 시각까지 늘린다
+    last_frame: Mutex<Option<Hold<CFRetained<CMSampleBuffer>>>>,
+    /// 한 프레임 길이(나노초)
+    frame_ns: i64,
 }
 
 impl Sink {
@@ -201,6 +207,8 @@ impl Sink {
             let input = &self.input.0;
             if input.isReadyForMoreMediaData() && input.appendSampleBuffer(buf) {
                 self.frames.fetch_add(1, Ordering::Relaxed);
+                // 화면 하나(IOSurface)만 붙잡는다 — 큐 깊이 6이라 SCK가 모자라지 않는다
+                *self.last_frame.lock().unwrap_or_else(|e| e.into_inner()) = Some(Hold(CFRetained::retain(NonNull::from(buf))));
             }
         }
     }
@@ -242,6 +250,49 @@ impl Sink {
         if f.is_none() {
             *f = Some(why);
         }
+    }
+}
+
+/// 화면이 바뀌지 않으면 SCK가 새 프레임을 보내지 않아 영상 트랙이 마지막 프레임 시각에서 끝난다
+/// (2026-11-28 실기: 정지 화면 10분 녹화 → 프레임 15개, 영상 122초·소리 609초). 마무리 직전에 마지막 프레임을
+/// 끝 시각 한 프레임 앞에 한 번 더 넣고 세션을 끝 시각에 닫아 영상 길이 = 녹화 길이로 맞춘다.
+/// 끝 시각 = 지금 호스트 시계(SCK 표본 시각의 기준 시계) — 정지가 끝난 뒤라 모든 표본보다 늦다.
+///
+/// # Safety
+/// 스트림 정지가 끝나 표본 처리기가 더 불리지 않을 때만 부른다(작성기를 이 스레드 혼자 만진다).
+unsafe fn hold_last_frame_to_end(sink: &Sink) {
+    const NS: i32 = 1_000_000_000;
+    let last = sink.last_frame.lock().unwrap_or_else(|e| e.into_inner()).take();
+    // SAFETY: 위 약속 — 작성기·입력은 이 스레드만 쓴다. 호스트 시계 읽기는 부작용이 없다.
+    unsafe {
+        let writer = &sink.writer.0;
+        if writer.status() != AVAssetWriterStatus::Writing {
+            return;
+        }
+        let end = CMClock::host_time_clock().time();
+        let Some(end_ns) = pts_to_ns(end.value, end.timescale, (end.flags.0 & 1) != 0) else {
+            return;
+        };
+        if let Some(Hold(last)) = last {
+            let lp = last.presentation_time_stamp();
+            let dup_ns = end_ns - sink.frame_ns;
+            if pts_to_ns(lp.value, lp.timescale, (lp.flags.0 & 1) != 0).is_some_and(|last_ns| dup_ns > last_ns) {
+                let timing = CMSampleTimingInfo { duration: CMTime::new(sink.frame_ns, NS), presentationTimeStamp: CMTime::new(dup_ns, NS), decodeTimeStamp: kCMTimeInvalid };
+                let mut out: *mut CMSampleBuffer = std::ptr::null_mut();
+                let status = CMSampleBuffer::create_copy_with_new_timing(None, &last, 1, &timing, NonNull::from(&mut out));
+                if let (0, Some(copy)) = (status, NonNull::new(out)) {
+                    let copy = CFRetained::from_raw(copy);
+                    let input = &sink.input.0;
+                    let t = Instant::now();
+                    while !input.isReadyForMoreMediaData() && t.elapsed() < Duration::from_millis(500) {
+                        std::thread::sleep(Duration::from_millis(5));
+                    }
+                    let held = input.isReadyForMoreMediaData() && input.appendSampleBuffer(&copy);
+                    log::debug!("recorder: last frame held to end ({:.1} s after it): {held}", (dup_ns - pts_to_ns(lp.value, lp.timescale, true).unwrap_or(dup_ns)) as f64 / 1e9);
+                }
+            }
+        }
+        writer.endSessionAtSourceTime(end);
     }
 }
 
@@ -560,6 +611,8 @@ impl MacRecorder {
         let done = RcBlock::new(move || {
             let _ = tx.send(());
         });
+        // SAFETY: 스트림 정지가 끝나 표본 처리기가 더 불리지 않는다 — 이 스레드만 작성기를 만진다.
+        unsafe { hold_last_frame_to_end(sink) };
         // SAFETY: 입력을 닫고 마무리(moov) — 완료 처리기는 AV 큐에서 돈다.
         unsafe {
             sink.input.0.markAsFinished();
@@ -643,6 +696,8 @@ impl Recorder for MacRecorder {
                 t0: Mutex::new(None),
                 failure: Mutex::new(None),
                 window_target: matches!(opts.target, RecTarget::Window { .. }),
+                last_frame: Mutex::new(None),
+                frame_ns: 1_000_000_000 / fps as i64,
             });
             let output = RecOutput::new(sink.clone());
             Ok((sink, output))
@@ -920,6 +975,45 @@ mod tests {
         // paused_offset_ns = 1_000 → 2_133 - 1_000 = 1_133 (> 1_033)
         assert_eq!(tl.accept_video(2_133), Some((1_133, false)));
         assert_eq!(tl.accept_audio(2_135), Some(1_135));
+    }
+
+    /// mp4 첫 트랙(영상 — 작성기에 영상 입력을 먼저 붙인다)의 `mdhd` 길이(초).
+    fn first_track_secs(bytes: &[u8]) -> Option<f64> {
+        let i = bytes.windows(4).position(|w| w == b"mdhd")?;
+        let b = &bytes[i + 4..];
+        let be32 = |o: usize| u32::from_be_bytes(b[o..o + 4].try_into().unwrap()) as u64;
+        let (scale, dur) = if b[0] == 1 { (be32(20), u64::from_be_bytes(b[24..32].try_into().unwrap())) } else { (be32(12), be32(16)) };
+        (scale > 0).then(|| dur as f64 / scale as f64)
+    }
+
+    /// 실제 범위 녹화 4초(손으로, 화면 기록 권한). 화면이 안 바뀌면 SCK가 프레임을 거의 안 보내도 영상 트랙이
+    /// 녹화 길이만큼이어야 한다(정지 화면 10분 → 영상 2분이던 문제). 영상은 임시 폴더에만 쓰고 바로 지운다.
+    /// `cargo test -p ink-platform-macos recorder::tests::실제_멈춘_화면도_영상이_끝까지 -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn 실제_멈춘_화면도_영상이_끝까지() {
+        let space = crate::space();
+        let m = space.layout().monitors.into_iter().find(|m| m.primary).expect("주 모니터");
+        let dir = std::env::temp_dir().join("Shookshok-test");
+        let temp = dir.join(recording::temp_name(2));
+        let mut rec = MacRecorder::new(dir.clone(), dir.clone());
+        let rect = ink_domain::geometry::PhysRect { x: m.bounds.x + m.bounds.w / 2, y: m.bounds.y + m.bounds.h / 2, w: 320, h: 240 };
+        rec.start(RecStartOpts {
+            target: RecTarget::Region { monitor_id: m.id, rect },
+            temp_path: temp.clone(),
+            fps: 30,
+            bitrate: recording::bitrate(320, 240, 30),
+            mic_device: None,
+            capture_cursor: false,
+        })
+        .expect("녹화 시작");
+        std::thread::sleep(Duration::from_millis(4000));
+        let stats = rec.stop().expect("마무리");
+        let bytes = std::fs::read(&temp).expect("파일");
+        let _ = std::fs::remove_file(&temp);
+        let video = first_track_secs(&bytes).expect("영상 트랙 길이");
+        eprintln!("frames {}, elapsed {} ms, video {video:.2} s", stats.frames, stats.elapsed_ms);
+        assert!(video * 1000.0 >= stats.elapsed_ms as f64 - 150.0, "영상이 녹화 길이보다 짧음: {video:.2} s / {} ms", stats.elapsed_ms);
     }
 
     /// 실제 화면 녹화 2초(화면 기록 권한이 있는 셸에서 손으로). 영상은 임시 폴더에만 쓰고 바로 지운다(개인정보) —
