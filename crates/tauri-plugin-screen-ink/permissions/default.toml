@@ -25,6 +25,7 @@ permissions = [
   "allow-pin-action",
   "allow-pin-zoom",
   "allow-draw-ready",
+  "allow-draw-frame",
   "allow-draw-finish",
   "allow-draw-restore",
   "allow-draw-export",

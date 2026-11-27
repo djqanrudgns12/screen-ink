@@ -133,6 +133,9 @@ pub(crate) struct CaptureHandoff {
 
 #[derive(Default)]
 pub struct CaptureState {
+    /// 첫 입력 전에는 네이티브 커서로 웹뷰에 아직 전달되지 않은 이동을 확인한다.
+    #[cfg(windows)]
+    native_move_pending: bool,
     pub(crate) selector: Option<Selector>,
     pub(crate) frames: Vec<Frame>,
     pub(crate) children: HashMap<u64, Vec<PhysRect>>,
@@ -343,7 +346,29 @@ impl InkService {
         };
         self.cap.selector = Some(sel);
         self.snapshot = Some(snap);
+        #[cfg(windows)]
+        {
+            self.cap.native_move_pending = matches!(self.mode, Mode::Capture { kind: CaptureKind::Region, .. });
+            if self.first_native_move() {
+                return;
+            }
+        }
         self.emit_capture();
+    }
+
+    /// 창을 여는 동안 실제로 이동한 커서를 먼저 처리한다. 제자리면 모니터 전체 강조를 유지한다.
+    #[cfg(windows)]
+    fn first_native_move(&mut self) -> bool {
+        if !self.cap.native_move_pending || self.cap.metrics.is_some() {
+            return false;
+        }
+        let Some(origin) = self.cap.selector.as_ref().and_then(Selector::hover_point) else { return false };
+        let cursor = self.ports.monitors.cursor();
+        if cursor == origin {
+            return false;
+        }
+        self.capture_input(CaptureInput::Move { x: cursor.x, y: cursor.y });
+        self.cap.metrics.is_some()
     }
 
     /// 되살리기 진입(R2-UNDO-1): 확정 범위 그대로 고르기 상태 기계를 열고 강조를 맞춘다.
@@ -369,6 +394,10 @@ impl InkService {
     pub(crate) fn end_selection(&mut self) {
         if let Some(line) = self.cap.probe.line() {
             log::info!("{line}");
+        }
+        #[cfg(windows)]
+        {
+            self.cap.native_move_pending = false;
         }
         self.cap.probe = EntryProbe::default();
         self.cap.selector = None;
@@ -408,6 +437,10 @@ impl InkService {
 
     /// 오버레이 입력 한 건.
     pub fn capture_input(&mut self, input: CaptureInput) {
+        #[cfg(windows)]
+        if !matches!(input, CaptureInput::Move { .. }) {
+            self.cap.native_move_pending = false;
+        }
         // F2는 창 하나만 고른다(요소 사슬 없음, 02 §2) — 단계 6 창 캡처
         if self.window_picking() {
             return self.window_input(input);
@@ -524,6 +557,10 @@ impl InkService {
                 let bg = at.saturating_duration_since(p).as_secs_f64() * 1000.0;
                 self.cap.probe.v_ms = Some((bg, ms_since(p)));
             }
+        }
+        #[cfg(windows)]
+        if self.first_native_move() {
+            return;
         }
         let (Some(_), Some(mut sel), Some(snap)) = (self.session(), self.cap.selector.take(), self.snapshot.take()) else { return };
         let effect = {

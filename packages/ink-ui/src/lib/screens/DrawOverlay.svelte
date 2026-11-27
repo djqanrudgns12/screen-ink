@@ -49,7 +49,7 @@
   const sessionId = untrack(() => session.session);
 
   let helpOpen = $state(false);
-  /** @type {HTMLImageElement | null} */
+  /** @type {HTMLImageElement | ImageBitmap | null} */
   let bgImage = $state.raw(null);
   let bgFailed = $state(false);
   /** @type {any} */
@@ -63,6 +63,7 @@
 
   let finished = false;
   let readySent = false;
+  let imageReadyAt = 0;
   let stateApplied = false;
   let lastPatchKey = '';
   let lastSyncedStyleRaw = '';
@@ -78,35 +79,52 @@
     return typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
   }
 
-  // ───────────── 배경(정지 화면 BMP) ─────────────
-
+  /** @type {Promise<void> | undefined} */
+  let loadingFrame;
   $effect(() => {
     const url = frameUrl;
     if (!url) return;
-    const img = new Image();
-    // ink:// 프로토콜이 ACAO *를 준다 — 내보내기 합성 캔버스의 getImageData가 막히지 않게
-    img.crossOrigin = 'anonymous';
-    img.decoding = 'async';
-    img.onload = () => {
-      bgImage = img;
-    };
-    img.onerror = () => {
-      // 배경을 못 읽어도 그리기는 이어 간다(빈 바탕) — 진입 계측은 지금 시각으로
-      bgFailed = true;
-      sendReady(nowMs());
-    };
-    img.src = url;
+    const abort = new AbortController();
+    /** @type {ImageBitmap | null} */
+    let bitmap = null;
+    loadingFrame = (async () => {
+      if (client.drawFrame && url.startsWith('http://ink.localhost/')) {
+        bitmap = await client.drawFrame(sessionId, abort.signal);
+        if (abort.signal.aborted) {
+          bitmap?.close();
+          return;
+        }
+      }
+      let image = /** @type {HTMLImageElement | ImageBitmap | null} */ (bitmap);
+      if (!image) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.decoding = 'async';
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = url;
+        });
+        image = img;
+      }
+      if (!abort.signal.aborted) {
+        imageReadyAt = nowMs();
+        bgImage = image;
+      }
+    })().catch(() => {
+      if (!abort.signal.aborted) bgFailed = true;
+    });
     return () => {
-      img.onload = null;
-      img.onerror = null;
+      abort.abort();
+      bitmap?.close();
     };
   });
 
-  /** @param {number} at  onFirstPaint 시각(performance.now) */
-  function sendReady(at) {
+  /** @param {number} at 첫 그림을 마친 시각 @param {number} [renderMs] 캔버스 그리기 시간 */
+  function sendReady(at, renderMs) {
     if (readySent) return;
     readySent = true;
-    client.drawReady(sessionId, Math.max(0, Math.round((at - mountedAt) * 10) / 10));
+    client.drawReady(sessionId, at - mountedAt, imageReadyAt ? imageReadyAt - mountedAt : undefined, renderMs);
   }
 
   // ───────────── 설정·키(화면 안 키는 설정값에서, R-KEY-6) ─────────────
@@ -304,6 +322,10 @@
    */
   async function exportImage(action) {
     const doc = engine.exportDocument();
+    if (doc.pages[doc.activePage]?.background === 'frame' && !bgImage) {
+      await loadingFrame;
+      if (!bgImage || finished) return;
+    }
     const { w, h } = doc.physSize;
     if (!(w > 0 && h > 0) || typeof document === 'undefined') return;
     /** @type {OffscreenCanvas | HTMLCanvasElement} */

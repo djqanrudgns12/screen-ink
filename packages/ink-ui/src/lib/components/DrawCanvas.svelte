@@ -56,7 +56,7 @@
    *   onStyleChange?: (next: import('../models/inkSize.js').AnnotateStyleState, meta: { kind: 'color' | 'size', toolId: string, color?: string, size?: number }) => void,
    *   onEffect?: (effect: import('../ink/inkEngine.js').InkEffect) => void,
    *   onPenMetrics?: (summary: import('../ink/penMetrics.js').PenLatencySummary) => void,
-   *   onFirstPaint?: (at: number) => void,
+   *   onFirstPaint?: (at: number, renderMs: number) => void,
    *   class?: string,
    * }}
    */
@@ -204,6 +204,7 @@
 
   function paint() {
     if (!bgCtx || !bakedCtx || !activeCtx || canvasW === 0) return;
+    const paintStart = firstPainted ? 0 : performance.now();
     const e = engine;
     const bg = e.background;
     const image = backgroundImage;
@@ -245,7 +246,8 @@
     sizeDirty = false;
     if (!firstPainted && (bg !== 'frame' || image)) {
       firstPainted = true;
-      onFirstPaint?.(performance.now());
+      const at = performance.now();
+      onFirstPaint?.(at, at - paintStart);
     }
   }
 

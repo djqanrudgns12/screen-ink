@@ -2,6 +2,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { encodeAnnotatedCommit } from './index.js';
+import { readDrawFrame } from './drawFrame.js';
 import { createEventHub } from './hub.js';
 
 const cmd = (name, args, options) => invoke(`plugin:screen-ink|${name}`, args, options);
@@ -50,7 +51,8 @@ export function createTauriClient() {
     pinInfo: (id) => cmd('pin_info', { id }),
     pinAction: (id, action) => cmd('pin_action', { id, action }),
     pinZoom: (id, dy, fx, fy) => cmd('pin_zoom', { id, dy, fx, fy }),
-    drawReady: (session, paintMs) => cmd('draw_ready', { session, paintMs }),
+    drawFrame: (session, signal) => readDrawFrame(session, signal, () => cmd('draw_frame', { session })),
+    drawReady: (session, paintMs, loadMs, renderMs) => cmd('draw_ready', { session, paintMs, loadMs, renderMs }),
     drawFinish: (payload) => cmd('draw_finish', { payload }),
     drawRestore: (session) => cmd('draw_restore', { session }),
     drawExport: (action, bytes, meta) => {

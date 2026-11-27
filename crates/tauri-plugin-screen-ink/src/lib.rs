@@ -1544,10 +1544,37 @@ fn ui_log<R: Runtime>(window: tauri::WebviewWindow<R>, level: String, message: S
     }
 }
 
+/// 판서 원본을 요청한 모니터의 웹뷰에만 보낸다. 미지원 환경은 기존 이미지 주소를 쓴다.
+#[tauri::command]
+async fn draw_frame<R: Runtime>(window: tauri::WebviewWindow<R>, session: u64) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        let monitor = overlay::monitor_of(window.label()).ok_or("판서 창을 찾지 못했습니다")?;
+        let frame = window.state::<overlay::FrameStore>().get(session, monitor).ok_or("종료된 판서입니다")?;
+        let (tx, mut rx) = tauri::async_runtime::channel(1);
+        window
+            .with_webview(move |view| {
+                let result = overlay::post_draw_frame(view, session, &frame);
+                let _ = tx.try_send(result.map_err(|e| e.to_string()));
+            })
+            .map_err(|e| e.to_string())?;
+        rx.recv().await.ok_or("판서 창이 닫혔습니다")?
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (window, session);
+        Err("공유 메모리를 지원하지 않습니다".into())
+    }
+}
+
 /// 판서 배경을 그렸다 → 진입 계측(M4) `mode enter draw [N ms]` 한 줄.
 #[tauri::command]
-fn draw_ready(ink: State<'_, Ink>, session: u64, paint_ms: Option<f64>) {
-    ink.lock().draw_ready(session, paint_ms);
+fn draw_ready(ink: State<'_, Ink>, session: u64, paint_ms: Option<f64>, load_ms: Option<f64>, render_ms: Option<f64>) {
+    if ink.lock().draw_ready(session, paint_ms).is_some() {
+        if let (Some(ui), Some(load), Some(render)) = (paint_ms, load_ms, render_ms) {
+            log::debug!("판서 첫 그림 {session}: 원본 준비 {load:.1} ms, 그리기 대기 {:.1} ms, 캔버스 {render:.1} ms", (ui - load - render).max(0.0));
+        }
+    }
 }
 
 /// 판서 끝(Esc·우클릭 1×) 또는 Rust가 먼저 끝낸 세션의 늦은 끝 — 항목이 있으면 보관.
@@ -2329,6 +2356,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             pin_action,
             pin_zoom,
             draw_ready,
+            draw_frame,
             draw_finish,
             draw_restore,
             draw_export,

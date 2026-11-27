@@ -89,8 +89,7 @@ pub(crate) fn is_overlay_label(label: &str) -> bool {
 }
 
 /// 오버레이 창 이름 → 모니터 id(`label`의 반대). 오버레이 창이 아니면 None.
-/// 지금은 맥 입력 경로만 쓴다(순수 함수라 시험은 모든 OS에서 돈다).
-#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+#[cfg_attr(not(any(windows, target_os = "macos")), allow(dead_code))]
 pub fn monitor_of(label: &str) -> Option<u32> {
     label.strip_prefix(PREFIX)?.parse().ok()
 }
@@ -148,6 +147,31 @@ impl FrameStore {
     pub fn get(&self, session: u64, monitor: u32) -> Option<Frame> {
         self.0.lock().unwrap_or_else(|e| e.into_inner()).get(&(session, monitor)).cloned()
     }
+}
+
+/// WebView2 읽기 전용 공유 메모리에 불투명 RGBA 원본을 한 번만 쓴다.
+#[cfg(windows)]
+pub(crate) fn post_draw_frame(view: tauri::webview::PlatformWebview, session: u64, frame: &Frame) -> windows_core::Result<()> {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2Environment12, ICoreWebView2_17, COREWEBVIEW2_SHARED_BUFFER_ACCESS_READ_ONLY};
+    use windows_core::{HSTRING, Interface};
+    let started = std::time::Instant::now();
+    let size = frame.bgra.len();
+    let metadata = HSTRING::from(format!(r#"{{"session":{session},"width":{},"height":{}}}"#, frame.width, frame.height));
+    // 웹뷰 스레드에서 새 버퍼를 채운 뒤 공개한다. 공개 뒤에는 쓰지 않고 각 프로세스가 참조를 놓는다.
+    unsafe {
+        let env: ICoreWebView2Environment12 = view.environment().cast()?;
+        let web: ICoreWebView2_17 = view.controller().CoreWebView2()?.cast()?;
+        let buffer = env.CreateSharedBuffer(size as u64)?;
+        let mut ptr = std::ptr::null_mut();
+        buffer.Buffer(&mut ptr)?;
+        let rgba = std::slice::from_raw_parts_mut(ptr, size);
+        for (dst, src) in rgba.chunks_exact_mut(4).zip(frame.bgra.chunks_exact(4)) {
+            dst.copy_from_slice(&[src[2], src[1], src[0], 255]);
+        }
+        web.PostSharedBufferToScript(&buffer, COREWEBVIEW2_SHARED_BUFFER_ACCESS_READ_ONLY, &metadata)?;
+    }
+    log::debug!("판서 공유 {session}: 원본 {size}바이트, 전달 요청 {:.1} ms", started.elapsed().as_secs_f64() * 1000.0);
+    Ok(())
 }
 
 /// `ink://` 프로토콜 처리기.

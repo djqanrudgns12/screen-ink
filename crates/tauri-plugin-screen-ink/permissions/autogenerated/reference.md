@@ -26,6 +26,7 @@ screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있
 - `allow-pin-action`
 - `allow-pin-zoom`
 - `allow-draw-ready`
+- `allow-draw-frame`
 - `allow-draw-finish`
 - `allow-draw-restore`
 - `allow-draw-export`
@@ -874,6 +875,19 @@ Enables the zoom_input command without any pre-configured scope.
 <td>
 
 Denies the zoom_input command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-draw-frame`
+
+</td>
+<td>
+
+윈도우의 판서 창이 해당 모니터 원본을 공유 메모리로 받도록 허용한다.
 
 </td>
 </tr>

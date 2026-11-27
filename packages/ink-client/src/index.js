@@ -301,7 +301,8 @@
  * @property {(id: number, action: 'close'|'closeAll'|'copy'|'save'|'drag'|'menu') => Promise<void>} pinAction  핀 동작(drag = 끌어 옮기기 시작, menu = 오른쪽 클릭 메뉴)
  * @property {(id: number, dy: -1|1, fx: number, fy: number) => Promise<number | null>} pinZoom  휠 한 칸 확대(-1)·축소(1), 커서 자리 = 창 안 비율 → 새 배율(%)
  * @property {(input: CaptureInput) => Promise<void>} captureInput  오버레이 입력 전달(포인터 이동은 rAF로 묶어 프레임당 한 번). 결과는 'capture' 이벤트로
- * @property {(session: number, paintMs?: number) => Promise<void>} drawReady  판서 배경을 그린 뒤 — 진입 계측 `mode enter draw [N ms]`(M4)
+ * @property {(session: number, signal: AbortSignal) => Promise<ImageBitmap | null>} [drawFrame] 윈도우 웹뷰 공유 원본
+ * @property {(session: number, paintMs?: number, loadMs?: number, renderMs?: number) => Promise<void>} drawReady  판서 배경을 그린 뒤 — 진입 계측 `mode enter draw [N ms]`(M4)
  * @property {(payload: DrawFinishPayload) => Promise<void>} drawFinish  판서 끝(Esc·우클릭 1×) · Rust가 먼저 끝낸 세션의 늦은 끝
  * @property {(session: number) => Promise<DrawRestoreResult>} drawRestore  Ctrl+Shift+R · restoreOnOpen
  * @property {(action: 'copy'|'save', bytes: ArrayBuffer|ArrayBufferView, meta: DrawExportMeta) => Promise<{ok: boolean, name?: string, error?: string}>} drawExport

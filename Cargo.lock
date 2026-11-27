@@ -4200,6 +4200,8 @@ dependencies = [
  "tauri-plugin-autostart",
  "tauri-plugin-dialog",
  "tauri-plugin-global-shortcut",
+ "webview2-com",
+ "windows-core",
  "winreg",
 ]
 

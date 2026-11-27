@@ -24,6 +24,8 @@ png = "0.18"
 [target.'cfg(windows)'.dependencies]
 ink-platform-windows.workspace = true
 winreg = "0.56"
+webview2-com = "0.39"
+windows-core = "0.62"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 ink-platform-macos.workspace = true

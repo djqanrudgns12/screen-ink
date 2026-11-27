@@ -90,8 +90,12 @@ unsafe extern "system" fn wndproc(h: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LR
             let dc = BeginPaint(h, &mut ps);
             if let Some(p) = frames().lock().unwrap_or_else(|e| e.into_inner()).get(&(h as isize)) {
                 let dirty = PhysRect::from_edges(ps.rcPaint.left, ps.rcPaint.top, ps.rcPaint.right, ps.rcPaint.bottom);
-                blit(dc, &p.dim, p.w, p.h, dirty);
-                if let Some(hl) = p.highlight.and_then(|r| r.intersect(&dirty)) {
+                let bright = p.highlight.and_then(|r| r.intersect(&dirty));
+                // 첫 모니터 전체 강조처럼 모두 원본으로 덮일 때는 4K 어두운 복사를 생략한다.
+                if bright != Some(dirty) {
+                    blit(dc, &p.dim, p.w, p.h, dirty);
+                }
+                if let Some(hl) = bright {
                     blit(dc, &p.bright, p.w, p.h, hl);
                 }
             }
