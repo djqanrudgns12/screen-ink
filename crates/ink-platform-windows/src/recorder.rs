@@ -39,6 +39,8 @@ use windows::Win32::System::WinRT::{RoInitialize, RO_INIT_MULTITHREADED};
 
 /// 우리 텍스처 링 크기(spikes §2 함정 4).
 const RING: usize = 8;
+/// 캡처 풀에 쌓인 장면을 한 번에 처리하되 중지·마이크 확인을 굶기지 않는다.
+const POOL_FRAMES: i32 = 3;
 /// 고르기 화면(캡처 제외가 아닌 정지 화면·오버레이)을 숨긴 뒤 첫 프레임까지 최소 간격.
 const SETTLE: Duration = Duration::from_millis(80);
 /// 시작 1초 안 중지: 첫 프레임을 기다리는 최대 시간(시안 E §3).
@@ -340,12 +342,12 @@ impl Source {
         if video.0 < 16 || video.1 < 16 {
             return Err("capture area too small".into());
         }
-        let pool = Direct3D11CaptureFramePool::CreateFreeThreaded(&gpu.winrt, DirectXPixelFormat::B8G8R8A8UIntNormalized, 3, size).map_err(hr("FramePool"))?;
+        let pool = Direct3D11CaptureFramePool::CreateFreeThreaded(&gpu.winrt, DirectXPixelFormat::B8G8R8A8UIntNormalized, POOL_FRAMES, size).map_err(hr("FramePool"))?;
         let session = pool.CreateCaptureSession(&item).map_err(hr("Session"))?;
         let _ = session.SetIsBorderRequired(false);
         let _ = session.SetIsCursorCaptureEnabled(opts.capture_cursor);
-        // Win11: 초당 장면 수 위로는 DWM이 프레임을 만들지 않게(없는 OS면 무시)
-        let _ = session.SetMinUpdateInterval(windows::Foundation::TimeSpan { Duration: 10_000_000 / opts.fps.max(1) as i64 });
+        // 합성 시각이 조금 앞당겨진 원본 장면까지 WGC가 거르지 않게 반 주기의 여유를 둔다.
+        let _ = session.SetMinUpdateInterval(windows::Foundation::TimeSpan { Duration: 5_000_000 / opts.fps.max(1) as i64 });
         let closed = Arc::new(AtomicBool::new(false));
         let flag = closed.clone();
         let closed_token = item.Closed(&TypedEventHandler::<GraphicsCaptureItem, IInspectable>::new(move |_, _| {
@@ -353,10 +355,10 @@ impl Source {
             Ok(())
         })).map_err(hr("GraphicsCaptureItem::Closed"))?;
         let (tx, arrived) = sync_channel::<()>(1);
-        let _ = pool.FrameArrived(&TypedEventHandler::<Direct3D11CaptureFramePool, IInspectable>::new(move |_, _| {
+        pool.FrameArrived(&TypedEventHandler::<Direct3D11CaptureFramePool, IInspectable>::new(move |_, _| {
             let _ = tx.try_send(());
             Ok(())
-        }));
+        })).map_err(hr("FrameArrived"))?;
         Ok(Source { gpu, item, closed_token, pool, session, closed, arrived, size, crop, video })
     }
 
@@ -383,6 +385,19 @@ fn frame_texture(f: &Direct3D11CaptureFrame) -> Result<ID3D11Texture2D, String> 
 }
 
 struct Qpc(i64);
+
+/// 합성 시각의 흔들림은 반 주기까지 흡수한다. 출력 시각도 같은 격자에 놓아
+/// 인코더가 약간 늦게 도착한 장면 자리에 직전 장면을 다시 넣지 않게 한다.
+fn frame_time(ts: i64, period: i64, next: &mut Option<i64>) -> Option<i64> {
+    let due = next.unwrap_or(ts);
+    if ts + period / 2 < due {
+        return None;
+    }
+    let skipped = (ts - due).max(0) / period;
+    let output = due + skipped * period;
+    *next = Some(output + period);
+    Some(output)
+}
 
 /// QPC 원점과 현재 녹화 구간. 정지 중 밀린 장면·소리는 재개 뒤에도 버린다.
 #[derive(Clone, Copy)]
@@ -478,6 +493,8 @@ fn record(opts: &RecStartOpts, src: &Source, stop: &AtomicBool, shared: &Shared,
     let mut slot = 0usize;
     let mut last: Option<(usize, i64, Instant)> = None;
     let mut frames = 0u64;
+    let mut next = None;
+    let (mut received, mut skipped, mut queued, mut slow_writes) = (0u64, 0u64, 0u64, 0u64);
     let write = |slot: usize, ts: i64, last: &mut Option<(usize, i64, Instant)>, frames: &mut u64| -> Result<(), String> {
         // 표본 시각은 늘 앞으로만
         let ts = last.map_or(ts, |(_, l, _)| ts.max(l + 1));
@@ -496,7 +513,7 @@ fn record(opts: &RecStartOpts, src: &Source, stop: &AtomicBool, shared: &Shared,
         // 창 크기가 바뀌면 풀도 따라간다(영상 크기는 그대로, 줄여서 가운데)
         if src.crop.is_none() && (cs.Width, cs.Height) != (size.Width, size.Height) && cs.Width > 0 && cs.Height > 0 {
             *size = cs;
-            let _ = src.pool.Recreate(&src.gpu.winrt, DirectXPixelFormat::B8G8R8A8UIntNormalized, 3, cs);
+            let _ = src.pool.Recreate(&src.gpu.winrt, DirectXPixelFormat::B8G8R8A8UIntNormalized, POOL_FRAMES, cs);
         }
         Ok(())
     };
@@ -535,39 +552,33 @@ fn record(opts: &RecStartOpts, src: &Source, stop: &AtomicBool, shared: &Shared,
                 }
             }
         }
-        // 밀린 프레임은 버리고 가장 새것만
-        let mut newest: Option<Direct3D11CaptureFrame> = None;
-        while let Ok(f) = src.pool.TryGetNextFrame() {
-            if let Some(old) = newest.replace(f) {
-                let _ = old.Close();
-            }
+        // 도착 신호는 합쳐져도 풀에서는 오래된 장면부터 가져온다.
+        for index in 0..POOL_FRAMES {
+            let Ok(frame) = src.pool.TryGetNextFrame() else { break };
+            received += 1;
+            queued += u64::from(index > 0);
+            let Some(ts) = timeline.sample(frame.SystemRelativeTime().map(|t| t.Duration).unwrap_or(now)) else {
+                let _ = frame.Close();
+                continue;
+            };
+            let Some(output) = frame_time(ts, dur, &mut next) else {
+                skipped += 1;
+                let _ = frame.Close();
+                continue;
+            };
+            grab(frame, slot, &mut size)?;
+            let began_write = Instant::now();
+            write(slot, output, &mut last, &mut frames)?;
+            slow_writes += u64::from(began_write.elapsed().as_nanos() >= dur as u128 * 100);
+            slot = (slot + 1) % RING;
         }
-        if paused {
-            if let Some(f) = newest {
-                let _ = f.Close();
-            }
-            continue;
-        }
-        let Some(frame) = newest else {
+        if !paused {
             if let Some((s, _, at)) = last {
                 if at.elapsed() >= REPEAT_EVERY {
                     write(s, timeline.elapsed(now), &mut last, &mut frames)?;
                 }
             }
-            continue;
-        };
-        let Some(ts) = timeline.sample(frame.SystemRelativeTime().map(|t| t.Duration).unwrap_or(now)) else {
-            let _ = frame.Close();
-            continue;
-        };
-        // 초당 장면 수 맞춤(모니터는 60 Hz로 올 수 있다)
-        if last.is_some_and(|(_, l, _)| ts - l < dur * 9 / 10) {
-            let _ = frame.Close();
-            continue;
         }
-        grab(frame, slot, &mut size)?;
-        write(slot, ts, &mut last, &mut frames)?;
-        slot = (slot + 1) % RING;
     }
 
     let end = clock.now()?;
@@ -595,6 +606,7 @@ fn record(opts: &RecStartOpts, src: &Source, stop: &AtomicBool, shared: &Shared,
         write(s, elapsed, &mut last, &mut frames)?;
     }
     enc.finalize()?;
+    log::debug!("녹화 장면 수신 {received}장, 같은 주기로 제외 {skipped}장, 대기열 추가 수신 {queued}장, 한 주기 이상 인코더 대기 {slow_writes}회");
     Ok(RecStats { elapsed_ms: elapsed as u64 / 10_000, bytes: 0, frames, width: vw, height: vh })
 }
 
@@ -974,6 +986,17 @@ pub fn free_bytes(dir: &Path) -> Option<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn 도착_시각이_흔들려도_출력_주기를_유지한다() {
+        let mut next = None;
+        for (ts, output) in [(0, 0), (105, 100), (240, 200), (300, 300), (400, 400), (1_020, 1_000), (1_100, 1_100)] {
+            assert_eq!(frame_time(ts, 100, &mut next), Some(output));
+        }
+        let mut next = None;
+        let count = (0..600).map(|n| n * 50).filter_map(|ts| frame_time(ts, 100, &mut next)).count();
+        assert!((300..=301).contains(&count));
+    }
 
     #[test]
     fn 두_트랙이_정지한_동안은_시간이_멈추고_밀린_표본은_재개_뒤에도_버린다() {
