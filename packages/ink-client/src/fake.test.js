@@ -471,3 +471,32 @@ test('캡처 주석 되살리기(R2-UNDO-1)와 문제 보고용 기록 묶기(R2
   assert.match(rEn.name, /^Shookshok-logs-\d{4}-\d{2}-\d{2}\.zip$/);
   assert.deepEqual(c.diagLog.map((d) => d.includeShortcuts), [true, false]);
 });
+
+test('최근 다섯 장에서 고른 그림을 열고 찍은 지 30분이 된 항목만 비운다', async (t) => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 60_000 });
+  const c = createFakeClient();
+  const events = [];
+  c.subscribe((event) => events.push(event));
+  assert.deepEqual((await c.getState()).recentCaptures, []);
+  for (let i = 0; i < 6; i++) {
+    await c.run('capture.region');
+    await c.captureInput({ type: 'move', x: 700 + i * 20, y: 400 });
+    await c.captureInput({ type: 'command', name: 'copy' });
+    t.mock.timers.tick(1000);
+  }
+  const entries = (await c.getState()).recentCaptures;
+  assert.deepEqual(entries.map((e) => e.id), [6, 5, 4, 3, 2]);
+  assert.equal(entries[4].capturedAt, 61);
+  assert.deepEqual(Object.keys(entries[4]).sort(), ['capturedAt', 'id', 'thumbUrl']);
+  await c.run('capture.reopen', 2);
+  const selected = events.findLast((e) => e.type === 'draw').draw;
+  const selectedThumb = decodeURIComponent(entries[4].thumbUrl).match(/viewBox="[^"]+"/)[0];
+  assert.ok(decodeURIComponent(selected.monitor.frameUrl).includes(selectedThumb));
+  assert.equal(selected.restoreOnOpen, false);
+  t.mock.timers.tick(30 * 60_000 - 5000);
+  assert.deepEqual(events.findLast((e) => e.type === 'state').state.recentCaptures.map((e) => e.id), [6, 5, 4, 3]);
+  await c.run('capture.reopen', 2);
+  assert.equal((await c.getState()).mode.session, selected.session);
+  c.simulateLock();
+  assert.deepEqual((await c.getState()).recentCaptures, []);
+});

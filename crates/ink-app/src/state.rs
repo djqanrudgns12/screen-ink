@@ -65,6 +65,15 @@ pub struct Recording {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RecentCaptureView {
+    pub id: u64,
+    /// 찍은 시각(유닉스 초).
+    pub captured_at: u64,
+    pub thumb_url: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct InkState {
     /// "windows" | "macos"
     pub platform: &'static str,
@@ -73,6 +82,7 @@ pub struct InkState {
     pub pinned_count: u32,
     /// 캡처 핀 개수(R-CAP-29) — 트레이 "핀 n개 · 모두 닫기"
     pub pins: u32,
+    pub recent_captures: Vec<RecentCaptureView>,
     pub recording: Recording,
     pub settings: BTreeMap<String, Value>,
     pub shortcuts: Vec<ShortcutRow>,

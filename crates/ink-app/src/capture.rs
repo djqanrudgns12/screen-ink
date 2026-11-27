@@ -117,6 +117,7 @@ pub struct CaptureState {
     pub(crate) children: HashMap<u64, Vec<PhysRect>>,
     pub(crate) ranges: History,
     pub(crate) last: Option<LastCapture>,
+    pub(crate) recent: crate::recent::RecentCaptures,
     /// 결과 섬 [판서로]가 쓸 범위·정지 프레임(3e-handoff)
     pub(crate) handoff: Option<CaptureHandoff>,
     /// 오늘 저장한 순번({n})
@@ -546,13 +547,17 @@ impl InkService {
         let hex = image::uniform_color(w, h, &px).map(|c| format!("#{:02X}{:02X}{:02X}", c[0], c[1], c[2]));
 
         let afterimage = self.session().zip(self.snapshot.as_ref().map(|s| s.layout.clone()));
-        let (tw, th, tpx) = image::thumbnail(w, h, &px, 160, 96);
-        let thumb = self.ports.overlay.thumbnail(tw, th, tpx);
-        self.cap.last = Some(LastCapture { w, h, bgra: Arc::new(px), app, hex: hex.clone() });
+        let capture = LastCapture { w, h, bgra: Arc::new(px), app, hex: hex.clone() };
+        let thumb = Some(self.remember_capture(&capture));
+        self.cap.last = Some(capture);
         // [판서로]용 범위·그 모니터 정지 프레임 — 모드가 끝나면 프레임 목록을 비우므로 그 전에 쥔다
         let handoff = self.handoff_of(rect);
         // 화면을 먼저 돌려준다(클립보드·파일은 그 뒤)
-        self.end_capture();
+        if matches!(self.mode, Mode::Capture { .. }) {
+            self.end_capture();
+        } else {
+            self.emit_state();
+        }
         if let Some((session, layout)) = afterimage {
             self.ports.overlay.flash_afterimage(session, rect, &layout);
         }
@@ -682,7 +687,9 @@ impl InkService {
         let bgra = Arc::new(px);
         match self.ports.pins.open(id, rect, w, h, bgra.clone()) {
             Ok(()) => {
-                self.cap.pins.insert(id, LastCapture { w, h, bgra, app, hex: None });
+                let capture = LastCapture { w, h, bgra, app, hex: None };
+                self.remember_capture(&capture);
+                self.cap.pins.insert(id, capture);
                 self.emit_state();
             }
             Err(e) => {

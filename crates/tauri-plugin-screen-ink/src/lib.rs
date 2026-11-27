@@ -1671,7 +1671,7 @@ async fn pick_output_folder<R: Runtime>(app: &AppHandle<R>) -> Result<(), String
 
 /// 화면 동작(`InkAction`). 창을 만들 수 있어 비동기, 서비스 일은 메인 스레드로.
 #[tauri::command]
-async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String> {
+async fn run<R: Runtime>(app: AppHandle<R>, action: String, id: Option<u64>) -> Result<(), String> {
     let hide = |label: &str| {
         if let Some(w) = app.get_webview_window(label) {
             let _ = w.hide();
@@ -1765,6 +1765,12 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String) -> Result<(), String
                 s.island(IslandEvent::new(IslandKind::Info, text));
             })
             .map_err(|e| e.to_string())?;
+        }
+        "capture.reopen" => {
+            let id = id.ok_or("캡처 번호가 필요합니다")?;
+            hide(POPOVER);
+            let h = app.clone();
+            app.run_on_main_thread(move || h.state::<Ink>().lock().reopen_capture(id)).map_err(|e| e.to_string())?;
         }
         "capture.saveLast" => {
             let h = app.clone();

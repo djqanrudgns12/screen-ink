@@ -228,6 +228,11 @@ pub trait Clock: Send {
 
 /// 모니터별 오버레이 창(03 §3 `OverlayHost`). 미리 만들어 숨겨 두고, 보일 때마다 투명도를 다시 지정한다(R-SYS-6).
 pub trait OverlayHost: Send {
+    /// 트레이의 작은 그림 주소. 웹뷰 어댑터는 운영체제에 맞는 프로토콜을 쓴다.
+    fn recent_thumbnail_url(&self, id: u64) -> String {
+        format!("ink://localhost/recent/{id}")
+    }
+
     /// 배치가 바뀌었거나 깨어났을 때 창을 모니터에 다시 맞춘다.
     fn prepare(&mut self, layout: &MonitorLayout);
     /// 정지 이미지를 넘겨받아 오버레이를 보인다. 이미지는 어댑터가 쥐고 모드가 끝나면 버린다.

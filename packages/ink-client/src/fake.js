@@ -64,6 +64,36 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   const pins = new Map();
   let pinSeq = 0;
   const history = [];
+  const recent = [];
+  const recentTtl = 30 * 60 * 1000;
+  let recentSeq = 0;
+
+  function forgetRecent() {
+    for (const entry of recent) clearTimeout(entry.timer);
+    recent.length = 0;
+  }
+
+  function rememberCapture(rect) {
+    const id = ++recentSeq;
+    const at = Date.now();
+    const thumb = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${rect.x} ${rect.y} ${rect.w} ${rect.h}"><rect width="1920" height="1080" fill="#dedad4"/><rect x="240" y="120" width="1440" height="820" fill="#faf8f4"/><path d="M350 380h680m-680 50h480" stroke="#aaa49b" stroke-width="12"/></svg>`;
+    const thumbUrl = `data:image/svg+xml,${encodeURIComponent(thumb)}`;
+    const centered = { ...rect, x: (1920 - rect.w) / 2, y: (1080 - rect.h) / 2 };
+    const placed = thumb.replace('<svg ', `<svg x="${centered.x}" y="${centered.y}" width="${rect.w}" height="${rect.h}" `);
+    const canvas = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080"><rect width="1920" height="1080"/>${placed}</svg>`;
+    const drawUrl = `data:image/svg+xml,${encodeURIComponent(canvas)}`;
+    const timer = setTimeout(() => {
+      const index = recent.findIndex((entry) => entry.id === id);
+      if (index >= 0) {
+        recent.splice(index, 1);
+        changed();
+      }
+    }, recentTtl);
+    timer.unref?.();
+    recent.unshift({ id, at, rect: centered, thumbUrl, drawUrl, timer });
+    if (recent.length > 5) clearTimeout(recent.pop().timer);
+  }
+
   const subs = new Set();
   let hotkeysEnabled = true;
   /** 단축키 녹화 중(전역 키를 풀어 둔 흉내) — 시험이 `isShortcutCapturing()`으로 본다 */
@@ -93,6 +123,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   let lastRange = null;
   /** 다음 판서 진입의 시작 보기(확대 → 판서 · [판서로]) */
   let nextView = null;
+  let nextFrameUrl = null;
   /**
    * 캡처 주석(4.9 · R2-UNDO-1) 흉내: 창(모니터) → 주석 개수·스냅숏, 부탁 순번·기다리는 부탁, 받은 답(시험용).
    * @type {{ session: number, items: Map<number, number>, snapshots: Map<number, any>, seq: number, pending: any, answers: any[], bypass: boolean }}
@@ -130,6 +161,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     const owners = [...new Set(bad.map((x) => x.owner))];
     return {
       platform, theme: settings['general.theme'], hotkeysEnabled, pinnedCount: 2, pins: pins.size, recording: { active: false, elapsedMs: 0 },
+      recentCaptures: recent.filter((entry) => Date.now() - entry.at < recentTtl)
+        .map(({ id, at, thumbUrl }) => ({ id, capturedAt: Math.floor(at / 1000), thumbUrl })),
       settings: { ...settings }, shortcuts: r, version: '0.1.0',
       conflicts: { count: bad.length, app: owners.length === 1 && owners[0] !== '슉쇽' ? owners[0] : undefined, combos: bad.map((x) => x.combo) },
       readonly: false,
@@ -398,6 +431,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       if (input.type === 'command' && input.name === 'pin') {
         const r = s.rect ?? chainAt(s.p)[s.level].r;
         discarded = null;
+        rememberCapture(r);
         endCaptureQuiet();
         pinSeq += 1;
         pins.set(pinSeq, { w: r.w, h: r.h, zoom: 100 });
@@ -408,6 +442,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         const r = s.rect ?? chainAt(s.p)[s.level].r;
         const finishedSession = mode.session;
         discarded = null;
+        rememberCapture(r);
         endCaptureQuiet();
         emit({ type: 'afterimage', afterimage: { session: finishedSession, rect: r, durationMs: 400 } });
         lastRange = r;
@@ -419,6 +454,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         const finishedSession = mode.session;
         lastHex = '#FFFFFF';
         discarded = null;
+        rememberCapture(r);
         endCaptureQuiet();
         emit({ type: 'afterimage', afterimage: { session: finishedSession, rect: r, durationMs: 400 } });
         lastRange = r;
@@ -575,8 +611,29 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     /** 시험용: 지금 보관 판서 */
     get keptInk() { return kept; },
     /** 시험용: 잠금 같은 시스템 사건 흉내 — Rust처럼 판서를 먼저 끝낸다(늦은 끝으로 보관) */
-    simulateLock() { endDraw(true); },
-    async run(action) {
+    simulateLock() {
+      const hadRecent = recent.length > 0;
+      forgetRecent();
+      if (mode.mode === 'draw') endDraw(true);
+      else if (hadRecent) changed();
+    },
+    async run(action, id) {
+      if (action === 'capture.reopen') {
+        const entry = recent.find((e) => e.id === id && Date.now() - e.at < recentTtl);
+        if (entry) {
+          nextView = fitRectView(entry.rect);
+          nextFrameUrl = entry.drawUrl;
+          return this.run('draw');
+        }
+        return;
+      }
+      if (action === 'capture.full') {
+        lastRange = { x: 0, y: 0, w: 1920, h: 1080 };
+        rememberCapture(lastRange);
+        changed();
+        island({ kind: 'result', text: '복사했어요', value: '1920×1080', ...toDrawButton() });
+        return;
+      }
       if (action === 'settings.reveal' || action === 'firstRun.open') return;
       if (action === 'perm.screen') {
         if (perms && !screenNeedsRelaunch) pendingPerms.screen = true;
@@ -639,6 +696,8 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         }
         // 이어받기: [판서로]가 정한 보기, 확대 중 판서는 그 확대 그대로(칠판·직전 판서는 1×)
         const view = kind === 'draw' ? nextView ?? (mode.mode === 'liveZoom' ? zoomHandoffView() : null) : null;
+        const drawFrameUrl = nextFrameUrl ?? frameUrl;
+        nextFrameUrl = null;
         nextView = null;
         lastRange = null;
         discarded = null;
@@ -651,7 +710,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         const bounds = { x: 0, y: 0, w: 1920, h: 1080 };
         drawSession = {
           session: sessionSeq, board,
-          monitor: { id: 0, bounds, work: { ...bounds, h: 1040 }, scale: 1, primary: true, ...(board || !frameUrl ? {} : { frameUrl }) },
+          monitor: { id: 0, bounds, work: { ...bounds, h: 1040 }, scale: 1, primary: true, ...(board || !drawFrameUrl ? {} : { frameUrl: drawFrameUrl }) },
           layoutFingerprint: '0,0,1920,1080@100', initialView: view ?? { s: 1, tx: 0, ty: 0 },
           restoreOnOpen: kind === 'restore', hasKept: Boolean(kept), keptCompatible: kept ? 'same' : 'none', cursor: { x: 760, y: 420 },
         };

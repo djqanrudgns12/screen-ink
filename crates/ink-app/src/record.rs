@@ -452,6 +452,7 @@ impl InkService {
     }
 
     pub fn tick_at(&mut self, now: u64) {
+        self.expire_recent(now);
         self.expire_discarded_capture();
         self.tick_delay(now);
         if self.rec.leftovers_pending && self.rec.phase == RecPhase::Idle && self.mode == Mode::Idle {

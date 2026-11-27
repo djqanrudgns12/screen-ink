@@ -8,6 +8,7 @@ pub mod live_zoom;
 pub mod package;
 pub mod ports;
 mod quick;
+mod recent;
 pub mod record;
 pub mod service;
 pub mod state;

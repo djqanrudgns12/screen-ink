@@ -358,6 +358,7 @@ impl InkService {
             hotkeys_enabled: self.hotkeys_enabled,
             pinned_count: self.pinned_count,
             pins: self.cap.pins.len() as u32,
+            recent_captures: self.cap.recent.views(self.clock_ms()),
             recording: self.recording_view(),
             settings: self.settings.values.clone(),
             conflicts: ConflictSummary { count: bad.len(), app, combos: bad.iter().map(|r| r.combo.clone()).collect() },
@@ -1118,6 +1119,7 @@ impl InkService {
         self.zoom_system_event(ev);
         // 잠금·절전·화면 구성 변경 뒤의 [판서로]·되살리기는 쓸 수 없다 — 쥐어 둔 범위·프레임을 놓는다
         if matches!(ev, SystemEvent::Lock | SystemEvent::Suspend | SystemEvent::DisplayChange) {
+            self.clear_recent();
             self.cap.handoff = None;
             self.clear_discarded_capture();
         }

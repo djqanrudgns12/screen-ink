@@ -286,6 +286,8 @@ pub enum DrawSource {
     Zoom { hide_ms: f64 },
     /// 결과 섬 [판서로](3e-handoff) — `reused` = 방금 고른 범위의 정지 프레임을 다시 씀(새로 찍지 않음)
     Capture { reused: bool },
+    /// 트레이에서 고른 캡처. 현재 화면을 새로 찍지 않는다.
+    Recent { id: u64 },
 }
 
 /// 진입 계측 한 줄(출처 포함): `mode enter draw [61 ms] (from zoom, scale 2.5, hide 18, capture 35, show 3, ui paint 5)`,
@@ -296,6 +298,7 @@ pub fn entry_line_from(source: DrawSource, scale: f64, board: bool, total_ms: f6
     let s = (scale * 100.0).round() / 100.0;
     let from = match source {
         DrawSource::Key => String::new(),
+        DrawSource::Recent { .. } => format!("from recent, scale {s}, "),
         DrawSource::Zoom { hide_ms } => format!("from zoom, scale {s}, hide {hide_ms:.0}, "),
         DrawSource::Capture { reused: true } => format!("from capture, scale {s}, frame reused, "),
         DrawSource::Capture { reused: false } => format!("from capture, scale {s}, "),
@@ -626,6 +629,15 @@ impl InkService {
         );
     }
 
+    /// 트레이에서 고른 원본으로 판서를 연다. 찍은 뒤 바뀐 화면이나 다른 판서의 주석은 섞지 않는다.
+    pub fn reopen_capture(&mut self, id: u64) {
+        if self.cap.recent.get(id, self.clock_ms()).is_none() {
+            return;
+        }
+        self.end_for_switch();
+        self.begin_draw_with(DrawKind::Draw, Instant::now(), DrawStart { source: DrawSource::Recent { id }, ..Default::default() });
+    }
+
     // ───────────── 진입 ─────────────
 
     fn begin_draw(&mut self, kind: DrawKind, pressed: Instant) {
@@ -674,6 +686,12 @@ impl InkService {
         let reuse = frame.take().filter(|f| f.monitor_id == mon.id);
         let frame = if board {
             None
+        } else if let DrawSource::Recent { id } = source {
+            let Some(entry) = self.cap.recent.get(id, self.clock_ms()) else { return };
+            let (frame, rect) = entry.draw_frame(mon.id, mon.bounds);
+            let (s, tx, ty) = ink_domain::zoom::fit_rect_view(mon.bounds, mon.scale, rect);
+            view = DrawViewTransform { s, tx, ty };
+            Some(frame)
         } else if let Some(f) = reuse {
             Some(f)
         } else {

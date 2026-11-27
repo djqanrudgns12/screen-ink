@@ -150,8 +150,6 @@ impl InkService {
     /// F1 확정과 같은 결과 길(R-OUT): 화면을 먼저 돌려주고 → 클립보드·저장 → 결과 섬.
     fn deliver_window(&mut self, w: &WindowInfo, cw: u32, ch: u32, px: Vec<u8>, method: &str, save: bool) {
         let app = Some(w.exe.trim_end_matches(".exe").to_string()).filter(|s| !s.is_empty());
-        let (tw, th, tpx) = image::thumbnail(cw, ch, &px, 160, 96);
-        let thumb = self.ports.overlay.thumbnail(tw, th, tpx);
         let afterimage = match self.mode {
             Mode::Capture { session, .. } => self.snapshot.as_ref().map(|s| (session, s.layout.clone())),
             _ => None,
@@ -160,8 +158,14 @@ impl InkService {
             // Shift+F1 "직전 범위"가 이 창 자리를 다시 찍을 수 있게
             self.remember_range(w.rect);
         }
-        self.cap.last = Some(LastCapture { w: cw, h: ch, bgra: Arc::new(px), app, hex: None });
-        self.end_capture();
+        let capture = LastCapture { w: cw, h: ch, bgra: Arc::new(px), app, hex: None };
+        let thumb = Some(self.remember_capture(&capture));
+        self.cap.last = Some(capture);
+        if matches!(self.mode, Mode::Capture { .. }) {
+            self.end_capture();
+        } else {
+            self.emit_state();
+        }
         if let Some((session, layout)) = afterimage {
             self.ports.overlay.flash_afterimage(session, w.rect, &layout);
         }

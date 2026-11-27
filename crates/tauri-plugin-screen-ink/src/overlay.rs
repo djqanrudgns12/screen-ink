@@ -156,9 +156,14 @@ pub fn serve<R: Runtime>(ctx: UriSchemeContext<'_, R>, req: Request<Vec<u8>>) ->
     let path = req.uri().path().trim_start_matches('/');
     let mut parts = path.split('/');
     let first = parts.next();
-    if first == Some("thumb") {
+    if matches!(first, Some("thumb" | "recent")) {
         let Some(id) = parts.next().and_then(|s| s.parse::<u64>().ok()) else { return not_found() };
-        let Some(bmp) = ctx.app_handle().try_state::<crate::adapters::ThumbStore>().and_then(|t| t.bmp(id)) else { return not_found() };
+        let bmp = if first == Some("recent") {
+            ctx.app_handle().try_state::<crate::Ink>().and_then(|s| s.lock().recent_thumbnail(id))
+        } else {
+            ctx.app_handle().try_state::<crate::adapters::ThumbStore>().and_then(|t| t.bmp(id))
+        };
+        let Some(bmp) = bmp else { return not_found() };
         return Response::builder().header("Content-Type", "image/bmp").header("Cache-Control", "no-store").header("Access-Control-Allow-Origin", "*").body(bmp).unwrap_or_else(|_| not_found());
     }
     if first == Some("pin") {
@@ -267,11 +272,11 @@ pub struct TauriOverlayHost<R: Runtime> {
 }
 
 /// 썸네일 주소(`frame_url`과 같은 규칙).
-pub fn thumb_url(id: u64) -> String {
+fn thumbnail_url(kind: &str, id: u64) -> String {
     if cfg!(windows) || cfg!(target_os = "android") {
-        format!("http://{SCHEME}.localhost/thumb/{id}")
+        format!("http://{SCHEME}.localhost/{kind}/{id}")
     } else {
-        format!("{SCHEME}://localhost/thumb/{id}")
+        format!("{SCHEME}://localhost/{kind}/{id}")
     }
 }
 
@@ -374,8 +379,12 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
         defer(&self.app, move |app| ensure_overlays(app, &layout));
     }
 
+    fn recent_thumbnail_url(&self, id: u64) -> String {
+        thumbnail_url("recent", id)
+    }
+
     fn thumbnail(&mut self, w: u32, h: u32, bgra: Vec<u8>) -> Option<String> {
-        (w > 0 && h > 0).then(|| thumb_url(self.thumbs.put(w, h, bgra)))
+        (w > 0 && h > 0).then(|| thumbnail_url("thumb", self.thumbs.put(w, h, bgra)))
     }
 
     fn highlight(&mut self, session: u64, rect: Option<PhysRect>) {

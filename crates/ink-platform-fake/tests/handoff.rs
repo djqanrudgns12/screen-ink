@@ -401,3 +401,41 @@ fn 모니터_구성이_바뀌었으면_지금_구성에서_새로_찍는다() {
     assert_eq!(ds.initial_view, view_of(vs, tx, ty));
 }
 
+
+#[test]
+fn 트레이에서_이전_캡처를_고르면_재촬영_없이_판서로_열고_만료되면_지운다() {
+    let w = world();
+    let mut svc = service(&w);
+    for i in 0..6 {
+        let at = if i == 1 { (2500, 450) } else { (400, 320) };
+        capture_at(&mut svc, &w, at.0, at.1);
+    }
+    let entries = svc.state().recent_captures;
+    assert_eq!(entries.iter().map(|e| e.id).collect::<Vec<_>>(), vec![6, 5, 4, 3, 2]);
+    assert!(svc.recent_thumbnail(1).is_none());
+    let thumb = svc.recent_thumbnail(2).unwrap();
+    assert_eq!(i32::from_le_bytes(thumb[18..22].try_into().unwrap()), 96);
+    assert_ne!(Some(thumb), svc.recent_thumbnail(6));
+
+    let n = captures(&w);
+    svc.reopen_capture(2);
+    assert!(!svc.draw_session().unwrap().restore_on_open);
+    let rect = PhysRect::new((FHD.w - CELL.w) / 2, (FHD.h - CELL.h) / 2, CELL.w, CELL.h);
+    let (s, tx, ty) = fit_rect_view(FHD, 1.0, rect);
+    assert_eq!(svc.draw_session().unwrap().initial_view, view_of(s, tx, ty));
+    assert_eq!(captures(&w), n);
+
+    let session = svc.draw_session().unwrap().session;
+    svc.tick_at(svc.clock_ms() + 30 * 60 * 1000);
+    assert!(svc.state().recent_captures.is_empty());
+    assert!(svc.recent_thumbnail(2).is_none());
+    svc.reopen_capture(2);
+    assert_eq!(svc.draw_session().unwrap().session, session);
+    for event in [SystemEvent::Lock, SystemEvent::Suspend, SystemEvent::DisplayChange] {
+        capture_at(&mut svc, &w, 400, 320);
+        let id = svc.state().recent_captures[0].id;
+        svc.on_system_event(event);
+        assert!(svc.state().recent_captures.is_empty());
+        assert!(svc.recent_thumbnail(id).is_none());
+    }
+}

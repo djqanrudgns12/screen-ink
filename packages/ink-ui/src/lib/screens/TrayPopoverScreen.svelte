@@ -22,20 +22,21 @@
   let state = $state(null);
 
   $effect(() => {
-    let alive = true;
+    let acceptInitial = true;
     client.getState().then((s) => {
-      if (!alive) return;
+      if (!acceptInitial) return;
       state = s;
       syncLang(s);
     });
     const off = client.subscribe((e) => {
       if (e.type === 'state') {
+        acceptInitial = false;
         state = e.state;
         syncLang(e.state);
       }
     });
     return () => {
-      alive = false;
+      acceptInitial = false;
       off();
     };
   });
@@ -50,6 +51,22 @@
   let pinnedCount = $derived(state?.pinnedCount ?? 0);
   let pinCount = $derived(state?.pins ?? 0);
   let status = $derived(resolveTrayStatus(state));
+  let recentCaptures = $derived(state?.recentCaptures ?? []);
+  let now = $state(Date.now());
+  $effect(() => {
+    if (!recentCaptures.length) return;
+    now = Date.now();
+    const timer = setInterval(() => { now = Date.now(); }, 30_000);
+    return () => clearInterval(timer);
+  });
+
+  function recentLabel(capturedAt) {
+    const n = Math.max(0, Math.floor((now / 1000 - capturedAt) / 60));
+    if (n === 0) return t('tray.recent.justNow');
+    if (n === 1) return t('tray.recent.oneMinute');
+    return t('tray.recent.minutesAgo', { n });
+  }
+
   let settingsCombo = $derived(primaryShortcut(',', platform));
 
   /** @param {string} action */
@@ -199,6 +216,17 @@
     keyDim={!hotkeysEnabled}
     onclick={() => runAction('draw.restore')}
   />
+  {#if recentCaptures.length}
+    <div class="ink-tray-recent" role="group" aria-label={t('tray.recent.label')}>
+      {#each recentCaptures as capture (capture.id)}
+        {@const label = recentLabel(capture.capturedAt)}
+        <button type="button" role="menuitem" class="ink-focus" aria-label={label} title={label}
+          data-menu-label={label} onclick={() => client.run('capture.reopen', capture.id)}>
+          <img src={capture.thumbUrl} alt="" />
+        </button>
+      {/each}
+    </div>
+  {/if}
   <MenuRow
     icon="folder"
     label={t('tray.item.openFolder')}
@@ -422,6 +450,25 @@
     background: var(--ink-line-soft);
     margin: 4px 6px;
   }
+
+  .ink-tray-recent {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    padding: 0 6px 4px;
+  }
+
+  .ink-tray-recent button {
+    height: 30px;
+    padding: 2px;
+    border: 1px solid var(--ink-line-soft);
+    border-radius: 4px;
+    background: var(--ink-surface);
+    cursor: pointer;
+  }
+
+  .ink-tray-recent button:hover { border-color: var(--ink-line-strong); }
+  .ink-tray-recent img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
   .ink-pin-row {
     display: flex;

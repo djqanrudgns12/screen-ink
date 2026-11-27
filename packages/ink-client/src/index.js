@@ -30,6 +30,7 @@
  * @property {boolean} hotkeysEnabled
  * @property {number} pinnedCount   창 항상 위 고정(R-TOP) 개수
  * @property {number} [pins]        캡처 핀(R-CAP-29) 개수
+ * @property {{id: number, capturedAt: number, thumbUrl: string}[]} [recentCaptures]   최근 찍은 순서, 찍은 시각은 유닉스 초
  * @property {RecordingState} recording   녹화(05 §8) — active면 트레이 빨간 점·녹화 섬·빨간 꺾쇠 창
  * @property {Record<string, any>} settings   설정 값(05 §1 표의 키)
  * @property {ShortcutRow[]} shortcuts
@@ -76,7 +77,7 @@
  *   |'folder.pick'|'logs.open'|'settings.export'|'capture.history.clear'|'capture.saveLast'|'capture.copyHex'|'pins.closeAll'
  *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'|'capture.restore'|'draw.acceptSuggestion'|'draw.undo'|'capture.toDraw'
  *   |'record.stop'|'record.discard'|'record.recoverSave'|'record.recoverDelete'|'perm.screen'|'perm.accessibility'|'app.relaunch'
- *   |'perm.refresh'|'settings.reveal'|'capture.full'|'update.check'|'update.install'|'update.snooze'|'pdf.open'|'diag.openFolder'} InkAction
+ *   |'perm.refresh'|'settings.reveal'|'capture.full'|'capture.reopen'|'update.check'|'update.install'|'update.snooze'|'pdf.open'|'diag.openFolder'} InkAction
  *   perm.screen·perm.accessibility = 맥 권한 요청 + 정확한 설정 칸 열기(M10) · app.relaunch = 다시 시작(화면 기록 반영)
  *   draw.acceptSuggestion·draw.undo = 판서 섬 단추([바꾸기]·[되돌리기]) → Rust가 'drawCommand' 이벤트로 오버레이 엔진에
  *   capture.cancel = 오버레이에서 Esc·우클릭(모드 끝, 정지 이미지 버림)
@@ -280,7 +281,7 @@
  * @property {() => Promise<string[]>} [systemFonts]  이 컴퓨터 글꼴 집 이름(글꼴 고르기 R2-TXT-4) — 화면에만 쓰고 로그에 남기지 않는다
  * @property {(bytes: Uint8Array, name: string) => Promise<boolean>} [savePdf]  화면이 만든 PDF(내 단축키 한 장)를 저장 대화상자로 저장 — 저장하면 true, 취소 false(R2-PDF). 없는 클라이언트는 Blob 내려받기로 대신
  * @property {(active: boolean) => Promise<void>} [shortcutCapture]  설정 › 단축키 녹화 칸이 키를 받는 동안 전역 키를 조용히 푼다(true)·다시 등록(false). 없는 클라이언트는 그냥 건너뛴다(R2-KEY-REC)
- * @property {(action: InkAction) => Promise<void>} run
+ * @property {(action: InkAction, id?: number) => Promise<void>} run
  * @property {() => Promise<ImportPick>} previewImport   가져오기: 파일 고르기 + 바뀌는 항목(저장 안 함)
  * @property {(path: string) => Promise<{ok: boolean, error?: string, state: InkState}>} applyImport  시트 [가져오기] — 되돌리기 1건
  * @property {() => Promise<InkState>} resetAll   모두 처음으로(확인 시트 뒤)

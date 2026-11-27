@@ -37,7 +37,7 @@ export function createTauriClient() {
     shortcutCapture: (active) => cmd('shortcut_capture', { active }),
     savePdf: (bytes, name) => cmd('save_pdf', { bytes: Array.from(bytes), name }),
     systemFonts: () => cmd('system_fonts'),
-    run: (action) => cmd('run', { action }),
+    run: (action, id) => cmd('run', { action, id }),
     previewImport: () => cmd('preview_import'),
     applyImport: (path) => cmd('apply_import', { path }),
     resetAll: () => cmd('reset_all'),
