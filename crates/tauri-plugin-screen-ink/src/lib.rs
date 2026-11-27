@@ -2152,8 +2152,10 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         let pictures = app.path().picture_dir().unwrap_or_else(|_| std::env::temp_dir()).join(APP_DIR);
         let h = app.clone();
         let rec = ink_platform_macos::recorder::MacRecorder::new(std::env::temp_dir().join(APP_DIR), pictures).with_window_rect_callback(move |rect| {
-            let app = h.clone();
-            let _ = h.run_on_main_thread(move || {
+            // 녹화 시작은 메인 스레드에서 서비스 잠금을 쥔 채 처음 자리를 알린다. `run_on_main_thread`는 메인 스레드에서
+            // 부르면 그 자리에서 실행되어 같은 잠금을 다시 잡고 앱 전체가 멈췄다(2026-11-28 맥 창 녹화 실기).
+            // 늘 잠금 밖에서, 녹화 상태가 된 뒤에 처리한다.
+            crate::overlay::defer(&h, move |app| {
                 if let Some(ink) = app.try_state::<Ink>() {
                     ink.lock().on_tracked_window_rect(rect);
                 }
