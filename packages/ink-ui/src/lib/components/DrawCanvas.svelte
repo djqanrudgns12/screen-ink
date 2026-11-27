@@ -753,6 +753,7 @@
 
   onMount(() => {
     if (!bgEl || !bakedEl || !activeEl || !rootEl) return;
+    const layers = [bgEl, bakedEl, activeEl];
     bgCtx = bgEl.getContext('2d', { alpha: false, willReadFrequently: true });
     bakedCtx = bakedEl.getContext('2d', { alpha: true });
     activeCtx = activeEl.getContext('2d', { alpha: true, desynchronized });
@@ -793,6 +794,12 @@
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
       flushPenMetrics();
+      for (const layer of layers) {
+        layer.width = 0;
+        layer.height = 0;
+      }
+      drawn.image = null;
+      bgCtx = bakedCtx = activeCtx = null;
     };
   });
 

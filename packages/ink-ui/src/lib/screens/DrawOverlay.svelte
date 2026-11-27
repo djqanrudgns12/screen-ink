@@ -87,6 +87,8 @@
     const abort = new AbortController();
     /** @type {ImageBitmap | null} */
     let bitmap = null;
+    /** @type {HTMLImageElement | null} */
+    let fallbackImage = null;
     loadingFrame = (async () => {
       if (client.drawFrame && url.startsWith('http://ink.localhost/')) {
         bitmap = await client.drawFrame(sessionId, abort.signal);
@@ -98,13 +100,11 @@
       let image = /** @type {HTMLImageElement | ImageBitmap | null} */ (bitmap);
       if (!image) {
         const img = new Image();
+        fallbackImage = img;
         img.crossOrigin = 'anonymous';
         img.decoding = 'async';
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          img.src = url;
-        });
+        img.src = url;
+        await img.decode();
         image = img;
       }
       if (!abort.signal.aborted) {
@@ -117,6 +117,8 @@
     return () => {
       abort.abort();
       bitmap?.close();
+      fallbackImage?.removeAttribute('src');
+      bgImage = null;
     };
   });
 
@@ -332,14 +334,17 @@
     const canvas = typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h });
     const ctx = /** @type {any} */ (canvas.getContext('2d', { willReadFrequently: true }));
     if (!ctx) return;
-    renderDocument(ctx, doc, { image: bgImage });
     let pixels;
     try {
+      renderDocument(ctx, doc, { image: bgImage });
       pixels = ctx.getImageData(0, 0, w, h).data;
     } catch {
       // 배경이 교차 출처로 막혔으면 내보낼 수 없다(조용히 실패하지 않게 섬은 Rust가 띄우지 못함 — 기록만)
-      console.warn('draw export: canvas pixels are not readable');
+      console.warn('판서 내보내기에서 캔버스 픽셀을 읽지 못했습니다');
       return;
+    } finally {
+      canvas.width = 0;
+      canvas.height = 0;
     }
     await client.drawExport(action, pixels, { w, h, session: sessionId });
   }

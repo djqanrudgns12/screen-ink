@@ -171,6 +171,8 @@
   let raf2 = 0;
   /** @type {ReturnType<typeof setTimeout> | null} */
   let deferTimer = null;
+  /** @type {AbortController | null} */
+  let frameRequest = null;
   let moveRaf = 0;
   /** @type {{ clientX: number, clientY: number } | null} */
   let pendingPointer = null;
@@ -256,6 +258,8 @@
   }
 
   function cancelPendingWork() {
+    frameRequest?.abort();
+    frameRequest = null;
     if (raf1 && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf1);
     if (raf2 && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf2);
     if (moveRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(moveRaf);
@@ -336,21 +340,18 @@
   /**
    * 첫 그림이 끝난 뒤에만 오프스크린 캔버스를 한 번 만든다.
    * @param {number} session
-   * @param {HTMLImageElement | null} sourceImg
+   * @param {HTMLImageElement | ImageBitmap | null} sourceImg
    * @param {boolean} requirePixels  true면 픽셀을 읽을 수 있을 때만 확대경을 연다(nativeFrame 늦은 읽기)
    */
   function initOffscreenCanvas(session, sourceImg, requirePixels = false) {
     if (session !== activeSession) return;
     let drawn = false;
-    if (
-      sourceImg &&
-      sourceImg.naturalWidth > 0 &&
-      sourceImg.naturalHeight > 0 &&
-      typeof document !== 'undefined'
-    ) {
+    const width = sourceImg && ('naturalWidth' in sourceImg ? sourceImg.naturalWidth : sourceImg.width);
+    const height = sourceImg && ('naturalHeight' in sourceImg ? sourceImg.naturalHeight : sourceImg.height);
+    if (sourceImg && width && height && typeof document !== 'undefined') {
       const canvas = document.createElement('canvas');
-      canvas.width = sourceImg.naturalWidth;
-      canvas.height = sourceImg.naturalHeight;
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (ctx) {
         try {
@@ -377,6 +378,26 @@
     if (cursorCss) {
       sampleAtCss(cursorCss.x, cursorCss.y);
     }
+  }
+
+  /** 네이티브 정지 창 위의 확대경·모자이크에 쓸 픽셀만 옮긴다. @param {number} session */
+  async function loadNativePixels(session) {
+    if (client.drawFrame && frameUrl.startsWith('http://ink.localhost/')) {
+      const request = new AbortController();
+      frameRequest = request;
+      const bitmap = await client.drawFrame(session, request.signal).catch(() => null);
+      try {
+        if (request.signal.aborted || session !== activeSession) return;
+        if (bitmap) {
+          initOffscreenCanvas(session, bitmap, true);
+          if (hasOffscreenPixels) return;
+        }
+      } finally {
+        bitmap?.close();
+        if (frameRequest === request) frameRequest = null;
+      }
+    }
+    deferredLoad = true;
   }
 
   /**
@@ -426,7 +447,7 @@
         if (session !== activeSession) return;
         if (isNative) {
           if (frameUrl) {
-            deferredLoad = true;
+            void loadNativePixels(session);
           }
         } else if (hasImage) {
           initOffscreenCanvas(session, imgEl, false);
