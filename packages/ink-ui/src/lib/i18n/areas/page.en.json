@@ -110,7 +110,7 @@
   "page.shortcuts.preset.lefthandDesc": "Capture with your left hand while keeping your right on the mouse",
   "page.shortcuts.preset.loading": "Checking for conflicts...",
   "page.shortcuts.preset.moreCount": "+{n} more",
-  "page.shortcuts.preset.presentation": "Presentation default",
+  "page.shortcuts.preset.presentation": "Presenter",
   "page.shortcuts.preset.presentationDesc": "Function and number keys for capture, draw, and zoom",
   "page.shortcuts.preset.previewTitle": "Shortcuts that will change",
   "page.shortcuts.preset.sameAsCurrent": "Already using this preset",
