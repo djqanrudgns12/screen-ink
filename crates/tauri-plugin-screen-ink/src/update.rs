@@ -2,10 +2,15 @@
 //!
 //! - 맥: `ink_platform_macos::updater`(OS 도구 curl·codesign, 같은 인증서 서명 확인). 켠 뒤 10분 + 하루 한 번,
 //!   설정 `update.auto`가 꺼져 있으면 통신 0. 그리기·녹화 같은 모드 중이거나 "오늘은 그만"이면 5분 뒤 다시 묻는다.
-//! - Windows: MSIX `.appinstaller`·스토어가 OS 쪽에서 업데이트한다(1차 H 시안) — 여기서는 서비스 `Updater` 포트만 부른다.
+//! - Windows: 직접 배포 MSIX는 앱 설치 관리자에 적용을 요청하고 비패키지는 검증한 설치 파일을 안내한다.
 
-use crate::{today, tr, Ink};
+#[cfg(not(windows))]
+use crate::today;
+#[cfg(windows)]
+use ink_platform_windows::updater::local_date as today;
+use crate::{tr, Ink};
 use ink_app::{IslandEvent, IslandKind};
+#[cfg(not(windows))]
 use ink_domain::mode::Mode;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -21,6 +26,11 @@ const RETRY: Duration = Duration::from_secs(300);
 const OFFER_MS: u32 = 30_000;
 
 static CHECKING: AtomicBool = AtomicBool::new(false);
+
+#[cfg(windows)]
+mod windows;
+#[cfg(windows)]
+pub use windows::check;
 
 #[cfg(target_os = "macos")]
 static STAGED: std::sync::Mutex<Option<ink_platform_macos::updater::Staged>> = std::sync::Mutex::new(None);
@@ -53,6 +63,7 @@ pub fn schedule<R: Runtime>(app: &AppHandle<R>) {
 }
 
 /// 확인(뒤 스레드에서 부른다). `manual` = 설정의 [지금 확인] — 결과를 늘 섬으로 알린다.
+#[cfg(not(windows))]
 pub fn check<R: Runtime>(app: &AppHandle<R>, manual: bool) {
     if CHECKING.swap(true, Ordering::SeqCst) {
         return;
@@ -86,7 +97,7 @@ fn stage<R: Runtime>(app: &AppHandle<R>) -> Result<Option<String>, String> {
     Ok(v)
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(windows, target_os = "macos")))]
 fn stage<R: Runtime>(app: &AppHandle<R>) -> Result<Option<String>, String> {
     let ink = app.state::<Ink>();
     let r = ink.lock().check_update();
@@ -94,6 +105,7 @@ fn stage<R: Runtime>(app: &AppHandle<R>) -> Result<Option<String>, String> {
 }
 
 /// 준비된 새 판을 알린다. 모드 중·"오늘은 그만"이면 5분 뒤 다시.
+#[cfg(not(windows))]
 fn offer<R: Runtime>(app: &AppHandle<R>, version: String) {
     let busy = {
         let ink = app.state::<Ink>();
@@ -128,7 +140,9 @@ pub fn install<R: Runtime>(app: &AppHandle<R>) {
             }
         }
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(windows)]
+    windows::install(app);
+    #[cfg(not(any(windows, target_os = "macos")))]
     {
         let r = app.state::<Ink>().lock().install_update();
         if let Err(e) = r {
@@ -140,4 +154,6 @@ pub fn install<R: Runtime>(app: &AppHandle<R>) {
 /// "오늘은 그만": 오늘은 다시 묻지 않는다.
 pub fn snooze<R: Runtime>(app: &AppHandle<R>) {
     let _ = app.state::<Ink>().lock().update_setting("update.snooze", &serde_json::Value::String(today()));
+    #[cfg(windows)]
+    windows::defer_snoozed(app);
 }

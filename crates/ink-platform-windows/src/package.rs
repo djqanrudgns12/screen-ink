@@ -160,6 +160,13 @@ pub fn app_installer_uri() -> Option<String> {
     query_winrt_package_info().app_installer_uri
 }
 
+/// 업데이트 작업 스레드가 WinRT 객체를 모두 놓은 뒤 같은 스레드에서 초기화를 해제한다.
+pub(crate) fn with_winrt<T>(work: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
+    let api = ComBase::load()?;
+    let _guard = api.init_thread()?;
+    work()
+}
+
 /// 발표·전체 화면 앱이 앞에 있는지(`SHQueryUserNotificationState`).
 pub fn fullscreen_app_active() -> bool {
     let Some(shell32) = LoadedModule::load("shell32.dll") else {
@@ -174,7 +181,33 @@ pub fn fullscreen_app_active() -> bool {
     let mut state: i32 = 0;
     // SAFETY: 출력 정수 포인터 하나만 넘긴다.
     let hr = unsafe { func(&mut state) };
-    hr == S_OK && is_fullscreen_notification_state(state)
+    (hr == S_OK && is_fullscreen_notification_state(state)) || foreground_covers_monitor()
+}
+
+/// 셸이 발표 모드로 분류하지 않은 브라우저 영상·슬라이드 쇼도 확인한다.
+fn foreground_covers_monitor() -> bool {
+    use windows_sys::Win32::{
+        Foundation::{POINT, RECT},
+        Graphics::Gdi::{ClientToScreen, GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONULL},
+        UI::WindowsAndMessaging::{GetClientRect, GetForegroundWindow, GetShellWindow},
+    };
+    // 전경 창의 내용 영역만 읽는다. 제목 표시줄이 있는 최대화 창과 바탕 화면은 제외한다.
+    unsafe {
+        let hwnd = GetForegroundWindow();
+        if hwnd.is_null() || hwnd == GetShellWindow() || matches!(crate::screen::class_name(hwnd).as_str(), "Progman" | "WorkerW") {
+            return false;
+        }
+        let monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
+        let mut info: MONITORINFO = std::mem::zeroed();
+        info.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
+        let mut client: RECT = std::mem::zeroed();
+        let mut origin = POINT { x: 0, y: 0 };
+        if GetMonitorInfoW(monitor, &mut info) == 0 || GetClientRect(hwnd, &mut client) == 0 || ClientToScreen(hwnd, &mut origin) == 0 {
+            return false;
+        }
+        let screen = info.rcMonitor;
+        origin.x <= screen.left && origin.y <= screen.top && origin.x + client.right >= screen.right && origin.y + client.bottom >= screen.bottom
+    }
 }
 
 /// 업데이트·패치로 종료된 뒤 Windows가 앱을 다시 켜도록 등록한다(`RegisterApplicationRestart`).

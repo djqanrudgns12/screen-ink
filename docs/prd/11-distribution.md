@@ -150,6 +150,15 @@ Certum(€49/년)은 SignPath를 못 쓸 때만 고려한다(게시자 이름을
 - **통신:** 통신은 Windows(스토어·앱 설치 관리자)가 하고 우리 실행 파일에는 HTTP가 없다(R-NET-2의 import 검사는 그대로 통과). 다만 "앱이 업데이트를 확인한다"로 바뀌므로 **PRD R-NET-1 문장을 고쳐야 한다** → 원래 세션에서 처리(이 세션은 PRD를 고치지 않음).
 - 구현은 진척도 `D10`(코드 — 원래 세션).
 
+### 7.3 Windows 직접 배포 진행 기록 (2026-11-27, D9·D10)
+
+- 앱을 켜고 10분 뒤부터 하루에 한 번 확인한다. 새 판이 있으면 섬에 30초 동안 **[지금 업데이트]**와 **[오늘은 그만]**을 표시한다. 모드 사용, 녹화, 전경 전체 화면, 보안 데스크톱, 같은 지역 날짜에 저장한 미루기 설정은 5분 뒤 다시 판정한다.
+- 직접 배포 MSIX는 설치할 때 등록된 HTTPS `.appinstaller`를 읽는다. MSIX만 설치했다면 §7.1의 제품 고정 주소(`https://ink.ssamuniverse.com/shookshok.appinstaller`)를 쓴다. 이름·게시자가 설치본과 같고 판이 더 높을 때 사용자가 적용을 누르면 재시작을 등록하고 Windows 패키지 관리자에 적용을 요청한다.
+- 개발·포터블 실행은 GitHub 릴리스의 `latest-win.json`을 읽는다. 새 판의 MSIX를 캐시에 받은 뒤 SHA-256과 Windows Authenticode 서명을 모두 검사한다. 단추를 누르면 탐색기에서 그 파일을 선택해 사용자가 직접 설치할 수 있다.
+- `update.auto`를 끄면 자동 확인과 수동 확인 모두 요청을 보내지 않는다. 이 릴리스의 `.appinstaller`에서는 앱 설정과 별개로 동작하는 §7.1 예시의 `OnLaunch`와 `AutomaticBackgroundTask` 예약을 뺐다. 스토어판 업데이트는 계속 Microsoft Store에서 관리한다.
+- Windows에서 `scripts/release-win.ps1`을 실행하면 `C:\agents\runs\W11-update\upload\`에 직접 배포 MSIX, `latest-win.json`, `shookshok.appinstaller`가 모인다. `-Notes`로 바뀐 점을 최대 세 줄 넣을 수 있다. 서명하려면 실제 인증서에 맞는 `-Publisher`와 `-CertThumbprint`를 지정한다. 스크립트는 최종 MSIX 바이트의 해시를 기록한다.
+- 서명 없이 만든 세 파일은 릴리스 초안용이다. 공개 전 실제 게시자로 서명해 다시 생성하고, 버전 태그의 릴리스 자산과 고정 HTTPS 주소의 `.appinstaller`를 함께 갱신한다. 서명된 두 판 사이의 실제 설치·재시작과 기존 설정 유지 확인은 사람 승인이 필요하다.
+
 ## 8. Certum 오픈소스 인증서 — 비용·범위 (2026-11-26 조사)
 
 | 항목 | 내용 |

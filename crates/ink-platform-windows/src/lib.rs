@@ -18,6 +18,8 @@ pub mod freeze;
 #[cfg(windows)]
 pub mod package;
 #[cfg(windows)]
+pub mod updater;
+#[cfg(windows)]
 pub mod screen;
 #[cfg(windows)]
 pub mod magnifier;

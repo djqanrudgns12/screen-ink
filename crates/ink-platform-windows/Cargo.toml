@@ -14,12 +14,17 @@ serde_json.workspace = true
 log.workspace = true
 
 [target.'cfg(windows)'.dependencies]
+serde.workspace = true
+quick-xml = { version = "0.42", features = ["serialize"] }
+tempfile = "3"
 uiautomation = "0.25"
 windows = { version = "0.62", features = [
   "Win32_UI_Accessibility",
   "Win32_System_Com",
   # 단계 6: F2 창 캡처(WGC)·F3 녹화(Media Foundation) — spikes-windows §1·§2
   "Foundation",
+  "ApplicationModel",
+  "Management_Deployment",
   "Devices_Enumeration",
   "Graphics",
   "Graphics_Capture",
