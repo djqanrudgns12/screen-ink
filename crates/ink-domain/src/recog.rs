@@ -526,7 +526,13 @@ pub fn build_chain_with(ev: &Evidence, opts: &RecogOptions) -> Vec<Node> {
                 occ_r && base.right() == vis.right(),
                 occ_b && base.bottom() == vis.bottom(),
             );
-            let snapped = snap_safe(base, snap(base), clipped, ev.occluders);
+            // 항목은 줄 사이에 선이 없어도 접근성 경계 자체가 선택 범위다.
+            // 메뉴 바깥 프레임이나 인접 행의 테두리에 붙이지 않는다.
+            let snapped = if matches!(e.control, Control::MenuItem | Control::ListItem | Control::DataItem) {
+                base
+            } else {
+                snap_safe(base, snap(base), clipped, ev.occluders)
+            };
             push(snapped, NodeKind::Element(e.control), if e.from_msaa { src::M } else { src::A });
         }
     }
@@ -594,7 +600,12 @@ pub fn build_chain_with(ev: &Evidence, opts: &RecogOptions) -> Vec<Node> {
 
     // 점수·보이지 않는 그릇
     for n in merged.iter_mut() {
-        let s = support(n.rect);
+        // V가 직접 확인한 색 경계 지지율을 재사용한다. 창에 잘린 후보는 다시 잰다.
+        let s = match n.kind {
+            NodeKind::Vision(_) => ev.vision.iter().find(|v| v.rect == n.rect)
+                .map(|v| v.support).or_else(|| support(n.rect)),
+            _ => support(n.rect),
+        };
         if let (NodeKind::Element(c), Some(s)) = (n.kind, s) {
             n.hidden_container = c.is_container() && s < HIDDEN_SUPPORT;
         }
@@ -662,7 +673,7 @@ impl LevelIntent {
     }
 }
 
-/// 첫 강조 단계(08 §4.5): 깊이 기억 → 점수 ≥ 0.5 중 가장 작은 것(보이지 않는 그릇 제외) → 창 → 모니터.
+/// 첫 강조 단계(08 §4.5). 깊이 기억, 제목 표시줄, 구조로 확인한 조작 요소, 점수 문턱을 차례로 적용한다.
 pub fn first_level(chain: &[Node], intent: Option<&LevelIntent>) -> usize {
     if let Some(it) = intent {
         if let Some(i) = chain.iter().position(|n| n.kind == it.kind) {
@@ -674,16 +685,45 @@ pub fn first_level(chain: &[Node], intent: Option<&LevelIntent>) -> usize {
             }
         }
     }
-    // 제목 표시줄 규칙(D6): 커서가 제목 표시줄 안이면 제목 글자가 아니라 창(제목 글자는 휠 아래로)
-    if chain.iter().any(|n| n.kind == NodeKind::Element(Control::TitleBar)) {
-        if let Some(wi) = window_index(chain) {
+    let window_level = window_index(chain);
+    let window = window_level.map(|i| chain[i].rect);
+    if let Some(wi) = window_level {
+        // 내용 안쪽에 남은 오래된 제목 표시줄 좌표가 화면 전체 선택을 가로채지 않게 한다.
+        if chain[..wi].iter().any(|n| {
+            n.kind == NodeKind::Element(Control::TitleBar) && n.rect.y - chain[wi].rect.y <= n.rect.h
+        }) {
             return wi;
         }
+    }
+
+    // 자식 창 또는 접근성 목록 항목을 기준으로 고른다. 문서 전체를 감싸는
+    // 큰 편집 창에서는 그 안의 영상 후보를 계속 쓸 수 있게 한다.
+    let preferred = chain.iter().position(|n| {
+        let native = n.sources & src::H != 0 && size_fit(&n.rect, window) == 1.0;
+        match n.kind {
+            NodeKind::Element(Control::ListItem | Control::DataItem | Control::MenuItem) => true,
+            NodeKind::Child | NodeKind::Element(Control::Other) => native,
+            NodeKind::Element(c) => native && !n.hidden_container
+                && !matches!(c, Control::Pane | Control::Custom | Control::Document | Control::TitleBar),
+            _ => false,
+        }
+    });
+    if let Some(i) = preferred {
+        let parent = chain[i];
+        let row = matches!(parent.kind, NodeKind::Element(Control::ListItem | Control::DataItem | Control::MenuItem));
+        // 행 안의 단순 글자·편집 레이블은 휠로 남기고 따로 확인된 조작 요소는 먼저 고른다.
+        let inner = chain[..i].iter().position(|n| {
+            matches!(n.kind, NodeKind::Element(c) if c.meaning() >= 0.85)
+                && n.score >= FIRST_SCORE
+                && n.rect.intersect(&parent.rect) == Some(n.rect)
+                && (!row || n.sources & (src::V | src::H) != 0)
+        });
+        return inner.unwrap_or(i);
     }
     if let Some(i) = chain.iter().position(|n| !n.hidden_container && n.score >= FIRST_SCORE && !matches!(n.kind, NodeKind::Window | NodeKind::Monitor | NodeKind::Virtual)) {
         return i;
     }
-    window_index(chain).or_else(|| chain.iter().position(|n| n.kind == NodeKind::Monitor)).unwrap_or(0)
+    window_level.or_else(|| chain.iter().position(|n| n.kind == NodeKind::Monitor)).unwrap_or(0)
 }
 
 #[cfg(test)]

@@ -58,6 +58,79 @@ fn color_matches(row: &[u8], x: usize, b0: u8, g0: u8, r0: u8) -> bool {
         && row[off + 2].abs_diff(r0) <= FLAT_TOLERANCE
 }
 
+/// 커서와 같은 색이 이어지는 가로·세로 구간. 글자나 안쪽 단추가 한 줄을
+/// 가로막을 수 있어 양 끝 가까운 줄에서도 같은 영역의 범위를 잰다.
+fn color_span(data: &PrepData, seed: [u8; 3], x: i32, y: i32, vertical: bool) -> (i32, i32) {
+    let (pos, limit) = if vertical { (y, data.rh) } else { (x, data.rw) };
+    let matches = |i: i32| {
+        let (cx, cy) = if vertical { (x, i) } else { (i, y) };
+        bgr_matches(px_bgr(&data.bgra, data.rw as usize, cx as usize, cy as usize), seed)
+    };
+    let mut lo = pos;
+    let mut hi = pos;
+    if matches(pos) {
+        hi += 1;
+        while lo > 0 && matches(lo - 1) {
+            lo -= 1;
+        }
+        while hi < limit as i32 && matches(hi) {
+            hi += 1;
+        }
+    }
+    (lo, hi)
+}
+
+/// 네 변을 따라 안쪽은 시드 색, 바로 바깥은 다른 색인지 확인한다. 모니터 끝은
+/// 물리 경계로 인정하되 잘린 전처리 영역 끝이나 단색 화면 전체는 후보가 될 수 없다.
+pub(crate) fn solid_box(data: &PrepData, x: i32, y: i32) -> Option<(PhysRect, f32)> {
+    let (width, height) = (data.rw as i32, data.rh as i32);
+    let seed = px_bgr(&data.bgra, width as usize, x as usize, y as usize);
+    let (mut left, mut right) = color_span(data, seed, x, y, false);
+    let (mut top, mut bottom) = color_span(data, seed, x, y, true);
+    for sx in [left + 1, right - 2] {
+        if left < sx && sx < right {
+            let (start, end) = color_span(data, seed, sx, y, true);
+            top = top.min(start);
+            bottom = bottom.max(end);
+        }
+    }
+    for sy in [top + 1, bottom - 2] {
+        if top < sy && sy < bottom {
+            let (start, end) = color_span(data, seed, x, sy, false);
+            left = left.min(start);
+            right = right.max(end);
+        }
+    }
+    let rect = PhysRect::from_edges(left, top, right, bottom);
+    if rect.w < 4 || rect.h < 4 || (left == 0 && right == width && top == 0 && bottom == height) {
+        return None;
+    }
+    let color = |cx, cy| px_bgr(&data.bgra, width as usize, cx as usize, cy as usize);
+    let mut weakest = 1.0_f32;
+    for (vertical, edge, outside, start, len) in [
+        (true, left, left - 1, top, rect.h), (true, right - 1, right, top, rect.h),
+        (false, top, top - 1, left, rect.w), (false, bottom - 1, bottom, left, rect.w),
+    ] {
+        let (limit, origin, full) = if vertical { (width, data.ox, data.full_w) } else { (height, data.oy, data.full_h) };
+        let at_end = outside < 0 || outside >= limit;
+        if at_end && (0..full as i32).contains(&(outside + origin)) {
+            return None;
+        }
+        let samples = len.min(16);
+        let hits = (0..samples).filter(|i| {
+            let along = start + ((2 * i + 1) * len) / (2 * samples);
+            let pixel = |across| if vertical { color(across, along) } else { color(along, across) };
+            let inside = pixel(edge);
+            bgr_matches(inside, seed) && (at_end || !bgr_matches(pixel(outside), inside))
+        }).count();
+        weakest = weakest.min(hits as f32 / samples as f32);
+        if weakest < 0.75 {
+            return None;
+        }
+    }
+    Some((rect, weakest))
+}
+
 /// ROI 내부 좌표 `(lx, ly)`에서 평탄 영역 바운딩 박스(ROI 좌표)를 찾는다.
 /// 예산을 초과하면 영역이 잘린 것이므로 `None`을 돌려준다.
 pub(crate) fn find_flat_region(data: &PrepData, lx: i32, ly: i32) -> Option<PhysRect> {
@@ -300,6 +373,17 @@ pub(crate) fn refine_image_bounds_with_occluders(
     };
     if clipped.w < MIN_REFINE_SIDE || clipped.h < MIN_REFINE_SIDE {
         return local_rect;
+    }
+
+    // 접근성 그림 여백에 옆 도형이 걸쳐도 네 변이 확인된 단색 그림은
+    // 자체 경계로 잰다. 하늘처럼 그림의 한쪽에만 닿는 영역은 제외한다.
+    if occluders.is_empty() {
+        if let Some((r, _)) = solid_box(data, clipped.x + clipped.w / 2, clipped.y + clipped.h / 2) {
+            if r.x > clipped.x && r.y > clipped.y && r.right() < clipped.right() && r.bottom() < clipped.bottom()
+                && r.area() as f64 >= clipped.area() as f64 * 0.6 {
+                return r;
+            }
+        }
     }
 
     let w = data.rw as usize;

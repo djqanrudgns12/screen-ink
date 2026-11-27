@@ -160,6 +160,18 @@ fn 빈_화면은_후보_0() {
 }
 
 #[test]
+fn 저대비_패널은_모니터_끝까지_인식하고_잘린_전처리_끝은_제외한다() {
+    let mut c = Canvas::new(640, 480, [248; 3]);
+    let panel = PhysRect::new(0, 32, 192, 380);
+    c.fill_rect(panel, [235; 3]);
+    c.fill_rect(PhysRect::new(16, 80, 160, 48), [200; 3]);
+    let p = prepare(&c.bgra, c.w, c.h);
+    assert!(p.query(96, 270).iter().any(|v| v.rect == panel));
+    let roi = prepare_roi(&c.bgra, c.w, c.h, 118, 265, 120);
+    assert!(roi.query(96, 270).iter().all(|v| v.kind != VKind::Flat));
+}
+
+#[test]
 fn 평평한_바탕_위_버튼() {
     let mut c = Canvas::new(800, 600, [245, 245, 245]);
     let btn = PhysRect::new(200, 180, 140, 44);

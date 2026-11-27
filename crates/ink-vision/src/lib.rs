@@ -119,11 +119,18 @@ impl Prepared {
             }
         }
 
-        if let Some(flat_local) = flat::find_flat_region(&self.data, lx, ly) {
+        let flat = flat::solid_box(&self.data, lx, ly)
+            .or_else(|| flat::find_flat_region(&self.data, lx, ly).map(|r| (r, 0.0)));
+        if let Some((flat_local, color_support)) = flat {
             if local_occ.is_empty() || !ladder::rect_touches_occluders(flat_local, &local_occ, OCCLUDER_EDGE_TOL) {
                 let g = self.to_global_rect(flat_local);
-                let sup = self.support_with_occluders(g, occluders);
+                let sup = color_support.max(self.support_with_occluders(g, occluders));
                 if g.contains(cursor) && sup >= MIN_SUPPORT {
+                    if color_support >= MIN_SUPPORT {
+                        // 같은 띠의 세 변이 일치하면 나머지 한 변을 비교한다.
+                        // 채움 안에서 끝난 투영선이나 살짝 넘어간 선은 색 경계로 바꾼다.
+                        out.retain(|c| !cuts_solid_band(c.rect, g));
+                    }
                     let dup = out.iter().any(|c| rect_iou(c.rect, g) >= LADDER_MERGE_IOU);
                     if !dup {
                         out.push(VCandidate { rect: g, kind: VKind::Flat, support: sup });
@@ -348,6 +355,18 @@ fn has_v_seg_overlap(data: &PrepData, lx: i32, ly0: i32, ly1: i32) -> bool {
     let segs = data.v_col_segs(lx);
     let idx = segs.partition_point(|s| (s.end as i32) <= ly0);
     segs.get(idx).is_some_and(|s| (s.start as i32) < ly1)
+}
+
+fn cuts_solid_band(candidate: PhysRect, solid: PhysRect) -> bool {
+    let differences = [
+        solid.x - candidate.x, solid.y - candidate.y,
+        candidate.right() - solid.right(), candidate.bottom() - solid.bottom(),
+    ];
+    let mut distinct = differences.into_iter().filter(|d| d.abs() > 2);
+    match (distinct.next(), distinct.next()) {
+        (Some(delta), None) => delta < 0 || rect_iou(candidate, solid) >= LADDER_MERGE_IOU,
+        _ => false,
+    }
 }
 
 fn rect_iou(a: PhysRect, b: PhysRect) -> f64 {
