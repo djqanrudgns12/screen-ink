@@ -20,13 +20,13 @@ pub use ports::{
     OverlayHost, PackageRuntime, PinHost, Ports, ReadyUpdate, SavedFile, ScreenSource, SettingsStore, StoreError, StoreLocation, SystemEvent, SystemProbe, UnpackagedRuntime, Updater,
     VisionSource, WindowCatalog, NO_SCREEN_PERMISSION,
 };
-pub use ports::{NoRecorder, RecStartOpts, RecStats, Recorder, WindowShot, REC_ENCODER_FAILED, REC_UNSUPPORTED, REC_WINDOW_CLOSED, WINDOW_PROTECTED};
+pub use ports::{MicAccess, NoRecorder, RecStartOpts, RecStats, Recorder, WindowShot, REC_ENCODER_FAILED, REC_UNSUPPORTED, REC_WINDOW_CLOSED, WINDOW_PROTECTED};
 pub use quick::Delay;
 pub use capture::CaptureInput;
 pub use draw::{DrawExportMeta, DrawExported, DrawFinish, DrawIslandPatch, DrawRestoreResult, ExportAction, KeptInk, KeptPayload, PenSample, RESULT_ISLAND_TO_DRAW};
 pub use ink_domain::mode::DrawKind;
 pub use vision::VisionEngine;
-pub use service::{HotkeyOutcome, ImportPreview, InkService, ACTION_PERM_AX, ACTION_PERM_REFRESH, ACTION_PERM_SCREEN, PAUSE_SLOT};
+pub use service::{HotkeyOutcome, ImportPreview, InkService, ACTION_PERM_AX, ACTION_PERM_MIC, ACTION_PERM_REFRESH, ACTION_PERM_SCREEN, PAUSE_SLOT};
 pub use state::{
     CaptureView, ConflictSummary, DrawSession, DrawViewTransform, InkState, IslandButton, IslandEvent, IslandHint, IslandKind, KeptCompat, OverlayMonitor, OverlaySession,
     PreviewResult, RowStatus, SetShortcutResult, ShortcutRow, UpdateResult,

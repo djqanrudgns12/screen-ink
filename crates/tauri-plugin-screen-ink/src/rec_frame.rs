@@ -3,7 +3,8 @@
 //! - 창 하나(`ink-rec-frame`)를 시작할 때 숨겨 만들어 둔다 — 녹화 중 서비스 잠금 안에서 웹뷰를 새로 만들면 교착될 수 있다.
 //! - 클릭 통과·포커스 없음·`WDA_EXCLUDEFROMCAPTURE`(영상에 안 찍힘, R-REC-2). 녹화하는 모니터 전체를 덮고,
 //!   범위는 그 창 안 논리 px로 `screen-ink://recframe` 이벤트에 실어 보낸다(UI는 좌표를 바꾸지 않는다, R-DPI-1).
-//! - 창 추적 녹화는 창이 움직이면 꺾쇠가 어긋나므로 지금은 띄우지 않는다(녹화 섬만).
+//! - 창 추적 녹화(단계 6.4): 대상 창이 움직이거나 크기가 바뀌면 녹화기의 자리 변화 알림으로 꺾쇠 창을 옮기고,
+//!   최소화·다른 Space로 숨으면 꺾쇠를 숨긴다.
 
 use ink_domain::geometry::PhysRect;
 use std::sync::Mutex;
@@ -12,8 +13,30 @@ use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Runtime
 pub const REC_FRAME: &str = "ink-rec-frame";
 const EVT_REC_FRAME: &str = "screen-ink://recframe";
 
-/// 지금 보이는 범위(같으면 다시 하지 않는다).
-static SHOWN: Mutex<Option<PhysRect>> = Mutex::new(None);
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct Shown {
+    rect: PhysRect,
+    monitor_id: Option<u32>,
+}
+
+/// 지금 보이는 범위와 모니터(같으면 다시 하지 않는다).
+static SHOWN: Mutex<Option<Shown>> = Mutex::new(None);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum SyncAction {
+    Set(Option<PhysRect>),
+    Keep,
+}
+
+pub(crate) fn sync_action(active: bool, target: Option<&str>, rect: Option<PhysRect>) -> SyncAction {
+    if !active {
+        SyncAction::Set(None)
+    } else if target == Some("window") {
+        SyncAction::Keep
+    } else {
+        SyncAction::Set(rect)
+    }
+}
 
 #[derive(Clone, Copy, serde::Serialize)]
 struct FramePlace {
@@ -49,15 +72,25 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 }
 
 /// 상태가 바뀔 때마다(`Notifier::state`): 녹화 중이면 그 모니터를 덮고 범위를 알린다, 아니면 숨긴다.
+/// 창 추적(`window`) 중에는 상태 틱마다 덮지 않고 `Notifier::record_frame` → `set_rect`만 따른다.
 pub fn sync<R: Runtime>(app: &AppHandle<R>, rec: &ink_app::state::Recording) {
-    let want = rec.rect.filter(|_| rec.active && rec.target != Some("window"));
-    {
+    if let SyncAction::Set(want) = sync_action(rec.active, rec.target, rec.rect) {
+        set_rect(app, want);
+    }
+}
+
+/// 녹화 꺾쇠 창의 범위·보임 상태를 맞춘다(`None` = 숨김).
+pub fn set_rect<R: Runtime>(app: &AppHandle<R>, want: Option<PhysRect>) {
+    let prev_monitor = {
         let mut shown = SHOWN.lock().unwrap_or_else(|e| e.into_inner());
-        if *shown == want {
+        if shown.map(|s| s.rect) == want {
             return;
         }
-        *shown = want;
-    }
+        if want.is_none() {
+            *shown = None;
+        }
+        shown.and_then(|s| s.monitor_id)
+    };
     let Some(w) = app.get_webview_window(REC_FRAME) else { return };
     let Some(r) = want else {
         let _ = w.hide();
@@ -69,19 +102,26 @@ pub fn sync<R: Runtime>(app: &AppHandle<R>, rec: &ink_app::state::Recording) {
         let space = ink_platform_macos::space();
         let center = ink_domain::geometry::PhysPoint { x: r.x + r.w / 2, y: r.y + r.h / 2 };
         let layout = space.layout();
-        if let (Some(m), Ok(ns)) = (layout.monitors.iter().find(|m| m.bounds.contains(center)), w.ns_window()) {
-            if ink_platform_macos::window::place(ns, &space, m.bounds) {
+        if let (Some(m), Ok(ns)) = (layout.monitor_at(center).or_else(|| layout.nearest(center)), w.ns_window()) {
+            let need_window_move = prev_monitor != Some(m.id);
+            let placed = !need_window_move || ink_platform_macos::window::place(ns, &space, m.bounds);
+            if placed {
+                *SHOWN.lock().unwrap_or_else(|e| e.into_inner()) = Some(Shown { rect: r, monitor_id: Some(m.id) });
                 let s = m.scale.max(0.5);
                 let place = FramePlace { x: (r.x - m.bounds.x) as f64 / s, y: (r.y - m.bounds.y) as f64 / s, width: r.w as f64 / s, height: r.h as f64 / s };
                 let _ = app.emit_to(REC_FRAME, EVT_REC_FRAME, place);
-                ink_platform_macos::window::order_front(ns);
-                let _ = w.show();
+                if need_window_move {
+                    ink_platform_macos::window::order_front(ns);
+                    let _ = w.show();
+                }
                 return;
             }
         }
     }
+    let _ = prev_monitor;
     let (cx, cy) = ((r.x + r.w / 2) as f64, (r.y + r.h / 2) as f64);
     let Some(m) = w.monitor_from_point(cx, cy).ok().flatten() else { return };
+    *SHOWN.lock().unwrap_or_else(|e| e.into_inner()) = Some(Shown { rect: r, monitor_id: None });
     let (pos, size, scale) = (*m.position(), *m.size(), m.scale_factor().max(0.5));
     let _ = w.set_position(PhysicalPosition::new(pos.x, pos.y));
     let _ = w.set_size(PhysicalSize::new(size.width, size.height));
@@ -94,4 +134,19 @@ pub fn sync<R: Runtime>(app: &AppHandle<R>, rec: &ink_app::state::Recording) {
         return;
     }
     let _ = w.show();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn 창_추적과_일반_녹화의_상태_동기화_판정() {
+        let r = PhysRect::new(10, 20, 300, 200);
+        assert_eq!(sync_action(false, Some("window"), Some(r)), SyncAction::Set(None));
+        assert_eq!(sync_action(false, Some("region"), Some(r)), SyncAction::Set(None));
+        assert_eq!(sync_action(true, Some("region"), Some(r)), SyncAction::Set(Some(r)));
+        assert_eq!(sync_action(true, Some("monitor"), Some(r)), SyncAction::Set(Some(r)));
+        assert_eq!(sync_action(true, Some("window"), Some(r)), SyncAction::Keep);
+    }
 }

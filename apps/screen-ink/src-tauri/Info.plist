@@ -14,5 +14,7 @@
   </array>
   <key>LSHasLocalizedDisplayName</key>
   <true/>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>화면 녹화에 마이크 소리를 함께 담기 위해 마이크를 사용해요.</string>
 </dict>
 </plist>

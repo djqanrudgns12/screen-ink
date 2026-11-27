@@ -55,6 +55,8 @@ pub struct Recording {
     pub height: u32,
     pub fps: u32,
     pub mic_on: bool,
+    /// 이 OS·녹화기가 마이크 녹음을 지원하는지(설정 화면 안내용)
+    pub mic_supported: bool,
     /// 녹화 범위(물리 px, 시작 순간) — 빨간 꺾쇠 창 자리
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rect: Option<ink_domain::geometry::PhysRect>,

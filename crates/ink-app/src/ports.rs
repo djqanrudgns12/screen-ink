@@ -317,6 +317,8 @@ pub trait SettingsStore: Send {
 pub trait Notifier: Send + Sync {
     fn state(&self, state: &InkState);
     fn island(&self, event: &IslandEvent);
+    /// 녹화하던 창이 움직이거나 숨겨짐(`rect` = 새 위치·크기, `None` = 최소화·다른 Space로 숨김).
+    fn record_frame(&self, _rect: Option<ink_domain::geometry::PhysRect>) {}
     /// 고르기 상태(`screen-ink://capture`) — 모든 오버레이·섬이 같은 것을 그린다.
     fn capture(&self, _view: &crate::state::CaptureView) {}
     /// 판서 세션(`screen-ink://draw`) — 상태(`mode: draw`)보다 먼저 보내 오버레이가 세션을 쥔 채 화면을 바꾼다.
@@ -522,6 +524,14 @@ pub struct RecStats {
     pub height: u32,
 }
 
+/// 마이크 권한 상태(단계 6.5). 권한 개념이 없는 플랫폼은 기본 `Granted`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MicAccess {
+    Granted,
+    NotDetermined,
+    Denied,
+}
+
 /// 화면 녹화(03 §3 `Recorder`, 05 §8). 파일 옮기기·남은 녹화 찾기도 여기 — 임시 폴더는 어댑터가 안다.
 pub trait Recorder: Send {
     /// F3 고르기에 들어갈 때 — 시간이 드는 준비(MF 시작·장치)를 녹화 시작 전에 끝낸다.
@@ -541,9 +551,23 @@ pub trait Recorder: Send {
     fn mic_supported(&self) -> bool {
         false
     }
+    /// 마이크 권한 상태(단계 6.5).
+    fn mic_access(&self) -> MicAccess {
+        MicAccess::Granted
+    }
+    /// 마이크 권한을 요청한다(비동기 — 첫 녹화 등).
+    fn request_mic_access(&mut self) {}
+    /// 시작 직후 실제로 마이크 트랙이 붙었는지(없거나 장치 분리로 영상만 녹화하면 `Some(false)`).
+    fn mic_active(&self) -> Option<bool> {
+        None
+    }
     /// 마이크 장치 목록 `[(id, 이름)]`(설정 창).
     fn audio_inputs(&self) -> Vec<(String, String)> {
         Vec::new()
+    }
+    /// 창 추적 녹화 중 대상 창 자리 변화(`Some(Some(rect))` = 표시/이동, `Some(None)` = 최소화·다른 Space 숨김, `None` = 변화 없음 또는 미지원).
+    fn take_window_rect(&mut self) -> Option<Option<ink_domain::geometry::PhysRect>> {
+        None
     }
     /// 임시 녹화 폴더(`%TEMP%\shookshok`). 없으면 녹화를 시작하지 않는다.
     fn temp_dir(&self) -> Option<std::path::PathBuf> {

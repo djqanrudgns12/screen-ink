@@ -30,6 +30,7 @@
   "page.capture.micSheetConfirm": "켜기",
   "page.capture.micSheetDesc": "녹화에 넣을 마이크를 골라요",
   "page.capture.micSheetTitle": "마이크 고르기",
+  "page.capture.micUnavailable": "연결되지 않은 마이크",
   "page.capture.micUsb": "USB 마이크",
   "page.capture.result": "Enter · 더블클릭 하면",
   "page.capture.result.both": "둘 다",

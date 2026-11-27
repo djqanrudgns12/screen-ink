@@ -64,6 +64,7 @@
  * @property {number} [height]
  * @property {number} [fps]         30 | 60
  * @property {boolean} [micOn]
+ * @property {boolean} [micSupported]
  * @property {PhysRect} [rect]      녹화 범위(시작 순간) — 빨간 꺾쇠 자리
  * @property {'monitor'|'region'|'window'} [target]  window = 창 추적(창이 움직여도 따라감)
  *
@@ -76,7 +77,7 @@
  * @typedef {'capture.region'|'capture.window'|'record.toggle'|'draw'|'zoom'|'board'|'pin.toggle'|'pin.releaseAll'|'draw.restore'|'folder.open'|'settings.open'|'firstRun.open'|'app.quit'|'snipaste.howto'
  *   |'folder.pick'|'logs.open'|'settings.export'|'capture.history.clear'|'capture.saveLast'|'capture.copyHex'|'pins.closeAll'
  *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'|'capture.restore'|'draw.acceptSuggestion'|'draw.undo'|'capture.toDraw'
- *   |'record.stop'|'record.discard'|'record.recoverSave'|'record.recoverDelete'|'perm.screen'|'perm.accessibility'|'app.relaunch'
+ *   |'record.stop'|'record.discard'|'record.recoverSave'|'record.recoverDelete'|'perm.screen'|'perm.accessibility'|'perm.microphone'|'app.relaunch'
  *   |'perm.refresh'|'settings.reveal'|'capture.full'|'capture.reopen'|'update.check'|'update.install'|'update.snooze'|'pdf.open'|'diag.openFolder'} InkAction
  *   perm.screen·perm.accessibility = 맥 권한 요청 + 정확한 설정 칸 열기(M10) · app.relaunch = 다시 시작(화면 기록 반영)
  *   draw.acceptSuggestion·draw.undo = 판서 섬 단추([바꾸기]·[되돌리기]) → Rust가 'drawCommand' 이벤트로 오버레이 엔진에
@@ -279,6 +280,7 @@
  * @property {() => Promise<{ok: boolean, state: InkState}>} undo   설정 창 안 Ctrl+Z
  * @property {(enabled: boolean) => Promise<InkState>} setHotkeysEnabled
  * @property {() => Promise<string[]>} [systemFonts]  이 컴퓨터 글꼴 집 이름(글꼴 고르기 R2-TXT-4) — 화면에만 쓰고 로그에 남기지 않는다
+ * @property {() => Promise<Array<{id: string, label: string}>>} [audioInputs]  이 컴퓨터 마이크 장치 목록(설정 › 녹화) — 화면에만 쓰고 로그에 남기지 않는다
  * @property {(bytes: Uint8Array, name: string) => Promise<boolean>} [savePdf]  화면이 만든 PDF(내 단축키 한 장)를 저장 대화상자로 저장 — 저장하면 true, 취소 false(R2-PDF). 없는 클라이언트는 Blob 내려받기로 대신
  * @property {(active: boolean) => Promise<void>} [shortcutCapture]  설정 › 단축키 녹화 칸이 키를 받는 동안 전역 키를 조용히 푼다(true)·다시 등록(false). 없는 클라이언트는 그냥 건너뛴다(R2-KEY-REC)
  * @property {(action: InkAction, id?: number) => Promise<void>} run

@@ -225,6 +225,10 @@ impl<R: Runtime> Notifier for TauriNotifier<R> {
     fn zoom(&self, state: Option<&ink_app::LiveZoomState>) {
         zoom_hud::emit(&self.app, state);
     }
+
+    fn record_frame(&self, rect: Option<ink_domain::geometry::PhysRect>) {
+        rec_frame::set_rect(&self.app, rect);
+    }
 }
 
 /// A 근거 어댑터: Windows = UIA 색인 일꾼, 맥 = AX 색인 일꾼(끝나면 메인 스레드에서 서비스에 알림), 그 밖 = 없음.
@@ -1024,6 +1028,18 @@ fn tidy_font_names(v: &mut Vec<String>) {
     v.retain(|n| !n.is_empty() && !n.starts_with('.') && !n.starts_with('#'));
     v.sort_by_key(|n| n.to_lowercase());
     v.dedup();
+}
+
+#[derive(serde::Serialize)]
+struct AudioInput {
+    id: String,
+    label: String,
+}
+
+/// 이 컴퓨터 마이크 장치 목록(설정 › 녹화). 이름만 화면에 쓰고 로그·기록에 남기지 않는다.
+#[tauri::command]
+fn audio_inputs(ink: State<'_, Ink>) -> Vec<AudioInput> {
+    ink.lock().audio_inputs().into_iter().map(|(id, label)| AudioInput { id, label }).collect()
 }
 
 /// `HKLM\…\Fonts` 값 이름("Malgun Gothic Bold (TrueType)", "Segoe UI & Segoe UI Semilight (TrueType)")에서 집 이름만.
@@ -1902,6 +1918,11 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String, id: Option<u64>) -> 
                 }
             });
         }
+        #[cfg(target_os = "macos")]
+        ink_app::ACTION_PERM_MIC => {
+            hide(POPOVER);
+            ink_platform_macos::permissions::open_microphone_settings();
+        }
         ACTION_RELAUNCH => app.restart(),
         other => {
             hide(POPOVER);
@@ -2001,11 +2022,20 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         let pictures = app.path().picture_dir().unwrap_or_else(|_| std::env::temp_dir()).join(APP_DIR);
         service.set_recorder(Box::new(ink_platform_windows::recorder::WinRecorder::new(std::env::temp_dir().join(APP_DIR), pictures)));
     }
-    // 맥 녹화(M15): SCStream → AVAssetWriter(H.264). 임시 폴더 = $TMPDIR/Shookshok, 기본 저장 = 사진/Shookshok
+    // 맥 녹화(M15): SCStream → AVAssetWriter(H.264 + AAC). 임시 폴더 = $TMPDIR/Shookshok, 기본 저장 = 사진/Shookshok
     #[cfg(target_os = "macos")]
     {
         let pictures = app.path().picture_dir().unwrap_or_else(|_| std::env::temp_dir()).join(APP_DIR);
-        service.set_recorder(Box::new(ink_platform_macos::recorder::MacRecorder::new(std::env::temp_dir().join(APP_DIR), pictures)));
+        let h = app.clone();
+        let rec = ink_platform_macos::recorder::MacRecorder::new(std::env::temp_dir().join(APP_DIR), pictures).with_window_rect_callback(move |rect| {
+            let app = h.clone();
+            let _ = h.run_on_main_thread(move || {
+                if let Some(ink) = app.try_state::<Ink>() {
+                    ink.lock().on_tracked_window_rect(rect);
+                }
+            });
+        });
+        service.set_recorder(Box::new(rec));
     }
     // 개발용 사람 정답 도구: 확정할 때마다 인식 시험 사례를 쓴다(시험 문서 화면에서만, 08 §5.2)
     if let Ok(dir) = std::env::var("SCREEN_INK_CASE_DIR") {
@@ -2178,6 +2208,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             shortcut_capture,
             save_pdf,
             system_fonts,
+            audio_inputs,
             text_focus,
             run,
             preview_import,

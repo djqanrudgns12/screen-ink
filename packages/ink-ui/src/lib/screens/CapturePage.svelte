@@ -26,9 +26,20 @@
   let exeInput = $state('');
   let micSheetOpen = $state(false);
   let selectedMic = $state('');
+  let rawMicDevices = $state([]);
+
+  async function loadAudioInputs() {
+    try {
+      const list = await client.audioInputs?.();
+      rawMicDevices = Array.isArray(list) ? list : [];
+    } catch {
+      rawMicDevices = [];
+    }
+  }
 
   $effect(() => {
     let alive = true;
+    loadAudioInputs();
     client.getState().then((s) => {
       if (!alive) return;
       state = s;
@@ -58,8 +69,7 @@
   let platform = $derived(state?.platform ?? 'windows');
   let micDevices = $derived([
     { id: '', label: t('page.capture.micDefault') },
-    { id: 'built-in', label: t('page.capture.micBuiltIn') },
-    { id: 'usb', label: t('page.capture.micUsb') },
+    ...rawMicDevices.filter((d) => d && d.id && d.label),
   ]);
   let cursorCombo = $derived(state?.shortcuts?.find((s) => s.id === 'c-cursor')?.combo ?? '');
   let cursorKeyLabel = $derived(formatComboReadable(cursorCombo, platform) || '`');
@@ -69,7 +79,9 @@
   let historyMax = $derived(Number(settings['capture.historyMax'] ?? 20));
   let micDeviceId = $derived(String(settings['record.micDevice'] ?? ''));
   let micDeviceLabel = $derived(
-    micDevices.find((d) => d.id === micDeviceId)?.label ?? (micDeviceId || t('page.capture.micDefault')),
+    micDeviceId
+      ? (micDevices.find((d) => d.id === micDeviceId)?.label ?? t('page.capture.micUnavailable'))
+      : t('page.capture.micDefault'),
   );
 
   function setSetting(path, value) {
@@ -113,6 +125,7 @@
   function handleMicToggle(next) {
     if (next && !settings['record.mic']) {
       selectedMic = micDeviceId;
+      loadAudioInputs();
       micSheetOpen = true;
     } else {
       setSetting('record.mic', false);
@@ -121,6 +134,7 @@
 
   function openMicPicker() {
     selectedMic = micDeviceId;
+    loadAudioInputs();
     micSheetOpen = true;
   }
 

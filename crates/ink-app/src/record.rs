@@ -4,7 +4,7 @@
 //! 녹화 중에도 F1·판서·확대에 들어가고, 그 모드가 끝나면 `Mode::Recording`으로 돌아온다(`rest_mode`).
 //! 잠금·절전·녹화하던 모니터가 사라지면 자동 중지·저장, 마무리하지 못한 임시 파일은 다음 시작 때 복구를 제안한다.
 
-use crate::ports::{NoRecorder, RecStartOpts, Recorder, SystemEvent, REC_ENCODER_FAILED, REC_UNSUPPORTED, REC_WINDOW_CLOSED};
+use crate::ports::{MicAccess, NoRecorder, RecStartOpts, Recorder, SystemEvent, REC_ENCODER_FAILED, REC_UNSUPPORTED, REC_WINDOW_CLOSED};
 use crate::service::{HotkeyOutcome, InkService};
 use crate::state::{IslandButton, IslandEvent, IslandKind, Recording};
 use ink_domain::geometry::{MonitorLayout, PhysPoint, PhysRect};
@@ -12,6 +12,7 @@ use ink_domain::mode::Mode;
 use ink_domain::naming;
 use ink_domain::recording::{self, Leftover, RecPhase, RecTarget};
 use ink_domain::selection::{Effect, Phase};
+use ink_domain::shortcuts::Platform;
 use ink_domain::snapshot::CaptureKind;
 use std::path::PathBuf;
 
@@ -58,6 +59,8 @@ pub struct RecordState {
     pub(crate) size: (u32, u32),
     pub(crate) fps: u32,
     pub(crate) mic_on: bool,
+    /// 창 추적 녹화 중 마지막으로 알린 꺾쇠 범위(`None` = 아직 안 알림, `Some(None)` = 숨김)
+    pub(crate) tracked_rect: Option<Option<PhysRect>>,
     /// 모니터·범위 녹화의 모니터 경계 — 배치가 바뀌어 이 경계가 사라지면 자동 중지
     pub(crate) monitor_bounds: Option<PhysRect>,
     /// 파일 이름 {app}(창 추적일 때만)
@@ -86,6 +89,7 @@ impl Default for RecordState {
             size: (0, 0),
             fps: 30,
             mic_on: false,
+            tracked_rect: None,
             monitor_bounds: None,
             app: None,
             leftovers: Vec::new(),
@@ -234,7 +238,17 @@ impl InkService {
         let id = self.ports.clock.unix() * 1000 + self.clock_ms() % 1000;
         let temp = dir.join(recording::temp_name(id));
         let mic_wanted = self.settings.bool("record.mic");
-        let mic_on = mic_wanted && self.rec.recorder.mic_supported();
+        let mic_supported = self.rec.recorder.mic_supported();
+        let mic_access = if mic_wanted && mic_supported {
+            let access = self.rec.recorder.mic_access();
+            if access == MicAccess::NotDetermined {
+                self.rec.recorder.request_mic_access();
+            }
+            access
+        } else {
+            MicAccess::Granted
+        };
+        let mic_on = mic_wanted && mic_supported && mic_access == MicAccess::Granted;
         let opts = RecStartOpts {
             target: target.clone(),
             temp_path: temp.clone(),
@@ -252,6 +266,7 @@ impl InkService {
             self.island(IslandEvent::new(IslandKind::Problem, text));
             return;
         }
+        let actual_mic = if mic_on { self.rec.recorder.mic_active().unwrap_or(true) } else { false };
         let now = self.clock_ms();
         self.rec.phase = RecPhase::Recording;
         self.rec.monitor_bounds = target.monitor_id().and_then(|id| layout.monitors.iter().find(|m| m.id == id)).map(|m| m.bounds);
@@ -262,13 +277,17 @@ impl InkService {
         self.rec.quiet_until = 0;
         self.rec.size = (w, h);
         self.rec.fps = fps;
-        self.rec.mic_on = mic_on;
+        self.rec.mic_on = actual_mic;
+        self.rec.tracked_rect = None;
         if self.mode == Mode::Idle {
             self.mode = Mode::Recording { started_ms: now };
         }
         // 계측 줄: 종류·크기만(창 제목·파일 이름 없음, R-LOG-1)
         log::info!("recording started: {} {w}x{h} {fps}fps", target.kind_name());
         self.emit_state();
+        if let Some(update) = self.rec.recorder.take_window_rect() {
+            self.on_tracked_window_rect(update);
+        }
 
         if !self.settings.bool("record.firstHintDone") {
             let mut ev = self.record_island(0);
@@ -282,9 +301,19 @@ impl InkService {
         } else {
             self.island(self.record_island(0));
         }
-        if mic_wanted && !mic_on && !self.rec.mic_notice_done {
+        if mic_wanted && !mic_supported && !self.rec.mic_notice_done {
             self.rec.mic_notice_done = true;
             self.island(IslandEvent::new(IslandKind::Info, self.t("island.record.micPending")).detail(self.t("island.record.videoOnly")));
+            self.rec.quiet_until = self.rec.quiet_until.max(now + NOTICE_MS);
+        } else if mic_wanted && mic_supported && mic_access != MicAccess::Granted {
+            let mut ev = IslandEvent::new(IslandKind::Info, self.t("island.record.micDenied")).detail(self.t("island.record.videoOnly"));
+            if self.platform == Platform::Mac {
+                ev = ev.button(&self.t("island.perm.openScreenBtn"), crate::ACTION_PERM_MIC, None);
+            }
+            self.island(ev);
+            self.rec.quiet_until = self.rec.quiet_until.max(now + NOTICE_MS);
+        } else if mic_wanted && mic_supported && mic_access == MicAccess::Granted && !actual_mic {
+            self.island(IslandEvent::new(IslandKind::Info, self.t("island.record.micUnavailable")).detail(self.t("island.record.videoOnly")));
             self.rec.quiet_until = self.rec.quiet_until.max(now + NOTICE_MS);
         }
         if let Some(m) = warn {
@@ -310,8 +339,9 @@ impl InkService {
     /// 상태(트레이 빨간 점·녹화 섬·꺾쇠 창이 읽는다).
     pub(crate) fn recording_view(&self) -> Recording {
         let active = self.recording_active();
+        let mic_supported = self.rec.recorder.mic_supported();
         if !active {
-            return Recording { phase: self.rec.phase, ..Default::default() };
+            return Recording { phase: self.rec.phase, mic_supported, ..Default::default() };
         }
         let stats = self.rec.recorder.stats();
         let (w, h) = if stats.width > 0 { (stats.width, stats.height) } else { self.rec.size };
@@ -324,6 +354,7 @@ impl InkService {
             height: h,
             fps: self.rec.fps,
             mic_on: self.rec.mic_on,
+            mic_supported,
             rect: self.rec.target.as_ref().map(|t| t.rect()),
             target: self.rec.target.as_ref().map(|t| t.kind_name()),
         }
@@ -403,12 +434,25 @@ impl InkService {
     fn reset_recording(&mut self) {
         self.rec.phase = RecPhase::Idle;
         self.rec.target = None;
+        self.rec.tracked_rect = None;
         self.rec.monitor_bounds = None;
         if matches!(self.mode, Mode::Recording { .. }) {
             self.mode = Mode::Idle;
             self.island(IslandEvent::new(IslandKind::End, ""));
         }
         self.emit_state();
+    }
+
+    /// 창 추적 녹화 중 대상 창의 화면 자리 변화(`Some(rect)` = 표시/이동, `None` = 최소화·다른 Space 숨김).
+    pub fn on_tracked_window_rect(&mut self, rect: Option<PhysRect>) {
+        if self.rec.phase != RecPhase::Recording || !matches!(self.rec.target, Some(RecTarget::Window { .. })) {
+            return;
+        }
+        if self.rec.tracked_rect == Some(rect) {
+            return;
+        }
+        self.rec.tracked_rect = Some(rect);
+        self.ports.notifier.record_frame(rect);
     }
 
     /// 녹화 파일 이름(캡처와 같은 규칙·같은 오늘 순번).
@@ -476,6 +520,9 @@ impl InkService {
             let why = if f.starts_with(REC_WINDOW_CLOSED) { StopReason::WindowClosed } else { StopReason::Stalled };
             self.finish_recording(Some(why));
             return;
+        }
+        if let Some(update) = self.rec.recorder.take_window_rect() {
+            self.on_tracked_window_rect(update);
         }
         if now.saturating_sub(self.rec.last_status_ms) >= STATUS_EVERY_MS {
             self.rec.last_status_ms = now;

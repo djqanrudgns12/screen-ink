@@ -11,6 +11,7 @@
 //! - WindowServer(메뉴 막대·커서)·Dock 소유 창은 앱 창이 아니라 화면 장식이라 목록에서 뺀다
 
 use crate::coords::{RectF, Space};
+use ink_domain::geometry::PhysRect;
 use ink_domain::snapshot::RawWindow;
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
@@ -61,6 +62,26 @@ pub(crate) fn owner_and_bounds(window: u32) -> Option<(i32, RectF)> {
     let list: &NSArray<NSDictionary<NSString, AnyObject>> = unsafe { &*(&*list as *const CFArray as *const NSArray<NSDictionary<NSString, AnyObject>>) };
     let d = list.iter().next()?;
     Some((num(&d, "kCGWindowOwnerPID")?.intValue(), bounds(&d)?))
+}
+
+/// 창 추적 녹화용: 대상 창이 지금 화면에 보이면 물리 사각형, 최소화·다른 Space·숨김이면 `None`.
+pub(crate) fn visible_rect(window: u32, space: &Space) -> Option<PhysRect> {
+    let list = CGWindowListCopyWindowInfo(CGWindowListOption::OptionIncludingWindow, window)?;
+    // SAFETY: 위 `owner_and_bounds`와 같은 무료 다리.
+    let list: &NSArray<NSDictionary<NSString, AnyObject>> = unsafe { &*(&*list as *const CFArray as *const NSArray<NSDictionary<NSString, AnyObject>>) };
+    let d = list.iter().next()?;
+    if !num(&d, "kCGWindowIsOnscreen").is_some_and(|n| n.boolValue()) {
+        return None;
+    }
+    let alpha = num(&d, "kCGWindowAlpha").map(|n| n.doubleValue()).unwrap_or(1.0);
+    if alpha <= 0.0 {
+        return None;
+    }
+    let b = bounds(&d)?;
+    if b.w <= 0.0 || b.h <= 0.0 {
+        return None;
+    }
+    Some(space.rect_to_phys(b))
 }
 
 /// Z 순서(앞 → 뒤) 화면에 보이는 창 전부. 거르기는 도메인(`snapshot::filter_windows`)이 한다.

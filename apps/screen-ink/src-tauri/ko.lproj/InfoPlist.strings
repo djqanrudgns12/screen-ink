@@ -1,3 +1,4 @@
 /* 한국어 macOS 앱 표시 이름(Dock·Launchpad·Finder) */
 "CFBundleDisplayName" = "슉쇽";
 "CFBundleName" = "슉쇽";
+"NSMicrophoneUsageDescription" = "화면 녹화에 마이크 소리를 함께 담기 위해 마이크를 사용해요.";

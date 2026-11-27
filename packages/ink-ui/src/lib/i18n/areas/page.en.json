@@ -30,6 +30,7 @@
   "page.capture.micSheetConfirm": "Turn on",
   "page.capture.micSheetDesc": "Choose a microphone for recordings",
   "page.capture.micSheetTitle": "Choose microphone",
+  "page.capture.micUnavailable": "Disconnected microphone",
   "page.capture.micUsb": "USB microphone",
   "page.capture.result": "On Enter or double-click",
   "page.capture.result.both": "Both",

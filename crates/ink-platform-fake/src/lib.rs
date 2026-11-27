@@ -288,6 +288,8 @@ pub struct Inbox {
     pub draw_commands: Vec<(u64, String)>,
     /// 실시간 확대 HUD 상태(`None` = 끝)
     pub zooms: Vec<Option<ink_app::LiveZoomState>>,
+    /// 창 추적 녹화 빨간 꺾쇠 변화 기록(`Some(rect)` = 표시/이동, `None` = 숨김)
+    pub record_frames: Vec<Option<PhysRect>>,
 }
 
 #[derive(Clone, Default)]
@@ -312,6 +314,10 @@ impl Notifier for RecordingNotifier {
 
     fn zoom(&self, state: Option<&ink_app::LiveZoomState>) {
         self.0.lock().unwrap().zooms.push(state.cloned());
+    }
+
+    fn record_frame(&self, rect: Option<PhysRect>) {
+        self.0.lock().unwrap().record_frames.push(rect);
     }
 }
 
@@ -632,7 +638,7 @@ impl FakeWorld {
 // ───────────── 녹화(단계 6) ─────────────
 
 /// 녹화기 흉내: 파일은 메모리 표(경로 → 바이트)에만 쓴다.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct RecBook {
     pub prepared: usize,
     pub started: Vec<ink_app::RecStartOpts>,
@@ -646,6 +652,11 @@ pub struct RecBook {
     /// 다음 상태 틱에 "스스로 멈춤"으로 돌려줄 이유
     pub failure: Option<String>,
     pub mic: bool,
+    pub mic_access: ink_app::MicAccess,
+    pub mic_requests: usize,
+    pub mic_active_override: Option<bool>,
+    pub audio_inputs: Vec<(String, String)>,
+    pub window_rect: Option<Option<PhysRect>>,
     pub free: Option<u64>,
     /// 녹화가 쓴 바이트(멈출 때 통계로)
     pub bytes: u64,
@@ -656,6 +667,34 @@ pub struct RecBook {
     pub kept: Vec<(String, String, String)>,
     pub deleted: Vec<String>,
     pub leftovers: Vec<ink_domain::recording::Leftover>,
+}
+
+impl Default for RecBook {
+    fn default() -> Self {
+        Self {
+            prepared: 0,
+            started: Vec::new(),
+            active: false,
+            stopped: 0,
+            aborted: 0,
+            fail_start: None,
+            fail_stop: None,
+            failure: None,
+            mic: false,
+            mic_access: ink_app::MicAccess::Granted,
+            mic_requests: 0,
+            mic_active_override: None,
+            audio_inputs: Vec::new(),
+            window_rect: None,
+            free: None,
+            bytes: 0,
+            elapsed_ms: 0,
+            temp_files: BTreeMap::new(),
+            kept: Vec::new(),
+            deleted: Vec::new(),
+            leftovers: Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone, Default)]
@@ -717,6 +756,26 @@ impl ink_app::Recorder for FakeRecorder {
 
     fn mic_supported(&self) -> bool {
         self.0.lock().unwrap().mic
+    }
+
+    fn mic_access(&self) -> ink_app::MicAccess {
+        self.0.lock().unwrap().mic_access
+    }
+
+    fn request_mic_access(&mut self) {
+        self.0.lock().unwrap().mic_requests += 1;
+    }
+
+    fn mic_active(&self) -> Option<bool> {
+        self.0.lock().unwrap().mic_active_override
+    }
+
+    fn audio_inputs(&self) -> Vec<(String, String)> {
+        self.0.lock().unwrap().audio_inputs.clone()
+    }
+
+    fn take_window_rect(&mut self) -> Option<Option<PhysRect>> {
+        self.0.lock().unwrap().window_rect.take()
     }
 
     fn temp_dir(&self) -> Option<std::path::PathBuf> {

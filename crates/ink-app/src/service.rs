@@ -176,6 +176,7 @@ pub struct InkService {
 /// 권한 단추 동작(M10) — 플러그인이 받아 요청 + 설정 칸 열기를 한다.
 pub const ACTION_PERM_SCREEN: &str = "perm.screen";
 pub const ACTION_PERM_AX: &str = "perm.accessibility";
+pub const ACTION_PERM_MIC: &str = "perm.microphone";
 /// 권한을 다시 읽는다(R2-ONB-2 — 첫 실행 카드·설정 점검이 열려 있는 동안 1초마다). 바뀌었을 때만 상태를 보낸다.
 pub const ACTION_PERM_REFRESH: &str = "perm.refresh";
 /// 권한 안내 섬은 설정 앱을 다녀올 동안 남겨 둔다.

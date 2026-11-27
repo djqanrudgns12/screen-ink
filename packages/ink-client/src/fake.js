@@ -160,7 +160,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     const bad = r.filter((x) => x.status === 'conflict' && x.scope === 'global');
     const owners = [...new Set(bad.map((x) => x.owner))];
     return {
-      platform, theme: settings['general.theme'], hotkeysEnabled, pinnedCount: 2, pins: pins.size, recording: { active: false, elapsedMs: 0 },
+      platform, theme: settings['general.theme'], hotkeysEnabled, pinnedCount: 2, pins: pins.size, recording: { active: false, elapsedMs: 0, micSupported: isMac },
       recentCaptures: recent.filter((entry) => Date.now() - entry.at < recentTtl)
         .map(({ id, at, thumbUrl }) => ({ id, capturedAt: Math.floor(at / 1000), thumbUrl })),
       settings: { ...settings }, shortcuts: r, version: '0.1.0',
@@ -372,6 +372,14 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       return isMac
         ? ['Apple SD Gothic Neo', 'Nanum Gothic', 'Nanum Myeongjo', 'Pretendard', 'JetBrains Mono']
         : ['Malgun Gothic', 'NanumGothic', 'Batang', 'Pretendard', 'D2Coding'];
+    },
+    async audioInputs() {
+      return isMac
+        ? [
+            { id: 'built-in', label: 'MacBook Pro 마이크' },
+            { id: 'usb', label: 'USB 마이크' },
+          ]
+        : [];
     },
     async shortcutCapture(active) {
       shortcutCapturing = Boolean(active);

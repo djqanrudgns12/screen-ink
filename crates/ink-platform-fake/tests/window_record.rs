@@ -1,6 +1,6 @@
 //! 단계 6 통합 시험(가짜 세계): F2 창 캡처·대체 사슬 · 바로 캡처 키 4종 · F3 녹화 범위·자동 중지·복구·겹침.
 
-use ink_app::{CaptureInput, Frame, HotkeyOutcome, InkService, IslandKind, SystemEvent, WindowShot, REC_WINDOW_CLOSED, WINDOW_PROTECTED};
+use ink_app::{CaptureInput, Frame, HotkeyOutcome, InkService, IslandKind, MicAccess, SystemEvent, WindowShot, ACTION_PERM_MIC, REC_WINDOW_CLOSED, WINDOW_PROTECTED};
 use ink_domain::geometry::{Monitor, MonitorLayout, PhysRect};
 use ink_domain::mode::Mode;
 use ink_domain::recording::{Leftover, RecTarget};
@@ -438,4 +438,101 @@ fn 녹화중_alt1_판서_겹침_허용_끝나면_녹화로() {
     s.on_hotkey("record");
     assert_eq!(s.mode(), Mode::Idle);
     assert_eq!(w.recorder.0.lock().unwrap().stopped, 1);
+}
+
+#[test]
+fn 마이크_켬_권한없음_장치없음_흐름() {
+    // 1) 마이크 지원 + 권한 허용 + 장치 지정 → mic_on=true, mic_supported=true, 녹화 섬 mic_off=false
+    let w = FakeWorld::new();
+    {
+        let mut r = w.recorder.0.lock().unwrap();
+        r.mic = true;
+        r.mic_access = MicAccess::Granted;
+        r.audio_inputs = vec![("usb-1".into(), "USB 마이크".into())];
+    }
+    let mut s = InkService::new(w.ports(), Platform::Mac, "test");
+    s.start();
+    w.install_recorder(&mut s);
+    assert_eq!(s.audio_inputs(), vec![("usb-1".into(), "USB 마이크".into())]);
+    assert!(s.state().recording.mic_supported);
+    assert!(s.update_setting("record.mic", &serde_json::json!(true)).ok);
+    assert!(s.update_setting("record.micDevice", &serde_json::json!("usb-1")).ok);
+
+    s.on_hotkey("record");
+    click(&mut s, 400, 300);
+    assert_eq!(w.recorder.0.lock().unwrap().started.last().unwrap().mic_device.as_deref(), Some("usb-1"));
+    assert!(s.state().recording.mic_on);
+    let mode_island = w.islands().into_iter().rev().find(|e| e.variant.as_deref() == Some("record")).unwrap();
+    assert!(!mode_island.mic_off);
+    s.stop_recording();
+
+    // 2) 미결정(NotDetermined) → 권한 요청 한 번 + 영상만 녹화 계속 + 안내 섬
+    w.recorder.0.lock().unwrap().mic_access = MicAccess::NotDetermined;
+    s.on_hotkey("record");
+    click(&mut s, 400, 300);
+    assert_eq!(w.recorder.0.lock().unwrap().mic_requests, 1);
+    assert_eq!(w.recorder.0.lock().unwrap().started.last().unwrap().mic_device, None);
+    assert!(!s.state().recording.mic_on);
+    assert!(s.recording_active());
+    let notice = w.last_island().unwrap();
+    assert_eq!(notice.text, "마이크 권한이 필요해요");
+    assert_eq!(notice.detail.as_deref(), Some("영상만 녹화해요"));
+    assert_eq!(notice.button.as_ref().map(|b| b.action.as_str()), Some(ACTION_PERM_MIC));
+    s.stop_recording();
+
+    // 3) 거부(Denied) → 요청 없이 바로 안내 섬 + 영상만 녹화 계속
+    w.recorder.0.lock().unwrap().mic_access = MicAccess::Denied;
+    s.on_hotkey("record");
+    click(&mut s, 400, 300);
+    assert_eq!(w.recorder.0.lock().unwrap().mic_requests, 1, "거부 상태에서는 다시 요청하지 않음");
+    assert!(!s.state().recording.mic_on);
+    assert!(s.recording_active());
+    assert_eq!(w.last_island().unwrap().text, "마이크 권한이 필요해요");
+    s.stop_recording();
+
+    // 4) 허용되었지만 장치 연결 해제·시작 실패로 어댑터가 mic_active=Some(false) 반환 → 안내 섬 + 영상만 녹화 계속
+    {
+        let mut r = w.recorder.0.lock().unwrap();
+        r.mic_access = MicAccess::Granted;
+        r.mic_active_override = Some(false);
+    }
+    s.on_hotkey("record");
+    click(&mut s, 400, 300);
+    assert!(!s.state().recording.mic_on);
+    assert!(s.recording_active());
+    let unavailable = w.last_island().unwrap();
+    assert_eq!(unavailable.text, "마이크를 찾지 못했어요");
+    assert_eq!(unavailable.detail.as_deref(), Some("영상만 녹화해요"));
+    s.stop_recording();
+}
+
+#[test]
+fn 창_추적_녹화_꺾쇠_이동_숨김_및_미지원_어댑터() {
+    let w = FakeWorld::new();
+    let mut s = service(&w);
+
+    // 어댑터가 window_rect 사건을 내지 않으면(예: Windows) 지금처럼 꺾쇠 없음 유지
+    s.on_hotkey("record");
+    s.capture_input(CaptureInput::Move { x: 420, y: 320 });
+    click(&mut s, 420, 320);
+    s.tick();
+    assert!(w.notifier.0.lock().unwrap().record_frames.is_empty());
+
+    // 창 위치가 오면 꺾쇠 표시 → 중복은 무시 → 이동/크기 변경 → 최소화(None) → 복원
+    let r1 = PhysRect::new(100, 100, 1200, 800);
+    let r2 = PhysRect::new(240, 180, 900, 600);
+    w.recorder.0.lock().unwrap().window_rect = Some(Some(r1));
+    s.tick();
+    w.recorder.0.lock().unwrap().window_rect = Some(Some(r1));
+    s.tick();
+    w.recorder.0.lock().unwrap().window_rect = Some(Some(r2));
+    s.tick();
+    s.on_tracked_window_rect(None);
+    s.on_tracked_window_rect(Some(r1));
+    assert_eq!(w.notifier.0.lock().unwrap().record_frames, vec![Some(r1), Some(r2), None, Some(r1)]);
+
+    // 중지 뒤에는 무시
+    s.stop_recording();
+    s.on_tracked_window_rect(Some(r2));
+    assert_eq!(w.notifier.0.lock().unwrap().record_frames.len(), 4);
 }
