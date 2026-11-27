@@ -364,12 +364,18 @@ fn 두_모니터_주석_도구_동기화_및_선택_범위_잠금() {
     let released_view = w.notifier.0.lock().unwrap().captures.last().cloned().unwrap();
     assert_eq!(released_view.annot_tool, None);
 
-    // 도구 해제 후에는 왼쪽 모니터 드래그가 다시 범위를 바꿈
+    // 도구 해제 후에는 끌기가 다시 범위를 바꾼다 — 범위 안을 끌면 옮기기(2026-11-28), 모니터 경계를 넘어도 크기 그대로
     s.capture_input(CaptureInput::Down { x: 3590, y: 430, button: 0 });
     s.capture_input(CaptureInput::Move { x: 3700, y: 450 });
     s.capture_input(CaptureInput::Up { x: 3700, y: 450, button: 0 });
+    let moved = w.notifier.0.lock().unwrap().captures.last().cloned().unwrap();
+    assert_eq!(moved.selection.rect, Some(PhysRect::new(3610, 340, 600, 400)));
+    // 범위 밖을 끌면 예전처럼 새 범위
+    s.capture_input(CaptureInput::Down { x: 3000, y: 900, button: 0 });
+    s.capture_input(CaptureInput::Move { x: 3110, y: 920 });
+    s.capture_input(CaptureInput::Up { x: 3110, y: 920, button: 0 });
     let redragged = w.notifier.0.lock().unwrap().captures.last().cloned().unwrap();
-    assert_eq!(redragged.selection.rect, Some(PhysRect::new(3590, 430, 110, 20)));
+    assert_eq!(redragged.selection.rect, Some(PhysRect::new(3000, 900, 110, 20)));
 }
 
 #[test]

@@ -15,6 +15,61 @@ use serde::{Deserialize, Serialize};
 const FRESH_SLOP: i32 = 3;
 /// 누른 채 이만큼 움직이면 드래그.
 const DRAG_SLOP: i32 = 4;
+/// 확정한 범위의 변·귀를 잡는 거리(논리 px). 화면 쪽 커서 모양(`selectionGrip.js`)도 같은 값을 쓴다.
+pub const GRIP_LOGICAL: f64 = 6.0;
+
+/// 확정한 범위를 손볼 때 잡은 곳(2026-11-28 사용자 요청: 안을 끌면 옮기기, 변·귀를 끌면 그쪽만 늘리기·줄이기).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Grip {
+    /// 범위 안 = 통째로 옮기기
+    Move,
+    /// 잡은 변(귀 = 두 변)만 커서를 따라간다
+    Edges { left: bool, top: bool, right: bool, bottom: bool },
+}
+
+/// 커서 점이 확정한 범위의 어디를 잡는지. 변·귀는 `tol` px 안(안팎 모두), 그 밖의 범위 안은 옮기기, 범위 밖은 `None`.
+/// 아주 작은 범위에서 양쪽 변이 모두 가까우면 더 가까운 쪽을 잡는다.
+pub fn grip_at(rect: PhysRect, p: PhysPoint, tol: i32) -> Option<Grip> {
+    let tol = tol.max(1);
+    let inside_x = p.x >= rect.x - tol && p.x <= rect.right() + tol;
+    let inside_y = p.y >= rect.y - tol && p.y <= rect.bottom() + tol;
+    if !inside_x || !inside_y {
+        return None;
+    }
+    let pick = |a: i32, b: i32| -> (bool, bool) {
+        let (na, nb) = (a.abs() <= tol, b.abs() <= tol);
+        match (na, nb) {
+            (true, true) => (a.abs() <= b.abs(), a.abs() > b.abs()),
+            other => other,
+        }
+    };
+    let (left, right) = pick(p.x - rect.x, p.x - rect.right());
+    let (top, bottom) = pick(p.y - rect.y, p.y - rect.bottom());
+    if left || right || top || bottom {
+        return Some(Grip::Edges { left, top, right, bottom });
+    }
+    rect.contains(p).then_some(Grip::Move)
+}
+
+/// 잡은 곳을 `from` → `to`로 끈 결과(가상 화면 안, 최소 1×1). 변을 반대편 너머로 끌면 뒤집힌다.
+pub fn adjust_rect(base: PhysRect, grip: Grip, from: PhysPoint, to: PhysPoint, bounds: PhysRect) -> PhysRect {
+    match grip {
+        Grip::Move => {
+            let x = (base.x + to.x - from.x).clamp(bounds.x, (bounds.right() - base.w).max(bounds.x));
+            let y = (base.y + to.y - from.y).clamp(bounds.y, (bounds.bottom() - base.h).max(bounds.y));
+            PhysRect::new(x, y, base.w, base.h)
+        }
+        Grip::Edges { left, top, right, bottom } => {
+            let cx = to.x.clamp(bounds.x, bounds.right());
+            let cy = to.y.clamp(bounds.y, bounds.bottom());
+            let (l, r) = (if left { cx } else { base.x }, if right { cx } else { base.right() });
+            let (t, b) = (if top { cy } else { base.y }, if bottom { cy } else { base.bottom() });
+            let (l, r) = (l.min(r), l.max(r).max(l.min(r) + 1));
+            let (t, b) = (t.min(b), t.max(b).max(t.min(b) + 1));
+            PhysRect::from_edges(l, t, r, b)
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -160,6 +215,8 @@ enum State {
     Hover { chain: Vec<Node>, level: usize, window: Option<u64>, fresh: bool },
     Drag { anchor: PhysPoint, cur: PhysPoint, snap: SnapState, edges: Edges },
     Confirmed { rect: PhysRect, picked_level: Option<usize> },
+    /// 확정한 범위를 옮기거나 변·귀를 끄는 중
+    Adjust { grip: Grip, base: PhysRect, from: PhysPoint, cur: PhysRect, snap: SnapState, edges: Edges },
 }
 
 pub struct Selector {
@@ -177,6 +234,8 @@ pub struct Selector {
     keys: CaptureKeys,
     /// 숨은 "인식 근거 보기"
     show_evidence: bool,
+    /// 확정한 범위 위에서 눌렀을 때 잡은 곳과 그때 범위(움직이면 손보기로)
+    grip_down: Option<(Grip, PhysRect)>,
 }
 
 fn fresh_chain(monitor: PhysRect, virt: PhysRect) -> Vec<Node> {
@@ -204,6 +263,7 @@ impl Selector {
             history_at: None,
             keys: CaptureKeys::default(),
             show_evidence: false,
+            grip_down: None,
         }
     }
 
@@ -231,6 +291,7 @@ impl Selector {
             State::Hover { chain, level, .. } => chain.get(*level).map(|n| n.rect),
             State::Drag { anchor, cur, .. } => Some(rect_between(*anchor, *cur)),
             State::Confirmed { rect, .. } => Some(*rect),
+            State::Adjust { cur, .. } => Some(*cur),
         }
     }
 
@@ -251,7 +312,7 @@ impl Selector {
                 Some(NodeKind::Monitor | NodeKind::Virtual) => "full",
                 _ => "element",
             },
-            State::Drag { .. } | State::Confirmed { .. } => "drag",
+            State::Drag { .. } | State::Confirmed { .. } | State::Adjust { .. } => "drag",
         }
     }
 
@@ -278,6 +339,11 @@ impl Selector {
                 (Phase::Drag, Vec::new(), -1, g)
             }
             State::Confirmed { .. } => (Phase::Confirmed, Vec::new(), -1, Vec::new()),
+            // 손보는 동안은 드래그처럼(툴바 숨김·크기 배지·자석 안내선)
+            State::Adjust { cur, snap, .. } => {
+                let g = guides(cur, snap).into_iter().map(|(x1, y1, x2, y2)| Guide { x1, y1, x2, y2 }).collect();
+                (Phase::Drag, Vec::new(), -1, g)
+            }
         };
         let evidence = match (&self.state, self.show_evidence) {
             (State::Hover { chain, level, .. }, true) => chain
@@ -330,10 +396,19 @@ impl Selector {
             Input::Down(p, Button::Left) => {
                 self.cursor = p;
                 self.pressed = Some(p);
+                self.grip_down = match self.state {
+                    State::Confirmed { rect, .. } => grip_at(rect, p, (GRIP_LOGICAL * ctx.scale_at(p)).round() as i32).map(|g| (g, rect)),
+                    _ => None,
+                };
                 Effect::None
             }
             Input::Up(p, Button::Left) => {
                 let was = self.pressed.take();
+                self.grip_down = None;
+                if let State::Adjust { cur, .. } = &self.state {
+                    let r = *cur;
+                    return self.confirm(r, None);
+                }
                 if let State::Drag { anchor, snap, edges, .. } = &self.state {
                     let end = if self.magnet { snap_point(p, edges, ctx.scale_at(p), &mut snap.clone()) } else { p };
                     let r = rect_between(*anchor, end);
@@ -376,7 +451,15 @@ impl Selector {
         self.magnet = !ctx.alt_down();
         if let Some(down) = self.pressed {
             let far = (p.x - down.x).abs() > DRAG_SLOP || (p.y - down.y).abs() > DRAG_SLOP;
-            if far && !matches!(self.state, State::Drag { .. }) {
+            if far && matches!(self.state, State::Confirmed { .. }) {
+                if let Some((grip, base)) = self.grip_down.take() {
+                    let mut edges = ctx.edges(p);
+                    let mon = ctx.monitor_at(p);
+                    edges.extend([mon.x, mon.right()], [mon.y, mon.bottom()]);
+                    self.state = State::Adjust { grip, base, from: down, cur: base, snap: SnapState::default(), edges };
+                }
+            }
+            if far && !matches!(self.state, State::Drag { .. } | State::Adjust { .. }) {
                 let mut edges = ctx.edges(down);
                 edges.extend([ctx.monitor_at(down).x, ctx.monitor_at(down).right()], [ctx.monitor_at(down).y, ctx.monitor_at(down).bottom()]);
                 let mut snap = SnapState::default();
@@ -385,6 +468,19 @@ impl Selector {
             }
         }
         match &mut self.state {
+            State::Adjust { grip, base, from, cur, snap, edges } => {
+                // 옮기기는 자석 없이, 변·귀는 드래그처럼 가까운 경계에 붙는다(Alt = 끔)
+                let to = if self.magnet && *grip != Grip::Move { snap_point(p, edges, ctx.scale_at(p), snap) } else {
+                    *snap = SnapState::default();
+                    p
+                };
+                let next = adjust_rect(*base, *grip, *from, to, ctx.virtual_bounds());
+                if next == *cur {
+                    return Effect::None;
+                }
+                *cur = next;
+                Effect::Redraw
+            }
             State::Drag { cur, snap, edges, .. } => {
                 *cur = if self.magnet { snap_point(p, edges, ctx.scale_at(p), snap) } else {
                     *snap = SnapState::default();
@@ -813,5 +909,93 @@ mod tests {
         assert_eq!(v.phase, Phase::Confirmed);
         assert_eq!(s.rect(), Some(rect));
         assert_eq!(v.rect, Some(rect));
+    }
+
+    fn pt(x: i32, y: i32) -> PhysPoint {
+        PhysPoint { x, y }
+    }
+
+    /// 확정한 범위 R = (400,300)~(800,600). 자석 후보(WIN 변)에서 멀리 둔다.
+    const R: PhysRect = PhysRect::new(400, 300, 400, 300);
+
+    fn confirmed(c: &mut Ctx) -> Selector {
+        Selector::new(pt(10, 10), c).with_confirmed(R)
+    }
+
+    fn drag(s: &mut Selector, c: &mut Ctx, from: PhysPoint, to: PhysPoint) -> Effect {
+        s.handle(Input::Down(from, Button::Left), c);
+        s.handle(Input::Move(PhysPoint { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }), c);
+        s.handle(Input::Move(to), c);
+        s.handle(Input::Up(to, Button::Left), c)
+    }
+
+    #[test]
+    fn 잡는_자리는_귀_변_안_밖() {
+        let e = |left, top, right, bottom| Some(Grip::Edges { left, top, right, bottom });
+        assert_eq!(grip_at(R, pt(400, 300), 6), e(true, true, false, false), "왼쪽 위 귀");
+        assert_eq!(grip_at(R, pt(805, 596), 6), e(false, false, true, true), "오른쪽 아래 귀(바깥 5 px)");
+        assert_eq!(grip_at(R, pt(600, 302), 6), e(false, true, false, false), "위 변");
+        assert_eq!(grip_at(R, pt(395, 450), 6), e(true, false, false, false), "왼쪽 변(바깥)");
+        assert_eq!(grip_at(R, pt(600, 450), 6), Some(Grip::Move), "안 = 옮기기");
+        assert_eq!(grip_at(R, pt(300, 450), 6), None, "밖");
+        // 아주 좁은 범위: 양쪽 변이 다 가까우면 더 가까운 쪽
+        let thin = PhysRect::new(100, 100, 4, 50);
+        assert_eq!(grip_at(thin, pt(104, 120), 6), e(false, false, true, false));
+    }
+
+    #[test]
+    fn 끌기_결과는_화면_안이고_변을_넘기면_뒤집힌다() {
+        let b = PhysRect::new(0, 0, 3840, 1080);
+        assert_eq!(adjust_rect(R, Grip::Move, pt(500, 400), pt(560, 380), b), PhysRect::new(460, 280, 400, 300));
+        assert_eq!(adjust_rect(R, Grip::Move, pt(500, 400), pt(-900, 400), b).x, 0, "왼쪽 끝에서 멈춤");
+        let right = Grip::Edges { left: false, top: false, right: true, bottom: false };
+        assert_eq!(adjust_rect(R, right, pt(800, 450), pt(900, 450), b), PhysRect::new(400, 300, 500, 300));
+        assert_eq!(adjust_rect(R, right, pt(800, 450), pt(300, 450), b), PhysRect::new(300, 300, 100, 300), "왼쪽 변 너머 = 뒤집힘");
+        assert_eq!(adjust_rect(R, right, pt(800, 450), pt(400, 450), b).w, 1, "최소 1 px");
+    }
+
+    #[test]
+    fn 확정한_범위_안을_끌면_옮기고_크기는_그대로() {
+        let mut c = ctx();
+        let mut s = confirmed(&mut c);
+        assert_eq!(drag(&mut s, &mut c, pt(600, 450), pt(650, 420)), Effect::Redraw);
+        assert_eq!(s.rect(), Some(PhysRect::new(450, 270, 400, 300)));
+        assert_eq!(s.view().phase, Phase::Confirmed, "놓으면 다시 확정");
+    }
+
+    #[test]
+    fn 변과_귀를_끌면_그쪽만_바뀐다() {
+        let mut c = ctx();
+        let mut s = confirmed(&mut c);
+        drag(&mut s, &mut c, pt(799, 450), pt(950, 470));
+        assert_eq!(s.rect(), Some(PhysRect::new(400, 300, 550, 300)), "오른쪽 변만(세로 움직임은 무시)");
+        drag(&mut s, &mut c, pt(400, 300), pt(380, 250));
+        assert_eq!(s.rect(), Some(PhysRect::new(380, 250, 570, 350)), "왼쪽 위 귀 = 두 변");
+    }
+
+    #[test]
+    fn 손보는_동안은_드래그_단계이고_밖을_끌면_새로_그린다() {
+        let mut c = ctx();
+        let mut s = confirmed(&mut c);
+        s.handle(Input::Down(pt(600, 450), Button::Left), &mut c);
+        s.handle(Input::Move(pt(640, 450)), &mut c);
+        assert_eq!(s.view().phase, Phase::Drag, "툴바를 숨기고 크기 배지");
+        s.handle(Input::Up(pt(640, 450), Button::Left), &mut c);
+        // 범위 밖에서 끌면 예전처럼 새 범위
+        drag(&mut s, &mut c, pt(1500, 900), pt(1700, 1000));
+        assert_eq!(s.rect(), Some(PhysRect::new(1500, 900, 200, 100)));
+    }
+
+    #[test]
+    fn 손볼_때_변은_자석에_붙고_alt면_끈다() {
+        let mut c = ctx();
+        let mut s = Selector::new(pt(10, 10), &c).with_confirmed(PhysRect::new(400, 300, 400, 300));
+        // 오른쪽 변을 WIN 오른쪽(1300) 근처 1296까지 → 1300에 붙음
+        drag(&mut s, &mut c, pt(800, 450), pt(1296, 450));
+        assert_eq!(s.rect().unwrap().right(), 1300);
+        c.alt = true;
+        let mut s = Selector::new(pt(10, 10), &c).with_confirmed(PhysRect::new(400, 300, 400, 300));
+        drag(&mut s, &mut c, pt(800, 450), pt(1296, 450));
+        assert_eq!(s.rect().unwrap().right(), 1296);
     }
 }

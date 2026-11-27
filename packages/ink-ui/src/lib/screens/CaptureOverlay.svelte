@@ -62,6 +62,7 @@
   import { computeTopIslandRect } from '../models/popoverPlacement.js';
   import { TEXT_SIZE_MUL, createInkEngine, itemCount } from '../ink/inkEngine.js';
   import { evidenceBoxes } from '../models/evidence.js';
+  import { gripCursor } from '../models/selectionGrip.js';
   import {
     buildMagnifierPatch,
     clientToImagePixel,
@@ -1280,6 +1281,15 @@
     }
     // 주석 도구를 고른 동안 범위 밖 움직임은 고르기에 보내지 않는다(범위 안은 주석 층이 받음)
     if (shouldBlockCapturePointer(annotTool, captureView)) return;
+    // 확정한 범위 위: 안 = 옮기기, 변·귀 = 늘리기·줄이기 커서(끄는 동안은 잡은 모양 그대로)
+    if (captureView?.phase !== 'drag') {
+      if (activeFrame?.state === 'confirmed' && !annotTool) {
+        const r = rootEl?.getBoundingClientRect();
+        gripCss = gripCursor(activeFrame, r ? e.clientX - r.left : e.clientX, r ? e.clientY - r.top : e.clientY);
+      } else {
+        gripCss = '';
+      }
+    }
     pendingPointer = { clientX: e.clientX, clientY: e.clientY };
     if (!moveRaf && typeof requestAnimationFrame === 'function') {
       moveRaf = requestAnimationFrame(flushPointerMove);
@@ -1480,6 +1490,9 @@
     viewportH = window.innerHeight;
   }
 
+  /** 확정한 범위 위 커서 모양(selectionGrip.js) */
+  let gripCss = $state('');
+
   let activeFrame = $derived.by(() => {
     if (selection) {
       return {
@@ -1595,6 +1608,7 @@
     data-native-frame={nativeFrame ? 'true' : undefined}
     data-annot-tool={annotTool ?? undefined}
     data-eyedropper={eyedropperActive ? 'true' : undefined}
+    style:cursor={gripCss || undefined}
     role="application"
     aria-label={t('capture.overlay.label')}
     onpointerdown={handlePointerDown}

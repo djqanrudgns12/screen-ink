@@ -93,6 +93,15 @@
     <span class="ink-sel-handle ink-h-tr" aria-hidden="true"></span>
     <span class="ink-sel-handle ink-h-bl" aria-hidden="true"></span>
     <span class="ink-sel-handle ink-h-br" aria-hidden="true"></span>
+    <!-- 변 가운데 손잡이: 변을 잡아 늘리기·줄이기(2026-11-28) — 범위가 작으면 귀 손잡이와 겹치지 않게 숨김 -->
+    {#if width >= 48}
+      <span class="ink-sel-handle ink-h-t" aria-hidden="true"></span>
+      <span class="ink-sel-handle ink-h-b" aria-hidden="true"></span>
+    {/if}
+    {#if height >= 48}
+      <span class="ink-sel-handle ink-h-l" aria-hidden="true"></span>
+      <span class="ink-sel-handle ink-h-r" aria-hidden="true"></span>
+    {/if}
   {/if}
 </div>
 
@@ -161,5 +170,21 @@
   .ink-h-br {
     right: -4px;
     bottom: -4px;
+  }
+  .ink-h-t {
+    left: calc(50% - 4px);
+    top: -4px;
+  }
+  .ink-h-b {
+    left: calc(50% - 4px);
+    bottom: -4px;
+  }
+  .ink-h-l {
+    left: -4px;
+    top: calc(50% - 4px);
+  }
+  .ink-h-r {
+    right: -4px;
+    top: calc(50% - 4px);
   }
 </style>
