@@ -54,7 +54,7 @@
           "name": "단계 2 — 오버레이·정지 스냅숏·섬",
           "items": [
             { "id": "2.1", "title": "MonitorProbe·구성 지문·변경 이벤트", "platform": "win", "days": 0.35, "status": "done" },
-            { "id": "2.2", "title": "오버레이 창 미리 만들기·투명도 재지정", "platform": "win", "days": 0.35, "status": "verify", "note": "대기 1시간·배율 변경 뒤 검은 화면 0 확인 남음", "level": "easy" },
+            { "id": "2.2", "title": "오버레이 창 미리 만들기·투명도 재지정", "platform": "win", "days": 0.35, "status": "verify", "note": "오버레이 미리 만들기·투명도 재지정, 혼합 배율 첫 진입 표본 128개 검은 화면 0(W5). 남음: 1시간 대기 뒤 진입", "level": "easy" },
             { "id": "2.3", "title": "정지 프레임·ink:// 프로토콜", "platform": "win", "days": 0.35, "status": "done" },
             { "id": "2.4", "title": "이미지·창 목록·모니터 같은 순간", "platform": "win", "days": 0.35, "status": "done" },
             { "id": "2.5", "title": "진입 계측·M1 측정", "platform": "win", "days": 0.35, "status": "verify", "note": "M1 p50 60·p95 69 통과, highlight first 계측 없음", "level": "easy" },
@@ -72,7 +72,7 @@
             { "id": "3a-ci", "title": "재생 시험 CI 상시 실행", "platform": "common", "days": 0.1, "status": "done", "note": "푸시마다 ubuntu·Windows·맥·UI(75dd40f 첫 실행 통과)" },
             { "id": "3b-index", "title": "A 근거: 미리 깨우기·UIA 색인·느린 앱 강등", "platform": "win", "days": 0.7, "status": "done" },
             { "id": "3b-msaa", "title": "MSAA 대체 경로", "platform": "win", "days": 0.3, "status": "verify", "note": "msaa.rs 대체 사슬(UIA 빈 창만) + 순수 시험, 실제 창 확인 남음", "level": "hard" },
-            { "id": "3b-dpi", "title": "DPI 모르는 창 좌표 보정(D12)", "platform": "win", "days": 0.2, "status": "verify", "note": "dpi.rs 판정·보정 + 순수 시험, 125%/150% PC 실측 남음(RUNBOOK-windows §2)", "level": "hard" },
+            { "id": "3b-dpi", "title": "DPI 모르는 창 좌표 보정(D12)", "platform": "win", "days": 0.2, "status": "verify", "note": "dpi.rs 판정·보정 + 200%/100% 실측 12개 통과(W5 9070297). 남음: 125%/150% 시스템 배율(사람 승인)", "level": "hard" },
             { "id": "3b-measure", "title": "Chrome 첫 강조 ≤ 진입+30 ms·이동 질의 ≤ 5 ms 측정", "platform": "win", "days": 0.3, "status": "done", "note": "릴리스: V 첫 근거 43~54 ms(진입 56~70), 이동 p95 1.5~4.6 ms. selection probe 로그" },
             { "id": "3b-uia-budget", "title": "UIA 색인 예산(60 ms) 초과·느린 앱 강등 문턱(150 ms×2) 재검토", "platform": "win", "days": 0.3, "status": "done", "note": "문턱 500 ms×2(adef3d3). 색인 자체 80~210 ms는 V가 먼저 강조하고 A는 도착하면 갱신(08 §4.7)" },
             { "id": "3c-engine", "title": "V 엔진(전처리·상자 사다리·평탄·지지율)", "platform": "common", "days": 1.2, "status": "done", "note": "4K 17 ms" },
@@ -127,16 +127,16 @@
             { "id": "6.2", "title": "바로 캡처 키(Shift+F1·Ctrl+F1·Shift+F2·Alt+F1)", "platform": "common", "days": 0.6, "status": "verify", "note": "바로 캡처 4종(직전 범위·커서 모니터·활성 창·지연 3/5/10초, 카운트다운 중 Esc 취소), 화면 확인 남음", "level": "easy" },
             { "id": "6.3", "title": "F3 범위 + Recorder", "platform": "win", "days": 0.6, "status": "verify", "note": "F3 범위·모니터·창 추적 + MF 하드웨어 H.264 녹화기(1080p30 5 Mbps), 10분 녹화 확인 남음", "level": "hard" },
             { "id": "6.4", "title": "녹화 섬·빨간 꺾쇠·트레이 빨간 점", "platform": "common", "days": 0.6, "status": "verify", "note": "녹화 섬·빨간 꺾쇠 창(캡처 제외)·트레이 빨간 점 + 창 추적 녹화 꺾쇠(맥 7b9569f: 이동·크기·최소화·다른 Space 숨김). 남음: 맥 실기, Windows 어댑터 사건", "level": "mid" },
-            { "id": "6.5", "title": "자동 중지·임시 파일 복구·마이크", "platform": "win", "days": 0.6, "status": "partial", "note": "자동 중지·임시 파일 복구 끝. 마이크: 공통 계약(기본 구현)+맥 SCStream 마이크→AAC 7b9569f. 남음: Windows WASAPI(W10), 맥 마이크 실기(권한 창은 사람)", "level": "hard" }
+            { "id": "6.5", "title": "자동 중지·임시 파일 복구·마이크", "platform": "win", "days": 0.6, "status": "verify", "note": "자동 중지·임시 파일 복구 + 마이크: 맥 SCStream→AAC(7b9569f), Windows WASAPI→AAC(2a8f2df), 장치 목록 권한(9998d75). 남음: 두 OS 실제 마이크 녹음(맥 권한 창·Windows 입력 장치 필요)", "level": "hard" }
           ]
         },
         {
           "id": "s65",
           "name": "단계 6.5 — 창 항상 위 고정(P1)",
           "items": [
-            { "id": "6.5.1", "title": "WindowPinner", "platform": "win", "days": 0.34, "status": "verify", "note": "별도 프로세스의 시험 창 고정·풀기 100회 확인. 실제 PowerToys와 주요 앱 조합 확인 남음", "level": "mid" },
+            { "id": "6.5.1", "title": "WindowPinner", "platform": "win", "days": 0.34, "status": "verify", "note": "시험 창 고정·풀기 100회(dce54d8). 남음: PowerToys·주요 앱 조합·관리자 권한 창(사람 승인)", "level": "mid" },
             { "id": "6.5.2", "title": "테두리 창·따라가기", "platform": "win", "days": 0.33, "status": "done", "note": "실제 창 이동·크기 추적 16ms 이내, 최대화·최소화·복원 확인. F1 캡처 경로에서 주황 테두리 0픽셀", "level": "hard" },
-            { "id": "6.5.3", "title": "정리·모두 풀기", "platform": "win", "days": 0.33, "status": "verify", "note": "창 닫힘·일괄 해제와 중단된 프로세스의 표시 정리 확인. 앱 재실행 후 안내 표시 실기 확인 남음", "level": "mid" }
+            { "id": "6.5.3", "title": "정리·모두 풀기", "platform": "win", "days": 0.33, "status": "verify", "note": "창 닫힘·모두 풀기·비정상 종료 정리(dce54d8). 남음: 앱 재실행 직후 안내 표시", "level": "mid" }
           ]
         },
         {
@@ -193,7 +193,7 @@
           "id": "mac-merge",
           "name": "통합 확인(맥 변경을 Windows에서)",
           "items": [
-            { "id": "R-win-regress", "title": "맥 변경 뒤 Windows 회귀 확인(빌드·M1·듀얼 모니터)", "platform": "win", "days": 0.25, "status": "verify", "note": "clippy 수정·M1 p50 55/p95 65·같은 배율 넘어 끌기 확인. 결과 섬 위치·혼합 배율은 미확인", "level": "easy" }
+            { "id": "R-win-regress", "title": "맥 변경 뒤 Windows 회귀 확인(빌드·M1·듀얼 모니터)", "platform": "win", "days": 0.25, "status": "verify", "note": "Windows 기준선(91619e7: 시험 266+390·clippy·빌드·실행) + 혼합 배율 4K 200%↔FHD 100% 실기(9070297: 결과 섬 위치·입력 복귀 고침, 범위·핀·판서·확대 통과). 남음: 1시간 대기 뒤 진입·성능 측정(W7)", "level": "easy" }
           ]
         }
       ]
@@ -252,7 +252,7 @@
             {"id": "R2-PDF", "title": "내 단축키 PDF(책상 옆 한 장)", "platform": "common", "days": 1, "status": "verify", "note": "e3f50ff + save_pdf 2d71338. 앱 안 저장 실기 남음", "level": "easy"},
             {"id": "R2-UPD", "title": "자동 업데이트(맥 OS 도구 + 같은 인증서 확인)", "platform": "mac", "days": 1.5, "status": "verify", "note": "맥 업데이터 + 릴리스 v0.2.0 게시(latest-mac.json 200). 남음: 다음 판에서 실제로 받아 바꿔 끼우는지", "level": "mid"},
             {"id": "R2-OSFIT", "title": "맥·Windows 맞춤 글·표기 검사", "platform": "common", "days": 1, "status": "verify", "note": "표기 34건 고침, OS 변형 키(~mac·~win), 자동 검사 ee71193(R2-OSFIT-3)", "level": "mid"},
-            {"id": "R2-CAP", "title": "스마트 캡처 가림 인지", "platform": "common", "days": 1.5, "status": "verify", "note": "924a904·585073e·e4d14ab — 합성 사례 14/14, 앱 경로 연결·계측. 남음: 실제 앱 화면에서 가린 창 범위 눈 확인", "level": "hard"},
+            {"id": "R2-CAP", "title": "스마트 캡처 가림 인지", "platform": "common", "days": 1.5, "status": "verify", "note": "924a904·585073e·e4d14ab·27a353e — 합성 사례 16/16(가림+여백 cap15·16 포함), 다중 모니터 주석 동기화 ead3814. 남음: 고친 뒤 실제 창 재확인", "level": "hard"},
             {"id": "R2-EXTRA", "title": "덧붙인 개선(기록 묶기·되살리기·추천 묶음·연습 카드 등)", "platform": "common", "days": 2, "status": "verify", "note": "A11Y·추천 묶음·연습 afee97e, 되살리기·기록 묶기 b7a6b31, 스냅숏·성능·점검표 03947df, 최근 목록 fcbebff, 검토 수정 e4d14ab·6dce869. 실기: 되살리기·최근 목록 통과. 남음: 연습 카드·기록 묶기 zip 눈 확인", "level": "mid"}
           ]
         }
