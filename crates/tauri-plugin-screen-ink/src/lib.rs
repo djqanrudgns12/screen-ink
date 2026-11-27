@@ -43,6 +43,7 @@ use tray_art::TrayMode;
 pub const POPOVER: &str = "ink-popover";
 pub const SETTINGS: &str = "ink-settings";
 pub const ISLAND: &str = "ink-island";
+const ISLAND_SIZE: (f64, f64) = (560.0, 88.0);
 const TRAY_ID: &str = "screen-ink";
 /// 화면에 보이는 앱 이름(docs/brand/README.md). 내부 식별자(플러그인·이벤트·트레이 ID)는 `screen-ink` 그대로.
 pub const APP_NAME: &str = "슉쇽";
@@ -471,7 +472,40 @@ fn refresh_window_titles<R: Runtime>(app: &AppHandle<R>, lang: Lang) {
 }
 
 fn show_island<R: Runtime>(app: &AppHandle<R>) {
-    let Some(w) = app.get_webview_window(ISLAND) else { return };
+    let gen = app.state::<IslandGen>().0.fetch_add(1, Ordering::SeqCst) + 1;
+    #[cfg(windows)]
+    {
+        let cursor = ink_platform_windows::screen::cursor_pos();
+        // SetWindowPos는 WebView2 창 절차에 재진입한다. 서비스 잠금을 놓은 다음 창을 옮긴다.
+        overlay::defer(app, move |app| {
+            if app.state::<IslandGen>().0.load(Ordering::SeqCst) != gen {
+                return;
+            }
+            if let Some(w) = app.get_webview_window(ISLAND) {
+                if let Ok(h) = w.hwnd() {
+                    ink_platform_windows::screen::show_island(h.0 as isize, cursor, ISLAND_SIZE);
+                }
+                let _ = w.show();
+            }
+        });
+    }
+    #[cfg(not(windows))]
+    if let Some(w) = app.get_webview_window(ISLAND) {
+        place_island(app, &w);
+    }
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(ISLAND_FALLBACK);
+        if app.state::<IslandGen>().0.load(Ordering::SeqCst) == gen {
+            if let Some(w) = app.get_webview_window(ISLAND) {
+                let _ = w.hide();
+            }
+        }
+    });
+}
+
+#[cfg(not(windows))]
+fn place_island<R: Runtime>(app: &AppHandle<R>, w: &tauri::WebviewWindow<R>) {
     // 커서가 있는 모니터의 위 가운데(02 §7: 단축키 순간 커서 모니터가 대상)
     // 맥: 혼합 배율에서 Tauri 물리 좌표는 옆 화면에 걸쳐 놓인다 → 포인트로 직접 놓는다
     #[cfg(target_os = "macos")]
@@ -491,21 +525,6 @@ fn show_island<R: Runtime>(app: &AppHandle<R>) {
         ink_platform_macos::window::order_front(ns);
     }
     let _ = w.show();
-    // 캡처 중이면 정지 화면·오버레이 창이 나중에 맨 위로 올라와 있다 → 섬을 그 위로(맨 위 무리의 맨 앞)
-    #[cfg(windows)]
-    if let Ok(h) = w.hwnd() {
-        ink_platform_windows::events::set_window_shown(h.0 as isize, true);
-    }
-    let gen = app.state::<IslandGen>().0.fetch_add(1, Ordering::SeqCst) + 1;
-    let app = app.clone();
-    std::thread::spawn(move || {
-        std::thread::sleep(ISLAND_FALLBACK);
-        if app.state::<IslandGen>().0.load(Ordering::SeqCst) == gen {
-            if let Some(w) = app.get_webview_window(ISLAND) {
-                let _ = w.hide();
-            }
-        }
-    });
 }
 
 fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
@@ -538,7 +557,7 @@ fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 
     WebviewWindowBuilder::new(app, ISLAND, WebviewUrl::App("index.html?view=island".into()))
         .title(tr(app, "plugin.window.island"))
-        .inner_size(560.0, 88.0)
+        .inner_size(ISLAND_SIZE.0, ISLAND_SIZE.1)
         .resizable(false)
         .decorations(false)
         .transparent(true)
@@ -1721,6 +1740,8 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String, id: Option<u64>) -> 
         }
         "island.hidden" => {
             log::debug!("island hidden by ui");
+            #[cfg(windows)]
+            app.state::<IslandGen>().0.fetch_add(1, Ordering::SeqCst);
             hide(ISLAND)
         }
         "folder.open" => {

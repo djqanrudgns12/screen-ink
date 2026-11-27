@@ -72,6 +72,33 @@ pub fn cursor_pos() -> PhysPoint {
     PhysPoint { x: p.x, y: p.y }
 }
 
+/// 옮기기 전 창 크기는 이전 모니터의 픽셀이다. 섬의 논리 크기와 위 여백을 도착할 모니터에서 환산한다.
+fn island_rect(monitor: &Monitor, logical_size: (f64, f64)) -> PhysRect {
+    let work = monitor.work;
+    let px = |logical: f64| (logical * monitor.scale).round() as i32;
+    let w = px(logical_size.0).min(work.w);
+    let h = px(logical_size.1).min(work.h);
+    PhysRect::new(work.x + (work.w - w) / 2, work.y + px(12.0).min(work.h - h), w, h)
+}
+
+/// 포커스를 가져오지 않고 커서 모니터의 작업 영역 위 가운데에 섬을 보인다.
+pub fn show_island(hwnd: isize, cursor: PhysPoint, logical_size: (f64, f64)) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOSIZE, SWP_SHOWWINDOW};
+    let layout = monitor_layout();
+    let Some(m) = layout.nearest(cursor) else {
+        crate::events::set_window_shown(hwnd, true);
+        return;
+    };
+    let r = island_rect(m, logical_size);
+    // 위치와 크기를 함께 주면 WM_DPICHANGED가 새 물리 크기에 배율을 한 번 더 적용한다.
+    // 먼저 이전 크기 그대로 모니터를 건너고, 도착한 뒤 작업 영역에 맞춘다.
+    // SAFETY: 두 호출 모두 앱 소유의 섬 창만 옮기며 포커스를 가져오지 않는다.
+    unsafe {
+        SetWindowPos(hwnd as HWND, HWND_TOPMOST, r.x, r.y, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE);
+        SetWindowPos(hwnd as HWND, HWND_TOPMOST, r.x, r.y, r.w, r.h, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    }
+}
+
 // ───────────── 창 목록 ─────────────
 
 unsafe extern "system" fn collect_window(h: HWND, data: LPARAM) -> BOOL {
@@ -408,6 +435,19 @@ impl MonitorProbe for WindowsScreen {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn 섬은_도착_모니터의_배율과_작업_영역을_쓴다() {
+        for (work, scale, want) in [
+            (PhysRect::new(0, 0, 3840, 2064), 2.0, PhysRect::new(1360, 24, 1120, 176)),
+            (PhysRect::new(3840, 0, 1920, 1032), 1.0, PhysRect::new(4520, 12, 560, 88)),
+            (PhysRect::new(-1600, -160, 1600, 960), 1.25, PhysRect::new(-1150, -145, 700, 110)),
+            (PhysRect::new(80, 40, 500, 90), 1.5, PhysRect::new(80, 40, 500, 90)),
+        ] {
+            let m = Monitor { id: 0, bounds: work, work, scale, primary: false };
+            assert_eq!(island_rect(&m, (560.0, 88.0)), want);
+        }
+    }
 
     #[test]
     fn 이_pc의_모니터와_창과_캡처() {

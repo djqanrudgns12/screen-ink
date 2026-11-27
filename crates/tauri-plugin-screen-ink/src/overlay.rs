@@ -536,9 +536,13 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
                 }
                 for l in &shown_labels {
                     if let Some(w) = h.get_webview_window(l) {
+                        #[cfg(not(windows))]
                         let _ = show_raw(&w, false);
                         let _ = w.set_ignore_cursor_events(false);
                         let _ = w.set_background_color(Some(Color(0, 0, 0, 0)));
+                        // 클릭 통과 해제가 창 스타일을 다시 적용한다. 잔상 창은 그 뒤에 숨겨야 입력이 돌아간다.
+                        #[cfg(windows)]
+                        let _ = show_raw(&w, false);
                     }
                 }
             });
