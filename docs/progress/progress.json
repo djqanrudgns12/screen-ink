@@ -57,7 +57,7 @@
             { "id": "2.2", "title": "오버레이 창 미리 만들기·투명도 재지정", "platform": "win", "days": 0.35, "status": "verify", "note": "오버레이 미리 만들기·투명도 재지정, 혼합 배율 첫 진입 표본 128개 검은 화면 0(W5). 남음: 1시간 대기 뒤 진입", "level": "easy" },
             { "id": "2.3", "title": "정지 프레임·ink:// 프로토콜", "platform": "win", "days": 0.35, "status": "done" },
             { "id": "2.4", "title": "이미지·창 목록·모니터 같은 순간", "platform": "win", "days": 0.35, "status": "done" },
-            { "id": "2.5", "title": "진입 계측·M1 측정", "platform": "win", "days": 0.35, "status": "verify", "note": "M1 캡처 진입 p95 4K 79·FHD 82 ms 통과(W7 a34df56, 100회씩), highlight first 계측 추가 — 첫 강조는 미달 → W16", "level": "easy" },
+            { "id": "2.5", "title": "진입 계측·M1 측정", "platform": "win", "days": 0.35, "status": "verify", "note": "M1 캡처 진입 p95 4K 79·FHD 82 ms 통과(W7), 첫 강조 p95 FHD 25 ms 통과·4K 38 ms(목표 30, W16에서 244→38). 남음: 4K 첫 강조 8 ms", "level": "easy" },
             { "id": "2.6", "title": "SystemEvents(잠금·절전·보안 데스크톱)", "platform": "win", "days": 0.35, "status": "verify", "note": "S12·S13 시나리오 카드 기록 남음", "level": "easy" },
             { "id": "2.7", "title": "섬 호스트·12상태·알림 큐", "platform": "common", "days": 0.4, "status": "done" }
           ]
@@ -83,7 +83,7 @@
             { "id": "3e-output", "title": "복사(DIB+PNG)·저장·기록·결과 섬(썸네일·저장)", "platform": "common", "days": 0.6, "status": "done" },
             { "id": "3e-paste", "title": "한글·PPT에 붙여 넣어 크기·색 확인", "platform": "win", "days": 0.05, "status": "todo", "level": "easy" },
             { "id": "3e-chip", "title": "결과 섬 HEX 칩·주황 잔상 0.4초", "platform": "common", "days": 0.15, "status": "verify", "note": "구현·시험 끝, 잔상은 이미 CaptureOverlay 사건(eval 없음). 맥 실기 M16 확인. 남음: Windows 확인", "level": "easy" },
-            { "id": "3e-handoff", "title": "[판서로] 이어받기 ≤ 150 ms", "platform": "common", "days": 0.2, "status": "partial", "note": "[그리기로] 맥 71~82 ms·Windows FHD 105 ms 통과, Windows 4K 323 ms 미달 → W16", "level": "mid" },
+            { "id": "3e-handoff", "title": "[판서로] 이어받기 ≤ 150 ms", "platform": "common", "days": 0.2, "status": "verify", "note": "[그리기로] 맥 71~82 ms, Windows FHD 105·4K 82 ms 통과(W16)", "level": "mid" },
             { "id": "3g-toolbar", "title": "선택 툴바(R-CAP-27): 위치 규칙·여러 모니터·취소/저장/복사·툴팁 키", "platform": "common", "days": 0.5, "status": "done", "note": "Windows 실제 앱 확인(2026-11-26: 확정 → 오른쪽 아래 툴바, [취소] 클릭으로 끝남). 위·안쪽 배치는 단위 시험, 맥은 인수인계 §2.6" },
             { "id": "3h-pin", "title": "캡처 핀(R-CAP-29): 툴바 [고정] → 늘 위 이미지 창·끌기·휠 확대·투명도·우클릭 메뉴·트레이 모두 닫기", "platform": "common", "days": 1, "status": "done", "note": "Windows 실제 앱 확인(2026-11-26): 원래 자리 생성·휠 125%·오른쪽 클릭 메뉴·끌기·두 번 클릭 닫기. Ctrl+휠 투명도·메뉴 복사/저장은 시험만, 맥 혼합 배율 자리는 인수인계 §2.6" },
             { "id": "3g-keys", "title": "화면 안 키 설정 반영(R-KEY-6): c-* 키로 판정, 맥 Cmd", "platform": "common", "days": 0.25, "status": "done", "note": "Space로 바꾸면 Space = 복사(서비스 시험)" },
@@ -114,7 +114,7 @@
           "items": [
             { "id": "5.1", "title": "Magnifier(Magnification API)·M6", "platform": "win", "days": 0.4, "status": "verify", "note": "magnifier.rs(전용 스레드·미리 만들기·EXCLUDE 필터)·포트·유스케이스·가짜 시험, 실제 화면 확인 남음", "level": "hard" },
             { "id": "5.2", "title": "커서 따라가기·휠 단계·배지", "platform": "common", "days": 0.4, "status": "verify", "note": "zoom.rs 추적·휠 단계·배지 + 시험, 화면 확인 남음", "level": "mid" },
-            { "id": "5.3", "title": "Alt+1 전환", "platform": "common", "days": 0.4, "status": "partial", "note": "확대 중 Alt+1 전환 FHD p95 129 ms 통과, 4K 385 ms 미달 → W16", "level": "mid" },
+            { "id": "5.3", "title": "Alt+1 전환", "platform": "common", "days": 0.4, "status": "verify", "note": "확대 중 Alt+1 전환 FHD p95 129 ms, 4K 138 ms 통과(W16: 판서 원본을 WebView2 공유 메모리로). 남음: 맥 실측", "level": "mid" },
             { "id": "5.4", "title": "4K 30 fps 미달 시 2안 판단", "platform": "win", "days": 0.4, "status": "done", "note": "4K 실시간 확대 앱 루프 82.5 fps(W7) — 30 fps 넘어 Magnification API 유지(2안 불필요)", "level": "mid" },
             { "id": "5.5", "title": "확대 섬·후광·MiniMap(원본 제외)", "platform": "common", "days": 0.4, "status": "verify", "note": "ZoomHud·후광·MiniMap(원본 제외) 구현, 화면 확인 남음", "level": "mid" }
           ]
