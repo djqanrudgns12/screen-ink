@@ -20,7 +20,10 @@ import {
   mosaicItem,
   mosaicSourcePlan,
   mosaicToPhys,
+  normalizeAnnotTool,
   renderAnnotationLayer,
+  shouldBlockCapturePointer,
+  syncAnnotToolFromView,
   wheelStep,
 } from './captureAnnotate.js';
 import { createInkEngine, itemCount } from '../ink/inkEngine.js';
@@ -297,4 +300,46 @@ test('글 상자 편집 중 초점이 상자 밖이어도 Esc는 글자 확정(c
   assert.equal(matchCaptureAnnotKey({ ...k('Escape'), key: 'Escape', isComposing: true }, { confirmed: true, toolActive: true, editing: true }), null);
   assert.deepEqual(matchCaptureAnnotKey({ ...k('Escape'), key: 'Escape', ctrlKey: true }, { confirmed: true, toolActive: true, editing: true }), { type: 'text' });
   assert.deepEqual(matchCaptureAnnotKey(k('KeyR'), { confirmed: true, toolActive: true, editing: true }), { type: 'text' });
+});
+
+test('세션 단위 주석 도구 동기화(W5): 한쪽 창 도구 선택 시 다른 창도 동기화되고 포인터 드래그를 차단한다', () => {
+  assert.equal(normalizeAnnotTool('pen'), 'pen');
+  assert.equal(normalizeAnnotTool('unknown'), null);
+  assert.equal(normalizeAnnotTool(null), null);
+
+  // 오른쪽 창에서 펜을 골랐을 때 왼쪽 창은 view.annotTool === 'pen'을 받아 동기화된다
+  assert.equal(syncAnnotToolFromView(null, { phase: 'confirmed', annotTool: 'pen' }), 'pen');
+  assert.equal(syncAnnotToolFromView('pen', { phase: 'confirmed', annotTool: null }), null);
+  // hover로 돌아가면 도구 해제
+  assert.equal(syncAnnotToolFromView('pen', { phase: 'hover', annotTool: 'pen' }), null);
+  // annotTool 필드가 없는 구형 view 호환
+  assert.equal(syncAnnotToolFromView('pen', { phase: 'confirmed' }), 'pen');
+
+  // 포인터 차단: 로컬 annotTool 또는 view.annotTool 둘 중 하나라도 있으면 범위 드래그 차단
+  assert.equal(shouldBlockCapturePointer('pen', { phase: 'confirmed', annotTool: null }), true);
+  assert.equal(shouldBlockCapturePointer(null, { phase: 'confirmed', annotTool: 'pen' }), true);
+  assert.equal(shouldBlockCapturePointer(null, { phase: 'confirmed', annotTool: null }), false);
+});
+
+test('4K 200% + FHD 100% 혼합 배율 경계 캡처에서 양쪽 모니터 주석 좌표가 물리 좌표와 정확히 일치한다', () => {
+  const monLeft = { id: 0, bounds: { x: 0, y: 0, w: 3840, h: 2160 }, scale: 2 };
+  const monRight = { id: 1, bounds: { x: 3840, y: 0, w: 1920, h: 1080 }, scale: 1 };
+  const rect = { x: 3500, y: 320, w: 600, h: 400 };
+  const anchor = { x: rect.x, y: rect.y };
+
+  // 왼쪽 모니터(200%): 물리 (3590, 430) -> CSS (1795, 215), anchor CSS (1750, 160) -> 문서 (45, 55) -> export 2배 -> (90, 110)
+  const leftAnchorCss = anchorToCss(anchor, monLeft);
+  assert.deepEqual(leftAnchorCss, { x: 1750, y: 160 });
+  const leftDoc = cssToDoc(3590 / 2, 430 / 2, leftAnchorCss);
+  assert.deepEqual(leftDoc, { x: 45, y: 55 });
+  const leftTf = exportTransform(anchor, rect, monLeft.scale);
+  assert.deepEqual([leftDoc.x * leftTf[0] + leftTf[4], leftDoc.y * leftTf[3] + leftTf[5]], [90, 110]);
+
+  // 오른쪽 모니터(100%): 물리 (3900, 480) -> CSS (60, 480), anchor CSS (-340, 320) -> 문서 (400, 160) -> export 1배 -> (400, 160)
+  const rightAnchorCss = anchorToCss(anchor, monRight);
+  assert.deepEqual(rightAnchorCss, { x: -340, y: 320 });
+  const rightDoc = cssToDoc(3900 - 3840, 480, rightAnchorCss);
+  assert.deepEqual(rightDoc, { x: 400, y: 160 });
+  const rightTf = exportTransform(anchor, rect, monRight.scale);
+  assert.deepEqual([rightDoc.x * rightTf[0] + rightTf[4], rightDoc.y * rightTf[3] + rightTf[5]], [400, 160]);
 });

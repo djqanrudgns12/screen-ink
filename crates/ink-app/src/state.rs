@@ -181,6 +181,11 @@ pub struct CaptureView {
     pub session: u64,
     #[serde(flatten)]
     pub selection: ink_domain::selection::SelectionView,
+    /// 지금 고른 주석 도구(세션 단위 — 모든 오버레이 창이 같은 도구를 쓴다).
+    pub annot_tool: Option<String>,
+    /// 세션 전체 주석의 실행 취소·다시 실행 가능 여부.
+    pub annot_can_undo: bool,
+    pub annot_can_redo: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]

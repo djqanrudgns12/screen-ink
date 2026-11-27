@@ -282,6 +282,10 @@ impl SettingsStore for MemoryStore {
 pub struct Inbox {
     pub islands: Vec<IslandEvent>,
     pub states: usize,
+    /// `screen-ink://capture`로 보낸 고르기 상태
+    pub captures: Vec<ink_app::CaptureView>,
+    /// 캡처 주석 실행 취소·다시 실행 명령(세션, 모니터 id, 명령)
+    pub capture_commands: Vec<(u64, u32, String)>,
     /// `screen-ink://draw`로 보낸 판서 세션
     pub draws: Vec<DrawSession>,
     /// 섬 단추 → 판서 엔진 명령(세션, 명령)
@@ -302,6 +306,14 @@ impl Notifier for RecordingNotifier {
 
     fn island(&self, event: &IslandEvent) {
         self.0.lock().unwrap().islands.push(event.clone());
+    }
+
+    fn capture(&self, view: &ink_app::CaptureView) {
+        self.0.lock().unwrap().captures.push(view.clone());
+    }
+
+    fn capture_command(&self, session: u64, monitor_id: u32, command: &str) {
+        self.0.lock().unwrap().capture_commands.push((session, monitor_id, command.to_string()));
     }
 
     fn draw(&self, session: &DrawSession) {

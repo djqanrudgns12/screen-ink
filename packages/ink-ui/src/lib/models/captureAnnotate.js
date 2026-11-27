@@ -35,6 +35,43 @@ export const TOOL_KEY_CODES = Object.freeze({
   KeyT: 'text',
   KeyE: 'eraser',
 });
+export const ANNOT_TOOL_IDS = Object.freeze(Object.values(TOOL_KEY_CODES));
+
+/**
+ * 유효한 캡처 주석 도구 id만 남기고 나머지는 null로 정규화한다.
+ * @param {string | null | undefined} tool
+ * @returns {string | null}
+ */
+export function normalizeAnnotTool(tool) {
+  return typeof tool === 'string' && ANNOT_TOOL_IDS.includes(tool) ? tool : null;
+}
+
+/**
+ * Rust CaptureView가 알려 준 세션 단위 도구 상태를 이 창 도구 상태에 반영할 값을 돌려준다.
+ * - phase가 'hover'면 주석 도구는 항상 꺼진다(null).
+ * - view.annotTool 필드가 생략된 구형 view면 현재 상태를 유지한다.
+ * @param {string | null} currentTool
+ * @param {{ phase?: string, annotTool?: string | null } | null | undefined} view
+ * @returns {string | null}
+ */
+export function syncAnnotToolFromView(currentTool, view) {
+  if (!view) return currentTool;
+  if (view.phase === 'hover') return null;
+  if (!Object.prototype.hasOwnProperty.call(view, 'annotTool')) return currentTool;
+  return view.phase === 'confirmed' ? normalizeAnnotTool(view.annotTool) : null;
+}
+
+/**
+ * 오버레이 창에서 포인터/휠 입력을 Rust 범위 고르기(CaptureInput)로 보내면 안 되는지 판정한다.
+ * 한 창에서 도구를 고른 직후 다른 모니터 창으로 넘어가도 view.annotTool로 차단한다.
+ * @param {string | null | undefined} annotTool
+ * @param {{ phase?: string, annotTool?: string | null } | null | undefined} view
+ * @returns {boolean}
+ */
+export function shouldBlockCapturePointer(annotTool, view) {
+  if (normalizeAnnotTool(annotTool)) return true;
+  return Boolean(view && view.phase === 'confirmed' && normalizeAnnotTool(view.annotTool));
+}
 /** 이보다 작게 끈 모자이크·도형은 만들지 않는다(CSS px). */
 export const MIN_DRAG_PX = 2;
 /** 휠 한 단계로 볼 누적 deltaY(px) — 엔진 WHEEL_STEP_DELTA와 같게(맥 휠 한 칸 = 40 px). */

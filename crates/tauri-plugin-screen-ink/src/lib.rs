@@ -54,6 +54,7 @@ const LEGACY_DIR: &str = "screen-ink";
 const EVT_STATE: &str = "screen-ink://state";
 const EVT_ISLAND: &str = "screen-ink://island";
 const EVT_CAPTURE: &str = "screen-ink://capture";
+const EVT_CAPTURE_COMMAND: &str = "screen-ink://capture-command";
 const EVT_DRAW: &str = "screen-ink://draw";
 /// 다시 시작(화면 기록 권한 반영, M10)
 const ACTION_RELAUNCH: &str = "app.relaunch";
@@ -221,6 +222,10 @@ impl<R: Runtime> Notifier for TauriNotifier<R> {
 
     fn capture(&self, view: &ink_app::CaptureView) {
         let _ = self.app.emit(EVT_CAPTURE, view);
+    }
+
+    fn capture_command(&self, session: u64, monitor_id: u32, command: &str) {
+        let _ = self.app.emit(EVT_CAPTURE_COMMAND, serde_json::json!({ "session": session, "monitorId": monitor_id, "command": command }));
     }
 
     fn draw(&self, session: &ink_app::DrawSession) {

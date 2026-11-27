@@ -14,6 +14,7 @@ export const EVENT_MAP = Object.freeze([
   ['screen-ink://island', (p) => ({ type: 'island', island: p })],
   ['screen-ink://overlay', (p) => ({ type: 'overlay', overlay: p })],
   ['screen-ink://capture', (p) => ({ type: 'capture', view: p })],
+  ['screen-ink://capture-command', (p) => ({ type: 'captureCommand', ...p })],
   ['screen-ink://draw', (p) => ({ type: 'draw', draw: p })],
   ['screen-ink://draw-command', (p) => ({ type: 'drawCommand', ...p })],
   ['screen-ink://afterimage', (p) => ({ type: 'afterimage', afterimage: p })],

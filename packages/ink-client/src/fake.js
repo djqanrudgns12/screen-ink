@@ -126,9 +126,9 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
   let nextFrameUrl = null;
   /**
    * 캡처 주석(4.9 · R2-UNDO-1) 흉내: 창(모니터) → 주석 개수·스냅숏, 부탁 순번·기다리는 부탁, 받은 답(시험용).
-   * @type {{ session: number, items: Map<number, number>, snapshots: Map<number, any>, seq: number, pending: any, answers: any[], bypass: boolean }}
+   * @type {{ session: number, tool: string | null, items: Map<number, number>, snapshots: Map<number, any>, depths: Map<number, { u: number, r: number }>, undoStack: number[], redoStack: number[], seq: number, pending: { request: any, expected: Set<number>, received: Set<number> } | null, answers: any[], bypass: boolean }}
    */
-  const annot = { session: 0, items: new Map(), snapshots: new Map(), seq: 0, pending: null, answers: [], bypass: false };
+  const annot = { session: 0, tool: null, items: new Map(), snapshots: new Map(), depths: new Map(), undoStack: [], redoStack: [], seq: 0, pending: null, answers: [], bypass: false };
   /** @type {{ kind: 'region'|'window'|'record', rect: any, items: Map<number, number>, snapshots: Map<number, any>, at: number } | null} */
   let discarded = null;
   /** @type {any[]} */
@@ -258,6 +258,11 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     if (mode.mode !== 'capture') return;
     mode = { mode: 'idle' };
     capture = null;
+    annot.tool = null;
+    annot.pending = null;
+    annot.depths.clear();
+    annot.undoStack = [];
+    annot.redoStack = [];
     changed();
     island({ kind: 'end', text: '' });
   };
@@ -401,6 +406,90 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         { name: '표', r: { x: Math.max(240, p.x - 360), y: Math.max(120, p.y - 120), w: 720, h: 240 } },
         { name: '2행', r: { x: Math.max(240, p.x - 360), y: p.y - 20, w: 720, h: 40 } },
       ];
+      const emitView = (alt = false) => {
+        const chain = chainAt(s.p);
+        const rect = s.phase === 'hover' ? chain[s.level].r : s.rect;
+        const activeTool = s.phase === 'confirmed' && annot.session === mode.session ? annot.tool : null;
+        const hasSession = annot.session === mode.session;
+        emit({
+          type: 'capture',
+          view: {
+            session: mode.session, phase: s.phase, rect, path: chain.map((c) => c.name), level: s.phase === 'hover' ? s.level : -1, guides: [], magnet: !alt, cursorIncluded: false, help: s.help,
+            annotTool: activeTool,
+            annotCanUndo: hasSession && annot.undoStack.length > 0,
+            annotCanRedo: hasSession && annot.redoStack.length > 0,
+            // 숨은 설정 capture.evidence: 작은 것 → 큰 것
+            ...(settings['capture.evidence'] && s.phase === 'hover'
+              ? { evidence: [...chain].reverse().map((c, i) => ({ rect: c.r, label: c.name, score: [0.86, 0.74, 0.61, 0.3][i], sources: ['W·A·V', 'W·V', 'W', 'W'][i], current: chain.length - 1 - i === s.level, hidden: false })) }
+              : {}),
+          },
+        });
+      };
+      if (annot.session !== mode.session) {
+        annot.session = mode.session;
+        annot.tool = null;
+        annot.depths.clear();
+        annot.undoStack = [];
+        annot.redoStack = [];
+      }
+      if (input.type === 'annotTool') {
+        annot.tool = s.phase === 'confirmed' ? (input.tool ?? null) : null;
+        emitView();
+        return;
+      }
+      if (input.type === 'annotHistorySync') {
+        const mid = input.monitorId;
+        const u = Number(input.undoDepth) || 0;
+        const r = Number(input.redoDepth) || 0;
+        const prev = annot.depths.get(mid) ?? { u: 0, r: 0 };
+        if (prev.u === u && prev.r === r) return;
+        annot.depths.set(mid, { u, r });
+        if (u > prev.u) {
+          for (let i = 0; i < Math.min(200, u - prev.u); i++) {
+            if (annot.undoStack.length >= 200) annot.undoStack.shift();
+            annot.undoStack.push(mid);
+          }
+          if (r === 0) annot.redoStack = [];
+        } else if (u === 0 && prev.u > 0) {
+          annot.undoStack = annot.undoStack.filter((m) => m !== mid);
+          if (r === 0) annot.redoStack = annot.redoStack.filter((m) => m !== mid);
+        }
+        emitView();
+        return;
+      }
+      if (input.type === 'annotHistory') {
+        if (input.dir === 'undo') {
+          const mid = annot.undoStack.pop();
+          if (mid == null) return;
+          annot.redoStack.push(mid);
+          const d = annot.depths.get(mid) ?? { u: 1, r: 0 };
+          annot.depths.set(mid, { u: Math.max(0, d.u - 1), r: d.r + 1 });
+          emit({ type: 'captureCommand', session: mode.session, monitorId: mid, command: 'undo' });
+          emitView();
+        } else if (input.dir === 'redo') {
+          const mid = annot.redoStack.pop();
+          if (mid == null) return;
+          annot.undoStack.push(mid);
+          const d = annot.depths.get(mid) ?? { u: 0, r: 1 };
+          annot.depths.set(mid, { u: d.u + 1, r: Math.max(0, d.r - 1) });
+          emit({ type: 'captureCommand', session: mode.session, monitorId: mid, command: 'redo' });
+          emitView();
+        }
+        return;
+      }
+      if (s.phase === 'confirmed' && annot.tool) {
+        if (input.type === 'move' || input.type === 'down' || input.type === 'up' || input.type === 'dblclick' || input.type === 'wheel') {
+          return;
+        }
+        if (input.type === 'key' && (input.code === 'Escape' || input.key === 'Escape') && !input.ctrl && !input.shift && !input.alt && !input.meta) {
+          annot.tool = null;
+          emitView();
+          return;
+        }
+        if (input.type === 'key' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(input.code)) {
+          return;
+        }
+      }
       // 캡처 주석(4.9): 주석이 있으면 결과 전에 주석 층을 부탁한다(진짜는 Rust commit → screen-ink://capture-commit)
       const commitAction =
         input.type === 'command' && ['copy', 'save', 'quickSave', 'pin'].includes(input.name)
@@ -410,8 +499,10 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
             : null;
       if (commitAction && !annot.bypass && annotated()) {
         annot.seq += 1;
-        annot.pending = { session: mode.session, seq: annot.seq, action: commitAction, rect: s.rect ?? chainAt(s.p)[s.level].r };
-        emit({ type: 'captureCommit', request: { ...annot.pending } });
+        const request = { session: mode.session, seq: annot.seq, action: commitAction, rect: s.rect ?? chainAt(s.p)[s.level].r };
+        const expected = new Set([...annot.items.entries()].filter(([, n]) => n > 0).map(([m]) => m));
+        annot.pending = { request, expected, received: new Set() };
+        emit({ type: 'captureCommit', request: { ...request } });
         return;
       }
       if (input.type === 'move') {
@@ -431,6 +522,10 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       } else if (input.type === 'down' && input.button === 2) {
         if (s.phase === 'hover') return this.run('capture.cancel');
         s.phase = 'hover'; s.rect = null;
+        annot.tool = null;
+        annot.depths.clear();
+        annot.undoStack = [];
+        annot.redoStack = [];
       } else if ((input.type === 'key' && input.key === 'Escape') || (input.type === 'command' && input.name === 'cancel')) {
         return this.run('capture.cancel');
       } else if (input.type === 'key' && input.key === '?') {
@@ -469,18 +564,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         island({ kind: 'result', variant: 'result', text: '복사했어요', value: `${r.w}×${r.h}`, detail: isMac ? '한글·PPT에 ⌘V' : '한글·PPT에 Ctrl+V', thumbUrl: frameUrl, button: { label: '저장', action: 'capture.saveLast' }, buttonKey: isMac ? 'Cmd+S' : 'Ctrl+S', chip: { label: `${lastHex} 복사`, action: 'capture.copyHex' }, ...toDrawButton() });
         return;
       }
-      const chain = chainAt(s.p);
-      const rect = s.phase === 'hover' ? chain[s.level].r : s.rect;
-      emit({
-        type: 'capture',
-        view: {
-          session: mode.session, phase: s.phase, rect, path: chain.map((c) => c.name), level: s.phase === 'hover' ? s.level : -1, guides: [], magnet: !input.alt, cursorIncluded: false, help: s.help,
-          // 숨은 설정 capture.evidence: 작은 것 → 큰 것
-          ...(settings['capture.evidence'] && s.phase === 'hover'
-            ? { evidence: [...chain].reverse().map((c, i) => ({ rect: c.r, label: c.name, score: [0.86, 0.74, 0.61, 0.3][i], sources: ['W·A·V', 'W·V', 'W', 'W'][i], current: chain.length - 1 - i === s.level, hidden: false })) }
-            : {}),
-        },
-      });
+      emitView(input.alt);
     },
     async pinInfo(id) {
       const p = pins.get(id) ?? (id === 0 ? { w: 718, h: 240, zoom: 100 } : null);
@@ -513,8 +597,12 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       if (mode.mode !== 'capture' || mode.session !== session) return;
       if (annot.session !== session) {
         annot.session = session;
+        annot.tool = null;
         annot.items = new Map();
         annot.snapshots = new Map();
+        annot.depths = new Map();
+        annot.undoStack = [];
+        annot.redoStack = [];
         annot.pending = null;
       }
       if (items > 0) {
@@ -523,11 +611,18 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       } else {
         annot.items.delete(monitorId);
         annot.snapshots.delete(monitorId);
+        annot.pending?.expected?.delete(monitorId);
       }
       if (!annotated() && annot.pending) {
         const p = annot.pending;
         annot.pending = null;
-        await runPlain(this, p.action);
+        await runPlain(this, p.request.action);
+        return;
+      }
+      if (annot.pending && [...annot.pending.expected].every((m) => annot.pending.received.has(m))) {
+        const p = annot.pending;
+        annot.pending = null;
+        await runPlain(this, p.request.action);
       }
     },
     async exportDiagnostics(opts) {
@@ -549,10 +644,15 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
     get diagLog() { return diagLog.map((d) => ({ ...d })); },
     async captureCommitAnnotated(meta, rgba) {
       const p = annot.pending;
-      if (!p || mode.mode !== 'capture' || meta.session !== p.session || meta.seq !== p.seq) return;
-      annot.pending = null;
+      if (!p || mode.mode !== 'capture' || meta.session !== p.request.session || meta.seq !== p.request.seq) return;
+      const mid = meta.monitorId != null ? meta.monitorId : [...p.expected].find((m) => !p.received.has(m));
+      if (mid == null || !p.expected.has(mid) || p.received.has(mid)) return;
+      p.received.add(mid);
       annot.answers.push({ meta, bytes: rgba ? rgba.length : 0 });
-      await runPlain(this, p.action);
+      if ([...p.expected].every((m) => p.received.has(m))) {
+        annot.pending = null;
+        await runPlain(this, p.request.action);
+      }
     },
     /** 시험용: 받은 주석 층 답(머리·바이트 수) */
     get annotatedLog() { return annot.answers.map((a) => ({ ...a })); },
@@ -738,6 +838,14 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         discarded = null;
         const kind = CAPTURE_ACTION[action];
         sessionSeq += 1;
+        annot.session = sessionSeq;
+        annot.tool = null;
+        annot.items = new Map();
+        annot.snapshots = new Map();
+        annot.depths = new Map();
+        annot.undoStack = [];
+        annot.redoStack = [];
+        annot.pending = null;
         mode = { mode: 'capture', session: sessionSeq, kind, startedMs: Date.now() };
         const bounds = { x: 0, y: 0, w: 1920, h: 1080 };
         emit({
@@ -766,8 +874,12 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
         mode = { mode: 'capture', session: sessionSeq, kind: d.kind, startedMs: Date.now() };
         capture = { phase: 'confirmed', level: 3, p: { x: 760, y: 420 }, rect: d.rect, down: null, help: false };
         annot.session = sessionSeq;
+        annot.tool = null;
         annot.items = new Map(d.items);
         annot.snapshots = new Map(d.snapshots);
+        annot.depths = new Map();
+        annot.undoStack = [];
+        annot.redoStack = [];
         annot.pending = null;
         const bounds = { x: 0, y: 0, w: 1920, h: 1080 };
         emit({

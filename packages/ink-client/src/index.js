@@ -147,6 +147,7 @@
  * @property {number} session
  * @property {number} seq
  * @property {CommitAction} action
+ * @property {number} [monitorId]  답을 보낸 오버레이 창의 모니터 id
  * @property {number} w            주석 층 크기(층이 없으면 0)
  * @property {number} h
  * @property {MosaicRect[]} mosaics
@@ -180,12 +181,18 @@
  * @property {boolean} cursorIncluded               ` 키 — 크기 배지에 "커서 포함"
  * @property {boolean} help                         ? 키 — 섬 키 안내 둘째 줄을 강제로 보임
  * @property {{rect: PhysRect, label: string, score: number, sources: string, current: boolean, hidden: boolean}[]} [evidence]  숨은 설정 capture.evidence — 사슬 마디(작은 것 → 큰 것)의 근거·점수
+ * @property {string | null} [annotTool]            지금 고른 주석 도구(세션 단위 — 모든 오버레이 창이 같은 도구를 쓴다)
+ * @property {boolean} [annotCanUndo]               세션 전체 주석 실행 취소 가능 여부
+ * @property {boolean} [annotCanRedo]               세션 전체 주석 다시 실행 가능 여부
  *
  * @typedef {{type:'move', x:number, y:number}
  *   | {type:'wheel', dy:-1|1}
  *   | {type:'down'|'up'|'dblclick', x:number, y:number, button:0|2}
  *   | {type:'key', key:string, code:string, ctrl:boolean, shift:boolean, alt:boolean, meta?:boolean}
- *   | {type:'command', name:'copy'|'save'|'quickSave'|'cancel'}} CaptureInput
+ *   | {type:'command', name:'copy'|'save'|'quickSave'|'cancel'}
+ *   | {type:'annotTool', tool:string|null}
+ *   | {type:'annotHistory', dir:'undo'|'redo'}
+ *   | {type:'annotHistorySync', monitorId:number, undoDepth:number, redoDepth:number}} CaptureInput
  *   command = 선택 툴바 단추(R-CAP-27) — 키와 같은 결과(Rust가 판단). meta = 맥 Cmd.
  *   좌표는 물리 px(가상 화면) = monitor.bounds + client × scale. wheel dy = -1 위(넓히기·부모) / 1 아래(좁히기·자식).
  *   key는 e.key와 e.code를 같이(한글 입력 중에도 code로 판단). Esc·우클릭·Enter 등 판단은 모두 Rust가 한다.
@@ -268,6 +275,8 @@
  * @typedef {{n: number, p50: number, p95: number, max: number}} PenSample  소프트웨어 펜 지연(ms) — M5
  *
  * @typedef {{session: number, command: 'acceptSuggestion'|'undo'}} DrawCommand  섬 단추 → 그 세션 오버레이의 엔진
+ *
+ * @typedef {{session: number, monitorId: number, command: 'undo'|'redo'}} CaptureCommand  캡처 주석 실행 취소·다시 실행 → 해당 모니터 오버레이 창
  */
 
 /**
@@ -303,7 +312,7 @@
  * @property {(session: number, monitorId: number, items: number, data?: any) => Promise<void>} [captureAnnotations]  캡처 주석(4.9 · R2-UNDO-1): 이 창의 주석 개수와 되살리기용 직렬화 데이터. 0개면 결과는 지금 경로 그대로
  * @property {(meta: CaptureCommitMeta, rgba: Uint8Array | Uint8ClampedArray | null) => Promise<void>} [captureCommitAnnotated]  'captureCommit' 부탁의 답 — 투명 주석 층(곧은 알파 RGBA, getImageData 그대로) + 모자이크 사각형. Rust가 원본에 합성
  * @property {(opts?: { includeShortcuts?: boolean }) => Promise<{ok: boolean, name?: string, error?: string}>} [exportDiagnostics]  문제 보고용 기록 묶기(R2-DIAG-1) — zip 하나로 다운로드 폴더에 저장
- * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView} | {type: 'afterimage', afterimage: AfterimageEvent} | {type: 'zoom', zoom: LiveZoomState | null} | {type: 'draw', draw: DrawSession} | ({type: 'drawCommand'} & DrawCommand) | {type: 'captureCommit', request: CaptureCommitRequest}) => void) => () => void} subscribe
+ * @property {(handler: (e: {type: 'state', state: InkState} | {type: 'island', island: IslandEvent} | {type: 'overlay', overlay: OverlaySession} | {type: 'capture', view: CaptureView} | {type: 'afterimage', afterimage: AfterimageEvent} | {type: 'zoom', zoom: LiveZoomState | null} | {type: 'draw', draw: DrawSession} | ({type: 'drawCommand'} & DrawCommand) | ({type: 'captureCommand'} & CaptureCommand) | {type: 'captureCommit', request: CaptureCommitRequest}) => void) => () => void} subscribe
  */
 
 /**

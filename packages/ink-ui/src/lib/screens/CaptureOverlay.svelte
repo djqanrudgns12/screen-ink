@@ -33,6 +33,9 @@
     exportAnnotationAsync,
     matchCaptureAnnotKey,
     mosaicSourcePlan,
+    normalizeAnnotTool,
+    shouldBlockCapturePointer,
+    syncAnnotToolFromView,
     wheelStep,
   } from '../models/captureAnnotate.js';
   import {
@@ -181,6 +184,8 @@
   let annot = $state.raw(null);
   let annotCanUndo = $state(false);
   let annotCanRedo = $state(false);
+  let sessionAnnotCanUndo = $state(false);
+  let sessionAnnotCanRedo = $state(false);
   let annotEditing = $state(false);
   let annotHasMosaic = $state(false);
   let annotColor = $state('R');
@@ -208,9 +213,11 @@
   let toolbarAnchorX = $state(null);
   let badgeW = $state(92);
   let badgeH = $state(24);
-  /** 마지막으로 Rust에 알린 주석 개수·문서 버전(개수 변화 또는 항목 변경 시 스냅숏 전달) */
+  /** 마지막으로 Rust에 알린 주석 개수·문서 버전·스택 깊이(개수 변화 또는 항목 변경 시 스냅숏 전달) */
   let annotReported = 0;
   let annotReportedDocRev = -1;
+  let annotReportedUndoDepth = 0;
+  let annotReportedRedoDepth = 0;
   let annotWheel = 0;
   /** 모자이크 미리보기 원본(정지 이미지를 문서 원점에서 시작하게 옮긴 캔버스) */
   /** @type {HTMLCanvasElement | null} */
@@ -299,6 +306,8 @@
     colorFormat = 'hex';
     readyScheduledSession = null;
     deferredLoadedSession = null;
+    sessionAnnotCanUndo = false;
+    sessionAnnotCanRedo = false;
   }
 
   /**
@@ -488,13 +497,15 @@
   }
 
   /**
-   * 엔진이 바뀔 때마다: 단추 상태 + 주석 개수·스냅숏이 바뀌면 Rust에 알린다(결과 경로 및 되살리기).
+   * 엔진이 바뀔 때마다: 단추 상태 + 주석 개수·스냅숏·스택 깊이가 바뀌면 Rust에 알린다(결과 경로 및 되살리기·다중 모니터 동기화).
    * @param {import('../ink/inkEngine.js').InkEngine} engine
    */
   function syncAnnot(engine) {
     const a = annot;
     if (!a || a.engine !== engine) return;
     const n = itemCount(engine.doc);
+    const hasEditingText = Boolean(engine.editing && String(engine.editing.text ?? '').trim().length > 0);
+    const effectiveCount = n + (hasEditingText ? 1 : 0);
     const docRev = engine.revs.doc;
     annotCanUndo = engine.canUndo;
     annotCanRedo = engine.canRedo;
@@ -502,11 +513,20 @@
     annotHasMosaic = engine.items.some((it) => it.kind === 'mosaic');
     annotColor = engine.color;
     annotWidth = engine.widthPx;
-    if (n !== annotReported || (n > 0 && docRev !== annotReportedDocRev)) {
-      annotReported = n;
+    if (effectiveCount !== annotReported || (effectiveCount > 0 && docRev !== annotReportedDocRev)) {
+      annotReported = effectiveCount;
       annotReportedDocRev = docRev;
       if (monitor && activeSession === a.session && typeof client.captureAnnotations === 'function') {
-        client.captureAnnotations(a.session, monitor.id, n, n > 0 ? serializeAnnotSnapshot(a, monitor) : null);
+        client.captureAnnotations(a.session, monitor.id, effectiveCount, effectiveCount > 0 ? serializeAnnotSnapshot(a, monitor) : null);
+      }
+    }
+    const undoDepth = engine.undoStack.length;
+    const redoDepth = engine.redoStack.length;
+    if (undoDepth !== annotReportedUndoDepth || redoDepth !== annotReportedRedoDepth) {
+      annotReportedUndoDepth = undoDepth;
+      annotReportedRedoDepth = redoDepth;
+      if (monitor && activeSession === a.session) {
+        sendCaptureInput({ type: 'annotHistorySync', monitorId: monitor.id, undoDepth, redoDepth });
       }
     }
   }
@@ -526,6 +546,8 @@
     annot = a;
     annotReported = 0;
     annotReportedDocRev = -1;
+    annotReportedUndoDepth = 0;
+    annotReportedRedoDepth = 0;
     a.off = engine.subscribe(syncAnnot);
     syncAnnot(engine);
     return a;
@@ -625,10 +647,14 @@
     annotTool = null;
     annotCanUndo = false;
     annotCanRedo = false;
+    sessionAnnotCanUndo = false;
+    sessionAnnotCanRedo = false;
     annotEditing = false;
     annotHasMosaic = false;
     annotReported = 0;
     annotReportedDocRev = -1;
+    annotReportedUndoDepth = 0;
+    annotReportedRedoDepth = 0;
     annotWheel = 0;
     annotFontPreview = null;
     panelOpen = false;
@@ -647,20 +673,20 @@
   }
 
   /**
-   * 툴바 도구 단추: 같은 도구 = 해제(범위 조정으로). 새 도구 = 저장된 스타일 반영 + 색·굵기 패널 열기.
-   * @param {string} id
+   * 주석 도구를 이 창에 반영한다(사용자 선택 또는 Rust 동기화 수신).
+   * @param {string | null} next
    */
-  function selectTool(id) {
-    const next = toggleAnnotTool(annotTool, id);
-    if (next === annotTool) return;
+  function applyAnnotTool(next) {
+    const norm = normalizeAnnotTool(next);
+    if (norm === annotTool) return;
     eyedropperActive = false;
-    if (next) {
+    if (norm) {
       const a = ensureAnnot();
       if (!a) return;
-      const target = annotTarget(next);
+      const target = annotTarget(norm);
       if (target.engineTool) a.engine.setTool(target.engineTool);
       else if (a.engine.editing) a.engine.commitText();
-      applyToolStyleToEngine(next, a.engine, annotStyle);
+      applyToolStyleToEngine(norm, a.engine, annotStyle);
       a.engine.notify();
       // 도구를 고를 때 색·굵기 패널을 저절로 열지 않는다 — 패널이 범위(그릴 자리)를 가린다(2026-11-27 실기).
       // 패널은 색·굵기 단추로만 연다.
@@ -668,7 +694,18 @@
       flushAnnotText();
       panelOpen = false;
     }
-    annotTool = next;
+    annotTool = norm;
+  }
+
+  /**
+   * 툴바·단축키 도구 선택: 같은 도구 = 해제(범위 조정으로). 세션 모든 오버레이 창에 알린다.
+   * @param {string} id
+   */
+  function selectTool(id) {
+    const next = toggleAnnotTool(annotTool, id);
+    if (next === annotTool) return;
+    applyAnnotTool(next);
+    sendCaptureInput({ type: 'annotTool', tool: annotTool });
   }
 
   /**
@@ -757,6 +794,10 @@
 
   /** @param {'undo' | 'redo'} dir */
   function annotHistory(dir) {
+    if (sessionMonitors.length > 1) {
+      sendCaptureInput({ type: 'annotHistory', dir });
+      return;
+    }
     const a = annot;
     if (!a) return;
     a.engine.runAction(dir === 'undo' ? 'd-undo' : 'd-redo');
@@ -798,7 +839,15 @@
     if (typeof client.captureCommitAnnotated !== 'function') return;
     flushAnnotText();
     const items = a.engine.items;
-    if (!items.length) return; // 개수 0 알림이 먼저 갔다 — Rust가 주석 없이 낸다
+    if (!items.length) {
+      if (annotReported > 0) {
+        annotReported = 0;
+        if (typeof client.captureAnnotations === 'function') {
+          client.captureAnnotations(a.session, monitor.id, 0);
+        }
+      }
+      return; // 개수 0 알림이 먼저 갔다 — Rust가 주석 없이 낸다
+    }
     const scale = monitor.scale > 0 ? monitor.scale : 1;
     const out = await exportAnnotationAsync(items, {
       anchor: a.anchor,
@@ -810,7 +859,7 @@
       showFontFallbackNotice();
     }
     if (activeSession !== req.session || annot !== a) return;
-    client.captureCommitAnnotated({ session: req.session, seq: req.seq, action: req.action, w: out.w, h: out.h, mosaics: out.mosaics }, out.rgba);
+    client.captureCommitAnnotated({ session: req.session, seq: req.seq, action: req.action, monitorId: monitor.id, w: out.w, h: out.h, mosaics: out.mosaics }, out.rgba);
   }
 
   // 모자이크를 쓰면(도구를 골랐거나 이미 있음) 미리보기 원본을 한 번 만든다(정지 이미지가 준비된 뒤)
@@ -1002,6 +1051,8 @@
           annot = a;
           annotReported = itemCount(engine.doc);
           annotReportedDocRev = engine.revs.doc;
+          annotReportedUndoDepth = engine.undoStack.length;
+          annotReportedRedoDepth = engine.redoStack.length;
           annotCanUndo = engine.canUndo;
           annotCanRedo = engine.canRedo;
           annotEditing = Boolean(engine.editing);
@@ -1013,8 +1064,21 @@
       } else if (e.type === 'capture') {
         if (activeSession !== null && e.view?.session === activeSession) {
           captureView = e.view;
+          sessionAnnotCanUndo = Boolean(e.view.annotCanUndo);
+          sessionAnnotCanRedo = Boolean(e.view.annotCanRedo);
           // 우클릭으로 범위를 버리면(다시 고르기) 주석도 버린다
-          if (e.view.phase === 'hover' && annot) dropAnnot(true);
+          if (e.view.phase === 'hover') {
+            if (annot) dropAnnot(true);
+            else if (annotTool) applyAnnotTool(null);
+          } else {
+            const syncedTool = syncAnnotToolFromView(annotTool, e.view);
+            if (syncedTool !== annotTool) applyAnnotTool(syncedTool);
+          }
+        }
+      } else if (e.type === 'captureCommand') {
+        if (activeSession !== null && e.session === activeSession && monitor && e.monitorId === monitor.id && annot?.session === activeSession) {
+          annot.engine.runAction(e.command === 'redo' ? 'd-redo' : 'd-undo');
+          annot.engine.notify();
         }
       } else if (e.type === 'captureCommit') {
         handleCommitRequest(e.request);
@@ -1106,7 +1170,12 @@
       if (typeof rawStyle === 'string' && rawStyle !== lastSyncedStyleRaw) {
         lastSyncedStyleRaw = rawStyle;
         annotStyle = parseAnnotateStyle(rawStyle);
-        if (annotTool === 'mosaic') annotBlock = annotStyle.tools.mosaic?.size ?? annotBlock;
+        if (annotTool === 'mosaic') {
+          annotBlock = annotStyle.tools.mosaic?.size ?? annotBlock;
+        } else if (annotTool && annot) {
+          applyToolStyleToEngine(annotTool, annot.engine, annotStyle);
+          annot.engine.notify();
+        }
       }
       const rawFont = state.settings['annotate.font'];
       if (typeof rawFont === 'string' && rawFont !== lastSyncedFontRaw) {
@@ -1188,7 +1257,7 @@
       return;
     }
     // 주석 도구를 고른 동안 범위 밖 움직임은 고르기에 보내지 않는다(범위 안은 주석 층이 받음)
-    if (annotTool) return;
+    if (shouldBlockCapturePointer(annotTool, captureView)) return;
     pendingPointer = { clientX: e.clientX, clientY: e.clientY };
     if (!moveRaf && typeof requestAnimationFrame === 'function') {
       moveRaf = requestAnimationFrame(flushPointerMove);
@@ -1219,9 +1288,9 @@
       }
       return;
     }
-    if (annotTool) {
+    if (shouldBlockCapturePointer(annotTool, captureView)) {
       // 도구를 고른 동안 범위 밖 클릭은 범위를 바꾸지 않는다. 우클릭 = 도구 해제(범위 조정으로)
-      if (e.button === 2) {
+      if (e.button === 2 && annotTool) {
         e.preventDefault();
         selectTool(annotTool);
       }
@@ -1254,7 +1323,7 @@
   /** @param {PointerEvent} e */
   function handlePointerUp(e) {
     if (activeSession === null || !monitor) return;
-    if (annotTool) return;
+    if (shouldBlockCapturePointer(annotTool, captureView)) return;
     if (pendingPointer) {
       if (moveRaf && typeof cancelAnimationFrame === 'function') {
         cancelAnimationFrame(moveRaf);
@@ -1271,7 +1340,7 @@
   /** @param {MouseEvent} e */
   function handleDblClick(e) {
     if (activeSession === null || !monitor) return;
-    if (annotTool) return; // 도구를 고른 동안 더블클릭은 복사가 아니다
+    if (shouldBlockCapturePointer(annotTool, captureView)) return; // 도구를 고른 동안 더블클릭은 복사가 아니다
     const rect = rootEl?.getBoundingClientRect();
     const input = toCapturePointerInput('dblclick', e, monitor, rect);
     if (!input) return;
@@ -1281,10 +1350,10 @@
   /** @param {WheelEvent} e */
   function handleWheel(e) {
     if (activeSession === null || !monitor) return;
-    if (annotTool) {
+    if (shouldBlockCapturePointer(annotTool, captureView)) {
       // 주석 중 휠: Ctrl(맥 Cmd)+휠 = 굵기·모자이크 칸, 그냥 휠은 삼킨다(확정 뒤 범위는 휠로 바뀌지 않음)
       e.preventDefault();
-      if (e.ctrlKey || e.metaKey) annotWheelStep(e);
+      if (annotTool && (e.ctrlKey || e.metaKey)) annotWheelStep(e);
       return;
     }
     const input = toCaptureWheelInput(e);
@@ -1623,8 +1692,8 @@
         activeFont={effectiveFont}
         activeFontWeight={effectiveFontWeight}
         isMarker={annotTool === 'marker'}
-        canUndo={annotCanUndo}
-        canRedo={annotCanRedo}
+        canUndo={sessionMonitors.length > 1 ? sessionAnnotCanUndo : annotCanUndo}
+        canRedo={sessionMonitors.length > 1 ? sessionAnnotCanRedo : annotCanRedo}
         tooltips={toolbarTips}
         x={toolbarPos.x}
         y={toolbarPos.y}

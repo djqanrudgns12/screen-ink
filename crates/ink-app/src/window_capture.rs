@@ -64,7 +64,7 @@ impl InkService {
         let rect = hit.map(|(_, r)| r);
         self.ports.overlay.highlight(session, rect);
         let view = SelectionView { phase: Phase::Hover, rect, path: vec![self.t("island.window.pathWindow")], level: 0, guides: Vec::new(), magnet: true, cursor_included: false, help: false, evidence: Vec::new() };
-        self.ports.notifier.capture(&CaptureView { session, selection: view });
+        self.ports.notifier.capture(&CaptureView { session, selection: view, annot_tool: None, annot_can_undo: false, annot_can_redo: false });
     }
 
     fn shoot_hovered(&mut self, save: bool) {

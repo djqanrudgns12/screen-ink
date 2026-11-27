@@ -58,3 +58,75 @@ test('부탁 뒤 주석이 모두 사라지면 기다리지 않는다', async ()
   await c.captureAnnotations(session, 0, 0);
   assert.equal((await c.getState()).mode.mode, 'idle');
 });
+
+test('주석 도구 동기화 중에는 포인터 드래그로 범위가 바뀌지 않고 해제 뒤 다시 바뀐다', async () => {
+  const c = createFakeClient();
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+  await c.run('capture.region');
+  await c.captureInput({ type: 'down', x: 100, y: 100, button: 0 });
+  await c.captureInput({ type: 'move', x: 700, y: 500 });
+  await c.captureInput({ type: 'up', x: 700, y: 500, button: 0 });
+  const confirmedRect = seen.filter((e) => e.type === 'capture').at(-1).view.rect;
+
+  await c.captureInput({ type: 'annotTool', tool: 'pen' });
+  const afterTool = seen.filter((e) => e.type === 'capture').at(-1).view;
+  assert.equal(afterTool.annotTool, 'pen');
+
+  // 다른 모니터 창에서 드래그를 보내도 확정 범위가 유지된다
+  await c.captureInput({ type: 'down', x: 200, y: 200, button: 0 });
+  await c.captureInput({ type: 'move', x: 310, y: 220 });
+  await c.captureInput({ type: 'up', x: 310, y: 220, button: 0 });
+  const stillLocked = seen.filter((e) => e.type === 'capture').at(-1).view;
+  assert.deepEqual(stillLocked.rect, confirmedRect);
+
+  // 도구 해제 뒤 다시 드래그 가능
+  await c.captureInput({ type: 'annotTool', tool: null });
+  await c.captureInput({ type: 'down', x: 200, y: 200, button: 0 });
+  await c.captureInput({ type: 'move', x: 309, y: 219 });
+  await c.captureInput({ type: 'up', x: 309, y: 219, button: 0 });
+  const redragged = seen.filter((e) => e.type === 'capture').at(-1).view;
+  assert.deepEqual(redragged.rect, { x: 200, y: 200, w: 110, h: 20 });
+});
+
+test('두 모니터가 모두 주석을 보고하면 둘 다 답할 때까지 대기한 뒤 끝낸다', async () => {
+  const c = createFakeClient();
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+  await c.run('capture.region');
+  const session = (await c.getState()).mode.session;
+  await c.captureInput({ type: 'up', x: 760, y: 420, button: 0 });
+  await c.captureAnnotations(session, 0, 1);
+  await c.captureAnnotations(session, 1, 1);
+  await c.captureInput({ type: 'command', name: 'copy' });
+
+  const commits = seen.filter((e) => e.type === 'captureCommit');
+  assert.equal(commits.length, 1);
+  const req = commits[0].request;
+
+  await c.captureCommitAnnotated({ session, seq: req.seq, action: 'copy', monitorId: 1, w: req.rect.w, h: req.rect.h, mosaics: [] }, new Uint8Array(req.rect.w * req.rect.h * 4));
+  assert.equal((await c.getState()).mode.mode, 'capture', '모니터 0 답을 기다린다');
+
+  await c.captureCommitAnnotated({ session, seq: req.seq, action: 'copy', monitorId: 0, w: req.rect.w, h: req.rect.h, mosaics: [] }, new Uint8Array(req.rect.w * req.rect.h * 4));
+  assert.equal((await c.getState()).mode.mode, 'idle');
+  assert.equal(c.annotatedLog.length, 2);
+});
+
+test('여러 모니터 실행 취소·다시 실행 동기화가 대상 모니터에 captureCommand를 전달한다', async () => {
+  const c = createFakeClient();
+  const seen = [];
+  c.subscribe((e) => seen.push(e));
+  await c.run('capture.region');
+  const session = (await c.getState()).mode.session;
+  await c.captureInput({ type: 'up', x: 760, y: 420, button: 0 });
+  await c.captureInput({ type: 'annotHistorySync', monitorId: 1, undoDepth: 1, redoDepth: 0 });
+  await c.captureInput({ type: 'annotHistorySync', monitorId: 0, undoDepth: 1, redoDepth: 0 });
+  await c.captureInput({ type: 'annotHistory', dir: 'undo' });
+  await c.captureInput({ type: 'annotHistory', dir: 'redo' });
+
+  const cmds = seen.filter((e) => e.type === 'captureCommand').map((e) => [e.session, e.monitorId, e.command]);
+  assert.deepEqual(cmds, [
+    [session, 0, 'undo'],
+    [session, 0, 'redo'],
+  ]);
+});

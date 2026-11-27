@@ -3,7 +3,7 @@
 
 use ink_app::capture::{AnnotatedCommit, CommitAction, CommitMeta, CommitRequest};
 use ink_app::{CaptureInput, Frame, InkService};
-use ink_domain::geometry::PhysRect;
+use ink_domain::geometry::{PhysPoint, PhysRect};
 use ink_domain::image::MosaicRect;
 use ink_domain::mode::Mode;
 use ink_domain::recog::{Control, ElementCand};
@@ -76,7 +76,7 @@ const MOSAIC: MosaicRect = MosaicRect { x: 100, y: 0, w: 20, h: 20, block: 10 };
 
 fn answer(req: &CommitRequest) -> AnnotatedCommit {
     AnnotatedCommit {
-        meta: CommitMeta { session: req.session, seq: req.seq, action: req.action, w: RANGE.w as u32, h: RANGE.h as u32, mosaics: vec![MOSAIC] },
+        meta: CommitMeta { session: req.session, seq: req.seq, action: req.action, monitor_id: None, w: RANGE.w as u32, h: RANGE.h as u32, mosaics: vec![MOSAIC] },
         overlay: layer(),
     }
 }
@@ -307,4 +307,176 @@ fn 모자이크만_있는_주석도_합성된다() {
     let d = w.desk.0.lock().unwrap();
     assert_eq!(px(&d.image_bgra[0], 300, 5, 5), orig(5, 5), "층 없음 = 펜 없음");
     assert_ne!(px(&d.image_bgra[0], 300, 100, 0), orig(100, 0), "모자이크는 적용");
+}
+
+fn dual_monitor_world() -> FakeWorld {
+    use ink_domain::geometry::Monitor;
+    let w = FakeWorld::new();
+    let mut scr = w.screen.0.lock().unwrap();
+    scr.layout = ink_domain::geometry::MonitorLayout::new(vec![
+        Monitor { id: 0, bounds: PhysRect::new(0, 0, 3840, 2160), work: PhysRect::new(0, 0, 3840, 2080), scale: 2.0, primary: true },
+        Monitor { id: 1, bounds: PhysRect::new(3840, 0, 1920, 1080), work: PhysRect::new(3840, 0, 1920, 1040), scale: 1.0, primary: false },
+    ]);
+    scr.windows.clear();
+    scr.cursor = PhysPoint { x: 4000, y: 500 };
+    scr.frames = Some(vec![
+        Frame { monitor_id: 0, width: 3840, height: 2160, bgra: Arc::new(vec![40; 3840 * 2160 * 4]) },
+        Frame { monitor_id: 1, width: 1920, height: 1080, bgra: Arc::new(vec![80; 1920 * 1080 * 4]) },
+    ]);
+    drop(scr);
+    w
+}
+
+#[test]
+fn 두_모니터_주석_도구_동기화_및_선택_범위_잠금() {
+    let w = dual_monitor_world();
+    let mut s = service(&w);
+    s.on_hotkey("region");
+    // 경계를 넘는 600×400 범위 (3500, 320, 600, 400) 드래그 확정
+    s.capture_input(CaptureInput::Down { x: 3500, y: 320, button: 0 });
+    s.capture_input(CaptureInput::Move { x: 4100, y: 720 });
+    s.capture_input(CaptureInput::Up { x: 4100, y: 720, button: 0 });
+    let last_view = w.notifier.0.lock().unwrap().captures.last().cloned().expect("CaptureView 발행");
+    assert_eq!(last_view.selection.phase, ink_domain::selection::Phase::Confirmed);
+    let expected_rect = PhysRect::new(3500, 320, 600, 400);
+    assert_eq!(last_view.selection.rect, Some(expected_rect));
+
+    // 오른쪽 도구 막대에서 펜 선택
+    s.capture_input(CaptureInput::AnnotTool { tool: Some("pen".into()) });
+    let after_tool = w.notifier.0.lock().unwrap().captures.last().cloned().unwrap();
+    assert_eq!(after_tool.annot_tool.as_deref(), Some("pen"));
+
+    // 왼쪽 모니터에서 드래그·더블클릭·휠·방향키·우클릭을 보내도 확정 범위가 바뀌지 않는다
+    s.capture_input(CaptureInput::Down { x: 3590, y: 430, button: 0 });
+    s.capture_input(CaptureInput::Move { x: 3700, y: 450 });
+    s.capture_input(CaptureInput::Up { x: 3700, y: 450, button: 0 });
+    s.capture_input(CaptureInput::Dblclick { x: 3600, y: 440 });
+    s.capture_input(CaptureInput::Wheel { dy: -1 });
+    s.capture_input(CaptureInput::Key { key: "ArrowLeft".into(), code: "ArrowLeft".into(), ctrl: false, shift: false, alt: false, meta: false });
+    s.capture_input(CaptureInput::Down { x: 3600, y: 440, button: 2 });
+    let locked_view = w.notifier.0.lock().unwrap().captures.last().cloned().unwrap();
+    assert_eq!(locked_view.selection.rect, Some(expected_rect));
+    assert!(matches!(s.mode(), Mode::Capture { .. }));
+
+    // Esc → 캡처 취소 대신 도구만 해제
+    s.capture_input(CaptureInput::Key { key: "Escape".into(), code: "Escape".into(), ctrl: false, shift: false, alt: false, meta: false });
+    assert!(matches!(s.mode(), Mode::Capture { .. }));
+    let released_view = w.notifier.0.lock().unwrap().captures.last().cloned().unwrap();
+    assert_eq!(released_view.annot_tool, None);
+
+    // 도구 해제 후에는 왼쪽 모니터 드래그가 다시 범위를 바꿈
+    s.capture_input(CaptureInput::Down { x: 3590, y: 430, button: 0 });
+    s.capture_input(CaptureInput::Move { x: 3700, y: 450 });
+    s.capture_input(CaptureInput::Up { x: 3700, y: 450, button: 0 });
+    let redragged = w.notifier.0.lock().unwrap().captures.last().cloned().unwrap();
+    assert_eq!(redragged.selection.rect, Some(PhysRect::new(3590, 430, 110, 20)));
+}
+
+#[test]
+fn 두_모니터_각각_그린_주석을_모두_합성한다() {
+    let w = dual_monitor_world();
+    let mut s = service(&w);
+    s.on_hotkey("region");
+    let session = match s.mode() {
+        Mode::Capture { session, .. } => session,
+        _ => panic!("캡처가 열려야 함"),
+    };
+    s.capture_input(CaptureInput::Down { x: 3500, y: 320, button: 0 });
+    s.capture_input(CaptureInput::Move { x: 4100, y: 720 });
+    s.capture_input(CaptureInput::Up { x: 4100, y: 720, button: 0 });
+
+    s.capture_annotations(session, 1, 1);
+    s.capture_annotations(session, 0, 1);
+    s.capture_input(cmd("save"));
+
+    let reqs = w.overlay.0.lock().unwrap().commit_requests.clone();
+    assert_eq!(reqs.len(), 1);
+    let req = reqs[0];
+    assert_eq!((req.rect.w, req.rect.h), (600, 400));
+
+    // 모니터 1 답: (450, 160)에 빨강
+    let mut layer1 = vec![0u8; 600 * 400 * 4];
+    let idx1 = (160 * 600 + 450) * 4;
+    layer1[idx1..idx1 + 4].copy_from_slice(&[255, 0, 0, 255]);
+    s.capture_commit_annotated(AnnotatedCommit {
+        meta: CommitMeta {
+            session,
+            seq: req.seq,
+            action: CommitAction::Save,
+            monitor_id: Some(1),
+            w: 600,
+            h: 400,
+            mosaics: vec![MosaicRect { x: 400, y: 20, w: 20, h: 20, block: 10 }],
+        },
+        overlay: layer1.clone(),
+    });
+    assert!(matches!(s.mode(), Mode::Capture { .. }), "모니터 0 답을 기다려야 함");
+
+    // 모니터 1 중복 답은 무시
+    s.capture_commit_annotated(AnnotatedCommit {
+        meta: CommitMeta { session, seq: req.seq, action: CommitAction::Save, monitor_id: Some(1), w: 600, h: 400, mosaics: vec![] },
+        overlay: layer1,
+    });
+    assert!(matches!(s.mode(), Mode::Capture { .. }));
+
+    // 모니터 0 답: (125, 160)에 파랑
+    let mut layer0 = vec![0u8; 600 * 400 * 4];
+    let idx0 = (160 * 600 + 125) * 4;
+    layer0[idx0..idx0 + 4].copy_from_slice(&[0, 0, 255, 255]);
+    s.capture_commit_annotated(AnnotatedCommit {
+        meta: CommitMeta {
+            session,
+            seq: req.seq,
+            action: CommitAction::Save,
+            monitor_id: Some(0),
+            w: 600,
+            h: 400,
+            mosaics: vec![MosaicRect { x: 20, y: 20, w: 20, h: 20, block: 10 }],
+        },
+        overlay: layer0,
+    });
+    assert_eq!(s.mode(), Mode::Idle);
+    let saved = &w.desk.0.lock().unwrap().saved_bgra[0];
+    assert_eq!(px(saved, 600, 450, 160), [0, 0, 255, 255], "모니터 1 빨강(BGRA)");
+    assert_eq!(px(saved, 600, 125, 160), [255, 0, 0, 255], "모니터 0 파랑(BGRA)");
+}
+
+#[test]
+fn 여러_모니터_실행_취소_다시_실행은_편집_순서대로_창에_전달한다() {
+    let w = dual_monitor_world();
+    let mut s = service(&w);
+    s.on_hotkey("region");
+    let session = match s.mode() {
+        Mode::Capture { session, .. } => session,
+        _ => panic!("캡처가 열려야 함"),
+    };
+    s.capture_input(CaptureInput::Down { x: 3500, y: 320, button: 0 });
+    s.capture_input(CaptureInput::Move { x: 4099, y: 719 });
+    s.capture_input(CaptureInput::Up { x: 4099, y: 719, button: 0 });
+
+    s.capture_input(CaptureInput::AnnotHistorySync { monitor_id: 1, undo_depth: 1, redo_depth: 0 });
+    s.capture_input(CaptureInput::AnnotHistorySync { monitor_id: 0, undo_depth: 1, redo_depth: 0 });
+    let v = w.notifier.0.lock().unwrap().captures.last().cloned().unwrap();
+    assert!(v.annot_can_undo);
+    assert!(!v.annot_can_redo);
+
+    s.capture_input(CaptureInput::AnnotHistory { dir: "undo".into() });
+    s.capture_input(CaptureInput::AnnotHistory { dir: "undo".into() });
+    let v2 = w.notifier.0.lock().unwrap().captures.last().cloned().unwrap();
+    assert!(!v2.annot_can_undo);
+    assert!(v2.annot_can_redo);
+
+    s.capture_input(CaptureInput::AnnotHistory { dir: "redo".into() });
+    let v3 = w.notifier.0.lock().unwrap().captures.last().cloned().unwrap();
+    assert!(v3.annot_can_undo);
+
+    let cmds = w.notifier.0.lock().unwrap().capture_commands.clone();
+    assert_eq!(
+        cmds,
+        vec![
+            (session, 0, "undo".to_string()),
+            (session, 1, "undo".to_string()),
+            (session, 1, "redo".to_string()),
+        ]
+    );
 }

@@ -321,6 +321,8 @@ pub trait Notifier: Send + Sync {
     fn record_frame(&self, _rect: Option<ink_domain::geometry::PhysRect>) {}
     /// 고르기 상태(`screen-ink://capture`) — 모든 오버레이·섬이 같은 것을 그린다.
     fn capture(&self, _view: &crate::state::CaptureView) {}
+    /// 캡처 주석 실행 취소·다시 실행 명령(`screen-ink://capture-command`)을 대상 모니터 창에 전달.
+    fn capture_command(&self, _session: u64, _monitor_id: u32, _command: &str) {}
     /// 판서 세션(`screen-ink://draw`) — 상태(`mode: draw`)보다 먼저 보내 오버레이가 세션을 쥔 채 화면을 바꾼다.
     fn draw(&self, _session: &crate::state::DrawSession) {}
     /// 섬 단추 → 판서 엔진(`screen-ink://draw-command`): `acceptSuggestion` · `undo`. 섬 창과 오버레이 창이 달라 서비스가 이어 준다.

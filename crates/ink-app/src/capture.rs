@@ -18,7 +18,7 @@ use ink_domain::selection::{Button, Command, Context, Effect, Input, Key, Select
 use ink_domain::settings::ExcludedApp;
 use ink_domain::snapshot::{CaptureKind, RawWindow, Snapshot};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -39,6 +39,26 @@ pub enum CaptureInput {
     Key { key: String, code: String, #[serde(default)] ctrl: bool, #[serde(default)] shift: bool, #[serde(default)] alt: bool, #[serde(default)] meta: bool },
     /// 선택 툴바 단추(R-CAP-27): "copy" | "save" | "quickSave" | "cancel"
     Command { name: String },
+    /// 세션 단위 주석 도구 선택/해제(모든 오버레이 창 동기화).
+    AnnotTool { tool: Option<String> },
+    /// 세션 단위 주석 실행 취소·다시 실행 요청("undo" | "redo").
+    AnnotHistory { dir: String },
+    /// 모니터 창 주석 스택 깊이 동기화.
+    AnnotHistorySync {
+        #[serde(rename = "monitorId")]
+        monitor_id: u32,
+        #[serde(rename = "undoDepth")]
+        undo_depth: u32,
+        #[serde(rename = "redoDepth")]
+        redo_depth: u32,
+    },
+}
+
+fn normalize_annot_tool(tool: Option<String>) -> Option<String> {
+    match tool.as_deref() {
+        Some("rect" | "ellipse" | "arrow" | "pen" | "marker" | "mosaic" | "text" | "eraser") => tool,
+        _ => None,
+    }
 }
 
 impl From<CaptureInput> for Input {
@@ -60,6 +80,7 @@ impl From<CaptureInput> for Input {
                 "cancel" => Input::Command(Command::Cancel),
                 _ => Input::Key(Key::default()),
             },
+            CaptureInput::AnnotTool { .. } | CaptureInput::AnnotHistory { .. } | CaptureInput::AnnotHistorySync { .. } => Input::Key(Key::default()),
         }
     }
 }
@@ -354,6 +375,11 @@ impl InkService {
         self.cap.cursor = None;
         self.cap.drawn = None;
         self.cap.raw.clear();
+        self.cap.annot.tool = None;
+        self.cap.annot.pending = None;
+        self.cap.annot.depths.clear();
+        self.cap.annot.undo_stack.clear();
+        self.cap.annot.redo_stack.clear();
         self.ports.elements.clear();
         self.ports.vision.clear();
     }
@@ -367,7 +393,14 @@ impl InkService {
 
     fn emit_capture(&self) {
         let (Some(session), Some(sel)) = (self.session(), self.cap.selector.as_ref()) else { return };
-        self.ports.notifier.capture(&CaptureView { session, selection: sel.view() });
+        let selection = sel.view();
+        let annot_tool = if matches!(selection.phase, ink_domain::selection::Phase::Confirmed) {
+            self.active_annot_tool()
+        } else {
+            None
+        };
+        let (annot_can_undo, annot_can_redo) = self.annot_history_flags(session);
+        self.ports.notifier.capture(&CaptureView { session, selection, annot_tool, annot_can_undo, annot_can_redo });
     }
 
     /// 오버레이 입력 한 건.
@@ -375,6 +408,43 @@ impl InkService {
         // F2는 창 하나만 고른다(요소 사슬 없음, 02 §2) — 단계 6 창 캡처
         if self.window_picking() {
             return self.window_input(input);
+        }
+        match input {
+            CaptureInput::AnnotTool { tool } => {
+                self.set_annot_tool(tool);
+                return;
+            }
+            CaptureInput::AnnotHistory { dir } => {
+                self.on_annot_history(&dir);
+                return;
+            }
+            CaptureInput::AnnotHistorySync { monitor_id, undo_depth, redo_depth } => {
+                self.on_annot_history_sync(monitor_id, undo_depth, redo_depth);
+                return;
+            }
+            _ => {}
+        }
+        if self.active_annot_tool().is_some() {
+            match &input {
+                CaptureInput::Move { .. }
+                | CaptureInput::Down { .. }
+                | CaptureInput::Up { .. }
+                | CaptureInput::Dblclick { .. }
+                | CaptureInput::Wheel { .. } => return,
+                CaptureInput::Key { key, code, ctrl, shift, alt, meta } => {
+                    if (code == "Escape" || key == "Escape") && !*ctrl && !*shift && !*alt && !*meta {
+                        self.set_annot_tool(None);
+                        return;
+                    }
+                    if matches!(code.as_str(), "ArrowLeft" | "ArrowRight" | "ArrowUp" | "ArrowDown") {
+                        return;
+                    }
+                }
+                CaptureInput::Command { .. }
+                | CaptureInput::AnnotTool { .. }
+                | CaptureInput::AnnotHistory { .. }
+                | CaptureInput::AnnotHistorySync { .. } => {}
+            }
         }
         let (Some(_), Some(mut sel), Some(snap)) = (self.session(), self.cap.selector.take(), self.snapshot.take()) else { return };
         // F3: 확정 직전 고르기 방식(창 단계였는지)으로 녹화 대상을 정한다
@@ -387,6 +457,15 @@ impl InkService {
         };
         if is_move && self.cap.probe.moves.len() < MAX_PROBE_MOVES {
             self.cap.probe.moves.push(ms_since(t));
+        }
+        let phase = sel.view().phase;
+        if phase != ink_domain::selection::Phase::Confirmed {
+            self.cap.annot.tool = None;
+            if phase == ink_domain::selection::Phase::Hover {
+                self.cap.annot.depths.clear();
+                self.cap.annot.undo_stack.clear();
+                self.cap.annot.redo_stack.clear();
+            }
         }
         self.cap.selector = Some(sel);
         self.snapshot = Some(snap);
@@ -849,6 +928,8 @@ pub struct CommitMeta {
     pub seq: u64,
     pub action: CommitAction,
     #[serde(default)]
+    pub monitor_id: Option<u32>,
+    #[serde(default)]
     pub w: u32,
     #[serde(default)]
     pub h: u32,
@@ -868,6 +949,7 @@ pub struct AnnotatedCommit {
 /// 머리 JSON 한도(모자이크 4096개도 넉넉) · 모자이크 개수 한도.
 pub const MAX_COMMIT_META: usize = 1 << 20;
 pub const MAX_COMMIT_MOSAICS: usize = 4096;
+const MAX_ANNOT_UNDO: usize = 200;
 
 impl AnnotatedCommit {
     /// 본문 = `[머리 길이 u32 LE][머리 JSON(UTF-8)][주석 층 RGBA]` (packages/ink-client `encodeAnnotatedCommit`과 1:1).
@@ -887,32 +969,156 @@ impl AnnotatedCommit {
 #[derive(Clone, Debug, Default)]
 pub(crate) struct AnnotLayer {
     mosaics: Vec<image::MosaicRect>,
-    overlay: Vec<u8>,
+    overlays: Vec<Vec<u8>>,
 }
 
 impl AnnotLayer {
     fn apply(&self, px: &mut [u8], w: u32, h: u32) {
         image::apply_mosaic(px, w, h, &self.mosaics);
-        if !self.overlay.is_empty() {
-            image::composite_rgba_over_bgra(px, &self.overlay, w, h);
+        for overlay in &self.overlays {
+            if !overlay.is_empty() {
+                image::composite_rgba_over_bgra(px, overlay, w, h);
+            }
         }
     }
+}
+
+#[derive(Debug)]
+struct CommitPart {
+    order: u64,
+    monitor_id: Option<u32>,
+    mosaics: Vec<image::MosaicRect>,
+    overlay: Vec<u8>,
+}
+
+#[derive(Debug)]
+struct PendingCommit {
+    request: CommitRequest,
+    expected: BTreeSet<u32>,
+    received: BTreeSet<u32>,
+    parts: Vec<CommitPart>,
 }
 
 /// 세션 하나의 주석 사정. 다른 세션 값은 쓰지 않는다(모드가 끝나도 지울 필요 없음).
 #[derive(Debug, Default)]
 pub(crate) struct AnnotState {
     session: u64,
+    tool: Option<String>,
     /// 모니터(오버레이 창) → 그 창 주석 개수
     items: BTreeMap<u32, u32>,
+    /// 모니터(오버레이 창) → 처음 주석을 그린 순서(합성 순서)
+    order: BTreeMap<u32, u64>,
+    order_seq: u64,
     /// 모니터(오버레이 창) → 되살리기용 직렬화 주석(anchor · InkDocument JSON)
     snapshots: BTreeMap<u32, serde_json::Value>,
+    /// 모니터별 실행 취소·다시 실행 깊이 및 세션 통합 스택
+    depths: BTreeMap<u32, (u32, u32)>,
+    undo_stack: Vec<u32>,
+    redo_stack: Vec<u32>,
     seq: u64,
-    pending: Option<CommitRequest>,
+    pending: Option<PendingCommit>,
     layer: Option<AnnotLayer>,
 }
 
 impl InkService {
+    fn ensure_annot_session(&mut self, session: u64) -> &mut AnnotState {
+        let a = &mut self.cap.annot;
+        if a.session != session {
+            *a = AnnotState { session, ..Default::default() };
+        }
+        a
+    }
+
+    fn active_annot_tool(&self) -> Option<String> {
+        let session = self.session()?;
+        if self.cap.annot.session != session {
+            return None;
+        }
+        let sel = self.cap.selector.as_ref()?;
+        if sel.view().phase != ink_domain::selection::Phase::Confirmed {
+            return None;
+        }
+        self.cap.annot.tool.clone()
+    }
+
+    fn annot_history_flags(&self, session: u64) -> (bool, bool) {
+        if self.cap.annot.session != session {
+            return (false, false);
+        }
+        (!self.cap.annot.undo_stack.is_empty(), !self.cap.annot.redo_stack.is_empty())
+    }
+
+    fn set_annot_tool(&mut self, tool: Option<String>) {
+        let Some(session) = self.session() else { return };
+        let confirmed = self.cap.selector.as_ref().is_some_and(|s| s.view().phase == ink_domain::selection::Phase::Confirmed);
+        let next = if confirmed { normalize_annot_tool(tool) } else { None };
+        let a = self.ensure_annot_session(session);
+        a.tool = next;
+        self.emit_capture();
+    }
+
+    fn on_annot_history_sync(&mut self, monitor_id: u32, undo_depth: u32, redo_depth: u32) {
+        let Some(session) = self.session() else { return };
+        let a = self.ensure_annot_session(session);
+        let prev = a.depths.get(&monitor_id).copied().unwrap_or((0, 0));
+        if prev == (undo_depth, redo_depth) {
+            return;
+        }
+        a.depths.insert(monitor_id, (undo_depth, redo_depth));
+        if undo_depth > prev.0 {
+            for _ in 0..(undo_depth - prev.0).min(MAX_ANNOT_UNDO as u32) {
+                if a.undo_stack.len() >= MAX_ANNOT_UNDO {
+                    a.undo_stack.remove(0);
+                }
+                a.undo_stack.push(monitor_id);
+            }
+            if redo_depth == 0 {
+                a.redo_stack.clear();
+            }
+        } else if undo_depth == 0 && prev.0 > 0 {
+            a.undo_stack.retain(|&m| m != monitor_id);
+            if redo_depth == 0 {
+                a.redo_stack.retain(|&m| m != monitor_id);
+            }
+        }
+        self.emit_capture();
+    }
+
+    fn on_annot_history(&mut self, dir: &str) {
+        let Some(session) = self.session() else { return };
+        let a = self.ensure_annot_session(session);
+        let cmd = match dir {
+            "undo" => {
+                let Some(mid) = a.undo_stack.pop() else { return };
+                a.redo_stack.push(mid);
+                if let Some(entry) = a.depths.get_mut(&mid) {
+                    entry.0 = entry.0.saturating_sub(1);
+                    entry.1 = entry.1.saturating_add(1);
+                }
+                "undo"
+            }
+            "redo" => {
+                let Some(mid) = a.redo_stack.pop() else { return };
+                if a.undo_stack.len() >= MAX_ANNOT_UNDO {
+                    a.undo_stack.remove(0);
+                }
+                a.undo_stack.push(mid);
+                if let Some(entry) = a.depths.get_mut(&mid) {
+                    entry.0 = entry.0.saturating_add(1);
+                    entry.1 = entry.1.saturating_sub(1);
+                }
+                "redo"
+            }
+            _ => return,
+        };
+        let target_monitor = match cmd {
+            "undo" => *a.redo_stack.last().unwrap(),
+            _ => *a.undo_stack.last().unwrap(),
+        };
+        self.ports.notifier.capture_command(session, target_monitor, cmd);
+        self.emit_capture();
+    }
+
     /// 오버레이가 주석 개수를 알린다(0 ↔ n이 바뀔 때). 지금 세션이 아니면 무시.
     /// 부탁해 둔 결과가 있는데 주석이 모두 사라졌으면(창이 주석을 버림) 기다리지 않고 지금 경로로 끝낸다.
     pub fn capture_annotations(&mut self, session: u64, monitor: u32, items: u32) {
@@ -924,23 +1130,32 @@ impl InkService {
         if self.session() != Some(session) {
             return;
         }
-        let a = &mut self.cap.annot;
-        if a.session != session {
-            *a = AnnotState { session, ..Default::default() };
-        }
+        let a = self.ensure_annot_session(session);
         if items == 0 {
             a.items.remove(&monitor);
             a.snapshots.remove(&monitor);
+            a.order.remove(&monitor);
+            if let Some(p) = a.pending.as_mut() {
+                p.expected.remove(&monitor);
+            }
         } else {
             a.items.insert(monitor, items);
+            if !a.order.contains_key(&monitor) {
+                a.order_seq += 1;
+                a.order.insert(monitor, a.order_seq);
+            }
             if let Some(d) = data {
                 a.snapshots.insert(monitor, d);
             }
         }
         if !self.annotated() {
-            if let Some(req) = self.cap.annot.pending.take() {
-                self.commit_plain(req.action, req.rect);
+            if let Some(p) = self.cap.annot.pending.take() {
+                self.commit_plain(p.request.action, p.request.rect);
             }
+            return;
+        }
+        if self.cap.annot.pending.as_ref().is_some_and(|p| p.expected.is_subset(&p.received)) {
+            self.finish_pending_commit();
         }
     }
 
@@ -1040,7 +1255,9 @@ impl InkService {
         self.snapshot = Some(snap);
         self.cap.cursor = d.cursor_sprite;
         self.mode = Mode::Capture { session, kind: d.kind, started_ms: self.now_ms() };
-        self.cap.annot = AnnotState { session, items: d.annot_items, snapshots: d.annot_snapshots, ..Default::default() };
+        let order: BTreeMap<u32, u64> = d.annot_items.keys().enumerate().map(|(i, &m)| (m, (i + 1) as u64)).collect();
+        let order_seq = order.len() as u64;
+        self.cap.annot = AnnotState { session, items: d.annot_items, order, order_seq, snapshots: d.annot_snapshots, ..Default::default() };
         self.island(self.capture_island(d.kind));
         self.emit_state();
         self.start_selection_confirmed(kept, cursor, d.rect);
@@ -1106,16 +1323,34 @@ impl InkService {
             self.commit_plain(action, rect);
             return;
         }
+        let expected: BTreeSet<u32> = self.cap.annot.items.iter().filter(|(_, &n)| n > 0).map(|(&m, _)| m).collect();
         self.cap.annot.seq += 1;
         let req = CommitRequest { session, seq: self.cap.annot.seq, action, rect };
         if self.ports.overlay.request_commit(&req) {
-            self.cap.annot.pending = Some(req);
+            self.cap.annot.pending = Some(PendingCommit { request: req, expected, received: BTreeSet::new(), parts: Vec::new() });
         } else {
             // 부탁할 길이 없음(미지원 어댑터) — 주석 없이라도 결과는 낸다
             self.cap.annot.pending = None;
             log::warn!("annotation request not delivered; result without annotations");
             self.commit_plain(action, rect);
         }
+    }
+
+    fn finish_pending_commit(&mut self) {
+        let Some(mut p) = self.cap.annot.pending.take() else { return };
+        p.parts.sort_by_key(|part| (part.order, part.monitor_id.unwrap_or(u32::MAX)));
+        let mut mosaics = Vec::new();
+        let mut overlays = Vec::new();
+        for part in p.parts {
+            mosaics.extend(part.mosaics);
+            if !part.overlay.is_empty() {
+                overlays.push(part.overlay);
+            }
+        }
+        mosaics.truncate(MAX_COMMIT_MOSAICS);
+        self.cap.annot.layer = Some(AnnotLayer { mosaics, overlays });
+        self.commit_plain(p.request.action, p.request.rect);
+        self.cap.annot.layer = None;
     }
 
     fn commit_plain(&mut self, action: CommitAction, rect: PhysRect) {
@@ -1128,27 +1363,43 @@ impl InkService {
     }
 
     /// 오버레이가 보낸 주석 층으로 부탁해 둔 결과를 낸다. 세션·순번이 다르면(늦은 답·두 번 답) 무시.
-    /// 층 크기가 범위와 다르면 주석 없이 낸다(잘못 겹치지 않게).
+    /// 층 크기가 범위와 다르면 해당 층은 건너뛴다(잘못 겹치지 않게).
     pub fn capture_commit_annotated(&mut self, commit: AnnotatedCommit) {
         let Some(session) = self.session() else { return };
         let AnnotatedCommit { meta, overlay } = commit;
-        let Some(req) = self.cap.annot.pending.filter(|r| r.session == session && meta.session == session && r.seq == meta.seq) else {
+        let Some(pending) = self.cap.annot.pending.as_mut().filter(|p| p.request.session == session && meta.session == session && p.request.seq == meta.seq) else {
             log::debug!("annotation answer ignored (session {} seq {})", meta.session, meta.seq);
             return;
         };
-        self.cap.annot.pending = None;
+        let mid = match meta.monitor_id {
+            Some(id) => {
+                if !pending.expected.contains(&id) || !pending.received.insert(id) {
+                    log::debug!("annotation answer ignored (monitor {id} session {} seq {})", meta.session, meta.seq);
+                    return;
+                }
+                id
+            }
+            None => {
+                let Some(next) = pending.expected.difference(&pending.received).next().copied() else {
+                    log::debug!("annotation answer ignored (no expected monitor left)");
+                    return;
+                };
+                pending.received.insert(next);
+                next
+            }
+        };
+        let req = pending.request;
         let (w, h) = (req.rect.w.max(0) as u32, req.rect.h.max(0) as u32);
         let sized = overlay.is_empty() || (meta.w == w && meta.h == h && overlay.len() as u64 == u64::from(w) * u64::from(h) * 4);
         if !sized {
             log::warn!("annotation layer {}x{} ({} bytes) does not match range {w}x{h}", meta.w, meta.h, overlay.len());
-            self.commit_plain(req.action, req.rect);
-            return;
+        } else {
+            let order_key = self.cap.annot.order.get(&mid).copied().unwrap_or(u64::MAX);
+            pending.parts.push(CommitPart { order: order_key, monitor_id: Some(mid), mosaics: meta.mosaics, overlay });
         }
-        let mut mosaics = meta.mosaics;
-        mosaics.truncate(MAX_COMMIT_MOSAICS);
-        self.cap.annot.layer = Some(AnnotLayer { mosaics, overlay });
-        self.commit_plain(req.action, req.rect);
-        self.cap.annot.layer = None;
+        if pending.expected.is_subset(&pending.received) {
+            self.finish_pending_commit();
+        }
     }
 }
 
