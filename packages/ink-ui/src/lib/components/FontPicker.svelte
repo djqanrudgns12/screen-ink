@@ -511,18 +511,18 @@
 
 <style>
   .ink-fp {
-    --fp-bg: rgba(20, 21, 25, 0.94);
-    --fp-fg: #f7f8fa;
-    --fp-muted: #9ca3af;
-    --fp-border: rgba(255, 255, 255, 0.14);
-    --fp-line: rgba(255, 255, 255, 0.08);
-    --fp-bar: rgba(255, 255, 255, 0.04);
-    --fp-soft: rgba(255, 255, 255, 0.08);
-    --fp-hover: rgba(255, 159, 10, 0.14);
-    --fp-selected: rgba(255, 159, 10, 0.22);
-    --fp-chip-bg: rgba(255, 255, 255, 0.08);
-    --fp-fade: rgba(20, 21, 25, 0.96);
-    --fp-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 18px 46px rgba(0, 0, 0, 0.52);
+    --fp-bg: var(--ink-fp-bg);
+    --fp-fg: var(--ink-fp-fg);
+    --fp-muted: var(--ink-fp-muted);
+    --fp-border: var(--ink-fp-border);
+    --fp-line: var(--ink-fp-line);
+    --fp-bar: var(--ink-fp-bar);
+    --fp-soft: var(--ink-fp-soft);
+    --fp-hover: var(--ink-fp-hover);
+    --fp-selected: var(--ink-fp-selected);
+    --fp-chip-bg: var(--ink-fp-chip-bg);
+    --fp-fade: var(--ink-fp-fade);
+    --fp-shadow: var(--ink-fp-shadow);
 
     display: flex;
     flex-direction: column;
@@ -540,46 +540,11 @@
     font-family: var(--ink-font-body);
   }
 
-  :global([data-theme='light']) .ink-fp {
-    --fp-bg: rgba(250, 250, 248, 0.96);
-    --fp-fg: #141414;
-    --fp-muted: #5e5e5b;
-    --fp-border: rgba(0, 0, 0, 0.13);
-    --fp-line: rgba(0, 0, 0, 0.08);
-    --fp-bar: rgba(0, 0, 0, 0.03);
-    --fp-soft: rgba(0, 0, 0, 0.06);
-    --fp-hover: rgba(217, 119, 6, 0.12);
-    --fp-selected: rgba(217, 119, 6, 0.2);
-    --fp-chip-bg: rgba(0, 0, 0, 0.055);
-    --fp-fade: rgba(250, 250, 248, 0.98);
-    --fp-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 18px 42px rgba(0, 0, 0, 0.2);
-  }
-
-  @media (prefers-color-scheme: light) {
-    :global(:root:not([data-theme='dark'])) .ink-fp {
-      --fp-bg: rgba(250, 250, 248, 0.96);
-      --fp-fg: #141414;
-      --fp-muted: #5e5e5b;
-      --fp-border: rgba(0, 0, 0, 0.13);
-      --fp-line: rgba(0, 0, 0, 0.08);
-      --fp-bar: rgba(0, 0, 0, 0.03);
-      --fp-soft: rgba(0, 0, 0, 0.06);
-      --fp-hover: rgba(217, 119, 6, 0.12);
-      --fp-selected: rgba(217, 119, 6, 0.2);
-      --fp-chip-bg: rgba(0, 0, 0, 0.055);
-      --fp-fade: rgba(250, 250, 248, 0.98);
-      --fp-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 18px 42px rgba(0, 0, 0, 0.2);
-    }
-  }
-
   @media (prefers-reduced-transparency: reduce) {
     .ink-fp {
-      --fp-bg: #18191d;
+      --fp-bg: var(--ink-glass-solid);
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
-    }
-    :global([data-theme='light']) .ink-fp {
-      --fp-bg: #fafaf8;
     }
   }
 
@@ -675,7 +640,7 @@
 
   .ink-fp-tab.is-active {
     background: var(--ink-accent);
-    color: #111315;
+    color: var(--ink-on-accent);
     font-weight: 700;
   }
 
@@ -707,7 +672,7 @@
   }
 
   .ink-fp-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255, 159, 10, 0.3);
+    background: var(--ink-fp-scroll-thumb);
     border-radius: 999px;
   }
 
@@ -868,7 +833,7 @@
   .ink-fp-chip:focus-visible,
   .ink-fp-chip.is-active {
     background: var(--ink-accent);
-    color: #111315;
+    color: var(--ink-on-accent);
     border-color: var(--ink-accent);
     outline: none;
   }

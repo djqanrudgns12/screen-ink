@@ -316,16 +316,16 @@
 
 <style>
   .ink-draw-toolbar {
-    --dtb-bg: rgba(20, 21, 25, 0.82);
-    --dtb-fg: #f7f8fa;
-    --dtb-sub: #c9ccd3;
-    --dtb-hover: rgba(255, 255, 255, 0.12);
-    --dtb-active-bg: rgba(255, 159, 10, 0.22);
-    --dtb-divider: rgba(255, 255, 255, 0.14);
-    --dtb-border: rgba(255, 255, 255, 0.14);
-    --dtb-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 14px 36px rgba(0, 0, 0, 0.42);
-    --dtb-tip-bg: rgba(14, 15, 18, 0.94);
-    --dtb-tip-fg: #f7f8fa;
+    --dtb-bg: var(--ink-dtb-bg);
+    --dtb-fg: var(--ink-tb-fg);
+    --dtb-sub: var(--ink-tb-sub);
+    --dtb-hover: var(--ink-tb-hover);
+    --dtb-active-bg: var(--ink-tb-active-bg);
+    --dtb-divider: var(--ink-tb-divider);
+    --dtb-border: var(--ink-tb-border);
+    --dtb-shadow: var(--ink-tb-shadow);
+    --dtb-tip-bg: var(--ink-tip-bg);
+    --dtb-tip-fg: var(--ink-tip-fg);
 
     position: absolute;
     left: 50%;
@@ -353,40 +353,11 @@
     pointer-events: none;
   }
 
-  :global([data-theme='light']) .ink-draw-toolbar {
-    --dtb-bg: rgba(250, 250, 248, 0.88);
-    --dtb-fg: #141414;
-    --dtb-sub: #474744;
-    --dtb-hover: rgba(0, 0, 0, 0.06);
-    --dtb-active-bg: rgba(255, 159, 10, 0.16);
-    --dtb-divider: rgba(0, 0, 0, 0.12);
-    --dtb-border: rgba(0, 0, 0, 0.12);
-    --dtb-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 12px 32px rgba(0, 0, 0, 0.16);
-    --dtb-tip-bg: rgba(24, 25, 28, 0.94);
-    --dtb-tip-fg: #f7f8fa;
-  }
-
-  @media (prefers-color-scheme: light) {
-    :global(:root:not([data-theme='dark'])) .ink-draw-toolbar {
-      --dtb-bg: rgba(250, 250, 248, 0.88);
-      --dtb-fg: #141414;
-      --dtb-sub: #474744;
-      --dtb-hover: rgba(0, 0, 0, 0.06);
-      --dtb-active-bg: rgba(255, 159, 10, 0.16);
-      --dtb-divider: rgba(0, 0, 0, 0.12);
-      --dtb-border: rgba(0, 0, 0, 0.12);
-      --dtb-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 12px 32px rgba(0, 0, 0, 0.16);
-    }
-  }
-
   @media (prefers-reduced-transparency: reduce) {
     .ink-draw-toolbar {
-      --dtb-bg: #18191d;
+      --dtb-bg: var(--ink-glass-solid);
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
-    }
-    :global([data-theme='light']) .ink-draw-toolbar {
-      --dtb-bg: #fafaf8;
     }
   }
 
@@ -451,11 +422,11 @@
     height: 12px;
     border-radius: 999px;
     flex: none;
-    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.45);
+    box-shadow: var(--ink-draw-style-dot-ring);
   }
 
   .ink-draw-style-dot.light {
-    box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--ink-draw-style-dot-ring-light);
   }
 
   .ink-draw-style-dot.marker {
@@ -490,7 +461,7 @@
     line-height: 1.25;
     white-space: nowrap;
     pointer-events: none;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+    box-shadow: var(--ink-tip-shadow);
     z-index: 10;
   }
 </style>

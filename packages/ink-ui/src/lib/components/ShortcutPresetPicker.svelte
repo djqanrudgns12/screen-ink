@@ -356,8 +356,18 @@
     text-overflow: ellipsis;
   }
 
+  .ink-presets.is-compact .ink-preset-top {
+    flex-wrap: wrap;
+    row-gap: 3px;
+    column-gap: 5px;
+  }
+
   .ink-presets.is-compact .ink-preset-name {
     font-size: 12px;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.25;
   }
 
   .ink-preset-badge {

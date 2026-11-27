@@ -207,6 +207,7 @@
   .ink-cheat-title {
     margin: 0;
     flex: 1;
+    font-family: var(--ink-font-display);
     font-size: 15px;
     font-weight: 600;
     color: var(--ink-text);

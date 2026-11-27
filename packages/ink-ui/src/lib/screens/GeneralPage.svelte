@@ -803,4 +803,17 @@
     font-size: 11.5px;
     color: var(--ink-accent-text);
   }
+
+  [data-setting-id='about.diag'] :global(.ink-row) {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  [data-setting-id='about.diag'] :global(.ink-row-sub) {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    text-align: right;
+    line-height: 1.35;
+  }
 </style>

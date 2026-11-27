@@ -753,7 +753,7 @@
   }
 
   .ink-island-swatch[data-bordered='true'] {
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+    box-shadow: var(--ink-island-swatch-ring);
   }
 
   .ink-island-swatch[data-selected='true'] {
@@ -772,7 +772,7 @@
 
   .ink-island-pen-dot[data-bordered='true'] {
     box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+      var(--ink-island-pen-ring),
       0 0 0 2px var(--ink-island),
       0 0 0 3.5px var(--ink-island-text);
   }
@@ -840,7 +840,7 @@
     width: 10px;
     height: 10px;
     border-radius: 3px;
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--ink-island-chip-border);
     box-sizing: border-box;
     flex: none;
   }

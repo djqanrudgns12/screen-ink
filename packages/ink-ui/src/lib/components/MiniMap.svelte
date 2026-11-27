@@ -66,7 +66,7 @@
   .ink-minimap-view {
     position: absolute;
     border-radius: 3px;
-    background: rgba(255, 159, 10, 0.1);
+    background: var(--ink-minimap-view-bg);
     box-shadow: 0 0 0 1.5px var(--ink-accent);
     box-sizing: border-box;
   }

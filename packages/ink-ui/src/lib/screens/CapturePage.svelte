@@ -380,6 +380,7 @@
 
   .ink-page-title {
     margin: 0;
+    font-family: var(--ink-font-display);
     font-size: 19px;
     font-weight: 600;
     color: var(--ink-text);

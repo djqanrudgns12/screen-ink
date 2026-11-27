@@ -593,14 +593,14 @@
 
 <style>
   .ink-cw-panel {
-    --cw-bg: rgba(20, 21, 25, 0.88);
-    --cw-fg: #f7f8fa;
-    --cw-sub: #a0a6b2;
-    --cw-border: rgba(255, 255, 255, 0.14);
-    --cw-soft: rgba(255, 255, 255, 0.08);
-    --cw-rail: rgba(255, 255, 255, 0.2);
-    --cw-preview-bg: rgba(255, 255, 255, 0.06);
-    --cw-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 18px 44px rgba(0, 0, 0, 0.48);
+    --cw-bg: var(--ink-cw-bg);
+    --cw-fg: var(--ink-cw-fg);
+    --cw-sub: var(--ink-cw-sub);
+    --cw-border: var(--ink-cw-border);
+    --cw-soft: var(--ink-cw-soft);
+    --cw-rail: var(--ink-cw-rail);
+    --cw-preview-bg: var(--ink-cw-preview-bg);
+    --cw-shadow: var(--ink-cw-shadow);
 
     position: absolute;
     left: 0;
@@ -624,38 +624,11 @@
     z-index: 7;
   }
 
-  :global([data-theme='light']) .ink-cw-panel {
-    --cw-bg: rgba(250, 250, 248, 0.92);
-    --cw-fg: #141414;
-    --cw-sub: #5e5e5b;
-    --cw-border: rgba(0, 0, 0, 0.12);
-    --cw-soft: rgba(0, 0, 0, 0.06);
-    --cw-rail: rgba(0, 0, 0, 0.16);
-    --cw-preview-bg: rgba(0, 0, 0, 0.045);
-    --cw-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 16px 40px rgba(0, 0, 0, 0.18);
-  }
-
-  @media (prefers-color-scheme: light) {
-    :global(:root:not([data-theme='dark'])) .ink-cw-panel {
-      --cw-bg: rgba(250, 250, 248, 0.92);
-      --cw-fg: #141414;
-      --cw-sub: #5e5e5b;
-      --cw-border: rgba(0, 0, 0, 0.12);
-      --cw-soft: rgba(0, 0, 0, 0.06);
-      --cw-rail: rgba(0, 0, 0, 0.16);
-      --cw-preview-bg: rgba(0, 0, 0, 0.045);
-      --cw-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 16px 40px rgba(0, 0, 0, 0.18);
-    }
-  }
-
   @media (prefers-reduced-transparency: reduce) {
     .ink-cw-panel {
-      --cw-bg: #18191d;
+      --cw-bg: var(--ink-glass-solid);
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
-    }
-    :global([data-theme='light']) .ink-cw-panel {
-      --cw-bg: #fafaf8;
     }
   }
 
@@ -726,12 +699,12 @@
     border: 0;
     border-radius: 999px;
     cursor: pointer;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
+    box-shadow: var(--ink-swatch-ring);
     transition: transform 100ms ease-out;
   }
 
   .ink-cw-swatch.light {
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--ink-swatch-ring-light);
   }
 
   .ink-cw-swatch:hover {
@@ -787,8 +760,8 @@
     width: 22px;
     height: 22px;
     border-radius: 999px;
-    background: conic-gradient(#e5484d, #f97316, #f2b705, #2ba36b, #2f6fed, #8b5cf6, #ec4899, #e5484d);
-    box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.4);
+    background: var(--ink-rainbow-wheel);
+    box-shadow: var(--ink-rainbow-ring);
   }
 
   .ink-cw-color-native {
@@ -822,7 +795,7 @@
   }
 
   .ink-cw-eye-btn.active {
-    background: rgba(255, 159, 10, 0.24);
+    background: var(--ink-cw-eye-active-bg);
     color: var(--ink-accent);
     box-shadow: inset 0 0 0 1.5px var(--ink-accent);
   }
@@ -841,11 +814,11 @@
     border: 0;
     border-radius: 999px;
     cursor: pointer;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+    box-shadow: var(--ink-recent-dot-ring);
   }
 
   .ink-cw-recent-dot.light {
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.28);
+    box-shadow: var(--ink-recent-dot-ring-light);
   }
 
   .ink-cw-recent-dot.active {
@@ -878,11 +851,7 @@
   }
 
   .ink-cw-font-btn:hover {
-    background: rgba(255, 255, 255, 0.13);
-  }
-
-  :global([data-theme='light']) .ink-cw-font-btn:hover {
-    background: rgba(0, 0, 0, 0.09);
+    background: var(--ink-cw-soft-hover);
   }
 
   .ink-cw-font-btn.open {
@@ -984,9 +953,9 @@
     width: 14px;
     height: 14px;
     border-radius: 999px;
-    background: #ffffff;
+    background: var(--ink-cw-thumb-bg);
     border: 2px solid var(--ink-accent);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--ink-cw-thumb-shadow);
     transform: translate(-50%, -50%);
     pointer-events: none;
   }
@@ -999,11 +968,11 @@
     padding: 2px 6px;
     border-radius: 5px;
     background: var(--ink-accent);
-    color: #111315;
+    color: var(--ink-on-accent);
     font-size: 11px;
     font-weight: 700;
     white-space: nowrap;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--ink-cw-thumb-tip-shadow);
   }
 
   .ink-cw-ticks {
@@ -1062,7 +1031,7 @@
   }
 
   .ink-cw-preview-dot.light {
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.28);
+    box-shadow: var(--ink-swatch-ring-dark-on-light);
   }
 
   .ink-cw-preview-marker {

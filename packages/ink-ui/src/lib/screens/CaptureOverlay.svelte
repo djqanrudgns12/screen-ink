@@ -1810,25 +1810,18 @@
     top: 0;
     padding: 3px 8px;
     border-radius: 7px;
-    background: rgba(16, 17, 20, 0.84);
-    color: #f7f8fa;
+    background: var(--ink-badge-bg);
+    color: var(--ink-badge-fg);
     font-size: 11px;
     font-weight: 500;
     line-height: 1.3;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+    border: 1px solid var(--ink-badge-border);
+    box-shadow: var(--ink-badge-shadow);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     pointer-events: none;
     white-space: nowrap;
     z-index: 5;
-  }
-
-  :global([data-theme='light']) .ink-size-badge {
-    background: rgba(250, 250, 248, 0.9);
-    color: #141414;
-    border-color: rgba(0, 0, 0, 0.12);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
   }
 
   .ink-stage-hint {
@@ -1838,12 +1831,12 @@
     transform: translateX(-50%);
     padding: 5px 12px;
     border-radius: 999px;
-    background: rgba(16, 17, 20, 0.78);
-    color: #e6e8ee;
+    background: var(--ink-stage-bg);
+    color: var(--ink-stage-fg);
     font-size: 12px;
     line-height: 1.3;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--ink-stage-border);
+    box-shadow: var(--ink-stage-shadow);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     pointer-events: none;
@@ -1854,13 +1847,6 @@
   .ink-stage-hint[data-top='true'] {
     bottom: auto;
     top: 16px;
-  }
-
-  :global([data-theme='light']) .ink-stage-hint {
-    background: rgba(250, 250, 248, 0.88);
-    color: #1c1d21;
-    border-color: rgba(0, 0, 0, 0.12);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
   }
 
   .ink-afterimage-layer {
@@ -1923,7 +1909,7 @@
     font-family: var(--ink-font-mono);
     font-size: 11px;
     paint-order: stroke;
-    stroke: rgba(0, 0, 0, 0.75);
+    stroke: var(--ink-evidence-stroke);
     stroke-width: 3px;
   }
 
@@ -1942,13 +1928,13 @@
     transform: translateX(-50%);
     padding: 6px 14px;
     border-radius: 999px;
-    background: rgba(16, 17, 20, 0.88);
-    color: #f7f8fa;
+    background: var(--ink-hud-bg);
+    color: var(--ink-island-text);
     font-size: 12px;
     font-weight: 500;
     line-height: 1.3;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
+    border: 1px solid var(--ink-hud-border);
+    box-shadow: var(--ink-hud-shadow);
     pointer-events: none;
     white-space: nowrap;
     z-index: 45;

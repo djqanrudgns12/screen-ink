@@ -154,6 +154,106 @@
   --ink-pen-K: #1A1A1A;
   --ink-pen-fg-dark: #121212;
   --ink-pen-fg-light: #FFFFFF;
+
+  /* 오버레이·유리 도구 막대·패널·HUD 토큰 (라이트/다크 자동 전환 및 공통) */
+  --ink-on-accent: #111315;
+  --ink-glass-solid: #FAFAF8;
+
+  /* 트레이 팝오버 반투명 재질 */
+  --ink-tray-glass-bg: rgba(250, 250, 248, 0.88);
+  --ink-tray-glass-mac: rgba(250, 250, 248, 0.82);
+  --ink-tray-glass-win: rgba(246, 246, 243, 0.9);
+  --ink-tray-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 0 0 1px rgba(18, 18, 18, 0.09), 0 14px 36px rgba(0, 0, 0, 0.16);
+
+  /* 캡처·그리기 도구 막대 */
+  --ink-tb-bg: rgba(250, 250, 248, 0.86);
+  --ink-dtb-bg: rgba(250, 250, 248, 0.88);
+  --ink-tb-fg: #141414;
+  --ink-tb-sub: #474744;
+  --ink-tb-hover: rgba(0, 0, 0, 0.06);
+  --ink-tb-active-bg: rgba(255, 159, 10, 0.16);
+  --ink-tb-divider: rgba(0, 0, 0, 0.12);
+  --ink-tb-border: rgba(0, 0, 0, 0.12);
+  --ink-tb-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 12px 32px rgba(0, 0, 0, 0.16);
+  --ink-tb-dot-ring: rgba(0, 0, 0, 0.25);
+  --ink-tip-bg: rgba(24, 25, 28, 0.94);
+  --ink-tip-fg: #F7F8FA;
+  --ink-tip-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+
+  /* 색·굵기 패널 */
+  --ink-cw-bg: rgba(250, 250, 248, 0.92);
+  --ink-cw-fg: #141414;
+  --ink-cw-sub: #5E5E5B;
+  --ink-cw-border: rgba(0, 0, 0, 0.12);
+  --ink-cw-soft: rgba(0, 0, 0, 0.06);
+  --ink-cw-soft-hover: rgba(0, 0, 0, 0.09);
+  --ink-cw-rail: rgba(0, 0, 0, 0.16);
+  --ink-cw-preview-bg: rgba(0, 0, 0, 0.045);
+  --ink-cw-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 16px 40px rgba(0, 0, 0, 0.18);
+  --ink-cw-eye-active-bg: rgba(255, 159, 10, 0.24);
+  --ink-cw-thumb-bg: #FFFFFF;
+  --ink-cw-thumb-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --ink-cw-thumb-tip-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  --ink-rainbow-wheel: conic-gradient(#E5484D, #F97316, #F2B705, #2BA36B, #2F6FED, #8B5CF6, #EC4899, #E5484D);
+  --ink-rainbow-ring: inset 0 0 0 1.5px rgba(255, 255, 255, 0.4);
+  --ink-swatch-ring: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
+  --ink-swatch-ring-light: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+  --ink-swatch-ring-dark-on-light: 0 0 0 1px rgba(0, 0, 0, 0.28);
+  --ink-recent-dot-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  --ink-recent-dot-ring-light: inset 0 0 0 1px rgba(0, 0, 0, 0.28);
+
+  /* 글꼴 고르기 팝오버 */
+  --ink-fp-bg: rgba(250, 250, 248, 0.96);
+  --ink-fp-fg: #141414;
+  --ink-fp-muted: #5E5E5B;
+  --ink-fp-border: rgba(0, 0, 0, 0.13);
+  --ink-fp-line: rgba(0, 0, 0, 0.08);
+  --ink-fp-bar: rgba(0, 0, 0, 0.03);
+  --ink-fp-soft: rgba(0, 0, 0, 0.06);
+  --ink-fp-hover: rgba(217, 119, 6, 0.12);
+  --ink-fp-selected: rgba(217, 119, 6, 0.2);
+  --ink-fp-chip-bg: rgba(0, 0, 0, 0.055);
+  --ink-fp-fade: rgba(250, 250, 248, 0.98);
+  --ink-fp-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 18px 42px rgba(0, 0, 0, 0.2);
+  --ink-fp-scroll-thumb: rgba(255, 159, 10, 0.3);
+
+  /* 캡처 오버레이 배지·안내·공통 HUD */
+  --ink-badge-bg: rgba(250, 250, 248, 0.9);
+  --ink-badge-fg: #141414;
+  --ink-badge-border: rgba(0, 0, 0, 0.12);
+  --ink-badge-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+  --ink-stage-bg: rgba(250, 250, 248, 0.88);
+  --ink-stage-fg: #1C1D21;
+  --ink-stage-border: rgba(0, 0, 0, 0.12);
+  --ink-stage-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  --ink-hud-bg: rgba(16, 17, 20, 0.88);
+  --ink-hud-bg-eye: rgba(16, 17, 20, 0.84);
+  --ink-hud-bg-soft: rgba(20, 21, 25, 0.72);
+  --ink-hud-border: rgba(255, 255, 255, 0.14);
+  --ink-hud-key-bg: rgba(255, 255, 255, 0.14);
+  --ink-hud-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
+
+  /* 캔버스·커서·섬·미니맵·확대 후광·칠판 미리보기·위험 연한 면 */
+  --ink-annot-outline: rgba(255, 159, 10, 0.7);
+  --ink-annot-ring-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  --ink-draw-ring-shadow: 0 0 0 1px rgba(255, 255, 255, 0.72), 0 0 0 2px rgba(0, 0, 0, 0.32), inset 0 0 0 1px rgba(0, 0, 0, 0.22);
+  --ink-draw-dot-ring: 0 0 0 1px rgba(255, 255, 255, 0.45);
+  --ink-draw-style-dot-ring: 0 0 0 1.5px rgba(255, 255, 255, 0.45);
+  --ink-draw-style-dot-ring-light: 0 0 0 1.5px rgba(0, 0, 0, 0.3);
+  --ink-island-dot-ring: 0 0 0 1px rgba(255, 255, 255, 0.5);
+  --ink-island-swatch-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  --ink-island-pen-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  --ink-island-chip-border: rgba(255, 255, 255, 0.8);
+  --ink-minimap-view-bg: rgba(255, 159, 10, 0.1);
+  --ink-zoom-halo-bg: rgba(0, 0, 0, 0.28);
+  --ink-zoom-halo-glow: 0 0 10px rgba(255, 159, 10, 0.35);
+  --ink-evidence-stroke: rgba(0, 0, 0, 0.75);
+  --ink-text-shadow-subtle: 0 0 1px rgba(0, 0, 0, 0.35);
+  --ink-board-white-text: #5E5E5B;
+  --ink-board-black-ring: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  --ink-board-black-text: #C9CCD3;
+  --ink-danger-soft-bg: rgba(229, 72, 77, 0.12);
+  --ink-danger-soft-border: rgba(229, 72, 77, 0.45);
 }
 
 [data-theme='dark'] {
@@ -243,6 +343,57 @@
   --ink-sidebar-border: transparent;
   --ink-close-bg: var(--ink-raised);
   --ink-close-r: 14px;
+
+  --ink-glass-solid: #18191D;
+
+  --ink-tray-glass-bg: rgba(26, 27, 31, 0.86);
+  --ink-tray-glass-mac: rgba(24, 25, 29, 0.8);
+  --ink-tray-glass-win: rgba(30, 31, 36, 0.91);
+  --ink-tray-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.09), 0 20px 48px rgba(0, 0, 0, 0.52);
+
+  --ink-tb-bg: rgba(20, 21, 25, 0.8);
+  --ink-dtb-bg: rgba(20, 21, 25, 0.82);
+  --ink-tb-fg: #F7F8FA;
+  --ink-tb-sub: #C9CCD3;
+  --ink-tb-hover: rgba(255, 255, 255, 0.12);
+  --ink-tb-active-bg: rgba(255, 159, 10, 0.22);
+  --ink-tb-divider: rgba(255, 255, 255, 0.14);
+  --ink-tb-border: rgba(255, 255, 255, 0.14);
+  --ink-tb-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 14px 36px rgba(0, 0, 0, 0.42);
+  --ink-tb-dot-ring: rgba(255, 255, 255, 0.45);
+  --ink-tip-bg: rgba(14, 15, 18, 0.94);
+
+  --ink-cw-bg: rgba(20, 21, 25, 0.88);
+  --ink-cw-fg: #F7F8FA;
+  --ink-cw-sub: #A0A6B2;
+  --ink-cw-border: rgba(255, 255, 255, 0.14);
+  --ink-cw-soft: rgba(255, 255, 255, 0.08);
+  --ink-cw-soft-hover: rgba(255, 255, 255, 0.13);
+  --ink-cw-rail: rgba(255, 255, 255, 0.2);
+  --ink-cw-preview-bg: rgba(255, 255, 255, 0.06);
+  --ink-cw-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 18px 44px rgba(0, 0, 0, 0.48);
+
+  --ink-fp-bg: rgba(20, 21, 25, 0.94);
+  --ink-fp-fg: #F7F8FA;
+  --ink-fp-muted: #9CA3AF;
+  --ink-fp-border: rgba(255, 255, 255, 0.14);
+  --ink-fp-line: rgba(255, 255, 255, 0.08);
+  --ink-fp-bar: rgba(255, 255, 255, 0.04);
+  --ink-fp-soft: rgba(255, 255, 255, 0.08);
+  --ink-fp-hover: rgba(255, 159, 10, 0.14);
+  --ink-fp-selected: rgba(255, 159, 10, 0.22);
+  --ink-fp-chip-bg: rgba(255, 255, 255, 0.08);
+  --ink-fp-fade: rgba(20, 21, 25, 0.96);
+  --ink-fp-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 18px 46px rgba(0, 0, 0, 0.52);
+
+  --ink-badge-bg: rgba(16, 17, 20, 0.84);
+  --ink-badge-fg: #F7F8FA;
+  --ink-badge-border: rgba(255, 255, 255, 0.14);
+  --ink-badge-shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+  --ink-stage-bg: rgba(16, 17, 20, 0.78);
+  --ink-stage-fg: #E6E8EE;
+  --ink-stage-border: rgba(255, 255, 255, 0.12);
+  --ink-stage-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -333,6 +484,57 @@
     --ink-sidebar-border: transparent;
     --ink-close-bg: var(--ink-raised);
     --ink-close-r: 14px;
+
+    --ink-glass-solid: #18191D;
+
+    --ink-tray-glass-bg: rgba(26, 27, 31, 0.86);
+    --ink-tray-glass-mac: rgba(24, 25, 29, 0.8);
+    --ink-tray-glass-win: rgba(30, 31, 36, 0.91);
+    --ink-tray-glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.09), 0 20px 48px rgba(0, 0, 0, 0.52);
+
+    --ink-tb-bg: rgba(20, 21, 25, 0.8);
+    --ink-dtb-bg: rgba(20, 21, 25, 0.82);
+    --ink-tb-fg: #F7F8FA;
+    --ink-tb-sub: #C9CCD3;
+    --ink-tb-hover: rgba(255, 255, 255, 0.12);
+    --ink-tb-active-bg: rgba(255, 159, 10, 0.22);
+    --ink-tb-divider: rgba(255, 255, 255, 0.14);
+    --ink-tb-border: rgba(255, 255, 255, 0.14);
+    --ink-tb-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 14px 36px rgba(0, 0, 0, 0.42);
+    --ink-tb-dot-ring: rgba(255, 255, 255, 0.45);
+    --ink-tip-bg: rgba(14, 15, 18, 0.94);
+
+    --ink-cw-bg: rgba(20, 21, 25, 0.88);
+    --ink-cw-fg: #F7F8FA;
+    --ink-cw-sub: #A0A6B2;
+    --ink-cw-border: rgba(255, 255, 255, 0.14);
+    --ink-cw-soft: rgba(255, 255, 255, 0.08);
+    --ink-cw-soft-hover: rgba(255, 255, 255, 0.13);
+    --ink-cw-rail: rgba(255, 255, 255, 0.2);
+    --ink-cw-preview-bg: rgba(255, 255, 255, 0.06);
+    --ink-cw-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 18px 44px rgba(0, 0, 0, 0.48);
+
+    --ink-fp-bg: rgba(20, 21, 25, 0.94);
+    --ink-fp-fg: #F7F8FA;
+    --ink-fp-muted: #9CA3AF;
+    --ink-fp-border: rgba(255, 255, 255, 0.14);
+    --ink-fp-line: rgba(255, 255, 255, 0.08);
+    --ink-fp-bar: rgba(255, 255, 255, 0.04);
+    --ink-fp-soft: rgba(255, 255, 255, 0.08);
+    --ink-fp-hover: rgba(255, 159, 10, 0.14);
+    --ink-fp-selected: rgba(255, 159, 10, 0.22);
+    --ink-fp-chip-bg: rgba(255, 255, 255, 0.08);
+    --ink-fp-fade: rgba(20, 21, 25, 0.96);
+    --ink-fp-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 18px 46px rgba(0, 0, 0, 0.52);
+
+    --ink-badge-bg: rgba(16, 17, 20, 0.84);
+    --ink-badge-fg: #F7F8FA;
+    --ink-badge-border: rgba(255, 255, 255, 0.14);
+    --ink-badge-shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+    --ink-stage-bg: rgba(16, 17, 20, 0.78);
+    --ink-stage-fg: #E6E8EE;
+    --ink-stage-border: rgba(255, 255, 255, 0.12);
+    --ink-stage-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
   }
 }
 

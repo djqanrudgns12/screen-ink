@@ -277,16 +277,16 @@
 
 <style>
   .ink-toolbar {
-    --tb-bg: rgba(20, 21, 25, 0.8);
-    --tb-fg: #f7f8fa;
-    --tb-hover: rgba(255, 255, 255, 0.12);
-    --tb-active-bg: rgba(255, 159, 10, 0.22);
-    --tb-divider: rgba(255, 255, 255, 0.14);
-    --tb-border: rgba(255, 255, 255, 0.14);
-    --tb-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 14px 36px rgba(0, 0, 0, 0.42);
-    --tb-tip-bg: rgba(14, 15, 18, 0.94);
-    --tb-tip-fg: #f7f8fa;
-    --tb-dot-ring: rgba(255, 255, 255, 0.45);
+    --tb-bg: var(--ink-tb-bg);
+    --tb-fg: var(--ink-tb-fg);
+    --tb-hover: var(--ink-tb-hover);
+    --tb-active-bg: var(--ink-tb-active-bg);
+    --tb-divider: var(--ink-tb-divider);
+    --tb-border: var(--ink-tb-border);
+    --tb-shadow: var(--ink-tb-shadow);
+    --tb-tip-bg: var(--ink-tip-bg);
+    --tb-tip-fg: var(--ink-tip-fg);
+    --tb-dot-ring: var(--ink-tb-dot-ring);
 
     position: absolute;
     left: 0;
@@ -310,40 +310,11 @@
     z-index: 6;
   }
 
-  :global([data-theme='light']) .ink-toolbar {
-    --tb-bg: rgba(250, 250, 248, 0.86);
-    --tb-fg: #141414;
-    --tb-hover: rgba(0, 0, 0, 0.06);
-    --tb-active-bg: rgba(255, 159, 10, 0.16);
-    --tb-divider: rgba(0, 0, 0, 0.12);
-    --tb-border: rgba(0, 0, 0, 0.12);
-    --tb-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 12px 32px rgba(0, 0, 0, 0.16);
-    --tb-tip-bg: rgba(24, 25, 28, 0.94);
-    --tb-tip-fg: #f7f8fa;
-    --tb-dot-ring: rgba(0, 0, 0, 0.25);
-  }
-
-  @media (prefers-color-scheme: light) {
-    :global(:root:not([data-theme='dark'])) .ink-toolbar {
-      --tb-bg: rgba(250, 250, 248, 0.86);
-      --tb-fg: #141414;
-      --tb-hover: rgba(0, 0, 0, 0.06);
-      --tb-active-bg: rgba(255, 159, 10, 0.16);
-      --tb-divider: rgba(0, 0, 0, 0.12);
-      --tb-border: rgba(0, 0, 0, 0.12);
-      --tb-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 12px 32px rgba(0, 0, 0, 0.16);
-      --tb-dot-ring: rgba(0, 0, 0, 0.25);
-    }
-  }
-
   @media (prefers-reduced-transparency: reduce) {
     .ink-toolbar {
-      --tb-bg: #18191d;
+      --tb-bg: var(--ink-glass-solid);
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
-    }
-    :global([data-theme='light']) .ink-toolbar {
-      --tb-bg: #fafaf8;
     }
   }
 
@@ -391,7 +362,7 @@
 
   .ink-toolbar-btn.primary {
     background: var(--ink-accent);
-    color: #111315;
+    color: var(--ink-on-accent);
   }
 
   .ink-toolbar-btn.primary:hover {
@@ -414,7 +385,7 @@
     font-size: 12px;
     line-height: 1;
     letter-spacing: -0.02em;
-    text-shadow: 0 0 1px rgba(0, 0, 0, 0.35);
+    text-shadow: var(--ink-text-shadow-subtle);
   }
 
   .ink-toolbar-divider {
@@ -438,7 +409,7 @@
     line-height: 1.25;
     white-space: nowrap;
     pointer-events: none;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+    box-shadow: var(--ink-tip-shadow);
     z-index: 10;
   }
 </style>

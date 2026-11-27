@@ -1074,7 +1074,7 @@
     user-select: none;
     -webkit-user-select: none;
     cursor: crosshair;
-    background: #000;
+    background: var(--ink-island);
   }
 
   .ink-draw[data-ring='true'] {
@@ -1114,7 +1114,7 @@
     margin: 0;
     padding: 0;
     border: none;
-    outline: 1px dashed rgba(255, 159, 10, 0.7);
+    outline: 1px dashed var(--ink-annot-outline);
     outline-offset: 2px;
     background: transparent;
     resize: none;
@@ -1132,10 +1132,7 @@
     box-sizing: border-box;
     border: 1.5px solid;
     border-radius: 50%;
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.72),
-      0 0 0 2px rgba(0, 0, 0, 0.32),
-      inset 0 0 0 1px rgba(0, 0, 0, 0.22);
+    box-shadow: var(--ink-draw-ring-shadow);
     pointer-events: none;
     display: none;
     will-change: transform;
@@ -1158,7 +1155,7 @@
     left: 50%;
     top: 50%;
     border-radius: 50%;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
+    box-shadow: var(--ink-draw-dot-ring);
     transform: translate(-50%, -50%);
   }
 
@@ -1183,9 +1180,9 @@
     gap: 6px;
     padding: 5px 11px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: rgba(20, 21, 25, 0.72);
-    color: #f7f8fa;
+    border: 1px solid var(--ink-hud-border);
+    background: var(--ink-hud-bg-soft);
+    color: var(--ink-island-text);
     font-size: 11.5px;
     font-weight: 500;
     cursor: pointer;
@@ -1209,7 +1206,7 @@
   .ink-draw-restore-key {
     padding: 1px 5px;
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.14);
+    background: var(--ink-hud-key-bg);
     font-size: 10.5px;
   }
 
@@ -1220,9 +1217,9 @@
     transform: translateX(-50%);
     padding: 5px 12px;
     border-radius: 999px;
-    background: rgba(16, 17, 20, 0.84);
-    color: #f7f8fa;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: var(--ink-hud-bg-eye);
+    color: var(--ink-island-text);
+    border: 1px solid var(--ink-hud-border);
     font-size: 12px;
     line-height: 1.3;
     pointer-events: none;

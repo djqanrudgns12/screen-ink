@@ -131,20 +131,17 @@
 {/if}
 
 <style>
-  /* 라이트: macOS vibrancy / Windows Mica 반투명 + 흐림 기본값 */
+  /* 라이트·다크: macOS vibrancy / Windows Mica 반투명 + 흐림 기본값 (tokens.css에서 자동 전환) */
   :global(.ink-popover) {
     width: 252px;
     box-sizing: border-box;
     padding: 8px;
-    border-radius: 12px;
-    background: rgba(250, 250, 248, 0.88);
+    border-radius: var(--ink-r-popover);
+    background: var(--ink-tray-glass-bg);
     backdrop-filter: blur(22px) saturate(1.35);
     -webkit-backdrop-filter: blur(22px) saturate(1.35);
     color: var(--ink-text);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.72),
-      0 0 0 1px rgba(18, 18, 18, 0.09),
-      0 14px 36px rgba(0, 0, 0, 0.16);
+    box-shadow: var(--ink-tray-glass-shadow);
     font-family: var(--ink-font-display);
     font-size: var(--ink-text-base);
     letter-spacing: var(--ink-tracking-ko);
@@ -152,54 +149,25 @@
   }
 
   :global(.ink-popover[data-platform='macos']) {
-    background: rgba(250, 250, 248, 0.82);
+    background: var(--ink-tray-glass-mac);
     backdrop-filter: blur(28px) saturate(1.6);
     -webkit-backdrop-filter: blur(28px) saturate(1.6);
   }
 
   :global(.ink-popover[data-platform='windows']) {
-    background: rgba(246, 246, 243, 0.9);
+    background: var(--ink-tray-glass-win);
     backdrop-filter: blur(18px) saturate(1.18);
     -webkit-backdrop-filter: blur(18px) saturate(1.18);
   }
 
-  /* 다크: macOS vibrancy / Windows Mica dark */
-  :global([data-theme='dark'] .ink-popover) {
-    background: rgba(26, 27, 31, 0.86);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      0 0 0 1px rgba(255, 255, 255, 0.09),
-      0 20px 48px rgba(0, 0, 0, 0.52);
-  }
-
   :global([data-theme='dark'] .ink-popover[data-platform='macos']) {
-    background: rgba(24, 25, 29, 0.8);
     backdrop-filter: blur(28px) saturate(1.55);
     -webkit-backdrop-filter: blur(28px) saturate(1.55);
   }
 
   :global([data-theme='dark'] .ink-popover[data-platform='windows']) {
-    background: rgba(30, 31, 36, 0.91);
     backdrop-filter: blur(18px) saturate(1.15);
     -webkit-backdrop-filter: blur(18px) saturate(1.15);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :global(:root:not([data-theme='light']) .ink-popover) {
-      background: rgba(26, 27, 31, 0.86);
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 0 1px rgba(255, 255, 255, 0.09),
-        0 20px 48px rgba(0, 0, 0, 0.52);
-    }
-
-    :global(:root:not([data-theme='light']) .ink-popover[data-platform='macos']) {
-      background: rgba(24, 25, 29, 0.8);
-    }
-
-    :global(:root:not([data-theme='light']) .ink-popover[data-platform='windows']) {
-      background: rgba(30, 31, 36, 0.91);
-    }
   }
 
   @media (prefers-reduced-transparency: reduce) {

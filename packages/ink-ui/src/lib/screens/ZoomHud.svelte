@@ -65,10 +65,10 @@
     top: 0;
     border-radius: 50%;
     box-sizing: border-box;
-    background: rgba(0, 0, 0, 0.28);
+    background: var(--ink-zoom-halo-bg);
     box-shadow:
       inset 0 0 0 1.5px var(--ink-accent),
-      0 0 10px rgba(255, 159, 10, 0.35);
+      var(--ink-zoom-halo-glow);
     will-change: transform;
   }
 

@@ -182,7 +182,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5);
+    box-shadow: var(--ink-island-dot-ring);
   }
 
   .ink-annot-line {

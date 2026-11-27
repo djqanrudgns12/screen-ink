@@ -314,6 +314,7 @@
 
   .ink-page-title {
     margin: 0;
+    font-family: var(--ink-font-display);
     font-size: 19px;
     font-weight: 600;
     color: var(--ink-text);
@@ -437,12 +438,12 @@
 
   .ink-board-mini[data-board='white'] {
     box-shadow: inset 0 0 0 1px var(--ink-line);
-    color: #5e5e5b;
+    color: var(--ink-board-white-text);
   }
 
   .ink-board-mini[data-board='black'] {
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
-    color: #c9ccd3;
+    box-shadow: var(--ink-board-black-ring);
+    color: var(--ink-board-black-text);
   }
 
   .ink-board-mini-svg {

@@ -420,7 +420,7 @@
   });
 
   let ring = $derived.by(() => {
-    if (tool === 'eraser') return { d: Math.max(10, eraserCss), dot: 0, color: '#FFFFFF' };
+    if (tool === 'eraser') return { d: Math.max(10, eraserCss), dot: 0, color: 'var(--ink-pen-W)' };
     if (tool === 'pen' || tool === 'marker') {
       return { d: Math.max(14, widthPx + 10), dot: Math.max(2, widthPx), color: resolveInkColor(colorCode, 'frame') };
     }
@@ -537,7 +537,7 @@
     margin: 0;
     padding: 0;
     border: none;
-    outline: 1px dashed rgba(255, 159, 10, 0.7);
+    outline: 1px dashed var(--ink-annot-outline);
     outline-offset: 2px;
     background: transparent;
     resize: none;
@@ -555,9 +555,7 @@
     box-sizing: border-box;
     border: 2px solid;
     border-radius: 50%;
-    box-shadow:
-      0 0 0 1px rgba(0, 0, 0, 0.45),
-      inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--ink-annot-ring-shadow);
     pointer-events: none;
     display: none;
     will-change: transform;

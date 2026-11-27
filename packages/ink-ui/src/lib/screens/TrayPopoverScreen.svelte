@@ -399,8 +399,8 @@
   }
 
   .ink-tray-tile[data-recording='true'] {
-    background: rgba(229, 72, 77, 0.12);
-    border-color: rgba(229, 72, 77, 0.45);
+    background: var(--ink-danger-soft-bg);
+    border-color: var(--ink-danger-soft-border);
     color: var(--ink-danger-text);
   }
 
