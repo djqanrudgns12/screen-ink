@@ -174,7 +174,7 @@ export async function previewPresetWithClient(client, presetId, shortcuts, platf
  * @param {string} presetId
  * @param {ReadonlyArray<{ id: string, label?: string, combo: string }>} shortcuts
  * @param {'windows' | 'macos' | string} [platform='windows']
- * @returns {Promise<{ ok: boolean, undoSteps: number, appliedCount: number, failed: Array<{ id: string, combo: string, reason: string }> }>}
+ * @returns {Promise<{ ok: boolean, undoSteps: number, appliedCount: number, previous: Array<{ id: string, combo: string }>, failed: Array<{ id: string, combo: string, reason: string }> }>}
  */
 export async function applyPreset(client, presetId, shortcuts, platform = 'windows') {
   const diff = diffPreset(presetId, shortcuts, platform);
@@ -198,6 +198,7 @@ export async function applyPreset(client, presetId, shortcuts, platform = 'windo
     ok: failed.length === 0,
     undoSteps,
     appliedCount,
+    previous: diff.map(({ id, before }) => ({ id, combo: before })),
     failed,
   };
 }
@@ -206,16 +207,17 @@ export async function applyPreset(client, presetId, shortcuts, platform = 'windo
  * 직전 추천 묶음 적용을 기존 `client.undo()` 스택으로 되돌린다.
  * @param {import('@screen-ink/client').InkClient} client
  * @param {number} undoSteps
+ * @param {ReadonlyArray<{ id: string, combo: string }>} previous
  * @returns {Promise<boolean>}
  */
-export async function undoPresetApply(client, undoSteps) {
-  let ok = true;
+export async function undoPresetApply(client, undoSteps, previous = []) {
+  let state;
   for (let i = 0; i < undoSteps; i += 1) {
     const res = await client.undo();
-    if (!res?.ok) {
-      ok = false;
-      break;
-    }
+    if (!res?.ok) return false;
+    state = res.state;
   }
-  return ok;
+  // Windows에서 원래 키를 다른 앱이 점유하면 되돌리기 요청 뒤에도 새 키가 남을 수 있다.
+  const restored = new Map(state?.shortcuts?.map(({ id, combo }) => [id, combo]));
+  return previous.every(({ id, combo }) => restored.get(id) === combo);
 }

@@ -99,6 +99,7 @@
   "page.draw.zoomMinimapSub": "Small in corner",
 
   "page.shortcuts.preset.applied": "Preset applied",
+  "page.shortcuts.preset.undoIncomplete": "Some shortcuts could not be restored. Check the current keys in Settings.",
   "page.shortcuts.preset.appliedPartial": "{n} shortcut(s) skipped due to conflicts",
   "page.shortcuts.preset.apply": "Apply",
   "page.shortcuts.preset.applying": "Applying...",

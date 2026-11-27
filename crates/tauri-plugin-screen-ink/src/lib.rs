@@ -1083,24 +1083,19 @@ fn audio_inputs(ink: State<'_, Ink>) -> Vec<AudioInput> {
 
 /// `HKLM\…\Fonts` 값 이름("Malgun Gothic Bold (TrueType)", "Segoe UI & Segoe UI Semilight (TrueType)")에서 집 이름만.
 #[cfg(any(windows, test))]
-fn windows_family_names(reg_output: &str) -> Vec<String> {
+fn windows_family_names(value_name: &str) -> Vec<String> {
     const STYLES: [&str; 12] = [" Bold Italic", " Bold", " Italic", " Semibold", " SemiBold", " Semilight", " Light", " Black", " ExtraLight", " Regular", " Medium", " Oblique"];
     let mut out = Vec::new();
-    for line in reg_output.lines() {
-        let line = line.trim();
-        let Some(i) = line.find("REG_SZ") else { continue };
-        let name = line[..i].trim();
-        let name = name.split(" (").next().unwrap_or(name);
-        for part in name.split(" & ") {
-            let mut fam = part.trim().to_string();
-            for st in STYLES {
-                if let Some(x) = fam.strip_suffix(st) {
-                    fam = x.to_string();
-                }
+    let name = value_name.split(" (").next().unwrap_or(value_name);
+    for part in name.split(" & ") {
+        let mut family = part.trim();
+        for style in STYLES {
+            if let Some(base) = family.strip_suffix(style) {
+                family = base;
             }
-            if !fam.is_empty() {
-                out.push(fam);
-            }
+        }
+        if !family.is_empty() {
+            out.push(family.to_owned());
         }
     }
     out
@@ -1108,10 +1103,15 @@ fn windows_family_names(reg_output: &str) -> Vec<String> {
 
 #[cfg(windows)]
 fn windows_font_families() -> Vec<String> {
+    use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, REG_SZ};
+    use winreg::RegKey;
     let mut all = Vec::new();
-    for key in [r"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts", r"HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"] {
-        if let Ok(out) = std::process::Command::new("reg").args(["query", key]).output() {
-            all.extend(windows_family_names(&String::from_utf8_lossy(&out.stdout)));
+    for root in [HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER] {
+        let Ok(key) = RegKey::predef(root).open_subkey(r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts") else { continue };
+        for (name, value) in key.enum_values().flatten() {
+            if value.vtype == REG_SZ {
+                all.extend(windows_family_names(&name));
+            }
         }
     }
     all
@@ -2338,10 +2338,11 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
 mod tests {
     #[test]
     fn windows_글꼴_목록에서_집_이름만() {
-        let out = "HKEY_LOCAL_MACHINE\\...\\Fonts\r\n    Malgun Gothic (TrueType)    REG_SZ    malgun.ttf\r\n    Malgun Gothic Bold (TrueType)    REG_SZ    malgunbd.ttf\r\n    Segoe UI & Segoe UI Semilight (TrueType)    REG_SZ    x.ttc\r\n";
-        let mut v = super::windows_family_names(out);
+        let names = ["Malgun Gothic (TrueType)", "Malgun Gothic Bold (TrueType)", "Segoe UI & Segoe UI Semilight (TrueType)"];
+        let mut v = names.into_iter().flat_map(super::windows_family_names).collect();
         super::tidy_font_names(&mut v);
         assert_eq!(v, ["Malgun Gothic", "Segoe UI"]);
+        assert_eq!(super::windows_family_names("맑은 고딕 Bold (TrueType)"), ["맑은 고딕"]);
     }
 
     use super::*;

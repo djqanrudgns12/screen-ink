@@ -99,6 +99,7 @@
   "page.draw.zoomMinimapSub": "모서리에 작게",
 
   "page.shortcuts.preset.applied": "추천 묶음을 적용했어요",
+  "page.shortcuts.preset.undoIncomplete": "일부 단축키를 원래대로 되돌리지 못했어요. 설정의 단축키 목록에서 현재 키를 확인하세요.",
   "page.shortcuts.preset.appliedPartial": "{n}개 키는 겹쳐서 바꾸지 못했어요",
   "page.shortcuts.preset.apply": "적용",
   "page.shortcuts.preset.applying": "적용 중...",

@@ -1010,6 +1010,7 @@
   "page.shortcuts.preset.sub": "Switch key layouts in one click",
   "page.shortcuts.preset.title": "Presets",
   "page.shortcuts.preset.undo": "Undo",
+  "page.shortcuts.preset.undoIncomplete": "Some shortcuts could not be restored. Check the current keys in Settings.",
   "page.shortcuts.preset.warnTag": "Note",
   "pdf.action.download": "Save as PDF",
   "pdf.action.generating": "Creating…",

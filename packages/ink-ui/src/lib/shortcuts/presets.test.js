@@ -132,3 +132,13 @@ test('다른 앱과 겹치는 키가 있으면 미리보기에 겹침을 표시�
   assert.equal(pinChange?.owner, 'Snipaste');
   assert.ok(preview.conflictCount >= 1);
 });
+
+test('되돌리기 요청이 성공해도 원래 키가 남지 않으면 복원 실패로 알린다', async () => {
+  const previous = [{ id: 'region', combo: 'F1' }];
+  const client = createFakeClient({ platform: 'windows' });
+  const state = await client.getState();
+  const undo = async () => ({ ok: true, state });
+  assert.equal(await undoPresetApply({ ...client, undo }, 1, previous), true);
+  state.shortcuts = state.shortcuts.map((row) => row.id === 'region' ? { ...row, combo: 'Alt+Q' } : row);
+  assert.equal(await undoPresetApply({ ...client, undo }, 1, previous), false);
+});

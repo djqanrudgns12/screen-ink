@@ -52,8 +52,9 @@
   let applying = $state(false);
   let showAllPreview = $state(false);
   let lastApplied = $state(
-    /** @type {{ presetId: string, undoSteps: number, failedCount: number } | null} */ (null),
+    /** @type {{ undoSteps: number, failedCount: number, previous: Array<{ id: string, combo: string }> } | null} */ (null),
   );
+  let undoIncomplete = $state(false);
 
   let activePresetId = $derived(detectActivePreset(shortcuts, platform));
   let previewLimit = $derived(compact ? 4 : 6);
@@ -97,13 +98,8 @@
     applying = true;
     try {
       const res = await applyPreset(client, targetId, shortcuts, platform);
-      if (res.undoSteps > 0) {
-        lastApplied = {
-          presetId: targetId,
-          undoSteps: res.undoSteps,
-          failedCount: res.failed.length,
-        };
-      }
+      undoIncomplete = false;
+      lastApplied = { undoSteps: res.undoSteps, failedCount: res.failed.length, previous: res.previous };
       closePreview();
     } finally {
       applying = false;
@@ -115,7 +111,7 @@
     const steps = lastApplied.undoSteps;
     applying = true;
     try {
-      await undoPresetApply(client, steps);
+      undoIncomplete = !(await undoPresetApply(client, steps, lastApplied.previous));
       lastApplied = null;
     } finally {
       applying = false;
@@ -249,6 +245,8 @@
         {/if}
       </div>
     </div>
+  {:else if undoIncomplete}
+    <div class="ink-preset-applied" role="status">{t('page.shortcuts.preset.undoIncomplete')}</div>
   {:else if lastApplied}
     <div class="ink-preset-applied" role="status">
       <span class="ink-preset-applied-text">
@@ -259,14 +257,16 @@
             : t('page.shortcuts.preset.applied')}
         </span>
       </span>
-      <button
-        type="button"
-        class="ink-preset-btn ink-preset-btn-sec ink-focus"
-        disabled={applying}
-        onclick={handleUndo}
-      >
-        {t('page.shortcuts.preset.undo')}
-      </button>
+      {#if lastApplied.undoSteps > 0}
+        <button
+          type="button"
+          class="ink-preset-btn ink-preset-btn-sec ink-focus"
+          disabled={applying}
+          onclick={handleUndo}
+        >
+          {t('page.shortcuts.preset.undo')}
+        </button>
+      {/if}
     </div>
   {/if}
 </section>

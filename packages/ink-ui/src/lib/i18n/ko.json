@@ -1010,6 +1010,7 @@
   "page.shortcuts.preset.sub": "자주 쓰는 방식에 맞춰 한 번에 바꿔요",
   "page.shortcuts.preset.title": "추천 묶음",
   "page.shortcuts.preset.undo": "되돌리기",
+  "page.shortcuts.preset.undoIncomplete": "일부 단축키를 원래대로 되돌리지 못했어요. 설정의 단축키 목록에서 현재 키를 확인하세요.",
   "page.shortcuts.preset.warnTag": "주의",
   "pdf.action.download": "PDF로 받기",
   "pdf.action.generating": "만드는 중…",
