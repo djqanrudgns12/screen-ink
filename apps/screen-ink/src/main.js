@@ -24,9 +24,7 @@ mount(App, {
   props: { client: createTauriClient(), view, firstRun: params.get('first') === '1', monitorId: Number(params.get('monitor') ?? 0), pinId: Number(params.get('pin') ?? 0) },
 });
 
-// 글자 입력 진단(R2-TXT-0, 개발 실행만): 글 상자가 초점을 받으면 맥 입력 상태를 앱 기록에
-if (import.meta.env.DEV) {
-  window.addEventListener('ink-debug-input', (e) => {
-    void invoke('plugin:screen-ink|debug_input', { place: String(e.detail ?? '') }).catch(() => {});
-  });
-}
+// 글 상자 초점(R2-TXT-0): 맥은 웹뷰 입력 문맥을 바로잡는다(한글 조합), Windows는 할 일 없음
+window.addEventListener('ink-text-focus', (e) => {
+  void invoke('plugin:screen-ink|text_focus', { place: String(e.detail ?? '') }).catch(() => {});
+});

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-text-focus"
+description = "Enables the text_focus command without any pre-configured scope."
+commands.allow = ["text_focus"]
+
+[[permission]]
+identifier = "deny-text-focus"
+description = "Denies the text_focus command without any pre-configured scope."
+commands.deny = ["text_focus"]

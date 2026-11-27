@@ -322,7 +322,7 @@ pub fn input_state() -> (usize, String) {
             let c: *const std::ffi::c_char = msg_send![src, UTF8String];
             if c.is_null() { "?".into() } else { std::ffi::CStr::from_ptr(c).to_string_lossy().into_owned() }
         };
-        let fr_ctx: *mut AnyObject = if fr.is_null() { std::ptr::null_mut() } else { msg_send![fr, inputContext] };
+        let fr_ctx = input_context_of(fr);
         (
             key as usize,
             format!(
@@ -335,6 +335,54 @@ pub fn input_state() -> (usize, String) {
                 !fr_ctx.is_null() && fr_ctx == ctx
             ),
         )
+    }
+}
+
+/// 응답자의 입력 문맥(`-[NSView inputContext]`). 응답하지 않는 객체(창 자신 등)·nil이면 nil.
+fn input_context_of(o: *mut AnyObject) -> *mut AnyObject {
+    if o.is_null() {
+        return std::ptr::null_mut();
+    }
+    // SAFETY: 응답하는지 먼저 묻고, 인자 없는 객체 반환 메서드로만 부른다.
+    unsafe {
+        let ok: Bool = msg_send![o, respondsToSelector: sel!(inputContext)];
+        if ok.as_bool() {
+            msg_send![o, inputContext]
+        } else {
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// 글 상자가 초점을 받을 때(R2-TXT-0 맥 한글 조합): 그 창을 키 창으로 두고, 첫 응답자(웹뷰)의 입력 문맥이
+/// 지금 입력 문맥(`currentInputContext`)이 아니면 지금 것을 내리고 웹뷰 것을 올린다.
+/// 맥 입력기(2벌식 등)는 지금 입력 문맥으로만 조합 글을 보낸다 — 활성화하지 않는 패널에서는 앱 활성화가 없어
+/// 지금 문맥이 갱신되지 않고 다른 창(이전 키 창)의 것으로 남을 수 있다 → 한글 키가 페이지에 오지 않고, 조합이 필요 없는
+/// 숫자만 들어간다(M16 기록: 실행마다 다르고 한 실행 안에서는 같음 = 처음 키 창이 된 순서에 달림).
+/// 반환 = 바로잡았으면 Some(바로잡기 전 상태), 이미 맞았거나 할 수 없으면 None.
+pub fn ensure_text_input(ns_window: *mut c_void) -> Option<String> {
+    MainThreadMarker::new()?;
+    let w = window(ns_window)?;
+    // SAFETY: NSWindow·NSTextInputContext 공개 메서드, 메인 스레드.
+    unsafe {
+        let was_key: Bool = msg_send![w, isKeyWindow];
+        if !was_key.as_bool() {
+            let _: () = msg_send![w, makeKeyWindow];
+        }
+        let fr: *mut AnyObject = msg_send![w, firstResponder];
+        let fr_ctx = input_context_of(fr);
+        if fr_ctx.is_null() {
+            return None;
+        }
+        let cur: *mut AnyObject = msg_send![objc2::class!(NSTextInputContext), currentInputContext];
+        if cur == fr_ctx && was_key.as_bool() {
+            return None;
+        }
+        if !cur.is_null() && cur != fr_ctx {
+            let _: () = msg_send![cur, deactivate];
+        }
+        let _: () = msg_send![fr_ctx, activate];
+        Some(format!("was key {}, responder ctx was current {}, current ctx nil {}", was_key.as_bool(), cur == fr_ctx, cur.is_null()))
     }
 }
 

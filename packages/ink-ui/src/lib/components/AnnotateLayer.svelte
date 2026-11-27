@@ -395,8 +395,8 @@
     ta.value = ed.text;
     ta.focus();
     ta.setSelectionRange(ta.value.length, ta.value.length);
-    // 진단(R2-TXT-0, 개발 실행만): 앱이 맥 입력 상태를 기록에 남긴다
-    if (import.meta.env?.DEV && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('ink-debug-input', { detail: 'annot-text' }));
+    // R2-TXT-0: 앱(맥)이 이 창 웹뷰의 입력 문맥을 지금 입력 문맥으로 바로잡는다 — 한글 조합 글이 이 상자로 오게
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('ink-text-focus', { detail: 'annot-text' }));
   });
 
   let textBox = $derived.by(() => {

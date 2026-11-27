@@ -820,6 +820,8 @@
     ta.value = ed.text;
     ta.focus();
     ta.setSelectionRange(ta.value.length, ta.value.length);
+    // R2-TXT-0: 맥 웹뷰 입력 문맥 바로잡기(캡처 뒤 [판서로] 글자도 같은 버그였다)
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('ink-text-focus', { detail: 'draw-text' }));
   });
 
   let textBox = $derived.by(() => {
