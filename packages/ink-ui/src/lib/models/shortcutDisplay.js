@@ -1,9 +1,54 @@
 // S02 단축키 목록·겹침 배너 표시 규칙 (순수 JS)
 import { keycaps } from '@screen-ink/client';
-import { translate } from '../i18n/core.js';
+import defaults from '../../../../../docs/shortcuts/defaults-v1.json' with { type: 'json' };
+import { normalizeOs, translate } from '../i18n/core.js';
 
 const F_KEY_RE = /^F([1-9]|1[0-9]|2[0-4])$/i;
 const TRAILING_PUNCT_RE = /[\s'"’”)\]]+$/;
+
+/** @type {Record<string, { win?: string | null, mac?: string | null }>} */
+const DEFAULT_SLOTS = /** @type {any} */ (defaults).slots;
+
+/**
+ * 확정본 v1 기본 단축키 조합(설정을 아직 받기 전 대체값).
+ * @param {string} id
+ * @param {'windows' | 'macos' | string} [platform='windows']
+ * @returns {string}
+ */
+export function defaultSlotCombo(id, platform = 'windows') {
+  const slot = DEFAULT_SLOTS[id];
+  if (!slot) return '';
+  return (normalizeOs(platform) === 'mac' ? slot.mac : slot.win) ?? '';
+}
+
+/**
+ * 수식키 한 개를 OS 관습 표기로 바꾼다(macOS 기호 / Windows 이름).
+ * @param {'primary' | 'alt' | 'shift' | 'ctrl' | string} kind
+ * @param {'windows' | 'macos' | string} [platform='windows']
+ * @returns {string}
+ */
+export function modifierKeyLabel(kind, platform = 'windows') {
+  const isMac = normalizeOs(platform) === 'mac';
+  const target = isMac ? 'macos' : 'windows';
+  const k = String(kind ?? '').toLowerCase();
+  if (k === 'primary') return keycaps(isMac ? 'Cmd' : 'Ctrl', target)[0] ?? '';
+  if (k === 'alt') return keycaps(isMac ? 'Option' : 'Alt', target)[0] ?? '';
+  if (k === 'shift') return keycaps('Shift', target)[0] ?? '';
+  if (k === 'ctrl') return keycaps('Ctrl', target)[0] ?? '';
+  return String(kind ?? '');
+}
+
+/**
+ * 주 수식키(맥 Cmd / Windows Ctrl) + 단일 키 조합 문자열을 만든다(예: 설정 열기 `,`).
+ * @param {string} key
+ * @param {'windows' | 'macos' | string} [platform='windows']
+ * @returns {string}
+ */
+export function primaryShortcut(key, platform = 'windows') {
+  if (!key) return '';
+  const mod = normalizeOs(platform) === 'mac' ? 'Cmd' : 'Ctrl';
+  return `${mod}+${key}`;
+}
 
 /**
  * 주격 조사('이'/'가')를 고른다.

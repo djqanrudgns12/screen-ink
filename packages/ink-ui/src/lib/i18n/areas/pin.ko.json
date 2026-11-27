@@ -2,7 +2,7 @@
   "pin.topmost.frameAria": "맨 위에 고정한 창",
   "pin.view.aria": "화면에 고정한 캡처",
   "pin.view.closeAria": "고정 닫기",
-  "pin.view.hint": "더블클릭 닫기 · 휠 크기 · Ctrl+휠 투명도",
+  "pin.view.hint": "더블클릭 닫기 · 휠 크기 · 보조 키+휠 투명도",
   "pin.view.hint~mac": "더블클릭 닫기 · 휠 크기 · ⌘+휠 투명도",
   "pin.view.hint~win": "더블클릭 닫기 · 휠 크기 · Ctrl+휠 투명도",
   "pin.view.opacity": "투명도 {pct}%",

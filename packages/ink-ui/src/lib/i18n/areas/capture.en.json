@@ -35,7 +35,7 @@
   "capture.layer.textLabel": "Markup text",
   "capture.opt.mosaicLabel": "Mosaic block size",
   "capture.opt.strokeLabel": "Color and size",
-  "capture.opt.wheel": "Ctrl+Scroll",
+  "capture.opt.wheel": "Modifier+Scroll",
   "capture.opt.wheel~mac": "⌘+Scroll",
   "capture.opt.wheel~win": "Ctrl+Scroll",
   "capture.overlay.label": "Capture screen",

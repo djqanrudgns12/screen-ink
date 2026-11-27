@@ -20,7 +20,7 @@
   "help.capture.s2": "Move the pointer to auto-highlight buttons, tables, and windows",
   "help.capture.s3": "Scroll the wheel to step up from a small element to the whole window",
   "help.capture.s4": "Click to lock the selection, or drag freely to draw your own box",
-  "help.capture.t1": "Hold Alt while dragging to pause snap to edges for pixel alignment",
+  "help.capture.t1": "Hold the modifier key while dragging to pause snap to edges for fine control",
   "help.capture.t1~mac": "Hold Option (⌥) while dragging to pause snap to edges for fine control",
   "help.capture.t1~win": "Hold Alt while dragging to pause snap to edges for fine control",
   "help.capture.t2": "In Window capture, press the same shortcut again to grab the current window",

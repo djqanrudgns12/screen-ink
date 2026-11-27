@@ -7,6 +7,7 @@
   import Switch from '../components/Switch.svelte';
   import ConflictHowtoModal from './onboarding/ConflictHowtoModal.svelte';
   import { formatFirstRunConflict } from '../models/settingsMeta.js';
+  import { defaultSlotCombo, formatComboReadable } from '../models/shortcutDisplay.js';
   import {
     ONBOARDING_STEP_COUNT,
     canAdvanceStep,
@@ -125,15 +126,15 @@
   });
 
   const CORE_ITEMS = [
-    { id: 'region', icon: 'region', labelKey: 'onboarding.keys.regionLabel', hintKey: 'onboarding.keys.regionHint', fallbackWin: 'F1', fallbackMac: 'F1' },
-    { id: 'draw', icon: 'draw', labelKey: 'onboarding.keys.drawLabel', hintKey: 'onboarding.keys.drawHint', fallbackWin: 'Alt+1', fallbackMac: 'Option+1' },
-    { id: 'zoom', icon: 'zoom', labelKey: 'onboarding.keys.zoomLabel', hintKey: 'onboarding.keys.zoomHint', fallbackWin: 'Alt+2', fallbackMac: 'Option+2' },
+    { id: 'region', icon: 'region', labelKey: 'onboarding.keys.regionLabel', hintKey: 'onboarding.keys.regionHint' },
+    { id: 'draw', icon: 'draw', labelKey: 'onboarding.keys.drawLabel', hintKey: 'onboarding.keys.drawHint' },
+    { id: 'zoom', icon: 'zoom', labelKey: 'onboarding.keys.zoomLabel', hintKey: 'onboarding.keys.zoomHint' },
   ];
 
   function comboFor(item) {
     const row = shortcuts.find((s) => s.id === item.id);
     if (row) return row.combo;
-    return platform === 'macos' ? item.fallbackMac : item.fallbackWin;
+    return defaultSlotCombo(item.id, platform);
   }
 
   function stepTitleKey(id) {
@@ -445,7 +446,12 @@
               </p>
               {#if (conflicts.combos ?? []).length > 0}
                 <p class="ink-first-notice-sub ink-mono">
-                  {t('onboarding.conflicts.conflictKeys', { keys: conflicts.combos.slice(0, 4).join(' · ') })}
+                  {t('onboarding.conflicts.conflictKeys', {
+                    keys: conflicts.combos
+                      .slice(0, 4)
+                      .map((c) => formatComboReadable(c, platform) || c)
+                      .join(' · '),
+                  })}
                 </p>
               {/if}
             </div>
@@ -597,7 +603,7 @@
           <p class="ink-practice-title">{t('onboarding.ready.practiceTitle')}</p>
           <p class="ink-practice-desc">
             {regionCombo
-              ? t('onboarding.ready.practiceDesc', { key: regionCombo })
+              ? t('onboarding.ready.practiceDesc', { key: formatComboReadable(regionCombo, platform) || regionCombo })
               : t('onboarding.ready.practiceDescNoKey')}
           </p>
         </div>

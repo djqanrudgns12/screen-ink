@@ -5,7 +5,7 @@
   "pdf.badge": "Desk reference",
   "pdf.legend.custom": "Custom key",
   "pdf.legend.keysLabel": "Key guide",
-  "pdf.legend.keys": "Ctrl · Alt · Shift · Win",
+  "pdf.legend.keys": "Modifier · Shift",
   "pdf.legend.keys~mac": "⌥ = Option · ⌘ = Command · ⇧ = Shift · ⌃ = Control · fn = bottom-left fn",
   "pdf.legend.keys~win": "Ctrl · Alt · Shift · Win",
   "pdf.hero.heading": "Remember these 6",

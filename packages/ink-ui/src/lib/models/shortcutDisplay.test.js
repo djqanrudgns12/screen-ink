@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  defaultSlotCombo,
   formatComboReadable,
   formatConflictBanner,
   getShortcutRowDisplay,
+  modifierKeyLabel,
+  primaryShortcut,
   subjectParticle,
 } from './shortcutDisplay.js';
 
@@ -22,6 +25,28 @@ test('formats readable combos for Windows and macOS', () => {
   assert.equal(formatComboReadable('Option+Shift+D', 'macos'), '⌥⇧D');
   assert.equal(formatComboReadable('Cmd+1', 'macos'), '⌘1');
   assert.equal(formatComboReadable('F1', 'windows'), 'F1');
+});
+
+test('resolves OS-specific default slot combos, modifier labels, and primary shortcuts', () => {
+  assert.equal(defaultSlotCombo('d-undo', 'windows'), 'Ctrl+Z');
+  assert.equal(defaultSlotCombo('d-undo', 'macos'), 'Cmd+Z');
+  assert.equal(defaultSlotCombo('board', 'windows'), 'Alt+3');
+  assert.equal(defaultSlotCombo('board', 'macos'), 'Option+3');
+  assert.equal(defaultSlotCombo('topmost', 'windows'), 'Alt+Shift+D');
+  assert.equal(defaultSlotCombo('topmost', 'macos'), '');
+  assert.equal(defaultSlotCombo('unknown-slot', 'windows'), '');
+
+  assert.equal(modifierKeyLabel('primary', 'macos'), '⌘');
+  assert.equal(modifierKeyLabel('primary', 'windows'), 'Ctrl');
+  assert.equal(modifierKeyLabel('alt', 'macos'), '⌥');
+  assert.equal(modifierKeyLabel('alt', 'windows'), 'Alt');
+  assert.equal(modifierKeyLabel('shift', 'macos'), '⇧');
+  assert.equal(modifierKeyLabel('Shift', 'windows'), 'Shift');
+  assert.equal(modifierKeyLabel('Tab', 'macos'), 'Tab');
+
+  assert.equal(primaryShortcut(',', 'macos'), 'Cmd+,');
+  assert.equal(primaryShortcut(',', 'windows'), 'Ctrl+,');
+  assert.equal(primaryShortcut('', 'macos'), '');
 });
 
 test('formats conflict banner for F-key sets, PowerToys single/multiple combos, macOS, and unknown app', () => {

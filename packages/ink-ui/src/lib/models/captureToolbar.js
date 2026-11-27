@@ -1,7 +1,7 @@
 // 선택 툴바(R2-UI-TB, 04 S08) 순수 모델 — 어느 모니터에 띄울지, 어디에 붙일지, 단추·툴팁·크기 배지.
 // 좌표: 사각형·모니터 = 가상 화면 물리 px, 배치 = 그 모니터 오버레이 창의 CSS px.
 
-import { formatComboReadable } from './shortcutDisplay.js';
+import { defaultSlotCombo, formatComboReadable } from './shortcutDisplay.js';
 
 /** 범위와 툴바 사이(CSS px) */
 export const TOOLBAR_GAP = 8;
@@ -139,12 +139,6 @@ export function comboMap(rows) {
   return out;
 }
 
-/** 설정을 아직 못 받았을 때의 기본값(확정본 v1). */
-const FALLBACK = Object.freeze({
-  windows: { 'c-cancel': 'Esc', 'c-save': 'Ctrl+S', 'c-copy': 'Enter', 'd-undo': 'Ctrl+Z', 'd-redo': 'Ctrl+Y' },
-  macos: { 'c-cancel': 'Esc', 'c-save': 'Cmd+S', 'c-copy': 'Enter', 'd-undo': 'Cmd+Z', 'd-redo': 'Shift+Cmd+Z' },
-});
-
 // ─────────────── 캡처 주석 도구(R2-UI-TB · R2-ANN) ───────────────
 
 /**
@@ -281,8 +275,9 @@ export function toolbarTooltip(action, combos, platform = 'windows', labelOverri
   const label = labelOverride || action.label;
   let readable = '';
   if (action.slot) {
-    const fallback = FALLBACK[platform] ?? FALLBACK.windows;
-    const combo = Object.prototype.hasOwnProperty.call(combos ?? {}, action.slot) ? combos[action.slot] : fallback[action.slot];
+    const combo = Object.prototype.hasOwnProperty.call(combos ?? {}, action.slot)
+      ? combos[action.slot]
+      : defaultSlotCombo(action.slot, platform);
     readable = combo ? formatComboReadable(combo, platform) : '';
   } else if (action.key) {
     readable = action.key;

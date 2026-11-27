@@ -14,7 +14,7 @@
   "settings.search.aria": "Search settings",
   "settings.search.clear": "Clear search",
   "settings.search.empty": "No matching settings",
-  "settings.search.shortcut": "Ctrl+K",
+  "settings.search.shortcut": "K",
   "settings.search.shortcut~mac": "⌘K",
   "settings.search.shortcut~win": "Ctrl+K",
   "settings.search.resultsAria": "Settings search results",

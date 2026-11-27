@@ -35,7 +35,7 @@
   "capture.layer.textLabel": "표시 글자",
   "capture.opt.mosaicLabel": "모자이크 칸 크기",
   "capture.opt.strokeLabel": "색과 굵기",
-  "capture.opt.wheel": "Ctrl+휠",
+  "capture.opt.wheel": "보조 키+휠",
   "capture.opt.wheel~mac": "⌘+휠",
   "capture.opt.wheel~win": "Ctrl+휠",
   "capture.overlay.label": "캡처 화면",

@@ -36,6 +36,7 @@ import {
   LATER_DRAW_KEYS,
   buildDrawKeymap,
   createImeGuard,
+  defaultDrawCombo,
   matchDrawKey,
   normalizeCombo,
 } from './drawKeys.js';
@@ -718,11 +719,12 @@ export class InkEngine {
     return Math.max(ERASER_MIN_PX, this.widthPx * ERASER_WIDTH_MUL) / this.view.s;
   }
 
-  /** 실행 취소 키 표시(섬 문구 "Ctrl+Z로 원래 획"). */
+  /** 실행 취소 키 표시(섬 문구 "되돌리기 키로 원래 획"). */
   get undoLabel() {
     const row = this.shortcuts?.find((s) => s.id === 'd-undo');
-    const combo = row ? normalizeCombo(row.combo, this.platform) : this.platform === 'macos' ? 'Cmd+Z' : 'Ctrl+Z';
-    return combo || (this.platform === 'macos' ? 'Cmd+Z' : 'Ctrl+Z');
+    const fallback = defaultDrawCombo('d-undo', this.platform);
+    const combo = row ? normalizeCombo(row.combo, this.platform) : fallback;
+    return combo || fallback;
   }
 
   /** 섬(drawIsland)에 줄 한 줄 상태. */

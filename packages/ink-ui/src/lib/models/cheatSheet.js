@@ -1,6 +1,7 @@
 // S16 단축키 한 장(F17) — state.shortcuts의 현재 값으로 세 열 생성(비운 칸 제외, 쉬운 말·다국어·OS 맞춤, R2-FIX-7)
 import { keycaps } from '@screen-ink/client';
 import { normalizeLang, normalizeOs, translate } from '../i18n/core.js';
+import { modifierKeyLabel } from './shortcutDisplay.js';
 
 const GLOBAL_ORDER = [
   { id: 'region', key: 'shortcuts.slot.region' },
@@ -98,9 +99,9 @@ export function buildCheatSheetColumns(
   const l = normalizeLang(lang);
   const tr = (key) => translate(l, key, undefined, osKey);
 
-  const modCtrl = isMac ? '⌘' : 'Ctrl';
-  const modAlt = isMac ? '⌥' : 'Alt';
-  const modShift = isMac ? '⇧' : 'Shift';
+  const modCtrl = modifierKeyLabel('primary', platform);
+  const modAlt = modifierKeyLabel('alt', platform);
+  const modShift = modifierKeyLabel('shift', platform);
   const wheelKey = tr('shortcuts.cheat.key.wheel');
   const arrowsKey = tr('shortcuts.cheat.key.arrows');
   const orSep = tr('shortcuts.cheat.or');

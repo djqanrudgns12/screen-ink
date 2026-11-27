@@ -5,7 +5,7 @@ import { defaultDrawCombo, normalizeCombo } from '../ink/drawKeys.js';
 import { clamp } from '../ink/coords.js';
 import { BASIC_COLOR_CODES } from './palette.js';
 import { clampToolSize, getToolSizeSpec } from './inkSize.js';
-import { formatComboReadable } from './shortcutDisplay.js';
+import { formatComboReadable, modifierKeyLabel } from './shortcutDisplay.js';
 
 /** 도구 막대가 손대지 않은 뒤 흐려지는 시간(ms). */
 export const DRAW_TOOLBAR_IDLE_MS = 3000;
@@ -170,9 +170,7 @@ export function formatDrawTooltip(item, combos, platform = 'windows') {
     const norm = normalizeCombo(raw, platform);
     readable = norm ? formatComboReadable(norm, platform) : '';
   } else if (item.modKey) {
-    if (item.modKey === 'primary') readable = platform === 'macos' ? '⌘' : 'Ctrl';
-    else if (item.modKey === 'Shift') readable = platform === 'macos' ? '⇧' : 'Shift';
-    else readable = item.modKey;
+    readable = modifierKeyLabel(item.modKey, platform);
   } else if (item.key) {
     readable = item.key;
   }

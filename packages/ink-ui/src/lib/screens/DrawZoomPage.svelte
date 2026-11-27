@@ -6,7 +6,7 @@
   import Switch from '../components/Switch.svelte';
   import Segmented from '../components/Segmented.svelte';
   import { locale, syncLang, t } from '../i18n/index.svelte.js';
-  import { formatComboReadable } from '../models/shortcutDisplay.js';
+  import { defaultSlotCombo, formatComboReadable } from '../models/shortcutDisplay.js';
   import { formatShapeOnHoldSub } from '../models/settingsMeta.js';
   import { buildBoardPreviewSamples } from '../models/drawUi.js';
 
@@ -53,18 +53,16 @@
   let shapeApply = $derived(settings['draw.shapeApply'] ?? 'suggest');
   let dUndoCombo = $derived(state?.shortcuts?.find((s) => s.id === 'd-undo')?.combo ?? '');
   let restoreCombo = $derived(
-    state?.shortcuts?.find((s) => s.id === 'restore')?.combo ??
-      (platform === 'macos' ? 'Option+Shift+1' : 'Alt+Shift+1'),
+    state?.shortcuts?.find((s) => s.id === 'restore')?.combo ?? defaultSlotCombo('restore', platform),
   );
   let restoreKeyLabel = $derived(
-    formatComboReadable(restoreCombo, platform) || (platform === 'macos' ? '⌥⇧1' : 'Alt Shift 1'),
+    formatComboReadable(restoreCombo || defaultSlotCombo('restore', platform), platform),
   );
   let boardCombo = $derived(
-    state?.shortcuts?.find((s) => s.id === 'board')?.combo ??
-      (platform === 'macos' ? 'Option+3' : 'Alt+3'),
+    state?.shortcuts?.find((s) => s.id === 'board')?.combo ?? defaultSlotCombo('board', platform),
   );
   let boardShortcut = $derived(
-    formatComboReadable(boardCombo, platform) || (platform === 'macos' ? '⌥3' : 'Alt+3'),
+    formatComboReadable(boardCombo || defaultSlotCombo('board', platform), platform),
   );
   let shapeOnHoldSub = $derived(formatShapeOnHoldSub(shapeApply, platform, locale.lang, dUndoCombo));
   // "멈추면 도형으로"가 꺼져 있으면 도형 바꾸는 방식은 쓸 일이 없다 — 들여쓰기+흐리게

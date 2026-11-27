@@ -6,6 +6,7 @@
   import Switch from '../components/Switch.svelte';
   import Keycap from '../components/Keycap.svelte';
   import { syncLang, t } from '../i18n/index.svelte.js';
+  import { primaryShortcut } from '../models/shortcutDisplay.js';
   import { TRAY_TILES, formatElapsed, resolveTrayStatus } from '../models/trayMenu.js';
 
   /**
@@ -49,7 +50,7 @@
   let pinnedCount = $derived(state?.pinnedCount ?? 0);
   let pinCount = $derived(state?.pins ?? 0);
   let status = $derived(resolveTrayStatus(state));
-  let settingsCombo = $derived(platform === 'macos' ? 'Cmd+,' : 'Ctrl+,');
+  let settingsCombo = $derived(primaryShortcut(',', platform));
 
   /** @param {string} action */
   function runAction(action) {

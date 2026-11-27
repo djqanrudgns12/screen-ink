@@ -5,7 +5,7 @@
   "pdf.badge": "책상 옆 한 장",
   "pdf.legend.custom": "내가 바꾼 키",
   "pdf.legend.keysLabel": "키 읽는 법",
-  "pdf.legend.keys": "Ctrl · Alt · Shift · Win",
+  "pdf.legend.keys": "보조 키 · Shift",
   "pdf.legend.keys~mac": "⌥ = Option · ⌘ = Command · ⇧ = Shift · ⌃ = Control · fn = 왼쪽 아래 fn",
   "pdf.legend.keys~win": "Ctrl · Alt · Shift · Win",
   "pdf.hero.heading": "이것만 기억해요",

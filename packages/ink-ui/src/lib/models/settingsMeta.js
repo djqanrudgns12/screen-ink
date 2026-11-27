@@ -1,6 +1,6 @@
 // 설정 키 메타데이터(이름·표시값)와 가져오기 변경 목록·겹침 문구 도우미 (순수 JS)
 import { shortenPath } from './template.js';
-import { formatComboReadable, subjectParticle } from './shortcutDisplay.js';
+import { defaultSlotCombo, formatComboReadable, subjectParticle } from './shortcutDisplay.js';
 import { compactFontLabel, parseFontSetting } from './fontPicker.js';
 import { normalizeOs, translate } from '../i18n/core.js';
 
@@ -177,8 +177,8 @@ export function formatShapeOnHoldSub(shapeApply, platform = 'windows', lang = 'k
     return translate(lang, 'page.draw.shapeOnHoldSubSuggest');
   }
   const resolvedOs = normalizeOs(platform) === 'mac' ? 'macos' : 'windows';
-  const fallback = resolvedOs === 'macos' ? 'Cmd+Z' : 'Ctrl+Z';
-  const undo = formatComboReadable(undoCombo || fallback, resolvedOs) || (resolvedOs === 'macos' ? '⌘Z' : 'Ctrl Z');
+  const fallback = defaultSlotCombo('d-undo', resolvedOs);
+  const undo = formatComboReadable(undoCombo || fallback, resolvedOs) || formatComboReadable(fallback, resolvedOs);
   return translate(lang, 'page.draw.shapeOnHoldSubAuto', { undo });
 }
 
@@ -221,7 +221,7 @@ export function formatFirstRunConflict(conflicts, platform = 'windows', lang = '
   if (!conflicts || conflicts.count <= 0) return null;
   const app = conflicts.app || '';
   if (app.includes('PowerToys')) {
-    const combo = formatComboReadable('Alt+Shift+D', platform);
+    const combo = formatComboReadable(defaultSlotCombo('topmost', 'windows'), platform);
     return {
       prefix: '',
       app: 'PowerToys',
