@@ -52,7 +52,11 @@ fn app_window<R: Runtime>(app: &AppHandle<R>, label: impl Into<String>, url: Web
         // 웹뷰는 로컬 자원만 쓴다. 시스템 프록시 자동 탐색과 외부 이름 조회도 건너뛴다.
         // 앱 업데이트 확인은 웹뷰 밖의 Windows 업데이터가 맡는다.
         "--no-proxy-server --host-resolver-rules=\"MAP * ~NOTFOUND, EXCLUDE localhost, EXCLUDE *.localhost, EXCLUDE 127.0.0.1, EXCLUDE [::1]\""
-    ));
+    )).on_page_load(|window, page| {
+        if matches!(page.event(), tauri::webview::PageLoadEvent::Finished) {
+            overlay::track_webview_memory(&window);
+        }
+    });
     builder
 }
 
@@ -1551,14 +1555,7 @@ async fn draw_frame<R: Runtime>(window: tauri::WebviewWindow<R>, session: u64) -
     {
         let monitor = overlay::monitor_of(window.label()).ok_or("판서 창을 찾지 못했습니다")?;
         let frame = window.state::<overlay::FrameStore>().get(session, monitor).ok_or("종료된 판서입니다")?;
-        let (tx, mut rx) = tauri::async_runtime::channel(1);
-        window
-            .with_webview(move |view| {
-                let result = overlay::post_draw_frame(view, session, &frame);
-                let _ = tx.try_send(result.map_err(|e| e.to_string()));
-            })
-            .map_err(|e| e.to_string())?;
-        rx.recv().await.ok_or("판서 창이 닫혔습니다")?
+        overlay::post_draw_frame(window, session, frame).await
     }
     #[cfg(not(windows))]
     {

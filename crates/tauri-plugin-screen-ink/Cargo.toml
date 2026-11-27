@@ -26,6 +26,7 @@ ink-platform-windows.workspace = true
 winreg = "0.56"
 webview2-com = "0.39"
 windows-core = "0.62"
+windows = { version = "0.62", features = ["Win32_System_Memory", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 ink-platform-macos.workspace = true

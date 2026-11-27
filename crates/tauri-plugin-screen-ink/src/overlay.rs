@@ -149,29 +149,139 @@ impl FrameStore {
     }
 }
 
-/// WebView2 읽기 전용 공유 메모리에 불투명 RGBA 원본을 한 번만 쓴다.
 #[cfg(windows)]
-pub(crate) fn post_draw_frame(view: tauri::webview::PlatformWebview, session: u64, frame: &Frame) -> windows_core::Result<()> {
-    use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2Environment12, ICoreWebView2_17, COREWEBVIEW2_SHARED_BUFFER_ACCESS_READ_ONLY};
-    use windows_core::{HSTRING, Interface};
-    let started = std::time::Instant::now();
-    let size = frame.bgra.len();
-    let metadata = HSTRING::from(format!(r#"{{"session":{session},"width":{},"height":{}}}"#, frame.width, frame.height));
-    // 웹뷰 스레드에서 새 버퍼를 채운 뒤 공개한다. 공개 뒤에는 쓰지 않고 각 프로세스가 참조를 놓는다.
-    unsafe {
-        let env: ICoreWebView2Environment12 = view.environment().cast()?;
-        let web: ICoreWebView2_17 = view.controller().CoreWebView2()?.cast()?;
-        let buffer = env.CreateSharedBuffer(size as u64)?;
-        let mut ptr = std::ptr::null_mut();
-        buffer.Buffer(&mut ptr)?;
-        let rgba = std::slice::from_raw_parts_mut(ptr, size);
-        for (dst, src) in rgba.chunks_exact_mut(4).zip(frame.bgra.chunks_exact(4)) {
-            dst.copy_from_slice(&[src[2], src[1], src[0], 255]);
-        }
-        web.PostSharedBufferToScript(&buffer, COREWEBVIEW2_SHARED_BUFFER_ACCESS_READ_ONLY, &metadata)?;
+pub(crate) use windows_webview::{post_draw_frame, track_webview_memory};
+
+#[cfg(windows)]
+mod windows_webview {
+    use super::{Frame, FrameStore};
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+    use std::os::windows::io::{AsRawHandle, BorrowedHandle, OwnedHandle};
+    use tauri::{Manager, Runtime, WebviewWindow};
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        ICoreWebView2Environment12, ICoreWebView2SharedBuffer, ICoreWebView2_17, ICoreWebView2_19,
+        COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL, COREWEBVIEW2_SHARED_BUFFER_ACCESS_READ_ONLY,
+    };
+    use windows::Win32::Foundation::{HANDLE, HWND, LPARAM, LRESULT, WPARAM};
+    use windows::Win32::System::Memory::{MapViewOfFile, UnmapViewOfFile, FILE_MAP_WRITE};
+    use windows::Win32::UI::Shell::{DefSubclassProc, GetWindowSubclass, RemoveWindowSubclass, SetWindowSubclass};
+    use windows::Win32::UI::WindowsAndMessaging::{IsWindowVisible, SWP_HIDEWINDOW, SWP_SHOWWINDOW, WINDOWPOS, WM_NCDESTROY, WM_WINDOWPOSCHANGED};
+    use windows_core::{Interface, HSTRING};
+
+    // 네이티브 오버레이·확대 창은 Tauri를 거치지 않고도 표시가 바뀐다.
+    // 실제 최상위 창의 표시 전환을 받아 숨긴 창의 스크립트와 이벤트 수신은 계속 살려 둔다.
+    pub(crate) fn track_webview_memory<R: Runtime>(window: &WebviewWindow<R>) {
+        let host = window.clone();
+        let _ = window.with_webview(move |view| unsafe {
+            let Ok(hwnd) = host.hwnd() else { return };
+            if GetWindowSubclass(hwnd, Some(visibility_changed), 1, None).as_bool() {
+                return;
+            }
+            let Ok(web) = view.controller().CoreWebView2().and_then(|web| web.cast::<ICoreWebView2_19>()) else { return };
+            if SetWindowSubclass(hwnd, Some(visibility_changed), 1, web.as_raw() as usize).as_bool() {
+                // 창 소멸 때 콜백이 이 참조를 한 번 반환한다.
+                let _ = web.clone().into_raw();
+                set_memory_level(&web, hwnd);
+            }
+        });
     }
-    log::debug!("판서 공유 {session}: 원본 {size}바이트, 전달 요청 {:.1} ms", started.elapsed().as_secs_f64() * 1000.0);
-    Ok(())
+
+    fn set_memory_level(web: &ICoreWebView2_19, hwnd: HWND) {
+        unsafe {
+            let level = if IsWindowVisible(hwnd).as_bool() { COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL } else { COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW };
+            if let Err(e) = web.SetMemoryUsageTargetLevel(level) {
+                log::debug!("웹뷰 메모리 목표 변경 실패: {e}");
+            }
+        }
+    }
+
+    unsafe extern "system" fn visibility_changed(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM, id: usize, data: usize) -> LRESULT {
+        if msg == WM_WINDOWPOSCHANGED {
+            let flags = (*(lp.0 as *const WINDOWPOS)).flags;
+            if flags.contains(SWP_SHOWWINDOW) || flags.contains(SWP_HIDEWINDOW) {
+                // COM 호출이 창 절차에 재진입하더라도 지역 참조가 살아 있게 한다.
+                let ptr = data as *mut _;
+                let web = ICoreWebView2_19::from_raw_borrowed(&ptr).unwrap().clone();
+                set_memory_level(&web, hwnd);
+            }
+        } else if msg == WM_NCDESTROY {
+            let _ = RemoveWindowSubclass(hwnd, Some(visibility_changed), id);
+            drop(ICoreWebView2_19::from_raw(data as *mut _));
+        }
+        DefSubclassProc(hwnd, msg, wp, lp)
+    }
+
+    // COM 참조는 생성한 UI 스레드에서만 사용·해제한다. 버퍼마다 동시에 살아 있는 주소가 고유하다.
+    thread_local! {
+        static TRANSFERS: RefCell<HashMap<usize, (ICoreWebView2_17, ICoreWebView2SharedBuffer)>> = RefCell::default();
+    }
+
+    fn allocate(view: tauri::webview::PlatformWebview, size: usize) -> windows_core::Result<(usize, OwnedHandle)> {
+        unsafe {
+            let env: ICoreWebView2Environment12 = view.environment().cast()?;
+            let web = view.controller().CoreWebView2()?.cast::<ICoreWebView2_17>()?;
+            let buffer = env.CreateSharedBuffer(size as u64)?;
+            let mut mapping = HANDLE::default();
+            buffer.FileMappingHandle(&mut mapping)?;
+            let owned = BorrowedHandle::borrow_raw(mapping.0).try_clone_to_owned()?;
+            let key = buffer.as_raw() as usize;
+            TRANSFERS.with_borrow_mut(|pending| pending.insert(key, (web, buffer)));
+            Ok((key, owned))
+        }
+    }
+
+    fn write_pixels(mapping: OwnedHandle, bgra: &[u8]) -> windows_core::Result<()> {
+        unsafe {
+            let view = MapViewOfFile(HANDLE(mapping.as_raw_handle()), FILE_MAP_WRITE, 0, 0, bgra.len());
+            if view.Value.is_null() {
+                return Err(windows_core::Error::from_thread());
+            }
+            // 이 일꾼이 유일한 작성자다. 매핑을 닫은 뒤에만 웹뷰에 읽기 권한으로 게시한다.
+            let rgba = std::slice::from_raw_parts_mut(view.Value.cast::<u8>(), bgra.len());
+            for (dst, src) in rgba.chunks_exact_mut(4).zip(bgra.chunks_exact(4)) {
+                dst.copy_from_slice(&[src[2], src[1], src[0], 255]);
+            }
+            UnmapViewOfFile(view)
+        }
+    }
+
+    pub(crate) async fn post_draw_frame<R: Runtime>(window: WebviewWindow<R>, session: u64, frame: Frame) -> Result<(), String> {
+        let app = window.app_handle().clone();
+        let store = window.state::<FrameStore>().inner().clone();
+        let (tx, mut rx) = tauri::async_runtime::channel(1);
+        window.with_webview(move |view| {
+            let size = frame.bgra.len();
+            let (key, mapping) = match allocate(view, size) {
+                Ok(transfer) => transfer,
+                Err(e) => {
+                    let _ = tx.try_send(Err(e.to_string()));
+                    return;
+                }
+            };
+            tauri::async_runtime::spawn_blocking(move || {
+                let started = std::time::Instant::now();
+                let written = write_pixels(mapping, &frame.bgra);
+                let write_ms = started.elapsed().as_secs_f64() * 1000.0;
+                let monitor = frame.monitor_id;
+                let metadata = HSTRING::from(format!(r#"{{"session":{session},"width":{},"height":{}}}"#, frame.width, frame.height));
+                drop(frame);
+                let _ = app.run_on_main_thread(move || {
+                    let (web, buffer) = TRANSFERS.with_borrow_mut(|pending| pending.remove(&key)).expect("공유 버퍼는 한 번만 게시한다");
+                    let result = if store.get(session, monitor).is_none() {
+                        Err("종료된 판서입니다".into())
+                    } else {
+                        written.and_then(|()| unsafe { web.PostSharedBufferToScript(&buffer, COREWEBVIEW2_SHARED_BUFFER_ACCESS_READ_ONLY, &metadata) }).map_err(|e| e.to_string())
+                    };
+                    if result.is_ok() {
+                        log::debug!("판서 공유 {session}: 원본 {size}바이트, 일꾼 변환·쓰기 {write_ms:.1} ms, 웹뷰 게시 완료");
+                    }
+                    let _ = tx.try_send(result);
+                });
+            });
+        }).map_err(|e| e.to_string())?;
+        rx.recv().await.ok_or("판서 창이 닫혔습니다")?
+    }
 }
 
 /// `ink://` 프로토콜 처리기.
