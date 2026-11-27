@@ -120,6 +120,7 @@ impl InkService {
             return;
         }
         self.end_capture();
+        self.clear_discarded_capture();
         let secs = self.settings.get("capture.delay").and_then(|v| v.as_u64()).unwrap_or(3).clamp(1, 60) as u32;
         self.rec.delay = Some(Delay { due_ms: self.clock_ms() + secs as u64 * 1000, shown: secs });
         self.hold_delay_esc();

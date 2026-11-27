@@ -12,7 +12,7 @@ use ink_domain::image::{self, FrameRef};
 use ink_domain::magnet::Edges;
 use ink_domain::mode::Mode;
 use ink_domain::naming;
-use ink_domain::recog::{build_chain_with, Evidence, Node};
+use ink_domain::recog::{build_chain_with, metrics_of, Evidence, Node, RecogMetrics};
 use ink_domain::modekeys::CaptureKeys;
 use ink_domain::selection::{Button, Command, Context, Effect, Input, Key, Selector};
 use ink_domain::settings::ExcludedApp;
@@ -143,7 +143,7 @@ pub struct CaptureState {
     /// 주석이 있던 캡처를 버린 직후 5초간 되살리기용으로 붙들어 둔 상태(R2-UNDO-1)
     pub(crate) discarded: Option<DiscardedCapture>,
     /// 마지막 사슬의 판정 계측 숫자(R2-CAP-6) — 확정 때 한 줄
-    pub(crate) metrics: Option<ink_domain::recog::RecogMetrics>,
+    pub(crate) metrics: Option<Vec<RecogMetrics>>,
 }
 
 /// 한 번의 고르기 동안 잰 것(08 §4.7 "첫 강조 ≤ 진입 + 30 ms", "커서 이동 질의 ≤ 5 ms").
@@ -195,7 +195,7 @@ struct Ctx<'a> {
     children: &'a mut HashMap<u64, Vec<PhysRect>>,
     history: Vec<PhysRect>,
     /// 마지막 사슬의 계측 숫자(R2-CAP-6)
-    metrics: &'a mut Option<ink_domain::recog::RecogMetrics>,
+    metrics: &'a mut Option<Vec<RecogMetrics>>,
 }
 
 impl Context for Ctx<'_> {
@@ -236,7 +236,9 @@ impl Context for Ctx<'_> {
         let opts = ink_domain::recog::RecogOptions { refine_image: if v_ready { Some(&refine) } else { None } };
         let chain = build_chain_with(&ev, &opts);
         // 계측(R2-CAP-6, 숫자만): 확정 때 고른 단계와 함께 한 줄로 남긴다
-        *self.metrics = Some(ink_domain::recog::metrics_of(&ev, &chain, 0));
+        let metrics = self.metrics.get_or_insert_with(Vec::new);
+        metrics.clear();
+        metrics.extend((0..chain.len()).map(|level| metrics_of(&ev, &chain, level)));
         (chain, w.map(|w| w.handle))
     }
 
@@ -346,6 +348,7 @@ impl InkService {
         }
         self.cap.probe = EntryProbe::default();
         self.cap.selector = None;
+        self.cap.metrics = None;
         self.cap.frames.clear();
         self.cap.children.clear();
         self.cap.cursor = None;
@@ -1079,18 +1082,25 @@ impl InkService {
         self.session().is_some_and(|s| self.cap.annot.session == s && self.cap.annot.items.values().any(|&n| n > 0))
     }
 
+    fn picked_metrics(&self) -> Option<&RecogMetrics> {
+        let level = self.cap.selector.as_ref()?.picked_level()?;
+        self.cap.metrics.as_ref()?.get(level)
+    }
+
     /// 고르기 상태 기계가 낸 결과. 주석이 없으면 지금 경로, 있으면 오버레이에 주석 층을 부탁한다.
     fn commit(&mut self, action: CommitAction, rect: PhysRect) {
         let Some(session) = self.session() else { return };
         // 판정 계측(R2-CAP-6): 숫자만 — 근거 종류 비트·가림 비율·고른 단계/사슬 길이(창 제목 없음)
-        if let (Some(m), Some(sel)) = (self.cap.metrics.take(), self.cap.selector.as_ref()) {
+        if let Some(m) = self.picked_metrics() {
             log::info!(
-                "capture pick: level {} of {}, first node sources {:#05b}, occluded {:.0}%",
-                sel.view().level,
+                "capture pick: level {} of {}, sources {:#05b}, occluded {:.0}%",
+                m.picked_level,
                 m.chain_len,
                 m.sources,
                 m.occluded_ratio * 100.0
             );
+        } else {
+            log::info!("capture pick: manual");
         }
         if !self.annotated() {
             self.commit_plain(action, rect);
@@ -1359,6 +1369,7 @@ mod tests {
             fn unregister(&mut self, _a: &str) {}
         }
         impl SystemProbe for Stub {
+            fn foreground_window(&self) -> Option<u64> { Some(7) }
             fn running_apps(&self) -> Vec<String> { vec![] }
             fn live_bindings(&self) -> Option<Vec<ink_domain::shortcuts::LiveBinding>> { Some(vec![]) }
         }
@@ -1368,7 +1379,9 @@ mod tests {
             fn location(&self) -> StoreLocation { StoreLocation::default() }
         }
         impl WindowCatalog for Stub {
-            fn windows(&self) -> Vec<RawWindow> { vec![] }
+            fn windows(&self) -> Vec<RawWindow> {
+                vec![RawWindow { handle: 7, rect: PhysRect::new(0, 0, 80, 64), visible: true, ..Default::default() }]
+            }
         }
         impl MonitorProbe for Stub {
             fn layout(&self) -> MonitorLayout {
@@ -1488,5 +1501,29 @@ mod tests {
         svc.start_capture(CaptureKind::Region);
         assert!(!svc.discarded_capture_held());
         assert!(rec.0.lock().unwrap().events.contains(&"drop_held:3".to_string()));
+
+        // 사슬을 한 단계 넓혀 클릭하고, 취소 뒤 다음 세션에 계측이 남는지 본다.
+        svc.capture_input(CaptureInput::Move { x: 30, y: 30 });
+        svc.capture_input(CaptureInput::Wheel { dy: -1 });
+        assert_eq!(svc.picked_metrics().unwrap().picked_level, 1);
+        svc.capture_input(CaptureInput::Down { x: 30, y: 30, button: 0 });
+        svc.capture_input(CaptureInput::Up { x: 30, y: 30, button: 0 });
+        let picked = svc.picked_metrics().unwrap();
+        assert_eq!((picked.picked_level, picked.chain_len, picked.sources), (1, 2, 0));
+        svc.capture_input(CaptureInput::Command { name: "cancel".into() });
+        assert!(svc.cap.metrics.is_none());
+
+        // 다른 바로 캡처가 시작되는 순간 이전 주석과 정지 프레임을 함께 놓는다.
+        for slot in ["active", "delay"] {
+            let rec = Fake::default();
+            let mut svc = make_svc(&rec);
+            svc.start_capture(CaptureKind::Region);
+            svc.capture_annotations_with_data(1, 0, 1, None);
+            svc.capture_input(CaptureInput::Command { name: "cancel".into() });
+            assert!(svc.discarded_capture_held());
+            svc.start_quick(slot);
+            assert!(!svc.discarded_capture_held(), "{slot}");
+            assert!(rec.0.lock().unwrap().events.contains(&"drop_held:1".to_string()), "{slot}");
+        }
     }
 }

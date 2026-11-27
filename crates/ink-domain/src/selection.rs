@@ -159,7 +159,7 @@ pub struct SelectionView {
 enum State {
     Hover { chain: Vec<Node>, level: usize, window: Option<u64>, fresh: bool },
     Drag { anchor: PhysPoint, cur: PhysPoint, snap: SnapState, edges: Edges },
-    Confirmed { rect: PhysRect },
+    Confirmed { rect: PhysRect, picked_level: Option<usize> },
 }
 
 pub struct Selector {
@@ -221,7 +221,7 @@ impl Selector {
 
     /// 확정한 범위로 바로 시작(캡처 주석 되살리기 R2-UNDO-1).
     pub fn with_confirmed(mut self, rect: PhysRect) -> Selector {
-        self.state = State::Confirmed { rect };
+        self.state = State::Confirmed { rect, picked_level: None };
         self
     }
 
@@ -230,7 +230,16 @@ impl Selector {
         match &self.state {
             State::Hover { chain, level, .. } => chain.get(*level).map(|n| n.rect),
             State::Drag { anchor, cur, .. } => Some(rect_between(*anchor, *cur)),
-            State::Confirmed { rect } => Some(*rect),
+            State::Confirmed { rect, .. } => Some(*rect),
+        }
+    }
+
+    /// 인식 사슬에서 실제 고른 단계(작은 것부터 0). 직접 정한 범위에는 없다.
+    pub fn picked_level(&self) -> Option<usize> {
+        match self.state {
+            State::Hover { level, fresh: false, .. } => Some(level),
+            State::Confirmed { picked_level, .. } => picked_level,
+            _ => None,
         }
     }
 
@@ -309,8 +318,8 @@ impl Selector {
         self.state = State::Hover { chain, level, window, fresh: false };
     }
 
-    fn confirm(&mut self, rect: PhysRect) -> Effect {
-        self.state = State::Confirmed { rect };
+    fn confirm(&mut self, rect: PhysRect, picked_level: Option<usize>) -> Effect {
+        self.state = State::Confirmed { rect, picked_level };
         Effect::Redraw
     }
 
@@ -328,11 +337,11 @@ impl Selector {
                 if let State::Drag { anchor, snap, edges, .. } = &self.state {
                     let end = if self.magnet { snap_point(p, edges, ctx.scale_at(p), &mut snap.clone()) } else { p };
                     let r = rect_between(*anchor, end);
-                    return self.confirm(r);
+                    return self.confirm(r, None);
                 }
                 match (was, self.rect()) {
                     // 클릭 = 지금 강조를 확정(S08: 손잡이·방향키)
-                    (Some(_), Some(r)) if matches!(self.state, State::Hover { .. }) => self.confirm(r),
+                    (Some(_), Some(r)) if matches!(self.state, State::Hover { .. }) => self.confirm(r, self.picked_level()),
                     _ => Effect::None,
                 }
             }
@@ -446,7 +455,7 @@ impl Selector {
         if on(&self.keys.full) {
             let mon = ctx.monitor_at(self.cursor);
             let target = if self.rect() == Some(mon) { ctx.virtual_bounds() } else { mon };
-            return self.confirm(target);
+            return self.confirm(target, None);
         }
         if on(&self.keys.detect) {
             self.elements = !self.elements;
@@ -466,7 +475,7 @@ impl Selector {
             return match ctx.history().first() {
                 Some(r) => {
                     self.history_at = Some(0);
-                    self.confirm(*r)
+                    self.confirm(*r, None)
                 }
                 None => Effect::Notice("island.capture.noRecent"),
             };
@@ -483,7 +492,7 @@ impl Selector {
                 Some(i) => i.saturating_sub(1),
             };
             self.history_at = Some(i);
-            return self.confirm(list[i]);
+            return self.confirm(list[i], None);
         }
         // 방향키: 범위가 정해진 뒤(강조 중이면 그 범위를 확정하고) 1 px
         let dir = match code {
@@ -521,7 +530,7 @@ impl Selector {
                 let y = (r.y + dy).clamp(v.y, v.bottom() - r.h);
                 PhysRect::new(x, y, r.w, r.h)
             };
-            return self.confirm(next);
+            return self.confirm(next, None);
         }
         // WASD: 범위 정하기 전 커서 1 px
         if matches!(self.state, State::Hover { .. }) && !k.ctrl && !k.alt {
@@ -612,6 +621,28 @@ mod tests {
         let v = s.view();
         assert_eq!(v.path, vec!["창", "표", "행"]);
         assert_eq!(v.level, 2);
+    }
+
+    #[test]
+    fn 직접_정하거나_되살린_범위에는_인식_단계가_없다() {
+        let mut c = ctx();
+        let p = PhysPoint { x: 410, y: 330 };
+        let mut s = Selector::new(PhysPoint { x: 400, y: 330 }, &c);
+        s.handle(Input::Move(p), &mut c);
+        assert_eq!(s.picked_level(), Some(0));
+        s.handle(key("KeyR"), &mut c);
+        assert_eq!(s.rect(), c.hist.first().copied());
+        assert_eq!(s.picked_level(), None);
+
+        s.handle(Input::Down(p, Button::Right), &mut c);
+        s.handle(Input::Down(p, Button::Left), &mut c);
+        let end = PhysPoint { x: 700, y: 500 };
+        s.handle(Input::Move(end), &mut c);
+        s.handle(Input::Up(end, Button::Left), &mut c);
+        assert_eq!(s.picked_level(), None);
+        s.handle(Input::Down(p, Button::Right), &mut c);
+        assert!(s.picked_level().is_some());
+        assert_eq!(s.with_confirmed(WIN).picked_level(), None);
     }
 
     #[test]

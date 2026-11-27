@@ -93,6 +93,7 @@ impl InkService {
             self.island(IslandEvent::new(IslandKind::Info, self.t("island.window.noActive")));
             return;
         };
+        self.clear_discarded_capture();
         self.shoot_window(w, false);
     }
 

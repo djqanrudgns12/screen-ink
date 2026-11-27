@@ -971,10 +971,14 @@ fn text_focus<R: Runtime>(app: AppHandle<R>, window: tauri::WebviewWindow<R>, pl
     #[cfg(target_os = "macos")]
     {
         let from = window.label().to_string();
-        let Ok(ptr) = window.ns_window() else { return };
-        let ptr = ptr as usize;
+        let handle = app.clone();
         let _ = app.run_on_main_thread(move || {
-            if let Some(before) = ink_platform_macos::window::ensure_text_input(ptr as *mut std::ffi::c_void) {
+            let Some(window) = handle.get_webview_window(&from) else { return };
+            if !window.is_visible().unwrap_or(false) {
+                return;
+            }
+            let Ok(ptr) = window.ns_window() else { return };
+            if let Some(before) = ink_platform_macos::window::ensure_text_input(ptr) {
                 log::info!("text input context fixed [{place}] on {from}: {before}");
             }
             if cfg!(debug_assertions) {
@@ -1104,7 +1108,7 @@ mod diag {
                 settings.remove("shortcuts");
             }
             if let Some(values) = settings.get_mut("values").and_then(Value::as_object_mut) {
-                for key in ["output.folder", "output.template", "record.micDevice"] {
+                for key in ["output.folder", "output.template", "record.micDevice", "annotate.font"] {
                     if let Some(v) = values.get_mut(key) {
                         if v.as_str().is_some_and(|s| !s.is_empty()) {
                             *v = Value::String("<redacted>".into());
@@ -1126,53 +1130,26 @@ mod diag {
         root
     }
 
-    fn redact_user_segment(mut s: String, prefix: &str, sep: char) -> String {
-        let mut out = String::with_capacity(s.len());
-        let mut rest = s.as_str();
-        while let Some(idx) = rest.find(prefix) {
-            let after_idx = idx + prefix.len();
-            out.push_str(&rest[..after_idx]);
-            let tail = &rest[after_idx..];
-            if let Some(end) = tail.find(sep) {
-                if end > 0 && !tail[..end].contains(char::is_whitespace) {
-                    out.push_str("<user>");
-                    rest = &tail[end..];
-                    continue;
-                }
+    /// 따옴표 없는 경로에는 공백도 들어갈 수 있어 첫 홈 경로부터 줄 끝까지 가린다.
+    /// 한 줄에 홈 경로가 여럿이면 각 경로의 OS 구분만 남긴다.
+    fn redact_home_paths(line: &str) -> String {
+        let normalized = line.to_ascii_lowercase().replace('\\', "/");
+        let mut out = String::new();
+        for (start, _) in normalized.match_indices('/') {
+            let tail = &normalized[start..];
+            let Some(root) = ["/users/", "/home/"].into_iter().find(|root| tail.starts_with(root)) else { continue };
+            if out.is_empty() {
+                out.push_str(&line[..start]);
+            } else {
+                out.push(' ');
             }
-            rest = tail;
+            let end = start + root.len();
+            out.push_str(&line[start..end]);
+            out.push_str("<user>");
+            out.push(line.as_bytes()[end - 1] as char);
+            out.push('…');
         }
-        out.push_str(rest);
-        s.clear();
-        s.push_str(&out);
-        s
-    }
-
-    fn redact_windows_user_paths(input: &str) -> String {
-        let lower = input.to_ascii_lowercase();
-        let bytes = input.as_bytes();
-        let lbytes = lower.as_bytes();
-        let needle = b":\\users\\";
-        let mut out = String::with_capacity(input.len());
-        let mut pos = 0;
-        while let Some(rel) = lbytes[pos..].windows(needle.len()).position(|w| w == needle) {
-            let abs = pos + rel;
-            if abs > 0 && bytes[abs - 1].is_ascii_alphabetic() {
-                let after = abs + needle.len();
-                if let Some(end) = input[after..].find(['\\', '/']) {
-                    if end > 0 && !input[after..after + end].contains(char::is_whitespace) {
-                        out.push_str(&input[pos..after]);
-                        out.push_str("<user>");
-                        pos = after + end;
-                        continue;
-                    }
-                }
-            }
-            out.push_str(&input[pos..abs + needle.len()]);
-            pos = abs + needle.len();
-        }
-        out.push_str(&input[pos..]);
-        out
+        if out.is_empty() { line.to_owned() } else { out }
     }
 
     /// 로그에서 창 제목 관련 줄과 OS 경로 안의 사용자 이름을 가린다.
@@ -1183,10 +1160,7 @@ mod diag {
             if lower.contains("window_title") || lower.contains("windowtitle") || lower.contains("title=") {
                 continue;
             }
-            let s = redact_user_segment(line.to_string(), "/Users/", '/');
-            let s = redact_user_segment(s, "/home/", '/');
-            let s = redact_windows_user_paths(&s);
-            lines.push(s);
+            lines.push(redact_home_paths(line));
         }
         let mut out = lines.join("\n");
         if !out.is_empty() && raw.ends_with('\n') {
@@ -2325,6 +2299,21 @@ mod tests {
     }
 
     #[test]
+    fn 진단_로그에서_홈_이름과_하위_경로를_가린다() {
+        for path in [
+            "/Users/alice", "/home/alice/개인 문서", r"C:\Users\bob",
+            r"C:\Users\Kim Minsoo\개인 문서", "C:/Users/bob/개인 문서",
+            r"C:\\Users\\bob\\개인 문서",
+        ] {
+            let log = diag::sanitize_log_text(&format!("경고 {path}\n다음 줄"));
+            assert!(log.starts_with("경고 ") && log.ends_with("\n다음 줄"));
+            for private in ["alice", "bob", "Kim", "Minsoo", "개인", "문서"] {
+                assert!(!log.contains(private), "{log}");
+            }
+        }
+    }
+
+    #[test]
     fn 진단_zip은_언어별_이름과_개인정보_제외_규칙을_지킨다() {
         use ink_domain::geometry::{Monitor, MonitorLayout, PhysRect};
         use ink_domain::package::InstallChannel;
@@ -2343,6 +2332,7 @@ mod tests {
                     "output.folder": "/Users/alice/Pictures/SecretClass",
                     "output.template": "비밀수업_{n}",
                     "record.micDevice": "Alice AirPods",
+                    "annotate.font": "개인 서체",
                     "capture.excluded": [{ "exe": "SecretApp", "mode": "exclude", "auto": false }],
                     "general.lang": "ko"
                 },
@@ -2379,6 +2369,7 @@ mod tests {
         assert_eq!(set_v["settings"]["values"]["output.folder"], "<redacted>");
         assert_eq!(set_v["settings"]["values"]["output.template"], "<redacted>");
         assert_eq!(set_v["settings"]["values"]["record.micDevice"], "<redacted>");
+        assert_eq!(set_v["settings"]["values"]["annotate.font"], "<redacted>");
         assert_eq!(set_v["settings"]["values"]["capture.excludedCount"], 1);
         let set_raw = String::from_utf8(entries_no_sc[1].1.clone()).unwrap();
         assert!(!set_raw.contains("alice") && !set_raw.contains("SecretClass") && !set_raw.contains("SecretApp"));
