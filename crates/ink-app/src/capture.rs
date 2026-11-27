@@ -172,6 +172,9 @@ pub struct CaptureState {
 pub(crate) struct EntryProbe {
     /// 단축키를 받은 순간
     pub(crate) pressed: Option<Instant>,
+    /// 윈도우에서 첫 후보 사슬의 강조를 네이티브 창에 반영한 시각.
+    #[cfg(windows)]
+    pub(crate) first_highlight_ms: Option<f64>,
     /// 진입 순간 커서 아래 창
     pub(crate) window: Option<u64>,
     /// 커서 자리 V 전처리가 처음 준비된 시각: (배경에서 끝난 때, 메인 스레드가 받은 때) 단축키부터 ms
@@ -570,6 +573,14 @@ impl InkService {
         }
         self.cap.drawn = rect;
         self.ports.overlay.highlight(session, rect);
+        #[cfg(windows)]
+        if self.cap.probe.first_highlight_ms.is_none() && self.cap.metrics.is_some() && rect.is_some() && sel.hover_point().is_some() {
+            if let Some(pressed) = self.cap.probe.pressed {
+                let elapsed = ms_since(pressed);
+                self.cap.probe.first_highlight_ms = Some(elapsed);
+                log::info!("highlight first [{elapsed:.1} ms]");
+            }
+        }
         self.emit_capture();
     }
 
@@ -1410,7 +1421,15 @@ mod tests {
     #[test]
     fn 진입_계측은_진입했을_때만_한_줄() {
         assert_eq!(EntryProbe::default().line(), None, "진입 안 했으면 없음");
-        let p = EntryProbe { pressed: Some(Instant::now()), window: Some(1), v_ms: Some((12.34, 40.0)), a_ms: Some((95.0, 120.0, 80.4)), moves: vec![0.5, 1.0, 2.0] };
+        let p = EntryProbe {
+            pressed: Some(Instant::now()),
+            window: Some(1),
+            v_ms: Some((12.34, 40.0)),
+            a_ms: Some((95.0, 120.0, 80.4)),
+            moves: vec![0.5, 1.0, 2.0],
+            #[cfg(windows)]
+            first_highlight_ms: None,
+        };
         let line = p.line().unwrap();
         assert!(line.contains("V first 12.3 (main 40.0) ms"), "{line}");
         assert!(line.contains("A first 95.0 (main 120.0, index 80) ms"), "{line}");

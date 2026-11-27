@@ -595,6 +595,8 @@ fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 
 /// 트레이 팝오버 열기·닫기. 위치: Windows = 아이콘 위(작업 표시줄이 위면 아래), 맥 = 메뉴 막대 아이콘 바로 아래.
 fn toggle_popover<R: Runtime>(app: &AppHandle<R>, tray_rect: Rect) {
+    #[cfg(windows)]
+    let clicked = std::time::Instant::now();
     let Some(w) = app.get_webview_window(POPOVER) else { return };
     let visible = w.is_visible().unwrap_or(false);
     // 맥: 다른 Space(전체 화면 앱 등)에서 "보임"으로 남은 팝오버는 숨기지 않고 지금 Space로 데려온다(R2-BUG-TRAY-3)
@@ -657,7 +659,12 @@ fn toggle_popover<R: Runtime>(app: &AppHandle<R>, tray_rect: Rect) {
         );
         return;
     }
-    let _ = w.show();
+    let shown = w.show();
+    #[cfg(windows)]
+    if shown.is_ok() {
+        log::info!("트레이 팝오버 표시 [{:.1} ms]", clicked.elapsed().as_secs_f64() * 1000.0);
+    }
+    let _ = shown;
     let _ = w.set_focus();
 }
 
