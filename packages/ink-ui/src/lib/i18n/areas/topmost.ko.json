@@ -1,0 +1,16 @@
+{
+  "topmost.unavailable": "이 창은 고정할 수 없어요",
+  "topmost.powerToys": "PowerToys가 고정한 창이에요",
+  "topmost.alreadyTopmost": "이 창은 원래 맨 위에 있어요",
+  "topmost.pinned": "‘{app}’을 맨 위에 고정했어요",
+  "topmost.pinnedUnnamed": "이 창을 맨 위에 고정했어요",
+  "topmost.released": "고정을 풀었어요",
+  "topmost.release": "풀기",
+  "topmost.denied": "관리자 권한 창이라 고정할 수 없어요",
+  "topmost.releaseFailed": "일부 창의 고정을 풀 수 없어요",
+  "topmost.releasedAll.one": "고정한 창 {n}개를 풀었어요",
+  "topmost.releasedAll.other": "고정한 창 {n}개를 풀었어요",
+  "topmost.cleaned.one": "지난번에 고정한 창 {n}개를 풀었어요",
+  "topmost.cleaned.other": "지난번에 고정한 창 {n}개를 풀었어요",
+  "topmost.trayRelease": "고정한 창 모두 풀기 ({n})"
+}

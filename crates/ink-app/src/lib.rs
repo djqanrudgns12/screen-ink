@@ -12,9 +12,11 @@ mod recent;
 pub mod record;
 pub mod service;
 pub mod state;
+pub mod topmost;
 pub mod vision;
 mod window_capture;
 
+pub use ports::{BorderStyle, PinError, WindowPinner};
 pub use ports::{
     AutostartControl, Clipboard, Clock, ElementSource, FileSink, Frame, HotkeyError, HotkeyRegistry, Loaded, MonitorProbe, NoPins, NoVision, NoopAutostart, NoopUpdater, Notifier,
     OverlayHost, PackageRuntime, PinHost, Ports, ReadyUpdate, SavedFile, ScreenSource, SettingsStore, StoreError, StoreLocation, SystemEvent, SystemProbe, UnpackagedRuntime, Updater,

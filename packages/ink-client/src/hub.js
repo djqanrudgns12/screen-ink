@@ -23,7 +23,7 @@ export const EVENT_MAP = Object.freeze([
 
 /**
  * @param {ListenFn} listen
- * @returns {{ add: (handler: (e: any) => void) => () => void }}
+ * @returns {{ islandReady: Promise<boolean>, add: (handler: (e: any) => void) => () => void }}
  */
 export function createEventHub(listen) {
   /** @type {Set<(e: any) => void>} */
@@ -36,10 +36,13 @@ export function createEventHub(listen) {
     else if (ev.type === 'state' && ev.state?.mode && ev.state.mode.mode !== 'capture') lastOverlay = null;
     for (const h of [...subs]) h(ev);
   };
+  let islandReady = Promise.resolve(false);
   for (const [name, to] of EVENT_MAP) {
-    listen(name, (e) => dispatch(to(e.payload))).catch(() => {});
+    const ready = listen(name, (e) => dispatch(to(e.payload))).then(() => true, () => false);
+    if (name === 'screen-ink://island') islandReady = ready;
   }
   return {
+    islandReady,
     add(handler) {
       subs.add(handler);
       // 지금 캡처 중이면 마지막 세션을 한 번 다시 준다(붙기 전에 지나간 사건)

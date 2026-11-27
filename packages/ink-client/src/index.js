@@ -76,7 +76,7 @@
  *
  * @typedef {'capture.region'|'capture.window'|'record.toggle'|'draw'|'zoom'|'board'|'pin.toggle'|'pin.releaseAll'|'draw.restore'|'folder.open'|'settings.open'|'firstRun.open'|'app.quit'|'snipaste.howto'
  *   |'folder.pick'|'logs.open'|'settings.export'|'capture.history.clear'|'capture.saveLast'|'capture.copyHex'|'pins.closeAll'
- *   |'settings.close'|'popover.close'|'island.hidden'|'capture.cancel'|'capture.restore'|'draw.acceptSuggestion'|'draw.undo'|'capture.toDraw'
+ *   |'settings.close'|'popover.close'|'island.ready'|'island.hidden'|'capture.cancel'|'capture.restore'|'draw.acceptSuggestion'|'draw.undo'|'capture.toDraw'
  *   |'record.stop'|'record.discard'|'record.recoverSave'|'record.recoverDelete'|'perm.screen'|'perm.accessibility'|'perm.microphone'|'app.relaunch'
  *   |'perm.refresh'|'settings.reveal'|'capture.full'|'capture.reopen'|'update.check'|'update.install'|'update.snooze'|'pdf.open'|'diag.openFolder'} InkAction
  *   perm.screen·perm.accessibility = 맥 권한 요청 + 정확한 설정 칸 열기(M10) · app.relaunch = 다시 시작(화면 기록 반영)

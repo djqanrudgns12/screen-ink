@@ -80,7 +80,7 @@ unsafe extern "system" fn collect_window(h: HWND, data: LPARAM) -> BOOL {
     TRUE
 }
 
-fn class_name(h: HWND) -> String {
+pub(super) fn class_name(h: HWND) -> String {
     let mut buf = [0u16; 128];
     // SAFETY: 버퍼 길이를 함께 넘긴다.
     let n = unsafe { GetClassNameW(h, buf.as_mut_ptr(), buf.len() as i32) };
@@ -94,7 +94,14 @@ fn dwm_rect(h: HWND) -> Option<RECT> {
     (hr == 0).then_some(r)
 }
 
-fn cloaked(h: HWND) -> bool {
+pub(super) fn frame_bounds(h: HWND) -> Option<RECT> {
+    dwm_rect(h).or_else(|| {
+        let mut r = RECT { left: 0, top: 0, right: 0, bottom: 0 };
+        (unsafe { GetWindowRect(h, &mut r) } != 0).then_some(r)
+    })
+}
+
+pub(super) fn cloaked(h: HWND) -> bool {
     let mut v: u32 = 0;
     // SAFETY: DWORD 하나.
     let hr = unsafe { DwmGetWindowAttribute(h, DWMWA_CLOAKED as _, &mut v as *mut _ as *mut c_void, 4) };
@@ -129,14 +136,7 @@ pub fn top_windows() -> Vec<RawWindow> {
                 } else {
                     None
                 };
-                let r = if visible {
-                    dwm_rect(h).or_else(|| {
-                        let mut r = RECT { left: 0, top: 0, right: 0, bottom: 0 };
-                        (GetWindowRect(h, &mut r) != 0).then_some(r)
-                    })
-                } else {
-                    None
-                };
+                let r = if visible { frame_bounds(h) } else { None };
                 RawWindow {
                     handle: h as usize as u64,
                     pid,

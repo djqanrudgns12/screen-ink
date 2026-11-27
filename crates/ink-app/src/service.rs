@@ -116,6 +116,8 @@ pub enum HotkeyOutcome {
     Captured,
     /// 실시간 확대를 시작·끝냄·배율 바꿈(live_zoom.rs)
     Zoom,
+    /// 활성 창의 맨 위 고정 키를 처리함
+    Topmost,
     /// 단축키 잠시 끄기·켜기를 처리함
     Toggled(bool),
     Ignored,
@@ -145,7 +147,7 @@ pub struct InkService {
     pub(crate) history: Vec<Undo>,
     pub(crate) readonly: bool,
     pub(crate) notices: Vec<StartupNotice>,
-    pub(crate) pinned_count: u32,
+    pub(crate) topmost: crate::topmost::TopmostState,
     // ── 모드·캡처(단계 2) ──
     pub(crate) epoch: Instant,
     pub(crate) mode: Mode,
@@ -298,7 +300,7 @@ impl InkService {
             history: Vec::new(),
             readonly,
             notices,
-            pinned_count: 0,
+            topmost: Default::default(),
             epoch: Instant::now(),
             mode: Mode::Idle,
             session_seq: 0,
@@ -357,7 +359,7 @@ impl InkService {
             },
             theme: self.settings.str("general.theme").to_string(),
             hotkeys_enabled: self.hotkeys_enabled,
-            pinned_count: self.pinned_count,
+            pinned_count: self.topmost.pinned.len() as u32,
             pins: self.cap.pins.len() as u32,
             recent_captures: self.cap.recent.views(self.clock_ms()),
             recording: self.recording_view(),
@@ -871,6 +873,10 @@ impl InkService {
         if let Some(outcome) = self.stage6_hotkey(slot) {
             return outcome;
         }
+        if slot == "topmost" && self.platform == Platform::Win {
+            self.toggle_topmost();
+            return HotkeyOutcome::Topmost;
+        }
         match mode::on_hotkey(&self.mode, slot, self.now_ms()) {
             ModeCommand::Start(kind) => {
                 self.begin_capture(kind, pressed);
@@ -1165,6 +1171,9 @@ impl InkService {
             return UpdateResult { ok: false, error: Some(f.reason), state: self.state() };
         }
         self.history.push(Undo::Setting { path: path.to_string(), prev });
+        if path == "topmost.border" {
+            self.update_border_style();
+        }
         if path == "general.lang" {
             self.emit_zoom();
             match self.mode {
@@ -1214,6 +1223,9 @@ impl InkService {
         match entry {
             Undo::Setting { path, prev } => {
                 let _ = self.settings.set_for(&path, &prev, self.platform, lang);
+                if path == "topmost.border" {
+                    self.update_border_style();
+                }
             }
             Undo::Shortcut { id, prev } => {
                 if let Some(slot) = self.slot(&id) {
@@ -1236,6 +1248,7 @@ impl InkService {
 
     /// 등록을 모두 풀고 지금 설정으로 다시(가져오기·모두 처음으로·통째 되돌리기).
     fn reregister_all(&mut self) {
+        self.update_border_style();
         let all: Vec<String> = std::mem::take(&mut self.registered).into_values().collect();
         for accel in all {
             self.ports.hotkeys.unregister(&accel);
@@ -1312,13 +1325,6 @@ impl InkService {
         self.island(IslandEvent::new(IslandKind::Result, self.t("island.settings.reset")));
         self.emit_state();
         self.state()
-    }
-
-    pub fn set_pinned_count(&mut self, n: u32) {
-        if self.pinned_count != n {
-            self.pinned_count = n;
-            self.emit_state();
-        }
     }
 
     // ───────────── 내부 ─────────────

@@ -38,7 +38,10 @@ export function createTauriClient() {
     savePdf: (bytes, name) => cmd('save_pdf', { bytes: Array.from(bytes), name }),
     systemFonts: () => cmd('system_fonts'),
     audioInputs: () => cmd('audio_inputs'),
-    run: (action, id) => cmd('run', { action, id }),
+    async run(action, id) {
+      if (action === 'island.ready' && !(await hub?.islandReady)) return;
+      return cmd('run', { action, id });
+    },
     previewImport: () => cmd('preview_import'),
     applyImport: (path) => cmd('apply_import', { path }),
     resetAll: () => cmd('reset_all'),

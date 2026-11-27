@@ -1,0 +1,16 @@
+{
+  "topmost.unavailable": "This window can’t be pinned",
+  "topmost.powerToys": "PowerToys pinned this window",
+  "topmost.alreadyTopmost": "This window is already on top",
+  "topmost.pinned": "Pinned {app} on top",
+  "topmost.pinnedUnnamed": "Pinned this window on top",
+  "topmost.released": "Unpinned the window",
+  "topmost.release": "Unpin",
+  "topmost.denied": "This window needs administrator access",
+  "topmost.releaseFailed": "Some windows couldn’t be unpinned",
+  "topmost.releasedAll.one": "Unpinned {n} window",
+  "topmost.releasedAll.other": "Unpinned {n} windows",
+  "topmost.cleaned.one": "Unpinned {n} window from last time",
+  "topmost.cleaned.other": "Unpinned {n} windows from last time",
+  "topmost.trayRelease": "Unpin all windows ({n})"
+}

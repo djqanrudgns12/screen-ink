@@ -59,6 +59,11 @@ fn catalog(lang: Lang) -> &'static Catalog {
     }
 }
 
+/// 고정된 키의 안내 문구를 복사 없이 빌린다.
+pub(crate) fn static_text(lang: Lang, key: &'static str) -> &'static str {
+    catalog(lang).get(key).or_else(|| catalog(Lang::Ko).get(key)).map_or(key, String::as_str)
+}
+
 /// 키의 글(값 끼우기 없음).
 pub fn tr(lang: Lang, key: &str) -> String {
     catalog(lang).get(key).or_else(|| catalog(Lang::Ko).get(key)).cloned().unwrap_or_else(|| key.to_string())

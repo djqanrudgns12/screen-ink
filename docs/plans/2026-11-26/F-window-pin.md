@@ -141,6 +141,13 @@ pub trait WindowPinner: Send {
 | Windows 실기 (R-TOP-3) | 창 고정 후 작업 관리자 강제 종료 → 재실행 | 남은 맨 위 창 **0개** + 정리 섬 표시 |
 | Windows 실기 (R-TOP-4) | PowerToys 항상 위 켠 상태에서 고정된 창에 `Alt+Shift+D` | 상태 엇갈림 0, `"PowerToys가 고정한 창이에요"` 안내 |
 
+로그인한 Windows 화면에서 아래 명령으로 전용 시험 창을 띄운다. 창 두 개로 고정·풀기 100회, 다른 창 활성화, 테두리 추적, 모두 풀기를 확인한다. F1과 같은 경로로 시험 창 영역만 읽어 주황 픽셀 수를 비교한다. 비정상 종료 복구 시험은 방금 중단한 시험 프로세스의 표시만 정리한다.
+
+```powershell
+cargo test -p ink-platform-windows --lib topmost::tests::실제_창_고정과_테두리_추적 -- --ignored --exact --nocapture --test-threads=1
+cargo test -p ink-platform-fake --test topmost
+```
+
 ---
 
 ## 5. 위험 · 대응
@@ -161,3 +168,7 @@ pub trait WindowPinner: Send {
 | `6.5.2` 테두리 창·`SetWinEventHook` 따라가기 | 0.33일 | 상 | `6.5.1` |
 | `6.5.3` 창 닫힘·종료·시작 잔여 정리·트레이 모두 풀기 | 0.33일 | 중 | `6.5.1`·`6.5.2` |
 | **묶음 합계** | **1.00일** | **상** | 단계 2 완료(끝남) · P1이므로 일정 초과 시 후순위 |
+
+## 7. 맥 대응 계획
+
+맥에서는 다른 앱의 창을 맨 위에 고정하는 공개 API가 없어 설정과 트레이에서 이 기능을 숨긴다. 공통 포트의 기본 구현은 `PinError::Unsupported`를 반환한다. 공개 API가 제공되면 창 소유권 확인, 캡처 제외, 종료 후 복구 가능 여부를 먼저 검증한다.

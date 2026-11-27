@@ -606,3 +606,35 @@ impl Recorder for NoRecorder {
     }
     fn abort(&mut self) {}
 }
+/// 창 고정 중 운영체제가 알려 준 결과.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PinError {
+    AccessDenied,
+    Gone,
+    Unsupported,
+    Other(String),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BorderStyle {
+    pub thickness_px: u32,
+    pub color_rgb: u32,
+}
+
+pub trait WindowPinner: Send {
+    fn candidate(&self, _hwnd: u64) -> Option<ink_domain::topmost::CandidateWindow> { None }
+    fn forget_destroyed(&mut self, _hwnd: u64) {}
+    fn foreground(&self) -> Option<ink_domain::topmost::CandidateWindow> { None }
+    fn pin(&mut self, _hwnd: u64, _border: BorderStyle) -> Result<(), PinError> { Err(PinError::Unsupported) }
+    fn unpin(&mut self, _hwnd: u64) -> Result<(), PinError> { Err(PinError::Unsupported) }
+    fn update_border_style(&mut self, _border: BorderStyle) {}
+    fn cleanup_orphans(&mut self) -> usize { 0 }
+    fn unpin_all(&mut self) {}
+    /// 창이 살아 있고 아직 우리 고정 표시를 가졌는지 확인한다.
+    fn is_alive(&self, _hwnd: u64) -> bool { false }
+    fn play_pin_sound(&self) {}
+}
+
+#[derive(Default)]
+pub struct UnsupportedWindowPinner;
+impl WindowPinner for UnsupportedWindowPinner {}

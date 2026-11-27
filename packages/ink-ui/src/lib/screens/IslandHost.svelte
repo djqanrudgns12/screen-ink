@@ -107,6 +107,7 @@
       if (!alive || !s) return;
       syncLang(s);
       if (s.platform) platform = s.platform;
+      if (s.platform === 'windows') client.run('island.ready');
       if (s.settings?.['draw.color']) defaultPenColor = s.settings['draw.color'];
     });
     const off = client.subscribe((e) => {

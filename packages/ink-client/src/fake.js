@@ -626,6 +626,7 @@ export function createFakeClient({ platform = 'windows', snipasteRunning = true,
       else if (hadRecent) changed();
     },
     async run(action, id) {
+      if (action === 'island.ready') return;
       if (action === 'capture.reopen') {
         const entry = recent.find((e) => e.id === id && Date.now() - e.at < recentTtl);
         if (entry) {

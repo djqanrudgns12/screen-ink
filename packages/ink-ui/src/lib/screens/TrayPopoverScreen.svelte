@@ -198,6 +198,8 @@
         <button
           type="button"
           class="ink-pin-release ink-focus"
+          aria-label={t('topmost.trayRelease', { n: pinnedCount })}
+          title={t('topmost.trayRelease', { n: pinnedCount })}
           onclick={() => runAction('pin.releaseAll')}
         >
           {t('tray.action.releaseAll')}

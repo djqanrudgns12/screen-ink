@@ -78,6 +78,14 @@ impl Ink {
 #[derive(Default)]
 struct PopoverClock(Mutex<Option<Instant>>);
 
+/// 트레이가 포커스를 받기 직전의 창. 명령 실행 때 프로세스와 속성을 다시 확인한다.
+#[cfg(windows)]
+#[derive(Default)]
+struct TrayPinTarget {
+    before_click: Option<(u64, u32)>,
+    opened: Option<(u64, u32)>,
+}
+
 /// 맥: 팝오버를 붙인 메뉴 막대 아이콘(CG 전역 포인트). 카드 크기가 바뀌면 다시 붙인다.
 #[cfg(target_os = "macos")]
 #[derive(Default)]
@@ -577,6 +585,13 @@ fn toggle_popover<R: Runtime>(app: &AppHandle<R>, tray_rect: Rect) {
     }
     #[cfg(not(target_os = "macos"))]
     place_popover_near(&w, tray_rect);
+    #[cfg(windows)]
+    {
+        let target = app.state::<Ink>().lock().foreground_for_tray();
+        let state = app.state::<Mutex<TrayPinTarget>>();
+        let mut saved = state.lock().unwrap_or_else(|e| e.into_inner());
+        saved.opened = target.or(saved.before_click.take());
+    }
     {
         let ink = app.state::<Ink>();
         let mut s = ink.lock();
@@ -1684,6 +1699,26 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String, id: Option<u64>) -> 
             }
         }
         "popover.close" => hide(POPOVER),
+        #[cfg(windows)]
+        "island.ready" => {
+            let handle = app.clone();
+            app.run_on_main_thread(move || handle.state::<Ink>().lock().announce_topmost_cleanup()).map_err(|e| e.to_string())?;
+        }
+        #[cfg(windows)]
+        "pin.toggle" | "pin.releaseAll" => {
+            let handle = app.clone();
+            app.run_on_main_thread(move || {
+                if let Some(w) = handle.get_webview_window(POPOVER) { let _ = w.hide(); }
+                let ink = handle.state::<Ink>();
+                let mut service = ink.lock();
+                if action == "pin.releaseAll" {
+                    service.unpin_all(true);
+                } else {
+                    let target = handle.state::<Mutex<TrayPinTarget>>().lock().unwrap_or_else(|e| e.into_inner()).opened.take();
+                    service.toggle_tray_target(target);
+                }
+            }).map_err(|e| e.to_string())?;
+        }
         "island.hidden" => {
             log::debug!("island hidden by ui");
             hide(ISLAND)
@@ -1778,6 +1813,8 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String, id: Option<u64>) -> 
             app.run_on_main_thread(move || h.state::<Ink>().lock().capture_to_draw_at(pressed)).map_err(|e| e.to_string())?;
         }
         "app.quit" => {
+            #[cfg(windows)]
+            app.state::<Ink>().lock().unpin_all(false);
             let _ = app.global_shortcut().unregister_all();
             app.exit(0);
         }
@@ -1950,6 +1987,8 @@ fn package_runtime() -> Box<dyn ink_app::PackageRuntime> {
 fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error>> {
     let started = Instant::now();
     app.manage(PopoverClock::default());
+    #[cfg(windows)]
+    app.manage(Mutex::new(TrayPinTarget::default()));
     #[cfg(target_os = "macos")]
     app.manage(PopoverAnchor::default());
     app.manage(IslandGen::default());
@@ -2009,6 +2048,11 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
         pins: Box::new(pins::TauriPinHost::new(app.clone(), pin_store)),
     };
     let mut service = InkService::new(ports, Platform::current(), app.package_info().version.to_string());
+    #[cfg(windows)]
+    {
+        service.set_window_pinner(Box::new(ink_platform_windows::topmost::WinWindowPinner::default()));
+        service.cleanup_on_start();
+    }
     service.set_package_runtime(pkg_runtime);
     #[cfg(windows)]
     if channel.is_packaged() {
@@ -2102,6 +2146,17 @@ fn finish_setup<R: Runtime>(app: &AppHandle<R>, initial: InkState, first_run: bo
         .tooltip(tooltip(&initial))
         .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| {
+            // 클릭하면 작업 표시줄이 먼저 활성화될 수 있어 아이콘에 들어온 순간의 대상도 기억한다.
+            #[cfg(windows)]
+            if matches!(event, TrayIconEvent::Enter { .. } | TrayIconEvent::Leave { .. }) {
+                let app = tray.app_handle();
+                let target = if matches!(event, TrayIconEvent::Enter { .. }) {
+                    app.state::<Ink>().lock().foreground_for_tray()
+                } else {
+                    None
+                };
+                app.state::<Mutex<TrayPinTarget>>().lock().unwrap_or_else(|e| e.into_inner()).before_click = target;
+            }
             // 왼쪽·오른쪽 클릭 모두 같은 팝오버(S01, Windows 관례)
             if let TrayIconEvent::Click { button_state: MouseButtonState::Up, rect, .. } = event {
                 toggle_popover(tray.app_handle(), rect);
@@ -2234,6 +2289,10 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .register_uri_scheme_protocol(overlay::SCHEME, |ctx, req| overlay::serve(ctx, req))
         .setup(|app, _api| setup(app))
         .on_event(|_app, event| {
+            #[cfg(windows)]
+            if matches!(event, RunEvent::ExitRequested { code: Some(_), .. } | RunEvent::Exit) {
+                if let Some(ink) = _app.try_state::<Ink>() { ink.lock().unpin_all(false); }
+            }
             // 트레이 상주 앱: 마지막 창을 닫아도 끝나지 않는다(끝내기는 팝오버 [끝내기] = exit(0))
             if let RunEvent::ExitRequested { api, code, .. } = event {
                 if code.is_none() {

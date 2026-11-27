@@ -496,6 +496,7 @@ impl InkService {
     }
 
     pub fn tick_at(&mut self, now: u64) {
+        self.tick_topmost();
         self.expire_recent(now);
         self.expire_discarded_capture();
         self.tick_delay(now);
