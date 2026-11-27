@@ -125,7 +125,7 @@
           "items": [
             { "id": "6.1", "title": "F2 WGC 창 캡처·대체 경로·검은 화면 판정", "platform": "win", "days": 0.6, "status": "verify", "note": "WGC 창 캡처 첫 프레임 p95 8.2 ms(W7). 남음: 테두리 육안", "level": "hard" },
             { "id": "6.2", "title": "바로 캡처 키(Shift+F1·Ctrl+F1·Shift+F2·Alt+F1)", "platform": "common", "days": 0.6, "status": "verify", "note": "바로 캡처 직전 범위·모니터·활성 창 복사 성공(W7). 지연 캡처는 04-screens대로 N초 뒤 범위 고르기(Enter 확정). 남음: 맥 확인", "level": "easy" },
-            { "id": "6.3", "title": "F3 범위 + Recorder", "platform": "win", "days": 0.6, "status": "partial", "note": "창 녹화 10분 저장·재생 성공·CPU 1.72%, 그러나 모니터 전체·영역 녹화가 시작 직후 멈춰 저장 실패(rec_frame 잠금 중 창 조작 의심) + 창 녹화 샘플 10.9% 부족 → W15 고치는 중", "level": "hard" },
+            { "id": "6.3", "title": "F3 범위 + Recorder", "platform": "win", "days": 0.6, "status": "verify", "note": "모니터·영역·창 녹화 1분·10분 중지·저장·재생 통과, 창 녹화 부족 10.88→0.68%·CPU 1.65%(W15 f272999). 남음: 실제 잠금·절전·모니터 분리, 맥 앱 안 F3 10분", "level": "hard" },
             { "id": "6.4", "title": "녹화 섬·빨간 꺾쇠·트레이 빨간 점", "platform": "common", "days": 0.6, "status": "verify", "note": "녹화 섬·빨간 꺾쇠 창(캡처 제외)·트레이 빨간 점 + 창 추적 녹화 꺾쇠(맥 7b9569f: 이동·크기·최소화·다른 Space 숨김). 남음: 맥 실기, Windows 어댑터 사건", "level": "mid" },
             { "id": "6.5", "title": "자동 중지·임시 파일 복구·마이크", "platform": "win", "days": 0.6, "status": "verify", "note": "자동 중지·임시 파일 복구 + 마이크: 맥 SCStream→AAC(7b9569f), Windows WASAPI→AAC(2a8f2df), 장치 목록 권한(9998d75). 남음: 두 OS 실제 마이크 녹음(맥 권한 창·Windows 입력 장치 필요)", "level": "hard" }
           ]
