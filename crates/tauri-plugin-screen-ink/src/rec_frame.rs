@@ -8,7 +8,7 @@
 
 use ink_domain::geometry::PhysRect;
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Runtime, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Runtime, WebviewUrl};
 
 pub const REC_FRAME: &str = "ink-rec-frame";
 const EVT_REC_FRAME: &str = "screen-ink://recframe";
@@ -48,7 +48,7 @@ struct FramePlace {
 }
 
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
-    let w = WebviewWindowBuilder::new(app, REC_FRAME, WebviewUrl::App("index.html?view=recframe".into()))
+    let w = crate::app_window(app, REC_FRAME, WebviewUrl::App("index.html?view=recframe".into()))
         .title(crate::tr(app, "plugin.window.recFrame"))
         .inner_size(320.0, 200.0)
         .resizable(false)

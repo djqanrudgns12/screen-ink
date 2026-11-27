@@ -40,6 +40,22 @@ use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Rect, RunEvent, Runti
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use tray_art::TrayMode;
 
+// 모든 슉쇽 창이 같은 WebView2 환경을 쓰도록 브라우저 인자를 한 곳에서 정한다.
+fn app_window<R: Runtime>(app: &AppHandle<R>, label: impl Into<String>, url: WebviewUrl) -> WebviewWindowBuilder<'_, R, AppHandle<R>> {
+    let builder = WebviewWindowBuilder::new(app, label, url);
+    #[cfg(windows)]
+    let builder = builder.additional_browser_args(concat!(
+        // 인자를 직접 주면 Wry 기본값이 교체되므로 메뉴·SmartScreen과 자동 재생 설정을 유지한다.
+        "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection ",
+        "--autoplay-policy=no-user-gesture-required ",
+        "--disable-background-networking --disable-component-update --disable-domain-reliability --no-pings --disable-sync ",
+        // 웹뷰는 로컬 자원만 쓴다. 시스템 프록시 자동 탐색과 외부 이름 조회도 건너뛴다.
+        // 앱 업데이트 확인은 웹뷰 밖의 Windows 업데이터가 맡는다.
+        "--no-proxy-server --host-resolver-rules=\"MAP * ~NOTFOUND, EXCLUDE localhost, EXCLUDE *.localhost, EXCLUDE 127.0.0.1, EXCLUDE [::1]\""
+    ));
+    builder
+}
+
 pub const POPOVER: &str = "ink-popover";
 pub const SETTINGS: &str = "ink-settings";
 pub const ISLAND: &str = "ink-island";
@@ -533,7 +549,7 @@ fn place_island<R: Runtime>(app: &AppHandle<R>, w: &tauri::WebviewWindow<R>) {
 }
 
 fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
-    let popover = WebviewWindowBuilder::new(app, POPOVER, WebviewUrl::App("index.html?view=popover".into()))
+    let popover = app_window(app, POPOVER, WebviewUrl::App("index.html?view=popover".into()))
         .title(tr(app, "plugin.window.popover"))
         // 카드 252 × 약 418~448 + 둘레 투명 여백 8씩(App.svelte `.popover-shell`) — 창 = 카드 + 그림자만(R2-UI-TRAY-1)
         .inner_size(268.0, 464.0)
@@ -560,7 +576,7 @@ fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         }
     });
 
-    WebviewWindowBuilder::new(app, ISLAND, WebviewUrl::App("index.html?view=island".into()))
+    app_window(app, ISLAND, WebviewUrl::App("index.html?view=island".into()))
         .title(tr(app, "plugin.window.island"))
         .inner_size(ISLAND_SIZE.0, ISLAND_SIZE.1)
         .resizable(false)
@@ -687,7 +703,7 @@ fn open_settings_with<R: Runtime>(app: &AppHandle<R>, first_run: bool) {
         return;
     }
     let url = if first_run { "index.html?view=settings&first=1" } else { "index.html?view=settings" };
-    let built = WebviewWindowBuilder::new(app, SETTINGS, WebviewUrl::App(url.into()))
+    let built = app_window(app, SETTINGS, WebviewUrl::App(url.into()))
         .title(tr(app, "plugin.window.settings"))
         .inner_size(900.0, 600.0)
         .resizable(false)

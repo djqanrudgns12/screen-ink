@@ -13,7 +13,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::http::{Request, Response};
 use tauri::window::Color;
-use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Runtime, UriSchemeContext, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Runtime, UriSchemeContext, WebviewUrl};
 
 pub const SCHEME: &str = "ink";
 pub const EVT_OVERLAY: &str = "screen-ink://overlay";
@@ -197,7 +197,7 @@ pub fn ensure_overlays<R: Runtime>(app: &AppHandle<R>, layout: &MonitorLayout) {
         let l = label(m.id);
         let w = match app.get_webview_window(&l) {
             Some(w) => w,
-            None => match WebviewWindowBuilder::new(app, &l, WebviewUrl::App(format!("index.html?view=overlay&monitor={}", m.id).into()))
+            None => match crate::app_window(app, &l, WebviewUrl::App(format!("index.html?view=overlay&monitor={}", m.id).into()))
                 .title(crate::tr(app, "plugin.window.overlay"))
                 .decorations(false)
                 .transparent(true)

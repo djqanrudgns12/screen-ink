@@ -8,7 +8,7 @@ use ink_domain::pin::{next_zoom, zoom_rect};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
-use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Runtime, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Runtime, WebviewUrl};
 
 pub const PREFIX: &str = "ink-pin-";
 /// 메뉴 항목 id 앞머리: `pin:<동작>:<핀 id>`
@@ -95,7 +95,7 @@ impl<R: Runtime> ink_app::PinHost for TauriPinHost<R> {
         // 창 만들기는 명령(메인 스레드) 안에서 하면 WebView2가 교착한다 → 다른 스레드에서(완료를 기다리지 않음)
         let app = self.app.clone();
         std::thread::spawn(move || {
-            let built = WebviewWindowBuilder::new(&app, label(id), WebviewUrl::App(format!("index.html?view=pin&pin={id}").into()))
+            let built = crate::app_window(&app, label(id), WebviewUrl::App(format!("index.html?view=pin&pin={id}").into()))
                 .title(crate::tr(&app, "plugin.window.pin"))
                 .decorations(false)
                 .transparent(true)

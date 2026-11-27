@@ -107,6 +107,8 @@
   ```bash
   cargo tree --workspace --edges normal | grep -E '\b(reqwest|ureq|hyper|surf|isahc|curl|tauri-plugin-http|tauri-plugin-updater)\b' || echo "OK: 0건"
   ```
+  - **Windows 포터블 0.2.0 재검사(W14).** 지정된 Rust 시험 414개 통과·10개 제외, Clippy 경고 0건. Windows 활성 의존 그래프에서 위 HTTP 크레이트 0개, 릴리스 사본의 PE 직접 가져오기에서 `winhttp.dll`·`wininet.dll`·`ws2_32.dll` 0개를 확인했다.
+  - 수정 전에는 자동 확인을 끄고 새 프로필로 42초 동안 관측했다. 본체 외부 TCP는 0건이었고, `msedgewebview2.exe`가 서로 다른 로컬 포트에서 `150.171.22.17:443`으로 2건 연결했다. 같은 실행의 WebView2 네트워크 로그에 `https://config.edge.skype.com/config/v1/Edge/158.0.4370.45` 요청이 있었다. Microsoft가 Edge 실험·구성 서비스에 사용하는 주소다. [Microsoft의 Edge 엔드포인트 목록](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-security-endpoints)
   - 참고: `Cargo.lock`에 `tauri`의 비활성 선택 피처 메타데이터가 남을 수 있으므로 반드시 활성 의존 그래프(`cargo tree --edges normal`)와 릴리스 바이너리 심볼/Import로 최종 판정한다.
 - [ ] **웹뷰 CSP 확인 (`apps/screen-ink/src-tauri/tauri.conf.json`)**:
   - `connect-src`에 외부 `http://`·`https://` 도메인이 없는지 확인 (로컬 `ipc:`·`ink:`만 허용; 개발용 `ws://localhost:1420`은 릴리스 빌드에서 외부 노출 없는지 확인).
@@ -114,11 +116,14 @@
   - 설정 › 일반 › 업데이트에서 **자동 업데이트 확인 끄기** 설정 후 앱 재실행.
   - macOS: `SCREEN_INK_UPDATE_DELAY_SECS=5`로 릴리스 `.app` 실행 후 30초 이상 관찰하며 `lsof -i -a -p <PID>` 및 `nettop -p <PID>`에서 외부 소켓 생성·송수신 바이트 **0** 확인.
   - Windows: MSIX/비패키지 모두 `update.auto = false` 또는 비패키지 경로에서 앱 프로세스 외부 연결 **0** 확인.
-  - **Windows 포터블 0.2.0 미통과.** Windows 11 25H2에서 자동 확인을 끈 채 새 WebView2 프로필로 두 번 시작했다. 첫 확인 시각을 5초로 당기고, 실행 직후부터 앱과 자식 프로세스의 IPv4·IPv6 소켓을 조회했다. 37.1초(258회)와 36.9초(262회) 모두 본체 외부 TCP 연결은 0건, 하위 프로세스는 각각 2건이었다. 두 번째 실행에서 연결 소유자가 `msedgewebview2.exe`임을 확인했다. 패킷 전수·바이트 계측과 설치형 MSIX 실기는 미실행이다.
+  - **W14 Windows 포터블 실측 통과.** 새 WebView2 프로필과 별도 앱 식별자로 실행한 사본에서 첫 자동 확인 시각을 5초로 설정했다. 자동 확인을 끄고 설정·범위 캡처·판서를 차례로 사용한 뒤 180초 더 관측했다. 시작부터 총 187.2초 동안 사본의 프로세스 트리에서 외부 TCP 연결 0건, UDP 바인딩 0건, 업데이터 실행 0건이었다. IPv4·IPv6 소켓 표본 3,577회와 별도로 `Get-NetTCPConnection` 435회에서도 외부 TCP 연결은 0건이었다. 화면 조작에 쓴 루프백 디버깅 연결은 외부 연결에서 제외했다.
+  - 자동 확인을 켜고 새 프로필로 다시 시작해 40초간 관측했다. GitHub의 `latest-win.json`을 요청한 `curl.exe` 1개에서만 외부 TCP 1건(`20.200.245.247:443`)이 보였고, 본체·WebView2는 0건이었다. 서버가 HTTP 오류를 반환해 목록 수신은 실패했다(`curl` 종료 코드 22). 패킷 전수 계측은 미실행이며, 설치형 MSIX 실기는 사람 승인 필요.
+  - WebView2 브라우저 프로세스는 1개였다. 설정 창에서 내장 글꼴 3종 로드, 두 모니터(3840×2160·1920×1080)의 정지 미리보기 창 표시와 로컬 캡처 이미지 디코딩, 판서 글상자에서 실제 키 입력으로 ‘한’ 조합 시작·종료를 확인했다.
+  - **W12 수정 전 기록.** Windows 11 25H2에서 자동 확인을 끈 채 새 WebView2 프로필로 두 번 시작했다. 첫 확인 시각을 5초로 당기고, 실행 직후부터 앱과 자식 프로세스의 IPv4·IPv6 소켓을 조회했다. 37.1초(258회)와 36.9초(262회) 모두 본체 외부 TCP 연결은 0건, 하위 프로세스는 각각 2건이었다. 두 번째 실행에서 연결 소유자가 `msedgewebview2.exe`임을 확인했다. 패킷 전수·바이트 계측과 설치형 MSIX 실기는 미실행이다.
 - [x] **Windows PE Import 검사 (1차 7.5)**:
   - `target/release/screen-ink.exe` (또는 `Shookshok.exe`)에서 `winhttp.dll` · `wininet.dll` · `ws2_32.dll` import가 없는지 `dumpbin /imports` / `llvm-objdump -p` / `rea inspect-pe-imports`로 확인.
   - WebView2 런타임 백그라운드 통신 억제 옵션 적용 여부 기록.
-  - 0.2.0 x64 릴리스 사본에서 `dumpbin /imports /headers`로 위 DLL 3종과 `VCRUNTIME140.dll` 직접 가져오기 0건을 확인했다. Windows 활성 의존 그래프에서도 위 HTTP 크레이트 0건이다. 앱의 `connect-src`에는 로컬 주소만 있고, WebView2 백그라운드 통신을 억제하는 앱 옵션은 찾지 못했다.
+  - 0.2.0 x64 릴리스 사본에서 `dumpbin /imports /headers`로 위 DLL 3종과 `VCRUNTIME140.dll` 직접 가져오기 0건을 확인했다. Windows 활성 의존 그래프에서도 위 HTTP 크레이트 0건이다. 앱의 `connect-src`에는 로컬 주소만 있고, W12 검사 당시에는 WebView2 백그라운드 통신 억제 옵션이 없었다. W14에서 모든 Windows 웹뷰에 같은 인자를 적용했다.
 - [ ] 학교망(SSL 검사)·오프라인 환경에서 앱 실행·캡처·그리기·단축키 PDF 저장 시 오류·지연 0건 확인.
 
 ---
@@ -262,7 +267,7 @@
 | macOS 서명 신원 & DR 일치 | `Shookshok Self Sign` / 일치(예·아니오) | | |
 | macOS `.app.zip` SHA-256 | | | |
 | Windows MSIX (store / direct) SHA-256 | 직접 배포용 무서명 `73e09cd31c49a42d9c03c23740a5a4e6ea0bcee958d2fbd17e42c7a0281294e6` | W12-dist | 2026-11-27 |
-| 업데이트 끈 상태 통신 0 실측 | Windows 포터블 미통과. 두 번 모두 본체 0건, 하위 프로세스 2건(§4) | W12-dist | 2026-11-27 |
+| 업데이트 끈 상태 통신 0 실측 | Windows 포터블 187.2초 동안 본체·하위 프로세스 외부 TCP 0건(§4). 설치형 MSIX 미실행 | W14-net0 | 2026-11-27 |
 | 로그 카나리아(창 제목 0건) | Windows 포터블 0건(§5) | W12-dist | 2026-11-27 |
 | 자동 스냅숏·성능 예산 통과 | [snapshots.md](../qa/2026-11-27/snapshots.md) · [perf.md](../qa/2026-11-27/perf.md) | | |
 | 최종 게시 승인 (GitHub / Store) | 초안 확인 후 사람 게시 | | |
