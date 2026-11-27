@@ -38,10 +38,15 @@ impl TileBitset {
     }
 
     #[inline]
-    fn set(&mut self, x: usize, y: usize) {
-        let (tid, word, mask) = self.tile_and_bit(x, y);
-        let bits = self.tiles[tid].get_or_insert_with(|| Box::new([0u64; TILE_WORDS]));
-        bits[word] |= mask;
+    fn set_span(&mut self, left: usize, right: usize, y: usize) {
+        let tile_row = (y >> TILE_SHIFT) * self.tiles_x;
+        for tile_x in (left >> TILE_SHIFT)..=(right >> TILE_SHIFT) {
+            let start = tile_x << TILE_SHIFT;
+            let lo = left.saturating_sub(start);
+            let hi = (right - start).min(63);
+            let tile = self.tiles[tile_row + tile_x].get_or_insert_with(|| Box::new([0; TILE_WORDS]));
+            tile[y & 63] |= (u64::MAX << lo) & (u64::MAX >> (63 - hi));
+        }
     }
 }
 
@@ -89,14 +94,15 @@ pub(crate) fn find_flat_region(data: &PrepData, lx: i32, ly: i32) -> Option<Phys
             continue;
         }
 
-        // 왼쪽 끝까지 확장
+        // 한 줄에서 같은 색이 이어진 구간은 한 번에 전부 표시한다.
+        // 시작점이 미방문이면 양 끝을 찾는 동안 같은 구간에 방문한 점은 없다.
         let mut x_left = px;
-        while x_left > 0 && !visited.is_set(x_left - 1, py) && color_matches(row, x_left - 1, b0, g0, r0) {
+        while x_left > 0 && color_matches(row, x_left - 1, b0, g0, r0) {
             x_left -= 1;
         }
         // 오른쪽 끝까지 확장
         let mut x_right = px;
-        while x_right + 1 < w && !visited.is_set(x_right + 1, py) && color_matches(row, x_right + 1, b0, g0, r0) {
+        while x_right + 1 < w && color_matches(row, x_right + 1, b0, g0, r0) {
             x_right += 1;
         }
 
@@ -106,9 +112,7 @@ pub(crate) fn find_flat_region(data: &PrepData, lx: i32, ly: i32) -> Option<Phys
             return None;
         }
 
-        for x in x_left..=x_right {
-            visited.set(x, py);
-        }
+        visited.set_span(x_left, x_right, py);
 
         if x_left < min_x {
             min_x = x_left;

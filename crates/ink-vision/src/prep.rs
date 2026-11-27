@@ -2,6 +2,7 @@
 //! 밝기·경사 → 가로/세로 곧은 경계 조각(CSR 구간 목록) + 행·열 누적합(O(1) 경계 지지율).
 
 use crate::{GRAD_THRESHOLD, MIN_SEGMENT_LEN};
+use std::sync::Arc;
 
 /// 곧은 경계 조각 안에서 허용하는 최대 끊김(1~2 px 교차선·안티에일리어싱 틈).
 const MAX_SEG_GAP: u16 = 2;
@@ -30,7 +31,7 @@ pub(crate) struct PrepData {
     pub rw: u32,
     pub rh: u32,
     /// ROI 영역의 BGRA 픽셀(`rw * rh * 4` 바이트) — 평탄 영역 채우기용.
-    pub bgra: Vec<u8>,
+    pub bgra: Arc<Vec<u8>>,
     /// 가로 경계 행별 누적합: `(rh + 1) * (rw + 1)`.
     /// `h_prefix[ly * stride + lx]` = 균열 행 `ly`에서 `[0, lx)`의 가로 경계 화소 수.
     pub h_prefix: Vec<u16>,
@@ -58,7 +59,7 @@ impl PrepData {
             oy: 0,
             rw: 0,
             rh: 0,
-            bgra: Vec::new(),
+            bgra: Arc::default(),
             h_prefix: Vec::new(),
             v_prefix: Vec::new(),
             h_segs: Vec::new(),
@@ -230,6 +231,7 @@ fn process_band(
     let mut v_head = vec![RunState::EMPTY; rw_u + 1];
     let mut v_tail = vec![RunState::EMPTY; rw_u + 1];
     let mut v_states = vec![RunState::EMPTY; rw_u + 1];
+    let mut previous_edges = Vec::new();
 
     // 5행 슬라이딩 밝기 버퍼(y-2..=y+2 미리 채움)
     let mut luma_ring: [Vec<u8>; 5] = std::array::from_fn(|_| vec![0u8; rw_u]);
@@ -252,8 +254,9 @@ fn process_band(
         let cur_row = &roi_bgra[ly * roi_row_bytes..(ly + 1) * roi_row_bytes];
         let cur_luma = &luma_ring[ly % 5];
 
-        // 2a. 가로 경계(ly >= 1)
-        if ly >= 1 {
+        // 같은 두 줄 사이에는 가로 경계가 없어 0으로 시작한 누적합을 그대로 쓴다.
+        let repeated = ly > 0 && cur_row == &roi_bgra[(ly - 1) * roi_row_bytes..ly * roi_row_bytes];
+        if ly >= 1 && !repeated {
             let h_start_idx = h_segs.len();
             let prev_row = &roi_bgra[(ly - 1) * roi_row_bytes..ly * roi_row_bytes];
             let prev_luma = &luma_ring[(ly - 1) % 5];
@@ -318,6 +321,21 @@ fn process_band(
 
         // 2b. 세로 경계(lx >= 1): 대역 첫 행은 0 기준, 이후 행은 직전 행 누적
         let ly16 = ly as u16;
+        // 세로 경계 판정에는 현재 줄만 쓰므로 같은 줄이면 앞줄의 경계 열만 한 칸씩 늘린다.
+        // 대역 첫 줄에서는 앞 대역의 상태를 빌리지 않는다.
+        if repeated && local_y > 0 {
+            let (prev, cur) = v_band.split_at_mut(local_y * stride);
+            let prefix = &mut cur[..stride];
+            prefix.copy_from_slice(&prev[prev.len() - stride..]);
+            for &x in &previous_edges {
+                let state: &mut RunState = &mut v_states[x];
+                state.end = ly16 + 1;
+                state.hits += 1;
+                prefix[x] += 1;
+            }
+            continue;
+        }
+        previous_edges.clear();
         let mut prev_px = [cur_row[0], cur_row[1], cur_row[2], cur_row[3]];
         let mut prev_y = cur_luma[0];
 
@@ -343,6 +361,7 @@ fn process_band(
                 prev_y = cy;
 
                 if is_edge {
+                    previous_edges.push(lx);
                     *dst_v = 1;
                     v_states[lx] = RunState { start: ly16, end: ly16 + 1, hits: 1 };
                 } else {
@@ -379,6 +398,7 @@ fn process_band(
                 prev_y = cy;
 
                 if is_edge {
+                    previous_edges.push(lx);
                     *dst_v = pv + 1;
                     let st = &mut v_states[lx];
                     if st.is_empty() {
@@ -424,12 +444,28 @@ fn process_band(
 
 /// ROI `[x0, x0+rw) × [y0, y0+rh)` 전처리 실행(큰 화면은 자동으로 멀티스레드 대역 분할).
 pub(crate) fn build_roi(bgra: &[u8], w: u32, h: u32, x0: u32, y0: u32, rw: u32, rh: u32) -> PrepData {
-    let threads = if (rw as usize).saturating_mul(rh as usize) >= PARALLEL_MIN_PIXELS && rh >= 256 {
+    build_roi_with_threads(bgra, (w, h), (x0, y0), (rw, rh), band_threads(rw, rh))
+}
+
+fn band_threads(rw: u32, rh: u32) -> usize {
+    if (rw as usize).saturating_mul(rh as usize) >= PARALLEL_MIN_PIXELS && rh >= 256 {
         std::thread::available_parallelism().map_or(1, |n| n.get()).min(4)
     } else {
         1
-    };
-    build_roi_with_threads(bgra, (w, h), (x0, y0), (rw, rh), threads)
+    }
+}
+
+pub(crate) fn build_shared(bgra: Arc<Vec<u8>>, w: u32, h: u32) -> PrepData {
+    if !valid_pixels(&bgra, (w, h), (w, h)) {
+        return PrepData::empty(w, h);
+    }
+    analyze_pixels(bgra, (w, h), (0, 0), (w, h), band_threads(w, h))
+}
+
+fn valid_pixels(bgra: &[u8], (w, h): (u32, u32), (rw, rh): (u32, u32)) -> bool {
+    let max_side = u16::MAX as u32 - 2;
+    (1..=max_side).contains(&rw) && (1..=max_side).contains(&rh)
+        && (w as usize).checked_mul(h as usize).and_then(|n| n.checked_mul(4)).is_some_and(|n| n <= bgra.len())
 }
 
 pub(crate) fn build_roi_with_threads(
@@ -442,27 +478,17 @@ pub(crate) fn build_roi_with_threads(
     let (w, h) = full;
     let (x0, y0) = origin;
     let (rw, rh) = roi;
-    if w == 0 || h == 0 || rw == 0 || rh == 0 {
-        return PrepData::empty(w, h);
-    }
-    let Some(full_bytes) = (w as usize).checked_mul(h as usize).and_then(|n| n.checked_mul(4)) else {
-        return PrepData::empty(w, h);
-    };
-    if bgra.len() < full_bytes {
-        return PrepData::empty(w, h);
-    }
-    if rw > u16::MAX as u32 - 2 || rh > u16::MAX as u32 - 2 {
+    if !valid_pixels(bgra, full, roi) {
         return PrepData::empty(w, h);
     }
 
     let rw_u = rw as usize;
     let rh_u = rh as usize;
-    let stride = rw_u + 1;
     let roi_row_bytes = rw_u * 4;
 
     // 1. ROI 픽셀 복사
     let roi_bgra = if x0 == 0 && y0 == 0 && rw == w && rh == h {
-        bgra[..full_bytes].to_vec()
+        bgra[..roi_row_bytes * rh_u].to_vec()
     } else {
         let mut buf = Vec::with_capacity(roi_row_bytes * rh_u);
         let full_row_bytes = w as usize * 4;
@@ -474,6 +500,18 @@ pub(crate) fn build_roi_with_threads(
         buf
     };
 
+    analyze_pixels(Arc::new(roi_bgra), full, origin, roi, requested_threads)
+}
+
+fn analyze_pixels(
+    roi_bgra: Arc<Vec<u8>>,
+    (w, h): (u32, u32),
+    (x0, y0): (u32, u32),
+    (rw, rh): (u32, u32),
+    requested_threads: usize,
+) -> PrepData {
+    let (rw_u, rh_u) = (rw as usize, rh as usize);
+    let stride = rw_u + 1;
     let prefix_len = stride * (rh_u + 1);
     let mut h_prefix = vec![0u16; prefix_len];
     let mut v_prefix = vec![0u16; prefix_len];

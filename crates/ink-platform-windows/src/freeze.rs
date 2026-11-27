@@ -72,15 +72,15 @@ unsafe fn blit(dc: HDC, buf: &[u8], w: i32, h: i32, r: PhysRect) {
     bmi.bmiHeader = BITMAPINFOHEADER {
         biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
         biWidth: w,
-        biHeight: -h,
+        biHeight: -r.h,
         biPlanes: 1,
         biBitCount: 32,
         biCompression: BI_RGB,
         ..std::mem::zeroed()
     };
-    // 위→아래 DIB여도 SetDIBitsToDevice의 원본 y는 "아래에서부터" 센다(실측: r.y를 그대로 넘기면 40px 밀림)
-    // → 전체 줄을 넘기고 원본 y를 뒤집는다
-    SetDIBitsToDevice(dc, r.x, r.y, r.w as u32, r.h as u32, r.x, h - r.y - r.h, 0, h as u32, buf.as_ptr().cast(), &bmi, DIB_RGB_COLORS);
+    // 원본 행 너비를 유지하면서 그릴 줄만 위→아래 DIB로 넘긴다. 이 띠 안의 원본 y는 0이다.
+    let start = r.y as usize * w as usize * 4;
+    SetDIBitsToDevice(dc, r.x, r.y, r.w as u32, r.h as u32, r.x, 0, 0, r.h as u32, buf[start..].as_ptr().cast(), &bmi, DIB_RGB_COLORS);
 }
 
 unsafe extern "system" fn wndproc(h: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LRESULT {

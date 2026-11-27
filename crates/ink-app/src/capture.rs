@@ -178,6 +178,9 @@ pub(crate) struct EntryProbe {
     /// 윈도우에서 첫 후보 사슬의 강조를 네이티브 창에 반영한 시각.
     #[cfg(windows)]
     pub(crate) first_highlight_ms: Option<f64>,
+    /// 첫 후보를 만든 이동의 처리 시작·계산 완료 시각.
+    #[cfg(windows)]
+    pub(crate) first_move: Option<(Instant, Instant)>,
     /// 진입 순간 커서 아래 창
     pub(crate) window: Option<u64>,
     /// 커서 자리 V 전처리가 처음 준비된 시각: (배경에서 끝난 때, 메인 스레드가 받은 때) 단축키부터 ms
@@ -494,6 +497,10 @@ impl InkService {
         if is_move && self.cap.probe.moves.len() < MAX_PROBE_MOVES {
             self.cap.probe.moves.push(ms_since(t));
         }
+        #[cfg(windows)]
+        if is_move && self.cap.probe.first_move.is_none() && self.cap.metrics.is_some() {
+            self.cap.probe.first_move = Some((t, Instant::now()));
+        }
         let phase = sel.view().phase;
         if phase != ink_domain::selection::Phase::Confirmed {
             self.cap.annot.tool = None;
@@ -609,6 +616,8 @@ impl InkService {
             log::debug!("highlight {:?} level {} path {}", rect, v.level, v.path.join(" > "));
         }
         self.cap.drawn = rect;
+        #[cfg(windows)]
+        let paint = (self.cap.probe.first_highlight_ms.is_none() && self.cap.probe.first_move.is_some()).then(Instant::now);
         self.ports.overlay.highlight(session, rect);
         #[cfg(windows)]
         if self.cap.probe.first_highlight_ms.is_none() && self.cap.metrics.is_some() && rect.is_some() && sel.hover_point().is_some() {
@@ -616,6 +625,10 @@ impl InkService {
                 let elapsed = ms_since(pressed);
                 self.cap.probe.first_highlight_ms = Some(elapsed);
                 log::info!("highlight first [{elapsed:.1} ms]");
+                if let (Some((received, computed)), Some(paint)) = (self.cap.probe.first_move, paint) {
+                    let since_press = |at: Instant| at.duration_since(pressed).as_secs_f64() * 1000.0;
+                    log::debug!("첫 강조 구간 이동 {:.2} 후보 {:.2} 그리기 시작 {:.2} ms", since_press(received), since_press(computed), since_press(paint));
+                }
             }
         }
         self.emit_capture();
@@ -1466,6 +1479,8 @@ mod tests {
             moves: vec![0.5, 1.0, 2.0],
             #[cfg(windows)]
             first_highlight_ms: None,
+            #[cfg(windows)]
+            first_move: None,
         };
         let line = p.line().unwrap();
         assert!(line.contains("V first 12.3 (main 40.0) ms"), "{line}");

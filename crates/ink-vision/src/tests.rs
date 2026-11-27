@@ -431,6 +431,28 @@ fn 성능_측정_1080p와_4k() {
 }
 
 #[test]
+fn 공유_원본의_반복_행을_건너뛰어도_경계와_후보가_같다() {
+    use std::sync::Arc;
+    let c = make_realistic_ui(640, 480);
+    let pixels = Arc::new(c.bgra);
+    let shared = prepare_shared(pixels.clone(), c.w, c.h);
+    assert!(Arc::ptr_eq(&pixels, &shared.data.bgra));
+    // 알파만 줄마다 바꾸면 경계 판정의 색은 같지만 모든 줄을 개별 검사한다.
+    let mut distinct = pixels.as_ref().clone();
+    for (y, row) in distinct.chunks_exact_mut(c.w as usize * 4).enumerate() {
+        row[3] = y as u8;
+    }
+    let reference = prepare(&distinct, c.w, c.h);
+    assert_eq!(shared.data.h_prefix, reference.data.h_prefix);
+    assert_eq!(shared.data.v_prefix, reference.data.v_prefix);
+    assert_eq!(shared.data.h_segs, reference.data.h_segs);
+    assert_eq!(shared.data.v_segs, reference.data.v_segs);
+    for (x, y) in [(0, 0), (180, 90), (440, 125), (639, 479)] {
+        assert_eq!(shared.query(x, y), reference.query(x, y));
+    }
+}
+
+#[test]
 fn 병렬_전처리는_단일_스레드와_완전히_동일하다() {
     let c = make_realistic_ui(640, 480);
     let seq = prep::build_roi_with_threads(&c.bgra, (c.w, c.h), (0, 0), (c.w, c.h), 1);

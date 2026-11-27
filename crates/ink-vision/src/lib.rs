@@ -62,6 +62,11 @@ pub fn prepare(bgra: &[u8], w: u32, h: u32) -> Prepared {
     Prepared { data: prep::build_roi(bgra, w, h, 0, 0, w, h) }
 }
 
+/// 캡처가 보관 중인 전체 화면 픽셀을 복사 없이 전처리와 질의에 쓴다.
+pub fn prepare_shared(bgra: std::sync::Arc<Vec<u8>>, w: u32, h: u32) -> Prepared {
+    Prepared { data: prep::build_shared(bgra, w, h) }
+}
+
 /// 커서 `(cx, cy)` 주변 `±half` 영역만 먼저 전처리한다(08 §4.7).
 /// 반환된 `Prepared`의 모든 메서드 입출력 좌표는 원본 이미지 기준 물리 px다.
 pub fn prepare_roi(bgra: &[u8], w: u32, h: u32, cx: u32, cy: u32, half: u32) -> Prepared {

@@ -136,7 +136,7 @@ impl Job {
             ready();
         }
         let t = std::time::Instant::now();
-        let p = ink_vision::prepare(&f.bgra, w, h);
+        let p = ink_vision::prepare_shared(f.bgra, w, h);
         log::debug!("vision full monitor {} {}x{} {:.1} ms", f.monitor_id, w, h, t.elapsed().as_secs_f64() * 1000.0);
         if store(&inner, generation, index, |s| {
             s.full = Some(p);
