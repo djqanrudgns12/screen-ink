@@ -210,6 +210,56 @@ impl VisionSource for VisionEngine {
             .unwrap_or(r)
     }
 
+    fn query_occluded(&self, p: PhysPoint, occluders: &[PhysRect]) -> Vec<VisionCand> {
+        let g = self.lock();
+        let Some(slot) = Self::slot_at(&g, p) else { return Vec::new() };
+        let Some(prep) = slot.at(p) else { return Vec::new() };
+        let (ox, oy) = slot.origin();
+        let occ: Vec<PhysRect> = occluders.iter().map(|o| shift(*o, -ox, -oy)).collect();
+        prep.query_with_occluders(p.x - ox, p.y - oy, &occ)
+            .into_iter()
+            .map(|c| VisionCand {
+                rect: shift(c.rect, ox, oy),
+                kind: match c.kind {
+                    ink_vision::VKind::Box => VisionKind::Box,
+                    ink_vision::VKind::Flat => VisionKind::Flat,
+                },
+                support: c.support,
+            })
+            .collect()
+    }
+
+    fn support_occluded(&self, r: PhysRect, occluders: &[PhysRect]) -> Option<f32> {
+        let g = self.lock();
+        g.slots.iter().find_map(|s| {
+            s.covering(r).map(|p| {
+                let occ: Vec<PhysRect> = occluders.iter().map(|o| shift(*o, -s.bounds.x, -s.bounds.y)).collect();
+                p.support_with_occluders(shift(r, -s.bounds.x, -s.bounds.y), &occ)
+            })
+        })
+    }
+
+    fn snap_occluded(&self, r: PhysRect, occluders: &[PhysRect]) -> PhysRect {
+        let g = self.lock();
+        g.slots
+            .iter()
+            .find_map(|s| {
+                s.covering(r).map(|p| {
+                    let occ: Vec<PhysRect> = occluders.iter().map(|o| shift(*o, -s.bounds.x, -s.bounds.y)).collect();
+                    shift(p.snap_with_occluders(shift(r, -s.bounds.x, -s.bounds.y), SNAP_TOL, &occ), s.bounds.x, s.bounds.y)
+                })
+            })
+            .unwrap_or(r)
+    }
+
+    fn refine_image(&self, r: PhysRect) -> PhysRect {
+        let g = self.lock();
+        g.slots
+            .iter()
+            .find_map(|s| s.covering(r).map(|p| shift(p.refine_image(shift(r, -s.bounds.x, -s.bounds.y)), s.bounds.x, s.bounds.y)))
+            .unwrap_or(r)
+    }
+
     fn edges_near(&self, p: PhysPoint) -> (Vec<i32>, Vec<i32>) {
         let g = self.lock();
         let Some(slot) = Self::slot_at(&g, p) else { return (Vec::new(), Vec::new()) };

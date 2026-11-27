@@ -12,7 +12,7 @@ use ink_domain::image::{self, FrameRef};
 use ink_domain::magnet::Edges;
 use ink_domain::mode::Mode;
 use ink_domain::naming;
-use ink_domain::recog::{build_chain, Evidence, Node};
+use ink_domain::recog::{build_chain_with, Evidence, Node};
 use ink_domain::modekeys::CaptureKeys;
 use ink_domain::selection::{Button, Command, Context, Effect, Input, Key, Selector};
 use ink_domain::settings::ExcludedApp;
@@ -141,6 +141,8 @@ pub struct CaptureState {
     pub(crate) annot: AnnotState,
     /// 주석이 있던 캡처를 버린 직후 5초간 되살리기용으로 붙들어 둔 상태(R2-UNDO-1)
     pub(crate) discarded: Option<DiscardedCapture>,
+    /// 마지막 사슬의 판정 계측 숫자(R2-CAP-6) — 확정 때 한 줄
+    pub(crate) metrics: Option<ink_domain::recog::RecogMetrics>,
 }
 
 /// 한 번의 고르기 동안 잰 것(08 §4.7 "첫 강조 ≤ 진입 + 30 ms", "커서 이동 질의 ≤ 5 ms").
@@ -191,6 +193,8 @@ struct Ctx<'a> {
     monitors: &'a dyn MonitorProbe,
     children: &'a mut HashMap<u64, Vec<PhysRect>>,
     history: Vec<PhysRect>,
+    /// 마지막 사슬의 계측 숫자(R2-CAP-6)
+    metrics: &'a mut Option<ink_domain::recog::RecogMetrics>,
 }
 
 impl Context for Ctx<'_> {
@@ -207,13 +211,15 @@ impl Context for Ctx<'_> {
             }
             _ => (Vec::new(), Vec::new()),
         };
-        let vis = if elements_on { self.vision.query(p) } else { Vec::new() };
+        // 그 창보다 앞에 있는 창들(가림 인지 R2-CAP-1) — V 후보·지지율·경계 맞춤도 앞 창 경계를 쓰지 않는다(R2-CAP-2)
+        let occ = w.map(|w| ink_domain::recog::occluders_of(&self.snap.windows, w.handle)).unwrap_or_default();
+        let vis = if elements_on { self.vision.query_occluded(p, &occ) } else { Vec::new() };
         let vision = self.vision;
         let v_ready = vision.support(monitor).is_some();
-        let sup = |r: PhysRect| vision.support(r).unwrap_or(0.5);
-        let snap = |r: PhysRect| vision.snap(r);
-        // 그 창보다 앞에 있는 창들(가림 인지 R2-CAP-1)
-        let occ = w.map(|w| ink_domain::recog::occluders_of(&self.snap.windows, w.handle)).unwrap_or_default();
+        let sup = |r: PhysRect| vision.support_occluded(r, &occ).unwrap_or(0.5);
+        let snap = |r: PhysRect| vision.snap_occluded(r, &occ);
+        // 그림 요소의 실제 가장자리(R2-CAP-3: 여백·그림자·둥근 모서리)
+        let refine = |r: PhysRect| vision.refine_image(r);
         let ev = Evidence {
             point: p,
             window: w.map(|w| w.rect),
@@ -226,7 +232,11 @@ impl Context for Ctx<'_> {
             support: if v_ready { Some(&sup) } else { None },
             snap: if v_ready { Some(&snap) } else { None },
         };
-        (build_chain(&ev), w.map(|w| w.handle))
+        let opts = ink_domain::recog::RecogOptions { refine_image: if v_ready { Some(&refine) } else { None } };
+        let chain = build_chain_with(&ev, &opts);
+        // 계측(R2-CAP-6, 숫자만): 확정 때 고른 단계와 함께 한 줄로 남긴다
+        *self.metrics = Some(ink_domain::recog::metrics_of(&ev, &chain, 0));
+        (chain, w.map(|w| w.handle))
     }
 
     fn edges(&mut self, around: PhysPoint) -> Edges {
@@ -277,6 +287,7 @@ macro_rules! ctx {
             monitors: monitors.as_ref(),
             children: &mut $s.cap.children,
             history: $s.cap.ranges.for_layout(&$snap.layout.fingerprint()),
+            metrics: &mut $s.cap.metrics,
         }
     }};
 }
@@ -1064,6 +1075,16 @@ impl InkService {
     /// 고르기 상태 기계가 낸 결과. 주석이 없으면 지금 경로, 있으면 오버레이에 주석 층을 부탁한다.
     fn commit(&mut self, action: CommitAction, rect: PhysRect) {
         let Some(session) = self.session() else { return };
+        // 판정 계측(R2-CAP-6): 숫자만 — 근거 종류 비트·가림 비율·고른 단계/사슬 길이(창 제목 없음)
+        if let (Some(m), Some(sel)) = (self.cap.metrics.take(), self.cap.selector.as_ref()) {
+            log::info!(
+                "capture pick: level {} of {}, first node sources {:#05b}, occluded {:.0}%",
+                sel.view().level,
+                m.chain_len,
+                m.sources,
+                m.occluded_ratio * 100.0
+            );
+        }
         if !self.annotated() {
             self.commit_plain(action, rect);
             return;

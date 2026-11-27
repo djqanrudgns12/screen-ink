@@ -150,6 +150,22 @@ pub trait VisionSource: Send {
     fn edges_near(&self, _p: PhysPoint) -> (Vec<i32>, Vec<i32>) {
         (Vec::new(), Vec::new())
     }
+    /// 가림 인지판(R2-CAP-2): 앞 창(`occluders`) 경계 ±2 px에 붙은 V 후보는 뺀다. 기본 = 가림 모름.
+    fn query_occluded(&self, p: PhysPoint, _occluders: &[ink_domain::geometry::PhysRect]) -> Vec<ink_domain::recog::VisionCand> {
+        self.query(p)
+    }
+    /// 가림 인지판 지지율 — 앞 창 경계에 붙은 변은 지지로 치지 않는다.
+    fn support_occluded(&self, r: ink_domain::geometry::PhysRect, _occluders: &[ink_domain::geometry::PhysRect]) -> Option<f32> {
+        self.support(r)
+    }
+    /// 가림 인지판 경계 맞춤 — 앞 창 경계로 끌려가지 않는다.
+    fn snap_occluded(&self, r: ink_domain::geometry::PhysRect, _occluders: &[ink_domain::geometry::PhysRect]) -> ink_domain::geometry::PhysRect {
+        self.snap(r)
+    }
+    /// 그림 요소의 실제 가장자리 다시 재기(R2-CAP-3: 여백·그림자·둥근 모서리). 기본 = 그대로.
+    fn refine_image(&self, r: ink_domain::geometry::PhysRect) -> ink_domain::geometry::PhysRect {
+        r
+    }
     fn clear(&mut self);
 }
 
