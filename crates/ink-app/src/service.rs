@@ -535,6 +535,8 @@ impl InkService {
             let combo = self.settings.shortcut(&id).to_string();
             let _ = self.register_slot(&id, &combo);
         }
+        #[cfg(target_os = "windows")]
+        log::info!("전역 단축키 등록 {}개, 실패 {}개", self.registered.len(), self.failures.len());
         self.failures.len()
     }
 
