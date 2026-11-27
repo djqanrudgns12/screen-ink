@@ -146,7 +146,7 @@
             { "id": "7.1", "title": "벤치 M1~M10 학교 PC·혼합 배율", "platform": "win", "days": 0.36, "status": "todo", "level": "mid" },
             { "id": "7.2", "title": "시나리오 카드 S1~S15", "platform": "win", "days": 0.36, "status": "todo", "level": "mid" },
             { "id": "7.3", "title": "인식 회귀·CI 기준선 고정", "platform": "common", "days": 0.36, "status": "partial", "note": "합성 사례와 Windows 실제 16종의 사례별 기준선·G3를 순수 재생으로 검사. RB-13 관리자 권한 사례 남음", "level": "easy" },
-            { "id": "7.4", "title": "200회 진입·종료(메모리·핸들)", "platform": "win", "days": 0.35, "status": "todo", "level": "easy" },
+            { "id": "7.4", "title": "200회 진입·종료(메모리·핸들)", "platform": "win", "days": 0.35, "status": "verify", "note": "Windows 캡처·판서·확대 각 200회(W8 9bf9e4c): 20회 뒤 평탄 — 누수 없음(20→200회 +0.3~4.3%). 다만 첫 사용 뒤 상주 증가(캡처 웹뷰 +572 MiB) → W17에서 숨길 때 정지 화면 자원 놓기. 남음: 맥 200회", "level": "easy" },
             { "id": "7.5", "title": "릴리스 체크리스트(R-NET-2·R-LOG-1 등)", "platform": "win", "days": 0.35, "status": "verify", "note": "릴리스 점검표 Windows 몫(docs/release/checklist-2.md): 기록에 창 제목 0, 업데이트 끈 상태 통신 0(WebView2 백그라운드 통신 차단 5a264b6, 187초 관측 TCP·UDP 0)·맥 60초 0(1ad2dcd). 남음: 서명·설치형 MSIX 실기(사람 승인)", "level": "mid" },
             { "id": "7.6", "title": "NSIS 설치본·포터블 ZIP", "platform": "win", "days": 0.36, "status": "verify", "note": "NSIS 설치본(5.1 MB)·포터블 ZIP(설정을 실행 파일 옆에) 생성, scripts/package-portable.ps1(4ce8bf1). 남음: 설치·제거 실기", "level": "mid" },
             { "id": "7.7", "title": "디자인 관문(S01~S17 = v3)", "platform": "common", "days": 0.36, "status": "verify", "note": "디자인 관문 docs/qa/2026-11-27/design-gate.md(49d567a): 미리보기 168장 넘침·잘림·겹침 0. 남음: 실제 창(S07 다중 모니터·S10 둥근 귀·S11 꺾쇠·S13 확대·S15 창 고정) 눈 확인", "level": "mid" }
