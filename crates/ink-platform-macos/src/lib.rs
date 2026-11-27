@@ -146,6 +146,10 @@ mod mac {
             crate::events::screen_locked()
         }
 
+        fn foreground_window(&self) -> Option<u64> {
+            crate::windows::foreground_window(&space())
+        }
+
         fn permissions(&self) -> Option<(bool, bool)> {
             Some((crate::permissions::screen(), crate::permissions::accessibility()))
         }

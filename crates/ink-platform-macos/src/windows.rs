@@ -125,3 +125,49 @@ pub fn top_windows(space: &Space) -> Vec<RawWindow> {
     }
     out
 }
+
+/// 지금 활성 창 — Shift+F2·F2 두 번(R-WIN-2). 맨 앞 앱의 가장 앞 일반 창(층 0). 맨 앞이 우리 앱(섬·팝오버가 잠깐 앞에
+/// 올라온 경우)이면 그 바로 뒤의 일반 창. 창 제목은 읽지 않는다.
+pub fn foreground_window(space: &Space) -> Option<u64> {
+    let front = objc2_app_kit::NSWorkspace::sharedWorkspace().frontmostApplication().map(|a| a.processIdentifier().max(0) as u32);
+    pick_foreground(&top_windows(space), front, std::process::id())
+}
+
+/// [`foreground_window`]의 고르기(순수 함수). `list`는 앞 → 뒤 순서.
+pub(crate) fn pick_foreground(list: &[RawWindow], front_pid: Option<u32>, own_pid: u32) -> Option<u64> {
+    let normal = |w: &&RawWindow| !w.topmost && w.rect.w > 0 && w.rect.h > 0 && w.pid != own_pid;
+    match front_pid {
+        Some(pid) if pid != own_pid => list.iter().filter(normal).find(|w| w.pid == pid).map(|w| w.handle),
+        _ => list.iter().find(normal).map(|w| w.handle),
+    }
+}
+
+#[cfg(test)]
+mod foreground_tests {
+    use super::pick_foreground;
+    use ink_domain::geometry::PhysRect;
+    use ink_domain::snapshot::RawWindow;
+
+    fn w(handle: u64, pid: u32, topmost: bool) -> RawWindow {
+        RawWindow { handle, pid, rect: PhysRect { x: 0, y: 0, w: 100, h: 100 }, topmost, tool: topmost, visible: true, ..Default::default() }
+    }
+
+    #[test]
+    fn 맨_앞_앱의_가장_앞_일반_창() {
+        let list = [w(1, 9, true), w(2, 5, false), w(3, 7, false), w(4, 7, false)];
+        assert_eq!(pick_foreground(&list, Some(7), 1), Some(3), "떠 있는 층·다른 앱 창은 건너뜀");
+    }
+
+    #[test]
+    fn 우리_앱이_앞이면_바로_뒤_창() {
+        let list = [w(1, 1, false), w(2, 5, false)];
+        assert_eq!(pick_foreground(&list, Some(1), 1), Some(2));
+        assert_eq!(pick_foreground(&list, None, 1), Some(2));
+    }
+
+    #[test]
+    fn 맨_앞_앱에_창이_없으면_없음() {
+        let list = [w(2, 5, false)];
+        assert_eq!(pick_foreground(&list, Some(7), 1), None);
+    }
+}
