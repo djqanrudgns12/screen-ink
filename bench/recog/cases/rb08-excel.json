@@ -1,0 +1,1862 @@
+{
+  "schema": 1,
+  "id": "rb08-excel",
+  "note": "RB-08 엑셀 칸",
+  "monitors": [
+    {
+      "id": 0,
+      "bounds": { "x": 0, "y": 0, "w": 3840, "h": 2160 },
+      "work": { "x": 0, "y": 0, "w": 3840, "h": 2064 },
+      "scale": 2.0,
+      "primary": true,
+      "frame": "blank-3840x2160.png"
+    },
+    {
+      "id": 1,
+      "bounds": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+      "work": { "x": 3840, "y": 0, "w": 1920, "h": 1032 },
+      "scale": 1.0,
+      "primary": false,
+      "frame": "rb08-excel.m1.png"
+    }
+  ],
+  "cursor": { "x": 977, "y": 536 },
+  "windows": [
+    {
+      "handle": 1,
+      "pid": 4294967295,
+      "exe": "excel.exe",
+      "class": "XLMAIN",
+      "rect": { "x": 3887, "y": 40, "w": 1536, "h": 923 },
+      "visible": true,
+      "minimized": false,
+      "maximized": false,
+      "cloaked": false,
+      "hung": false,
+      "clickThrough": false,
+      "layeredAlpha": null,
+      "topmost": false,
+      "tool": false
+    }
+  ],
+  "elements": {
+    "1": [
+      {
+        "rect": { "x": 3888, "y": 220, "w": 1534, "h": 6 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 940, "w": 1534, "h": 22 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 940, "w": 1534, "h": 22 },
+        "control": "toolBar"
+      },
+      {
+        "rect": { "x": 3888, "y": 940, "w": 1534, "h": 22 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 940, "w": 1534, "h": 22 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 940, "w": 1534, "h": 22 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 940, "w": 1534, "h": 22 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3892, "y": 941, "w": 38, "h": 21 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 3933, "y": 941, "w": 157, "h": 21 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4977, "y": 941, "w": 120, "h": 21 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5107, "y": 941, "w": 40, "h": 21 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5147, "y": 941, "w": 40, "h": 21 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5187, "y": 941, "w": 40, "h": 21 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5228, "y": 941, "w": 18, "h": 21 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5246, "y": 941, "w": 100, "h": 21 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 5246, "y": 941, "w": 53, "h": 21 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5299, "y": 946, "w": 5, "h": 11 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 5304, "y": 941, "w": 42, "h": 21 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5346, "y": 941, "w": 18, "h": 21 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5364, "y": 941, "w": 47, "h": 21 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 5411, "y": 941, "w": 11, "h": 21 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3888, "y": 41, "w": 1534, "h": 179 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 41, "w": 1534, "h": 179 },
+        "control": "toolBar"
+      },
+      {
+        "rect": { "x": 3888, "y": 41, "w": 1534, "h": 179 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 41, "w": 1534, "h": 179 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 41, "w": 1534, "h": 179 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 41, "w": 1534, "h": 179 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3930, "y": 41, "w": 135, "h": 48 },
+        "control": "toolBar"
+      },
+      {
+        "rect": { "x": 3930, "y": 50, "w": 28, "h": 29 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3959, "y": 50, "w": 38, "h": 29 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3959, "y": 50, "w": 25, "h": 29 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3984, "y": 50, "w": 13, "h": 29 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 3998, "y": 50, "w": 38, "h": 29 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3998, "y": 50, "w": 25, "h": 29 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4023, "y": 50, "w": 13, "h": 29 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4037, "y": 49, "w": 28, "h": 31 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4066, "y": 41, "w": 413, "h": 48 },
+        "control": "titleBar"
+      },
+      {
+        "rect": { "x": 4479, "y": 49, "w": 368, "h": 32 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4520, "y": 57, "w": 314, "h": 17 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 5203, "y": 41, "w": 75, "h": 48 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 5217, "y": 57, "w": 16, "h": 16 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 5278, "y": 41, "w": 48, "h": 48 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5326, "y": 41, "w": 48, "h": 48 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5374, "y": 41, "w": 48, "h": 48 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3892, "y": 89, "w": 54, "h": 30 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3946, "y": 89, "w": 1464, "h": 30 },
+        "control": "tab"
+      },
+      {
+        "rect": { "x": 3946, "y": 89, "w": 29, "h": 30 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 3976, "y": 89, "w": 42, "h": 30 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 89, "w": 55, "h": 30 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 4075, "y": 89, "w": 112, "h": 30 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 4188, "y": 89, "w": 42, "h": 30 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 4231, "y": 89, "w": 55, "h": 30 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 4287, "y": 89, "w": 42, "h": 30 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 4330, "y": 89, "w": 42, "h": 30 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 4373, "y": 89, "w": 55, "h": 30 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 5348, "y": 89, "w": 62, "h": 30 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 3896, "y": 119, "w": 1490, "h": 101 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3900, "y": 119, "w": 1486, "h": 101 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 3900, "y": 121, "w": 118, "h": 97 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 3908, "y": 123, "w": 52, "h": 76 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3908, "y": 123, "w": 52, "h": 38 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3908, "y": 161, "w": 52, "h": 38 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 3962, "y": 123, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3962, "y": 149, "w": 48, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3962, "y": 149, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3986, "y": 149, "w": 24, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 3962, "y": 175, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4002, "y": 202, "w": 16, "h": 16 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4018, "y": 121, "w": 280, "h": 97 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 4026, "y": 131, "w": 163, "h": 24 },
+        "control": "comboBox"
+      },
+      {
+        "rect": { "x": 4027, "y": 133, "w": 148, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 4175, "y": 132, "w": 13, "h": 22 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4191, "y": 131, "w": 47, "h": 24 },
+        "control": "comboBox"
+      },
+      {
+        "rect": { "x": 4192, "y": 133, "w": 32, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 4224, "y": 132, "w": 13, "h": 22 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4240, "y": 131, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4266, "y": 131, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4026, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4052, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4078, "y": 163, "w": 39, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4078, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4102, "y": 163, "w": 15, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4122, "y": 163, "w": 39, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4122, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4146, "y": 163, "w": 15, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4166, "y": 163, "w": 39, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4166, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4190, "y": 163, "w": 15, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4207, "y": 163, "w": 39, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4207, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4231, "y": 163, "w": 15, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4251, "y": 163, "w": 39, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4251, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4275, "y": 163, "w": 15, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4282, "y": 202, "w": 16, "h": 16 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4298, "y": 121, "w": 332, "h": 97 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 4306, "y": 131, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4332, "y": 131, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4358, "y": 131, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4387, "y": 131, "w": 40, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4306, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4332, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4358, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4387, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4413, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4450, "y": 131, "w": 100, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4450, "y": 163, "w": 172, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4450, "y": 163, "w": 148, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4598, "y": 163, "w": 24, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4614, "y": 202, "w": 16, "h": 16 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4630, "y": 121, "w": 162, "h": 97 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 4638, "y": 131, "w": 146, "h": 24 },
+        "control": "comboBox"
+      },
+      {
+        "rect": { "x": 4639, "y": 133, "w": 131, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 4770, "y": 132, "w": 13, "h": 22 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4638, "y": 163, "w": 39, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4638, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4662, "y": 163, "w": 15, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4679, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4705, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4734, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4760, "y": 163, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4776, "y": 202, "w": 16, "h": 16 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4792, "y": 121, "w": 156, "h": 97 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 4800, "y": 123, "w": 42, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4844, "y": 123, "w": 42, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4888, "y": 123, "w": 52, "h": 69 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4948, "y": 121, "w": 146, "h": 97 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 4956, "y": 123, "w": 42, "h": 76 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4956, "y": 123, "w": 42, "h": 38 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4956, "y": 161, "w": 42, "h": 38 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 5000, "y": 123, "w": 42, "h": 76 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 5000, "y": 123, "w": 42, "h": 38 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5000, "y": 161, "w": 42, "h": 38 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 5044, "y": 123, "w": 42, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 5094, "y": 121, "w": 216, "h": 97 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 5102, "y": 123, "w": 108, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 5102, "y": 123, "w": 84, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5186, "y": 123, "w": 24, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 5102, "y": 149, "w": 80, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 5102, "y": 175, "w": 80, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 5212, "y": 123, "w": 44, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 5258, "y": 123, "w": 44, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 5310, "y": 121, "w": 58, "h": 97 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 5318, "y": 123, "w": 42, "h": 76 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5390, "y": 195, "w": 20, "h": 20 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 220, "w": 208, "h": 43 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3897, "y": 229, "w": 100, "h": 26 },
+        "control": "comboBox"
+      },
+      {
+        "rect": { "x": 3900, "y": 232, "w": 60, "h": 20 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 3964, "y": 230, "w": 32, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4096, "y": 220, "w": 1326, "h": 43 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 3888, "y": 263, "w": 1534, "h": 677 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 5403, "y": 263, "w": 17, "h": 648 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 5403, "y": 263, "w": 17, "h": 648 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 5403, "y": 263, "w": 17, "h": 648 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 5403, "y": 263, "w": 17, "h": 17 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5403, "y": 280, "w": 17, "h": 552 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 5403, "y": 832, "w": 17, "h": 62 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5403, "y": 894, "w": 17, "h": 17 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4827, "y": 915, "w": 576, "h": 17 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 4827, "y": 915, "w": 576, "h": 17 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 4827, "y": 915, "w": 576, "h": 17 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4827, "y": 915, "w": 17, "h": 17 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4844, "y": 915, "w": 496, "h": 17 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 5340, "y": 915, "w": 46, "h": 17 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5386, "y": 915, "w": 17, "h": 17 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4795, "y": 909, "w": 32, "h": 31 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 263, "w": 1534, "h": 677 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 908, "w": 907, "h": 32 },
+        "control": "tab"
+      },
+      {
+        "rect": { "x": 3904, "y": 908, "w": 32, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3936, "y": 908, "w": 32, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4085, "y": 908, "w": 32, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4000, "y": 908, "w": 53, "h": 32 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 263, "w": 1534, "h": 645 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 263, "w": 1512, "h": 645 },
+        "control": "table"
+      },
+      {
+        "rect": { "x": 3888, "y": 263, "w": 37, "h": 27 },
+        "control": "header"
+      },
+      {
+        "rect": { "x": 3925, "y": 263, "w": 94, "h": 27 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 263, "w": 239, "h": 27 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 263, "w": 94, "h": 27 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 263, "w": 239, "h": 27 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 263, "w": 94, "h": 27 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 263, "w": 94, "h": 27 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 263, "w": 94, "h": 27 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 263, "w": 94, "h": 27 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 263, "w": 94, "h": 27 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 263, "w": 94, "h": 27 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 263, "w": 94, "h": 27 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 263, "w": 94, "h": 27 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 263, "w": 94, "h": 27 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 290, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 290, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 290, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 290, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 290, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 290, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 290, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 290, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 290, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 290, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 290, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 290, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 290, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 290, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 320, "w": 37, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 320, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 320, "w": 239, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 320, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 320, "w": 239, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 320, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 320, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 320, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 320, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 320, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 320, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 320, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 320, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 320, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 392, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 392, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 392, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 392, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 392, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 392, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 392, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 392, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 392, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 392, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 392, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 392, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 392, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 392, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 422, "w": 37, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 422, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 422, "w": 239, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 422, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 422, "w": 239, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 422, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 422, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 422, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 422, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 422, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 422, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 422, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 422, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 422, "w": 94, "h": 72 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 494, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 494, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 494, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 494, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 494, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 494, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 494, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 494, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 494, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 494, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 494, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 494, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 494, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 494, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 524, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 524, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 524, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 524, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 524, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 524, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 524, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 524, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 524, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 524, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 524, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 524, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 524, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 524, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 554, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 554, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 554, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 554, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 554, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 554, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 554, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 554, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 554, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 554, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 554, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 554, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 554, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 554, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 584, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 584, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 584, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 584, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 584, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 584, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 584, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 584, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 584, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 584, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 584, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 584, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 584, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 584, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 614, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 614, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 614, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 614, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 614, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 614, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 614, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 614, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 614, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 614, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 614, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 614, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 614, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 614, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 644, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 644, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 644, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 644, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 644, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 644, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 644, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 644, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 644, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 644, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 644, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 644, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 644, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 644, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 674, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 674, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 674, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 674, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 674, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 674, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 674, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 674, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 674, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 674, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 674, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 674, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 674, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 674, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 704, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 704, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 704, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 704, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 704, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 704, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 704, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 704, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 704, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 704, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 704, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 704, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 704, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 704, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 734, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 734, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 734, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 734, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 734, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 734, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 734, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 734, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 734, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 734, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 734, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 734, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 734, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 734, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 764, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 764, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 764, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 764, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 764, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 764, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 764, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 764, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 764, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 764, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 764, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 764, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 764, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 764, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 794, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 794, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 794, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 794, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 794, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 794, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 794, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 794, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 794, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 794, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 794, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 794, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 794, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 794, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 824, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 824, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 824, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 824, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 824, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 824, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 824, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 824, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 824, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 824, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 824, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 824, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 824, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 824, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 854, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 854, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 854, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 854, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 854, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 854, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 854, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 854, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 854, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 854, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 854, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 854, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 854, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 854, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 884, "w": 37, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3925, "y": 884, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4019, "y": 884, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4258, "y": 884, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4352, "y": 884, "w": 239, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4591, "y": 884, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4685, "y": 884, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4779, "y": 884, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4873, "y": 884, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 4967, "y": 884, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5061, "y": 884, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5155, "y": 884, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5249, "y": 884, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 5343, "y": 884, "w": 94, "h": 30 },
+        "control": "dataItem"
+      },
+      {
+        "rect": { "x": 3888, "y": 48, "w": 22, "h": 22 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3888, "y": 48, "w": 22, "h": 22 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 5283, "y": 18, "w": 47, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5330, "y": 18, "w": 46, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5376, "y": 18, "w": 47, "h": 24 },
+        "control": "button"
+      }
+    ]
+  },
+  "children": {
+    "1": [
+      { "x": 3888, "y": 940, "w": 1534, "h": 22 },
+      { "x": 3888, "y": 41, "w": 1534, "h": 179 },
+      { "x": 3888, "y": 220, "w": 208, "h": 43 },
+      { "x": 3897, "y": 229, "w": 100, "h": 26 },
+      { "x": 3900, "y": 232, "w": 60, "h": 20 },
+      { "x": 4096, "y": 220, "w": 1326, "h": 43 },
+      { "x": 3888, "y": 263, "w": 1534, "h": 677 },
+      { "x": 5403, "y": 263, "w": 17, "h": 648 },
+      { "x": 4827, "y": 915, "w": 576, "h": 17 },
+      { "x": 4795, "y": 909, "w": 32, "h": 31 }
+    ]
+  },
+  "points": [
+    {
+      "label": "물",
+      "truth": { "x": 4018, "y": 319, "w": 240, "h": 73 },
+      "at": { "x": 4138, "y": 355 }
+    },
+    {
+      "label": "흙",
+      "truth": { "x": 4351, "y": 319, "w": 240, "h": 73 },
+      "at": { "x": 4471, "y": 355 }
+    },
+    {
+      "label": "빛",
+      "truth": { "x": 4018, "y": 421, "w": 240, "h": 73 },
+      "at": { "x": 4138, "y": 457 }
+    },
+    {
+      "label": "공기",
+      "truth": { "x": 4351, "y": 421, "w": 240, "h": 73 },
+      "at": { "x": 4471, "y": 457 }
+    }
+  ]
+}

@@ -51,6 +51,11 @@ cargo test -p ink-platform-windows --test rb15_16 real:: -- --ignored --test-thr
 
 ## 3. `3f-frozen` RB-20 멈춘 앱 (모드마다 2분, 합 8분)
 
+2026-11-27 실제 창 측정은 [Windows 인식 기준선](../../docs/benchmark/2026-11-27-windows-recog.md)에 있다.
+UIA에서 MSAA로 이어지는 경로를 재현하려면 시험 앱에 `--empty-uia`를 추가한다.
+Snipaste가 F1을 쓰는 노드에서는 시험용 슉쇽 설정에 빈 키를 지정한다. F13이면 감시 스크립트에
+`-HotkeyVk 124 -ExitWithHotkey`를 준다. 같은 단축키로 캡처를 끝내면 포커스와 관계없이 종료 때 이동 통계를 읽을 수 있다.
+
 ```powershell
 Start-Process "$bin\rb20-frozen.exe" -ArgumentList '--mode','hang-location','--life','90'
 npm run app:dev            # 다른 창

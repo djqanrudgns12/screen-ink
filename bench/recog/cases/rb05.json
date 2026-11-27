@@ -1,0 +1,552 @@
+{
+  "schema": 1,
+  "id": "rb05",
+  "note": "RB-05 탐색기 시험 폴더의 세 행",
+  "monitors": [
+    {
+      "id": 0,
+      "bounds": { "x": 0, "y": 0, "w": 3840, "h": 2160 },
+      "work": { "x": 0, "y": 0, "w": 3840, "h": 2064 },
+      "scale": 2.0,
+      "primary": true,
+      "frame": "blank-3840x2160.png"
+    },
+    {
+      "id": 1,
+      "bounds": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+      "work": { "x": 3840, "y": 0, "w": 1920, "h": 1032 },
+      "scale": 1.0,
+      "primary": false,
+      "frame": "rb05.m1.png"
+    }
+  ],
+  "cursor": { "x": 699, "y": 875 },
+  "windows": [
+    {
+      "handle": 1,
+      "pid": 4294967295,
+      "exe": "explorer.exe",
+      "class": "CabinetWClass",
+      "rect": { "x": 3887, "y": 40, "w": 1536, "h": 923 },
+      "visible": true,
+      "minimized": false,
+      "maximized": false,
+      "cloaked": false,
+      "hung": false,
+      "clickThrough": false,
+      "layeredAlpha": null,
+      "topmost": false,
+      "tool": false
+    }
+  ],
+  "elements": {
+    "1": [
+      {
+        "rect": { "x": 4175, "y": 40, "w": 1247, "h": 35 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 176, "w": 1534, "h": 786 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 176, "w": 1534, "h": 786 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 938, "w": 1534, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3895, "y": 938, "w": 61, "h": 24 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 3900, "y": 938, "w": 51, "h": 24 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 3963, "y": 938, "w": 148, "h": 24 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 3968, "y": 938, "w": 138, "h": 24 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 5370, "y": 938, "w": 48, "h": 24 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 5370, "y": 938, "w": 24, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 5394, "y": 938, "w": 24, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3890, "y": 176, "w": 154, "h": 762 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3890, "y": 176, "w": 154, "h": 762 },
+        "control": "tree"
+      },
+      {
+        "rect": { "x": 3941, "y": 182, "w": 16, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 214, "w": 40, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 278, "w": 56, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 310, "w": 52, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 342, "w": 28, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 374, "w": 28, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 406, "w": 28, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 438, "w": 40, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 470, "w": 34, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 502, "w": 63, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 534, "w": 69, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 566, "w": 72, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 598, "w": 50, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 630, "w": 43, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 694, "w": 35, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3949, "y": 726, "w": 91, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3949, "y": 758, "w": 92, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 790, "w": 52, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 3941, "y": 822, "w": 33, "h": 32 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 4048, "y": 176, "w": 1374, "h": 762 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 4048, "y": 176, "w": 1374, "h": 762 },
+        "control": "list"
+      },
+      {
+        "rect": { "x": 4048, "y": 176, "w": 1374, "h": 25 },
+        "control": "header"
+      },
+      {
+        "rect": { "x": 4048, "y": 176, "w": 578, "h": 25 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4610, "y": 176, "w": 15, "h": 25 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4626, "y": 176, "w": 306, "h": 25 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4916, "y": 176, "w": 15, "h": 25 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4932, "y": 176, "w": 255, "h": 25 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 5171, "y": 176, "w": 15, "h": 25 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5187, "y": 176, "w": 170, "h": 25 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 5341, "y": 176, "w": 15, "h": 25 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4062, "y": 207, "w": 1291, "h": 24 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 4084, "y": 210, "w": 542, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 4626, "y": 210, "w": 306, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 4932, "y": 210, "w": 255, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 5187, "y": 210, "w": 170, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 4062, "y": 235, "w": 1291, "h": 24 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 4084, "y": 238, "w": 542, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 4626, "y": 238, "w": 306, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 4932, "y": 238, "w": 255, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 5187, "y": 238, "w": 170, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 4062, "y": 263, "w": 1291, "h": 24 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 4084, "y": 266, "w": 542, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 4626, "y": 266, "w": 306, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 4932, "y": 266, "w": 255, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 5187, "y": 266, "w": 170, "h": 19 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 3888, "y": 42, "w": 1534, "h": 134 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 42, "w": 1534, "h": 134 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3888, "y": 42, "w": 1534, "h": 38 },
+        "control": "tab"
+      },
+      {
+        "rect": { "x": 3890, "y": 42, "w": 250, "h": 38 },
+        "control": "list"
+      },
+      {
+        "rect": { "x": 3892, "y": 48, "w": 248, "h": 32 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 3904, "y": 56, "w": 16, "h": 16 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3930, "y": 56, "w": 52, "h": 15 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4100, "y": 52, "w": 32, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4143, "y": 53, "w": 32, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3891, "y": 80, "w": 198, "h": 48 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3899, "y": 88, "w": 32, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3947, "y": 88, "w": 32, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3995, "y": 88, "w": 32, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4043, "y": 88, "w": 32, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4089, "y": 88, "w": 931, "h": 32 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 4089, "y": 88, "w": 931, "h": 32 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 4102, "y": 92, "w": 51, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4102, "y": 96, "w": 16, "h": 16 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 4153, "y": 92, "w": 839, "h": 24 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 4153, "y": 92, "w": 77, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4162, "y": 94, "w": 36, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4230, "y": 92, "w": 142, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4239, "y": 94, "w": 101, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4372, "y": 92, "w": 84, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4381, "y": 94, "w": 43, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4456, "y": 92, "w": 69, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4465, "y": 94, "w": 28, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4525, "y": 92, "w": 104, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4534, "y": 94, "w": 63, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4629, "y": 92, "w": 79, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 4638, "y": 94, "w": 61, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 5028, "y": 88, "w": 383, "h": 32 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 5028, "y": 88, "w": 383, "h": 32 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 5039, "y": 94, "w": 99, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 3888, "y": 129, "w": 663, "h": 46 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3894, "y": 129, "w": 126, "h": 46 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3906, "y": 145, "w": 16, "h": 16 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 4031, "y": 129, "w": 40, "h": 46 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4043, "y": 145, "w": 16, "h": 16 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 4079, "y": 129, "w": 40, "h": 46 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4091, "y": 145, "w": 16, "h": 16 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 4127, "y": 129, "w": 40, "h": 46 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4139, "y": 145, "w": 16, "h": 16 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 4175, "y": 129, "w": 40, "h": 46 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4187, "y": 145, "w": 16, "h": 16 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 4223, "y": 129, "w": 40, "h": 46 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4235, "y": 145, "w": 16, "h": 16 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 4271, "y": 129, "w": 40, "h": 46 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4283, "y": 145, "w": 16, "h": 16 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 4322, "y": 129, "w": 85, "h": 46 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4334, "y": 145, "w": 16, "h": 16 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 4411, "y": 129, "w": 85, "h": 46 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4423, "y": 145, "w": 16, "h": 16 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 4503, "y": 129, "w": 48, "h": 46 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5303, "y": 129, "w": 119, "h": 46 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 5311, "y": 129, "w": 101, "h": 46 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5323, "y": 145, "w": 16, "h": 16 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3888, "y": 48, "w": 22, "h": 22 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3888, "y": 48, "w": 22, "h": 22 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 5283, "y": 41, "w": 47, "h": 30 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5330, "y": 41, "w": 46, "h": 30 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5376, "y": 41, "w": 47, "h": 30 },
+        "control": "button"
+      }
+    ]
+  },
+  "children": {
+    "1": [
+      { "x": 4175, "y": 40, "w": 1247, "h": 35 },
+      { "x": 3888, "y": 176, "w": 1534, "h": 786 },
+      { "x": 3890, "y": 176, "w": 154, "h": 762 },
+      { "x": 4048, "y": 176, "w": 1374, "h": 762 },
+      { "x": 3888, "y": 42, "w": 1534, "h": 134 }
+    ]
+  },
+  "points": [
+    {
+      "label": "구름 행",
+      "truth": { "x": 4062, "y": 207, "w": 1291, "h": 24 },
+      "at": { "x": 4707, "y": 219 }
+    },
+    {
+      "label": "바람 행",
+      "truth": { "x": 4062, "y": 235, "w": 1291, "h": 24 },
+      "at": { "x": 4707, "y": 247 }
+    },
+    {
+      "label": "햇빛 행",
+      "truth": { "x": 4062, "y": 263, "w": 1291, "h": 24 },
+      "at": { "x": 4707, "y": 275 }
+    }
+  ]
+}

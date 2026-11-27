@@ -10,6 +10,7 @@
 //! - `hang-location`: `infinite-msaa` + 자식의 `accLocation`도 돌아오지 않는다 → MSAA 일꾼 마감(100 ms)·교체 시험.
 //! - `slow-msaa`: `accLocation`마다 `--slow-ms`만큼 잔다 → MSAA 걸음 예산(20 ms) 끊기 시험.
 //! - `--life`초가 지나면 스스로 끝난다(멈춘 채 남지 않게, 기본 120초).
+//! - `--empty-uia`는 UIA에 자식이 없는 시험 창을 제공한다. 같은 창의 MSAA 격자는 그대로라 실제 대체 경로를 시험할 수 있다.
 //!
 //! 이 앱은 일부러 DPI를 모른다(매니페스트·DPI 호출 없음): 배율이 100%가 아닌 모니터에서 `accLocation`이 논리 좌표를
 //! 주므로 D12 보정 경로(`dpi::classify_space` → Logical)도 함께 탄다. 자식 사각형 자리(20 px 격자의 16 px 칸)를 회색으로
@@ -29,13 +30,13 @@ fn main() {
 #[cfg(windows)]
 mod win {
     use std::ptr::{null, null_mut};
-    use std::sync::atomic::{AtomicIsize, AtomicU64, AtomicU8, Ordering};
+    use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicU64, AtomicU8, Ordering};
     use std::time::Duration;
     use windows::core::{implement, Interface, Result, BSTR, GUID, PCWSTR};
     use windows::Win32::Foundation::{E_INVALIDARG, E_NOTIMPL, WPARAM};
     use windows::Win32::System::Com::{CoInitializeEx, IDispatch, IDispatch_Impl, ITypeInfo, COINIT_APARTMENTTHREADED, DISPATCH_FLAGS, DISPPARAMS, EXCEPINFO};
     use windows::Win32::System::Variant::VARIANT;
-    use windows::Win32::UI::Accessibility::{IAccessible, IAccessible_Impl, LresultFromObject};
+    use windows::Win32::UI::Accessibility::{IAccessible, IAccessible_Impl, LresultFromObject, IRawElementProviderSimple, IRawElementProviderSimple_Impl, ProviderOptions, ProviderOptions_ServerSideProvider, UiaHostProviderFromHwnd, UiaReturnRawElementProvider, UiaRootObjectId, UIA_PATTERN_ID, UIA_PROPERTY_ID};
     use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT};
     use windows_sys::Win32::Graphics::Gdi::{BeginPaint, ClientToScreen, EndPaint, FillRect, GetStockObject, GRAY_BRUSH, PAINTSTRUCT};
     use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
@@ -52,6 +53,20 @@ mod win {
     static MODE: AtomicU8 = AtomicU8::new(MODE_INFINITE);
     static SLOW_MS: AtomicU64 = AtomicU64::new(5);
     static MAIN: AtomicIsize = AtomicIsize::new(0);
+    static EMPTY_UIA: AtomicBool = AtomicBool::new(false);
+
+    #[implement(IRawElementProviderSimple)]
+    struct EmptyUia(isize);
+
+    impl IRawElementProviderSimple_Impl for EmptyUia_Impl {
+        fn ProviderOptions(&self) -> Result<ProviderOptions> { Ok(ProviderOptions_ServerSideProvider) }
+        fn GetPatternProvider(&self, _: UIA_PATTERN_ID) -> Result<windows::core::IUnknown> { Err(E_NOTIMPL.into()) }
+        fn GetPropertyValue(&self, _: UIA_PROPERTY_ID) -> Result<VARIANT> { Ok(VARIANT::default()) }
+        fn HostRawElementProvider(&self) -> Result<IRawElementProviderSimple> {
+            // 이 공급자를 만든 시험 창의 기본 속성만 위임한다.
+            unsafe { UiaHostProviderFromHwnd(windows::Win32::Foundation::HWND(self.0 as _)) }
+        }
+    }
 
     /// `OBJID_CLIENT`
     const OBJID_CLIENT: i32 = -4;
@@ -217,6 +232,10 @@ mod win {
 
     unsafe extern "system" fn proc(h: HWND, msg: u32, w: usize, l: LPARAM) -> LRESULT {
         match msg {
+            WM_GETOBJECT if EMPTY_UIA.load(Ordering::Relaxed) && l as i32 == UiaRootObjectId => {
+                let root: IRawElementProviderSimple = EmptyUia(h as isize).into();
+                UiaReturnRawElementProvider(windows::Win32::Foundation::HWND(h as _), WPARAM(w), windows::Win32::Foundation::LPARAM(l), &root).0
+            }
             WM_GETOBJECT if mode() != MODE_HUNG && l as i32 == OBJID_CLIENT => {
                 let acc: IAccessible = Acc { depth: 0, index: 0 }.into();
                 LresultFromObject(&IAccessible::IID, WPARAM(w), &acc).0
@@ -288,7 +307,12 @@ mod win {
             };
             RegisterClassW(&wc);
             let title = wide("RB-20");
-            let main = CreateWindowExW(0, class.as_ptr(), title.as_ptr(), WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 640, 480, null_mut(), null_mut(), GetModuleHandleW(null()), null());
+            let empty = std::env::args().any(|a| a == "--empty-uia");
+            EMPTY_UIA.store(empty, Ordering::Relaxed);
+            // 제목 표시줄의 시스템 단추도 UIA 자식이므로 빈 나무 시험에서만 테두리 없는 창을 쓴다.
+            let style = if empty { windows_sys::Win32::UI::WindowsAndMessaging::WS_POPUP } else { WS_OVERLAPPEDWINDOW };
+            let pos = if empty { 100 } else { CW_USEDEFAULT };
+            let main = CreateWindowExW(0, class.as_ptr(), title.as_ptr(), style, pos, pos, 640, 480, null_mut(), null_mut(), GetModuleHandleW(null()), null());
             if main.is_null() {
                 eprintln!("창을 만들지 못했어요");
                 std::process::exit(1);

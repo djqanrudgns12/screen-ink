@@ -1,0 +1,259 @@
+{
+  "schema": 1,
+  "id": "rb17",
+  "note": "RB-17 열린 시작 메뉴의 검색 상자",
+  "monitors": [
+    {
+      "id": 0,
+      "bounds": { "x": 0, "y": 0, "w": 3840, "h": 2160 },
+      "work": { "x": 0, "y": 0, "w": 3840, "h": 2064 },
+      "scale": 2.0,
+      "primary": true,
+      "frame": "rb17.m0.png"
+    },
+    {
+      "id": 1,
+      "bounds": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+      "work": { "x": 3840, "y": 0, "w": 1920, "h": 1032 },
+      "scale": 1.0,
+      "primary": false,
+      "frame": "blank-1920x1080.png"
+    }
+  ],
+  "cursor": { "x": 720, "y": 1360 },
+  "windows": [
+    {
+      "handle": 1,
+      "pid": 4294967295,
+      "exe": "rb04-win32.exe",
+      "class": "ScreenInkRb04",
+      "rect": { "x": 41, "y": 100, "w": 1798, "h": 1429 },
+      "visible": true,
+      "minimized": false,
+      "maximized": false,
+      "cloaked": false,
+      "hung": false,
+      "clickThrough": false,
+      "layeredAlpha": null,
+      "topmost": false,
+      "tool": false
+    }
+  ],
+  "elements": {
+    "1": [
+      {
+        "rect": { "x": 46, "y": 103, "w": 120, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 178, "y": 103, "w": 120, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 310, "y": 107, "w": 120, "h": 24 },
+        "control": "checkBox"
+      },
+      {
+        "rect": { "x": 46, "y": 151, "w": 384, "h": 28 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 46, "y": 191, "w": 384, "h": 24 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 454, "y": 103, "w": 440, "h": 120 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 470, "y": 131, "w": 160, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 470, "y": 163, "w": 160, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 46, "y": 239, "w": 400, "h": 200 },
+        "control": "list"
+      },
+      {
+        "rect": { "x": 46, "y": 240, "w": 400, "h": 20 },
+        "control": "header"
+      },
+      {
+        "rect": { "x": 46, "y": 240, "w": 180, "h": 20 },
+        "control": "header"
+      },
+      {
+        "rect": { "x": 226, "y": 240, "w": 180, "h": 20 },
+        "control": "header"
+      },
+      {
+        "rect": { "x": 46, "y": 260, "w": 360, "h": 19 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 47, "y": 260, "w": 37, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 226, "y": 260, "w": 180, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 46, "y": 278, "w": 360, "h": 19 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 47, "y": 278, "w": 37, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 226, "y": 278, "w": 180, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 46, "y": 297, "w": 360, "h": 19 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 47, "y": 297, "w": 37, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 226, "y": 297, "w": 180, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 46, "y": 315, "w": 360, "h": 19 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 47, "y": 315, "w": 37, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 226, "y": 315, "w": 180, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 46, "y": 334, "w": 360, "h": 19 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 47, "y": 334, "w": 37, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 226, "y": 334, "w": 180, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 470, "y": 239, "w": 424, "h": 200 },
+        "control": "tree"
+      },
+      {
+        "rect": { "x": 487, "y": 240, "w": 59, "h": 19 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 504, "y": 259, "w": 28, "h": 19 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 504, "y": 278, "w": 28, "h": 19 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 504, "y": 297, "w": 28, "h": 19 },
+        "control": "treeItem"
+      },
+      {
+        "rect": { "x": 46, "y": 463, "w": 848, "h": 220 },
+        "control": "tab"
+      },
+      {
+        "rect": { "x": 47, "y": 464, "w": 50, "h": 21 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 96, "y": 464, "w": 50, "h": 21 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 146, "y": 464, "w": 50, "h": 21 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 70, "y": 511, "w": 380, "h": 150 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 433, "y": 511, "w": 9, "h": 150 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 433, "y": 511, "w": 9, "h": 17 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 433, "y": 644, "w": 9, "h": 17 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 474, "y": 511, "w": 120, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 38, "y": 52, "w": 881, "h": 28 },
+        "control": "titleBar"
+      },
+      {
+        "rect": { "x": 22, "y": 57, "w": 22, "h": 22 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 22, "y": 57, "w": 22, "h": 22 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 779, "y": 51, "w": 47, "h": 29 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 826, "y": 51, "w": 46, "h": 29 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 872, "y": 51, "w": 47, "h": 29 },
+        "control": "button"
+      }
+    ]
+  },
+  "children": {
+    "1": [
+      { "x": 91, "y": 206, "w": 240, "h": 64 },
+      { "x": 355, "y": 206, "w": 240, "h": 64 },
+      { "x": 619, "y": 214, "w": 240, "h": 48 },
+      { "x": 91, "y": 302, "w": 768, "h": 56 },
+      { "x": 91, "y": 382, "w": 768, "h": 48 },
+      { "x": 907, "y": 206, "w": 880, "h": 240 },
+      { "x": 939, "y": 262, "w": 320, "h": 48 },
+      { "x": 939, "y": 326, "w": 320, "h": 48 },
+      { "x": 91, "y": 478, "w": 800, "h": 400 },
+      { "x": 92, "y": 479, "w": 800, "h": 40 },
+      { "x": 939, "y": 478, "w": 848, "h": 400 },
+      { "x": 91, "y": 926, "w": 1696, "h": 440 },
+      { "x": 139, "y": 1022, "w": 760, "h": 300 },
+      { "x": 947, "y": 1022, "w": 240, "h": 64 }
+    ]
+  },
+  "points": [
+    {
+      "label": "시작 메뉴 검색 상자",
+      "truth": { "x": 90, "y": 342, "w": 1536, "h": 64 },
+      "at": { "x": 858, "y": 374 }
+    }
+  ]
+}

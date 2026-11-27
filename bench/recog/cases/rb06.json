@@ -1,0 +1,379 @@
+{
+  "schema": 1,
+  "id": "rb06",
+  "note": "RB-06 Windows 설정의 디스플레이 배치",
+  "monitors": [
+    {
+      "id": 0,
+      "bounds": { "x": 0, "y": 0, "w": 3840, "h": 2160 },
+      "work": { "x": 0, "y": 0, "w": 3840, "h": 2064 },
+      "scale": 2.0,
+      "primary": true,
+      "frame": "blank-3840x2160.png"
+    },
+    {
+      "id": 1,
+      "bounds": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+      "work": { "x": 3840, "y": 0, "w": 1920, "h": 1032 },
+      "scale": 1.0,
+      "primary": false,
+      "frame": "rb06.m1.png"
+    }
+  ],
+  "cursor": { "x": 699, "y": 875 },
+  "windows": [
+    {
+      "handle": 1,
+      "pid": 4294967295,
+      "exe": "applicationframehost.exe",
+      "class": "ApplicationFrameWindow",
+      "rect": { "x": 3887, "y": 40, "w": 1536, "h": 923 },
+      "visible": true,
+      "minimized": false,
+      "maximized": false,
+      "cloaked": false,
+      "hung": false,
+      "clickThrough": false,
+      "layeredAlpha": null,
+      "topmost": false,
+      "tool": false
+    }
+  ],
+  "elements": {
+    "1": [
+      {
+        "rect": { "x": 5234, "y": 41, "w": 188, "h": 32 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 5284, "y": 41, "w": 46, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5330, "y": 41, "w": 46, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5376, "y": 41, "w": 46, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3888, "y": 41, "w": 1534, "h": 921 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3938, "y": 57, "w": 1296, "h": 16 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4397, "y": 49, "w": 516, "h": 32 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 3888, "y": 41, "w": 1534, "h": 921 },
+        "control": "custom"
+      },
+      {
+        "rect": { "x": 3892, "y": 47, "w": 40, "h": 36 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3888, "y": 41, "w": 300, "h": 921 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3893, "y": 90, "w": 290, "h": 75 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3904, "y": 98, "w": 60, "h": 60 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3976, "y": 111, "w": 77, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 3976, "y": 130, "w": 77, "h": 16 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 3888, "y": 182, "w": 300, "h": 772 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3904, "y": 184, "w": 280, "h": 476 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 3904, "y": 184, "w": 280, "h": 36 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 3914, "y": 192, "w": 20, "h": 20 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3904, "y": 224, "w": 280, "h": 36 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 3914, "y": 232, "w": 20, "h": 20 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3904, "y": 264, "w": 280, "h": 36 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 3914, "y": 272, "w": 20, "h": 20 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3904, "y": 304, "w": 280, "h": 36 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 3914, "y": 312, "w": 20, "h": 20 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3904, "y": 344, "w": 280, "h": 36 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 3914, "y": 352, "w": 20, "h": 20 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3904, "y": 384, "w": 280, "h": 36 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 3914, "y": 392, "w": 20, "h": 20 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3904, "y": 424, "w": 280, "h": 36 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 3914, "y": 432, "w": 20, "h": 20 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3904, "y": 464, "w": 280, "h": 36 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 3914, "y": 472, "w": 20, "h": 20 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3904, "y": 504, "w": 280, "h": 36 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 3914, "y": 512, "w": 20, "h": 20 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3904, "y": 544, "w": 280, "h": 36 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 3914, "y": 552, "w": 20, "h": 20 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3904, "y": 584, "w": 280, "h": 36 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 3914, "y": 592, "w": 20, "h": 20 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3904, "y": 624, "w": 280, "h": 36 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 3914, "y": 632, "w": 20, "h": 20 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 4305, "y": 92, "w": 272, "h": 44 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 4305, "y": 92, "w": 128, "h": 44 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4306, "y": 95, "w": 86, "h": 38 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4434, "y": 95, "w": 143, "h": 38 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4434, "y": 95, "w": 143, "h": 38 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4214, "y": 147, "w": 1208, "h": 815 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 4214, "y": 147, "w": 1208, "h": 815 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 4306, "y": 152, "w": 1000, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4307, "y": 180, "w": 998, "h": 250 },
+        "control": "custom"
+      },
+      {
+        "rect": { "x": 4878, "y": 222, "w": 145, "h": 83 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 4945, "y": 245, "w": 11, "h": 38 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4585, "y": 222, "w": 292, "h": 165 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 4723, "y": 286, "w": 16, "h": 38 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4961, "y": 437, "w": 130, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5107, "y": 433, "w": 161, "h": 40 },
+        "control": "comboBox"
+      },
+      {
+        "rect": { "x": 5123, "y": 443, "w": 103, "h": 19 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 4306, "y": 489, "w": 1000, "h": 324 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 4365, "y": 506, "w": 103, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4365, "y": 525, "w": 256, "h": 16 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 5265, "y": 508, "w": 32, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4365, "y": 567, "w": 258, "h": 32 },
+        "control": "checkBox"
+      },
+      {
+        "rect": { "x": 4365, "y": 618, "w": 263, "h": 32 },
+        "control": "checkBox"
+      },
+      {
+        "rect": { "x": 4365, "y": 669, "w": 249, "h": 32 },
+        "control": "checkBox"
+      },
+      {
+        "rect": { "x": 4365, "y": 720, "w": 263, "h": 32 },
+        "control": "checkBox"
+      },
+      {
+        "rect": { "x": 4307, "y": 762, "w": 998, "h": 50 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 4365, "y": 778, "w": 195, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 5131, "y": 771, "w": 130, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4306, "y": 845, "w": 1000, "h": 117 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 4306, "y": 845, "w": 1000, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4306, "y": 872, "w": 1000, "h": 70 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 4365, "y": 890, "w": 61, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4365, "y": 909, "w": 260, "h": 16 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 5195, "y": 887, "w": 66, "h": 40 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5265, "y": 891, "w": 32, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4306, "y": 945, "w": 1000, "h": 17 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 3888, "y": 73, "w": 1534, "h": 889 },
+        "control": "pane"
+      }
+    ]
+  },
+  "children": {
+    "1": [
+      { "x": 5234, "y": 41, "w": 188, "h": 32 },
+      { "x": 3888, "y": 41, "w": 1534, "h": 921 },
+      { "x": 3888, "y": 73, "w": 1534, "h": 889 }
+    ]
+  },
+  "points": [
+    {
+      "label": "모니터 2",
+      "truth": { "x": 4585, "y": 222, "w": 292, "h": 165 },
+      "at": { "x": 4731, "y": 304 }
+    },
+    {
+      "label": "모니터 1",
+      "truth": { "x": 4879, "y": 222, "w": 145, "h": 83 },
+      "at": { "x": 4951, "y": 263 }
+    },
+    {
+      "label": "식별",
+      "truth": { "x": 4961, "y": 437, "w": 130, "h": 32 },
+      "at": { "x": 5026, "y": 453 }
+    },
+    {
+      "label": "디스플레이 확장",
+      "truth": { "x": 5111, "y": 437, "w": 153, "h": 32 },
+      "at": { "x": 5187, "y": 453 }
+    }
+  ]
+}

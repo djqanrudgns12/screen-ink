@@ -90,21 +90,23 @@ fn 사례는_쓰고_읽어도_같다() {
 fn 저장소_사례가_기준선_아래로_떨어지지_않는다() {
     let dir: PathBuf = [env!("CARGO_MANIFEST_DIR"), "..", "..", "bench", "recog", "cases"].iter().collect();
     let files = replay::cases_in(&dir);
-    if files.is_empty() {
-        eprintln!("사례 없음: {}", dir.display());
-        return;
-    }
-    let baseline: serde_json::Value = std::fs::read_to_string(dir.join("baseline.json")).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
+    let mut baseline: std::collections::BTreeMap<String, usize> =
+        serde_json::from_slice(&std::fs::read(dir.join("baseline.json")).expect("기준선 읽기")).expect("사례별 정답 수");
+    assert!(!baseline.is_empty(), "저장소 기준선이 비었어요");
     let mut all = Vec::new();
     for f in files {
         let l = replay::load(&f).unwrap();
-        let scores = replay::score(&l);
-        let top1 = scores.iter().filter(|s| s.top1()).count() as u64;
-        if let Some(want) = baseline.get(&l.case.id).and_then(|v| v.as_u64()) {
-            assert!(top1 >= want, "{}: Top-1 {top1} < 기준선 {want}", l.case.id);
+        let want = baseline.remove(&l.case.id).expect("기준선에 없는 사례 또는 중복 ID");
+        assert!(!l.case.points.is_empty(), "{}: 정답 점이 없어요", l.case.id);
+        for p in &l.case.points {
+            assert!(p.truth.contains(p.at) && l.case.monitors.iter().any(|m| m.monitor.bounds.contains(p.at)), "{}: 잘못된 정답 점 {}", l.case.id, p.label);
         }
+        let scores = replay::score(&l);
+        let top1 = scores.iter().filter(|s| s.top1()).count();
+        assert!(top1 >= want, "{}: Top-1 {top1} < 기준선 {want}", l.case.id);
         all.extend(scores);
     }
+    assert!(baseline.is_empty(), "재생하지 못한 기준선 사례: {:?}", baseline.keys());
     eprintln!("{:?}", replay::summarize(&all));
 }
 

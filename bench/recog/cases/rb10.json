@@ -1,0 +1,381 @@
+{
+  "schema": 1,
+  "id": "rb10",
+  "note": "RB-10 엣지 PDF",
+  "monitors": [
+    {
+      "id": 0,
+      "bounds": { "x": 0, "y": 0, "w": 3840, "h": 2160 },
+      "work": { "x": 0, "y": 0, "w": 3840, "h": 2064 },
+      "scale": 2.0,
+      "primary": true,
+      "frame": "blank-3840x2160.png"
+    },
+    {
+      "id": 1,
+      "bounds": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+      "work": { "x": 3840, "y": 0, "w": 1920, "h": 1032 },
+      "scale": 1.0,
+      "primary": false,
+      "frame": "rb10.m1.png"
+    }
+  ],
+  "cursor": { "x": 977, "y": 536 },
+  "windows": [
+    {
+      "handle": 1,
+      "pid": 4294967295,
+      "exe": "msedge.exe",
+      "class": "Chrome_WidgetWin_1",
+      "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+      "visible": true,
+      "minimized": false,
+      "maximized": false,
+      "cloaked": false,
+      "hung": false,
+      "clickThrough": false,
+      "layeredAlpha": null,
+      "topmost": false,
+      "tool": false
+    }
+  ],
+  "elements": {
+    "1": [
+      {
+        "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+        "control": "document"
+      },
+      {
+        "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+        "control": "document"
+      },
+      {
+        "rect": { "x": 3840, "y": 0, "w": 1920, "h": 41 },
+        "control": "toolBar"
+      },
+      {
+        "rect": { "x": 3844, "y": 4, "w": 36, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3889, "y": 4, "w": 32, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3921, "y": 4, "w": 28, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3949, "y": 4, "w": 93, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3993, "y": 10, "w": 39, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4041, "y": 4, "w": 29, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4069, "y": 4, "w": 37, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4114, "y": 4, "w": 37, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4159, "y": 4, "w": 37, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4204, "y": 4, "w": 37, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4656, "y": 4, "w": 37, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4692, "y": 4, "w": 37, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4728, "y": 4, "w": 37, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4775, "y": 4, "w": 41, "h": 32 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 4862, "y": 4, "w": 37, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4907, "y": 4, "w": 37, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5522, "y": 4, "w": 36, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5567, "y": 4, "w": 36, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5603, "y": 4, "w": 36, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5639, "y": 4, "w": 36, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5684, "y": 4, "w": 36, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5720, "y": 4, "w": 36, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5597, "y": 1020, "w": 135, "h": 32 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 3840, "y": 41, "w": 1920, "h": 1039 },
+        "control": "document"
+      },
+      {
+        "rect": { "x": 4475, "y": 45, "w": 645, "h": 696 },
+        "control": "document"
+      },
+      {
+        "rect": { "x": 4480, "y": 48, "w": 640, "h": 693 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 4593, "y": 294, "w": 10, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4566, "y": 241, "w": 234, "h": 121 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 4813, "y": 294, "w": 10, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4786, "y": 241, "w": 234, "h": 121 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 4593, "y": 401, "w": 10, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4566, "y": 348, "w": 234, "h": 120 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 4813, "y": 401, "w": 10, "h": 19 },
+        "control": "text"
+      },
+      {
+        "rect": { "x": 4786, "y": 348, "w": 234, "h": 120 },
+        "control": "image"
+      },
+      {
+        "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3840, "y": -81, "w": 1920, "h": 81 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3842, "y": -81, "w": 1780, "h": 41 },
+        "control": "tab"
+      },
+      {
+        "rect": { "x": 3844, "y": -81, "w": 32, "h": 36 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3872, "y": -81, "w": 256, "h": 41 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3872, "y": -81, "w": 256, "h": 41 },
+        "control": "tab"
+      },
+      {
+        "rect": { "x": 3872, "y": -81, "w": 256, "h": 41 },
+        "control": "tabItem"
+      },
+      {
+        "rect": { "x": 4096, "y": -69, "w": 16, "h": 16 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3872, "y": -81, "w": 256, "h": 41 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 4124, "y": -81, "w": 32, "h": 41 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4156, "y": -81, "w": 1466, "h": 41 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 5622, "y": -81, "w": 138, "h": 39 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3840, "y": -41, "w": 1920, "h": 40 },
+        "control": "toolBar"
+      },
+      {
+        "rect": { "x": 3840, "y": -37, "w": 36, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3880, "y": -37, "w": 32, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3916, "y": -37, "w": 1768, "h": 32 },
+        "control": "group"
+      },
+      {
+        "rect": { "x": 3920, "y": -33, "w": 56, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3976, "y": -33, "w": 1676, "h": 24 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 5656, "y": -33, "w": 24, "h": 24 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 5656, "y": -33, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5688, "y": -41, "w": 32, "h": 40 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 5688, "y": -37, "w": 32, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5724, "y": -37, "w": 36, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4456, "y": 44, "w": 688, "h": 57 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 4456, "y": 44, "w": 688, "h": 57 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 4456, "y": 44, "w": 688, "h": 57 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 4497, "y": 53, "w": 606, "h": 39 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 4497, "y": 53, "w": 415, "h": 39 },
+        "control": "titleBar"
+      },
+      {
+        "rect": { "x": 4919, "y": 53, "w": 177, "h": 39 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 4925, "y": 54, "w": 165, "h": 37 },
+        "control": "titleBar"
+      }
+    ]
+  },
+  "children": {
+    "1": [
+      { "x": 3840, "y": 0, "w": 1920, "h": 1080 }
+    ]
+  },
+  "points": [
+    {
+      "label": "시험 표 1번 칸",
+      "truth": { "x": 4574, "y": 249, "w": 218, "h": 104 },
+      "at": { "x": 4683, "y": 301 }
+    },
+    {
+      "label": "시험 표 2번 칸",
+      "truth": { "x": 4794, "y": 249, "w": 218, "h": 104 },
+      "at": { "x": 4903, "y": 301 }
+    },
+    {
+      "label": "시험 표 3번 칸",
+      "truth": { "x": 4574, "y": 356, "w": 218, "h": 104 },
+      "at": { "x": 4683, "y": 408 }
+    },
+    {
+      "label": "시험 표 4번 칸",
+      "truth": { "x": 4794, "y": 356, "w": 218, "h": 104 },
+      "at": { "x": 4903, "y": 408 }
+    }
+  ]
+}

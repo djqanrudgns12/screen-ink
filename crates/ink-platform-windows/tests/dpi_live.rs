@@ -119,3 +119,22 @@ fn dpi_자체_msaa_서버의_논리_좌표를_물리로() {
         assert!((c.w - want).abs() <= 1 && (c.h - want).abs() <= 1, "칸 크기 {}×{} ≠ {want} — 보정 안 됨", c.w, c.h);
     }
 }
+
+#[test]
+#[ignore = "시험 창 필요 — rb20-frozen --empty-uia --mode slow-msaa --slow-ms 0"]
+fn 빈_uia_창은_실제_msaa_격자로_이어진다() {
+    use ink_app::ElementSource;
+    use ink_platform_windows::uia::UiaIndex;
+    setup();
+    let w = find("rb20-frozen.exe");
+    let (tx, rx) = std::sync::mpsc::channel();
+    let index = UiaIndex::spawn(move |_, _, _| { let _ = tx.send(()); });
+    index.request(w.handle, &w.exe);
+    rx.recv_timeout(Duration::from_secs(10)).expect("UIA 일꾼의 완료 통지");
+    let found = index.elements(w.handle);
+    let cells: Vec<_> = found.iter().filter(|e| e.from_msaa && e.control == Control::Button).collect();
+    let size = (16.0 * WindowDpi::of(w.handle).ratio()).round() as i32;
+    assert!(!cells.is_empty(), "MSAA 단추가 하나 이상이어야 해요");
+    assert!(cells.iter().all(|e| (e.rect.w - size).abs() <= 1 && (e.rect.h - size).abs() <= 1));
+    eprintln!("UIA 일꾼을 거친 MSAA 단추 {}개, 기대 크기 {size} px", cells.len());
+}

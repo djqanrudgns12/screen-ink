@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "id": "rb11-tip",
+  "note": "RB-11 시험 창의 도구 설명",
+  "monitors": [
+    {
+      "id": 0,
+      "bounds": { "x": 0, "y": 0, "w": 3840, "h": 2160 },
+      "work": { "x": 0, "y": 0, "w": 3840, "h": 2064 },
+      "scale": 2.0,
+      "primary": true,
+      "frame": "blank-3840x2160.png"
+    },
+    {
+      "id": 1,
+      "bounds": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+      "work": { "x": 3840, "y": 0, "w": 1920, "h": 1032 },
+      "scale": 1.0,
+      "primary": false,
+      "frame": "rb11-tip.m1.png"
+    }
+  ],
+  "cursor": { "x": 4482, "y": 631 },
+  "windows": [
+    {
+      "handle": 1,
+      "pid": 4294967295,
+      "exe": "powershell.exe",
+      "class": "WindowsForms10.tooltips_class32.app.0.5735b3_r8_ad1",
+      "rect": { "x": 4080, "y": 280, "w": 110, "h": 19 },
+      "visible": true,
+      "minimized": false,
+      "maximized": false,
+      "cloaked": false,
+      "hung": false,
+      "clickThrough": false,
+      "layeredAlpha": 255,
+      "topmost": true,
+      "tool": true
+    }
+  ],
+  "elements": {
+    "1": []
+  },
+  "children": {
+    "1": []
+  },
+  "points": [
+    {
+      "label": "도구 설명",
+      "truth": { "x": 4080, "y": 280, "w": 110, "h": 19 },
+      "at": { "x": 4135, "y": 289 }
+    }
+  ]
+}

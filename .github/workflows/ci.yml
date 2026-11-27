@@ -36,6 +36,8 @@ jobs:
       # 실제 화면(UIA·모니터)이 필요한 ink-platform-windows 시험은 돌리지 않고 빌드·clippy만
       - name: 시험(플러그인 포함)
         run: cargo test --workspace --exclude screen-ink --exclude ink-platform-windows
+      - name: 크롬·웹뷰2의 V 단독 첫 강조 적중률 80% 검사
+        run: cargo run -p ink-platform-fake --bin recog-replay -- --vision-only --filter "RB-01,RB-03" --min-top1 80
       - name: clippy(Windows 어댑터·플러그인 포함)
         run: cargo clippy --workspace --exclude screen-ink --all-targets -- -D warnings
       # ink-platform-windows 중 화면을 쓰지 않는 순수 판정만(DPI 보정·MSAA 걸음·확대경, RB-15·16 판정 — 실제 창 시험은 ignore)

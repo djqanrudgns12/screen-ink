@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "id": "rb11-combo",
+  "note": "RB-11 펼친 시험 콤보 목록",
+  "monitors": [
+    {
+      "id": 0,
+      "bounds": { "x": 0, "y": 0, "w": 3840, "h": 2160 },
+      "work": { "x": 0, "y": 0, "w": 3840, "h": 2064 },
+      "scale": 2.0,
+      "primary": true,
+      "frame": "blank-3840x2160.png"
+    },
+    {
+      "id": 1,
+      "bounds": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+      "work": { "x": 3840, "y": 0, "w": 1920, "h": 1032 },
+      "scale": 1.0,
+      "primary": false,
+      "frame": "rb11-combo.m1.png"
+    }
+  ],
+  "cursor": { "x": 4482, "y": 631 },
+  "windows": [
+    {
+      "handle": 1,
+      "pid": 4294967295,
+      "exe": "powershell.exe",
+      "class": "ComboLBox",
+      "rect": { "x": 4038, "y": 241, "w": 180, "h": 38 },
+      "visible": true,
+      "minimized": false,
+      "maximized": false,
+      "cloaked": false,
+      "hung": false,
+      "clickThrough": false,
+      "layeredAlpha": null,
+      "topmost": true,
+      "tool": true
+    }
+  ],
+  "elements": {
+    "1": [
+      {
+        "rect": { "x": 4039, "y": 242, "w": 178, "h": 12 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 4039, "y": 254, "w": 178, "h": 12 },
+        "control": "listItem"
+      },
+      {
+        "rect": { "x": 4039, "y": 266, "w": 178, "h": 12 },
+        "control": "listItem"
+      }
+    ]
+  },
+  "children": {
+    "1": []
+  },
+  "points": [
+    {
+      "label": "물",
+      "truth": { "x": 4039, "y": 242, "w": 178, "h": 12 },
+      "at": { "x": 4128, "y": 248 }
+    },
+    {
+      "label": "흙",
+      "truth": { "x": 4039, "y": 254, "w": 178, "h": 12 },
+      "at": { "x": 4128, "y": 260 }
+    },
+    {
+      "label": "빛",
+      "truth": { "x": 4039, "y": 266, "w": 178, "h": 12 },
+      "at": { "x": 4128, "y": 272 }
+    }
+  ]
+}

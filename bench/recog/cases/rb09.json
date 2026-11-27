@@ -1,0 +1,421 @@
+{
+  "schema": 1,
+  "id": "rb09",
+  "note": "RB-09 한글 2022 표·문단·그림 시험 문서",
+  "monitors": [
+    {
+      "id": 0,
+      "bounds": { "x": 0, "y": 0, "w": 3840, "h": 2160 },
+      "work": { "x": 0, "y": 0, "w": 3840, "h": 2064 },
+      "scale": 2.0,
+      "primary": true,
+      "frame": "blank-3840x2160.png"
+    },
+    {
+      "id": 1,
+      "bounds": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+      "work": { "x": 3840, "y": 0, "w": 1920, "h": 1032 },
+      "scale": 1.0,
+      "primary": false,
+      "frame": "rb09.m1.png"
+    }
+  ],
+  "cursor": { "x": 720, "y": 1360 },
+  "windows": [
+    {
+      "handle": 1,
+      "pid": 4294967295,
+      "exe": "hwp.exe",
+      "class": "HwndWrapper[Hwp.exe;;49a29cc4-9f07-4cf2-b78e-595313769c7c]",
+      "rect": { "x": 3880, "y": 40, "w": 1550, "h": 930 },
+      "visible": true,
+      "minimized": false,
+      "maximized": false,
+      "cloaked": false,
+      "hung": false,
+      "clickThrough": false,
+      "layeredAlpha": null,
+      "topmost": false,
+      "tool": false
+    }
+  ],
+  "elements": {
+    "1": [
+      {
+        "rect": { "x": 3881, "y": 226, "w": 28, "h": 28 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3909, "y": 226, "w": 1505, "h": 28 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3881, "y": 254, "w": 28, "h": 661 },
+        "control": "pane"
+      },
+      {
+        "rect": { "x": 3909, "y": 254, "w": 1505, "h": 661 },
+        "control": "edit"
+      },
+      {
+        "rect": { "x": 3881, "y": 41, "w": 1548, "h": 32 },
+        "control": "titleBar"
+      },
+      {
+        "rect": { "x": 5333, "y": 41, "w": 32, "h": 32 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3881, "y": 73, "w": 1548, "h": 32 },
+        "control": "menu"
+      },
+      {
+        "rect": { "x": 3881, "y": 77, "w": 63, "h": 28 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 3951, "y": 77, "w": 59, "h": 28 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4010, "y": 77, "w": 59, "h": 28 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4069, "y": 77, "w": 59, "h": 28 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4128, "y": 77, "w": 59, "h": 28 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4187, "y": 77, "w": 48, "h": 28 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4235, "y": 77, "w": 59, "h": 28 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4294, "y": 77, "w": 59, "h": 28 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4353, "y": 77, "w": 59, "h": 28 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4412, "y": 77, "w": 32, "h": 26 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 5201, "y": 77, "w": 160, "h": 24 },
+        "control": "comboBox"
+      },
+      {
+        "rect": { "x": 3881, "y": 105, "w": 1548, "h": 88 },
+        "control": "custom"
+      },
+      {
+        "rect": { "x": 3895, "y": 111, "w": 38, "h": 76 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3933, "y": 111, "w": 56, "h": 76 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3989, "y": 111, "w": 45, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4034, "y": 111, "w": 38, "h": 76 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4072, "y": 111, "w": 59, "h": 76 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4144, "y": 111, "w": 38, "h": 76 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4182, "y": 111, "w": 38, "h": 76 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4220, "y": 111, "w": 45, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4278, "y": 111, "w": 38, "h": 76 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4316, "y": 111, "w": 38, "h": 76 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4354, "y": 111, "w": 54, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4408, "y": 111, "w": 45, "h": 76 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4453, "y": 111, "w": 38, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4504, "y": 111, "w": 38, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4542, "y": 111, "w": 38, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4580, "y": 111, "w": 38, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4618, "y": 111, "w": 38, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4669, "y": 111, "w": 54, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4723, "y": 111, "w": 54, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4790, "y": 111, "w": 38, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4828, "y": 111, "w": 65, "h": 76 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4893, "y": 111, "w": 38, "h": 76 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4931, "y": 111, "w": 46, "h": 76 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3881, "y": 193, "w": 1548, "h": 32 },
+        "control": "custom"
+      },
+      {
+        "rect": { "x": 3898, "y": 197, "w": 40, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 3940, "y": 197, "w": 40, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 3982, "y": 197, "w": 40, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4039, "y": 197, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4065, "y": 197, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4106, "y": 197, "w": 40, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4148, "y": 197, "w": 40, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4207, "y": 197, "w": 106, "h": 24 },
+        "control": "comboBox"
+      },
+      {
+        "rect": { "x": 4319, "y": 197, "w": 91, "h": 24 },
+        "control": "comboBox"
+      },
+      {
+        "rect": { "x": 4416, "y": 197, "w": 118, "h": 24 },
+        "control": "comboBox"
+      },
+      {
+        "rect": { "x": 4540, "y": 197, "w": 106, "h": 24 },
+        "control": "comboBox"
+      },
+      {
+        "rect": { "x": 4665, "y": 197, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4691, "y": 197, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4717, "y": 197, "w": 40, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4759, "y": 197, "w": 40, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4801, "y": 197, "w": 40, "h": 24 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4858, "y": 197, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4884, "y": 197, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4910, "y": 197, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4936, "y": 197, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4962, "y": 197, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4988, "y": 197, "w": 24, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5031, "y": 197, "w": 103, "h": 24 },
+        "control": "comboBox"
+      },
+      {
+        "rect": { "x": 3881, "y": 944, "w": 1548, "h": 25 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 3891, "y": 945, "w": 49, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3940, "y": 945, "w": 36, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3976, "y": 945, "w": 36, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4012, "y": 945, "w": 36, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4048, "y": 945, "w": 54, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4102, "y": 945, "w": 65, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4167, "y": 945, "w": 63, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4229, "y": 945, "w": 40, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4269, "y": 945, "w": 126, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 4395, "y": 945, "w": 68, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5099, "y": 945, "w": 32, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5131, "y": 945, "w": 32, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5163, "y": 945, "w": 32, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5203, "y": 945, "w": 32, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5240, "y": 945, "w": 88, "h": 24 },
+        "control": "other"
+      },
+      {
+        "rect": { "x": 5333, "y": 945, "w": 32, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 5365, "y": 945, "w": 64, "h": 24 },
+        "control": "button"
+      },
+      {
+        "rect": { "x": 3881, "y": 944, "w": 1548, "h": 25 },
+        "control": "other"
+      }
+    ]
+  },
+  "children": {
+    "1": [
+      { "x": 3881, "y": 226, "w": 28, "h": 28 },
+      { "x": 3909, "y": 226, "w": 1505, "h": 28 },
+      { "x": 3881, "y": 254, "w": 28, "h": 661 },
+      { "x": 3909, "y": 254, "w": 1505, "h": 661 }
+    ]
+  },
+  "points": [
+    {
+      "label": "물",
+      "truth": { "x": 4375, "y": 446, "w": 286, "h": 56 },
+      "at": { "x": 4518, "y": 474 }
+    },
+    {
+      "label": "흙",
+      "truth": { "x": 4663, "y": 446, "w": 286, "h": 56 },
+      "at": { "x": 4806, "y": 474 }
+    },
+    {
+      "label": "빛",
+      "truth": { "x": 4375, "y": 504, "w": 286, "h": 57 },
+      "at": { "x": 4518, "y": 532 }
+    },
+    {
+      "label": "공기",
+      "truth": { "x": 4663, "y": 504, "w": 286, "h": 57 },
+      "at": { "x": 4806, "y": 532 }
+    },
+    {
+      "label": "관찰 그림",
+      "truth": { "x": 4375, "y": 606, "w": 237, "h": 75 },
+      "at": { "x": 4493, "y": 643 }
+    }
+  ]
+}

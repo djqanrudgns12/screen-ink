@@ -22,6 +22,7 @@ param(
   [int]$IntervalMs = 16,
   [int]$MoveGapMs = 60,
   [int]$HotkeyVk = 0x70,
+  [switch]$ExitWithHotkey,
   [string]$AppProcess = 'screen-ink',
   [string]$FrozenProcess = 'rb20-frozen'
 )
@@ -31,6 +32,7 @@ $app = @(Get-Process -Name $AppProcess -ErrorAction SilentlyContinue)
 if ($app.Count -eq 0) { throw "$AppProcess 가 꺼져 있어요" }
 $frozen = @(Get-Process -Name $FrozenProcess -ErrorAction SilentlyContinue)
 if ($frozen.Count -eq 0) { throw "$FrozenProcess 가 꺼져 있어요(먼저 띄워요)" }
+if ($app.Count -ne 1 -or $frozen.Count -ne 1) { throw '시험 대상이 여럿이에요. 사본에 고유한 프로세스 이름을 써요.' }
 
 Add-Type -TypeDefinition @'
 using System;
@@ -44,6 +46,8 @@ public static class Rb20Watch {
   [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
   [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
   [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
+  [DllImport("user32.dll")] static extern IntPtr WindowFromPhysicalPoint(POINT p);
+  [StructLayout(LayoutKind.Sequential)] struct POINT { public int X, Y; }
   [DllImport("user32.dll")] static extern IntPtr SendMessageTimeout(IntPtr h, uint msg, UIntPtr w, IntPtr l, uint flags, uint timeout, out UIntPtr result);
   [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr ctx);
   [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
@@ -65,6 +69,10 @@ public static class Rb20Watch {
     try { SetCursorPos(x, y); } finally { if (old != IntPtr.Zero) SetThreadDpiAwarenessContext(old); }
   }
   public static void Key(byte vk) { keybd_event(vk, 0, 0, UIntPtr.Zero); Thread.Sleep(30); keybd_event(vk, 0, 2, UIntPtr.Zero); }
+  public static uint OwnerAt(int x, int y) {
+    uint pid; GetWindowThreadProcessId(WindowFromPhysicalPoint(new POINT { X=x, Y=y }), out pid);
+    return pid;
+  }
 
   static volatile bool running;
   static Thread worker;
@@ -79,7 +87,7 @@ public static class Rb20Watch {
       while (running) {
         if (refresh.ElapsedMilliseconds > 200) { hs = WindowsOf(pid, false); refresh.Restart(); }
         double worst = 0;
-        foreach (var h in hs.GetRange(0, Math.Min(8, hs.Count))) {
+        foreach (var h in hs) {
           UIntPtr res; sw.Restart();
           IntPtr ok = SendMessageTimeout(h, 0, UIntPtr.Zero, IntPtr.Zero, 0x0002, 100, out res);
           double ms = sw.Elapsed.TotalMilliseconds;
@@ -109,12 +117,22 @@ $fw = [Rb20Watch]::WindowsOf([uint32]$frozen[0].Id, $true)
 if ($fw.Count -eq 0) { throw 'RB-20 창이 보이지 않아요' }
 $r = [Rb20Watch]::RectOf($fw[0])
 $cx = $r[0] + [int]($r[2] / 2); $cy = $r[1] + [int]($r[3] / 2)
+if ([Rb20Watch]::OwnerAt($cx, $cy) -ne $frozen[0].Id) { throw '시험 창 가운데가 다른 창에 가려졌어요.' }
+$before = @([Rb20Watch]::WindowsOf([uint32]$app[0].Id, $true))
 
 [Rb20Watch]::Move($cx, $cy); Start-Sleep -Milliseconds 200
 [Rb20Watch]::Start([uint32]$app[0].Id, $IntervalMs)
 Start-Sleep -Milliseconds 300
 [Rb20Watch]::Key([byte]$HotkeyVk)   # F1 진입
 Start-Sleep -Milliseconds 400
+$overlays = @([Rb20Watch]::WindowsOf([uint32]$app[0].Id, $true) | Where-Object {
+  $box = [Rb20Watch]::RectOf($_)
+  $_ -notin $before -and $cx -ge $box[0] -and $cx -lt ($box[0]+$box[2]) -and $cy -ge $box[1] -and $cy -lt ($box[1]+$box[3])
+})
+if ($overlays.Count -eq 0) {
+  [void][Rb20Watch]::Stop()
+  throw '단축키를 보냈지만 시험 앱의 캡처 창이 나타나지 않았어요.'
+}
 for ($k = 0; $k -lt $Moves; $k++) {
   # RB-20 창 안을 지그재그로
   $fx = 0.15 + 0.7 * (($k * 7) % 10) / 9.0
@@ -122,11 +140,14 @@ for ($k = 0; $k -lt $Moves; $k++) {
   [Rb20Watch]::Move($r[0] + [int]($r[2] * $fx), $r[1] + [int]($r[3] * $fy))
   Start-Sleep -Milliseconds $MoveGapMs
 }
-[Rb20Watch]::Key([byte]0x1B)        # Esc
+$exitKey = if ($ExitWithHotkey) { $HotkeyVk } else { 0x1B }
+[Rb20Watch]::Key([byte]$exitKey)
 Start-Sleep -Milliseconds 400
 $s = [Rb20Watch]::Stop()
+$stillOpen = @([Rb20Watch]::WindowsOf([uint32]$app[0].Id, $true) | Where-Object { $_ -in $overlays })
 
-$verdict = if ($s[3] -eq 0) { '통과' } else { '실패' }
+$verdict = if ($s[3] -eq 0 -and $stillOpen.Count -eq 0) { '통과' } else { '실패' }
 Write-Host ("RB-20 UI 응답: 잰 횟수 {0} · p95 {1:N1} ms · 최대 {2:N1} ms · 100 ms 초과 {3}회(시간 초과 {4}) → {5}" -f $s[0], $s[1], $s[2], $s[3], $s[4], $verdict)
 Write-Host "앱 로그에서도 확인: 'selection probe' moves max < 100 ms, 'msaa deadline … exceeded'(hang-location 모드면 1번 나와야 정상)"
+if ($stillOpen.Count -gt 0) { throw '측정한 캡처 창이 종료 키를 보낸 뒤에도 열려 있어요.' }
 if ($s[3] -ne 0) { exit 1 }

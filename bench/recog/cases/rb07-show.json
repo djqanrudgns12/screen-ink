@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "id": "rb07-show",
+  "note": "RB-07 파워포인트 슬라이드 쇼",
+  "monitors": [
+    {
+      "id": 0,
+      "bounds": { "x": 0, "y": 0, "w": 3840, "h": 2160 },
+      "work": { "x": 0, "y": 0, "w": 3840, "h": 2064 },
+      "scale": 2.0,
+      "primary": true,
+      "frame": "blank-3840x2160.png"
+    },
+    {
+      "id": 1,
+      "bounds": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+      "work": { "x": 3840, "y": 0, "w": 1920, "h": 1032 },
+      "scale": 1.0,
+      "primary": false,
+      "frame": "rb07-show.m1.png"
+    }
+  ],
+  "cursor": { "x": 977, "y": 536 },
+  "windows": [
+    {
+      "handle": 1,
+      "pid": 4294967295,
+      "exe": "powerpnt.exe",
+      "class": "screenClass",
+      "rect": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+      "visible": true,
+      "minimized": false,
+      "maximized": false,
+      "cloaked": false,
+      "hung": false,
+      "clickThrough": false,
+      "layeredAlpha": null,
+      "topmost": false,
+      "tool": false
+    }
+  ],
+  "elements": {
+    "1": []
+  },
+  "children": {
+    "1": []
+  },
+  "points": [
+    {
+      "label": "물",
+      "truth": { "x": 4224, "y": 144, "w": 446, "h": 230 },
+      "at": { "x": 4447, "y": 259 }
+    },
+    {
+      "label": "흙",
+      "truth": { "x": 4800, "y": 144, "w": 446, "h": 230 },
+      "at": { "x": 5023, "y": 259 }
+    },
+    {
+      "label": "빛",
+      "truth": { "x": 4224, "y": 533, "w": 446, "h": 230 },
+      "at": { "x": 4447, "y": 648 }
+    },
+    {
+      "label": "공기",
+      "truth": { "x": 4800, "y": 533, "w": 446, "h": 230 },
+      "at": { "x": 5023, "y": 648 }
+    }
+  ]
+}

@@ -59,11 +59,19 @@ fn main() {
         std::process::exit(1);
     }
     let mut all = Vec::new();
+    let mut matched = vec![false; o.filter.len()];
     for f in &files {
         match replay::load(f) {
             Ok(mut l) => {
                 let hay = format!("{} {}", l.case.id, l.case.note).to_lowercase();
-                if !o.filter.is_empty() && !o.filter.iter().any(|t| hay.contains(t.as_str())) {
+                let mut selected = o.filter.is_empty();
+                for (term, seen) in o.filter.iter().zip(&mut matched) {
+                    if hay.contains(term.as_str()) {
+                        *seen |= !l.case.points.is_empty();
+                        selected = true;
+                    }
+                }
+                if !selected {
                     continue;
                 }
                 if o.vision_only {
@@ -75,7 +83,16 @@ fn main() {
                 println!("{:<40} 점 {:>3}  Top-1 {:>5.1}%  Top-3 {:>5.1}%  경계 {:.2}px", l.case.id, sum.points, sum.top1 * 100.0, sum.top3 * 100.0, sum.mean_edge);
                 all.extend(s);
             }
-            Err(e) => eprintln!("건너뜀 {e}"),
+            Err(e) => {
+                eprintln!("사례를 읽지 못했어요: {e}");
+                std::process::exit(1);
+            }
+        }
+    }
+    for (term, seen) in o.filter.iter().zip(matched) {
+        if !seen {
+            eprintln!("필터에 맞는 정답 점이 없어요: {term}");
+            std::process::exit(1);
         }
     }
     if all.is_empty() {
@@ -90,7 +107,10 @@ fn main() {
     }
     match std::fs::write(&o.out, replay::to_csv(&all)) {
         Ok(()) => println!("CSV: {}", o.out.display()),
-        Err(e) => eprintln!("CSV를 쓰지 못했어요: {e}"),
+        Err(e) => {
+            eprintln!("CSV를 쓰지 못했어요: {e}");
+            std::process::exit(1);
+        }
     }
     if let Some(min) = o.min_top1 {
         let got = sum.top1 * 100.0;

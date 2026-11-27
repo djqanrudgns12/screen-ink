@@ -19,6 +19,24 @@
    점 = 강조를 고른 커서 자리, 드래그면 가운데).
 4. JSON의 `note`에 무엇을 띄운 화면인지(예: `RB-04 Win32 시험 앱`) 적는다. 같은 화면의 점은 한 파일의 `points`로 합쳐도 된다.
 
+## 지정한 시험 창만 수집하는 방법
+
+다른 창이 열려 있는 Windows 작업 노드에서는 시험 창의 PID와 HWND를 지정해 수집할 수 있다.
+아래 도구는 WGC로 해당 창만 찍고 실제 모니터의 물리 좌표에 붙인다. 창 밖은 흰색이다.
+창 안에서 일부만 저장하려면 메모 뒤에 창 왼쪽 위 기준의 `x y 너비 높이`(물리 px)를 준다.
+접근성 색인·자식 창 좌표는 시험 창에서 읽는다. 정답은 수집 후 아래 절차로 붙인다.
+
+```powershell
+cargo build -p ink-platform-windows --example recog-window
+Copy-Item "$env:CARGO_TARGET_DIR\debug\examples\recog-window.exe" "$작업사본\recog-window.exe"
+$env:SCREEN_INK_CASE_DIR = $사례폴더
+& "$작업사본\recog-window.exe" rb04 $시험앱.Id $시험앱.MainWindowHandle.ToInt64() "RB-04 Win32 표준 컨트롤"
+```
+
+RB-18에서는 메모 뒤에 `--cloaked PID HWND`를 주면 DWM 숨김 속성을 확인하고 두 시험 창을 실제 Z 순서로 보존한다.
+수집된 HWND·PID는 재생용 번호로 치환한다. 창 제목·접근성 이름은 기록하지 않는다.
+2026-11-27의 화면 범위와 항목별 정답 출처는 [Windows 실제 창 인식 보고서](../../docs/benchmark/2026-11-27-windows-recog.md)에 있다.
+
 ## 자동 정답 (RB-01·02·03·12·14·19 — 우리 시험 문서)
 
 시험 문서 `pages/*.html`은 배치(CSS px)를 `<script type="application/json" id="layout">`에 담고, 왼쪽 위에 2×2 색 표지(자홍·청록 / 노랑·검정)를 그린다.

@@ -54,6 +54,7 @@ windows = { version = "0.62", features = [
   "Win32_System_Ole",
   "Win32_System_Variant",
 ] }
+
 windows-sys = { version = "0.59", features = [
   "Win32_UI_Accessibility",
   "Win32_UI_Shell",
@@ -76,3 +77,6 @@ windows-sys = { version = "0.59", features = [
   "Win32_UI_Magnification",
   "Win32_System_Threading",
 ] }
+
+[target.'cfg(windows)'.dev-dependencies]
+ink-platform-fake = { path = "../ink-platform-fake" }

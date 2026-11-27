@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "id": "rb11",
+  "note": "RB-11 시험 창의 열린 바로 가기 메뉴",
+  "monitors": [
+    {
+      "id": 0,
+      "bounds": { "x": 0, "y": 0, "w": 3840, "h": 2160 },
+      "work": { "x": 0, "y": 0, "w": 3840, "h": 2064 },
+      "scale": 2.0,
+      "primary": true,
+      "frame": "blank-3840x2160.png"
+    },
+    {
+      "id": 1,
+      "bounds": { "x": 3840, "y": 0, "w": 1920, "h": 1080 },
+      "work": { "x": 3840, "y": 0, "w": 1920, "h": 1032 },
+      "scale": 1.0,
+      "primary": false,
+      "frame": "rb11.m1.png"
+    }
+  ],
+  "cursor": { "x": 977, "y": 536 },
+  "windows": [
+    {
+      "handle": 1,
+      "pid": 4294967295,
+      "exe": "python.exe",
+      "class": "#32768",
+      "rect": { "x": 4190, "y": 300, "w": 150, "h": 72 },
+      "visible": true,
+      "minimized": false,
+      "maximized": false,
+      "cloaked": false,
+      "hung": false,
+      "clickThrough": false,
+      "layeredAlpha": null,
+      "topmost": true,
+      "tool": true
+    }
+  ],
+  "elements": {
+    "1": [
+      {
+        "rect": { "x": 4193, "y": 303, "w": 144, "h": 22 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4193, "y": 325, "w": 144, "h": 22 },
+        "control": "menuItem"
+      },
+      {
+        "rect": { "x": 4193, "y": 347, "w": 144, "h": 22 },
+        "control": "menuItem"
+      }
+    ]
+  },
+  "children": {
+    "1": []
+  },
+  "points": [
+    {
+      "label": "관찰 자료",
+      "truth": { "x": 4193, "y": 303, "w": 144, "h": 22 },
+      "at": { "x": 4265, "y": 314 }
+    },
+    {
+      "label": "표 만들기",
+      "truth": { "x": 4193, "y": 325, "w": 144, "h": 22 },
+      "at": { "x": 4265, "y": 336 }
+    },
+    {
+      "label": "닫기",
+      "truth": { "x": 4193, "y": 347, "w": 144, "h": 22 },
+      "at": { "x": 4265, "y": 358 }
+    }
+  ]
+}
