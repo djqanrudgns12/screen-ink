@@ -236,12 +236,97 @@ pub struct Evidence<'a> {
 
 const MIN_SIDE: i32 = 4;
 const MIN_AREA: i64 = 16;
-const MERGE_IOU: f64 = 0.92;
+/// 사다리·후보 겹침 합침 IoU 문턱(R2-CAP-4).
+pub const MERGE_IOU: f64 = 0.90;
+/// 앞 창 경계 ±2 px 제외 허용 오차(R2-CAP-2).
+pub const OCCLUDER_EDGE_TOL: i32 = 2;
 const HIDDEN_SUPPORT: f32 = 0.15;
 /// 가린 뒤 보이는 넓이가 원래의 이 비율보다 작으면 후보에서 뺀다(R2-CAP-1).
 pub const MIN_VISIBLE: f64 = 0.30;
 /// 가림 계산에 쓰는 앞 창 수 상한(갈래가 4^n으로 늘지 않게 — 커서를 담는 쪽만 따라가 실제로는 몇 갈래뿐).
 const MAX_OCCLUDERS: usize = 8;
+
+/// 융합 추가 옵션(R2-CAP-3): 이미지 요소의 여백·그림자를 걷어내어 실제 그림 가장자리를 다시 잰다.
+#[derive(Default)]
+pub struct RecogOptions<'a> {
+    pub refine_image: Option<&'a dyn Fn(PhysRect) -> PhysRect>,
+}
+
+/// R2-CAP-6 계측 준비용 요약 숫자(창 제목·파일 이름 없음).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecogMetrics {
+    pub sources: u8,
+    pub occluded_ratio: f32,
+    pub picked_level: usize,
+    pub chain_len: usize,
+}
+
+#[inline]
+fn h_edge_touches_occluders(y: i32, x0: i32, x1: i32, occluders: &[PhysRect]) -> bool {
+    occluders.iter().any(|o| {
+        ((y - o.y).abs() <= OCCLUDER_EDGE_TOL || (y - o.bottom()).abs() <= OCCLUDER_EDGE_TOL)
+            && x1 > o.x
+            && x0 < o.right()
+    })
+}
+
+#[inline]
+fn v_edge_touches_occluders(x: i32, y0: i32, y1: i32, occluders: &[PhysRect]) -> bool {
+    occluders.iter().any(|o| {
+        ((x - o.x).abs() <= OCCLUDER_EDGE_TOL || (x - o.right()).abs() <= OCCLUDER_EDGE_TOL)
+            && y1 > o.y
+            && y0 < o.bottom()
+    })
+}
+
+/// V 후보 사각형이 앞 창과 겹치거나 네 변 중 하나가 앞 창 경계 ±2 px에 붙는지 판정한다(R2-CAP-2).
+pub fn touches_occluder_edge(r: PhysRect, occluders: &[PhysRect]) -> bool {
+    occluders.iter().any(|o| r.intersect(o).is_some_and(|i| i.area() > 0))
+        || h_edge_touches_occluders(r.y, r.x, r.right(), occluders)
+        || h_edge_touches_occluders(r.bottom(), r.x, r.right(), occluders)
+        || v_edge_touches_occluders(r.x, r.y, r.bottom(), occluders)
+        || v_edge_touches_occluders(r.right(), r.y, r.bottom(), occluders)
+}
+
+/// 앞 창에 잘린 변은 원래 잘린 좌표를 유지하고, 안 잘린 변도 앞 창 경계 ±2 px로 끌려 붙으면 되돌린다(R2-CAP-2).
+fn snap_safe(orig: PhysRect, snapped: PhysRect, clipped: (bool, bool, bool, bool), occluders: &[PhysRect]) -> PhysRect {
+    if occluders.is_empty() {
+        return snapped;
+    }
+    let pick = |clipped_side: bool, o: i32, s: i32, touches: bool| -> i32 {
+        if clipped_side || (s != o && touches) { o } else { s }
+    };
+    let (cl, ct, cr, cb) = clipped;
+    let l = pick(cl, orig.x, snapped.x, v_edge_touches_occluders(snapped.x, orig.y, orig.bottom(), occluders));
+    let t = pick(ct, orig.y, snapped.y, h_edge_touches_occluders(snapped.y, orig.x, orig.right(), occluders));
+    let r = pick(cr, orig.right(), snapped.right(), v_edge_touches_occluders(snapped.right(), orig.y, orig.bottom(), occluders));
+    let b = pick(cb, orig.bottom(), snapped.bottom(), h_edge_touches_occluders(snapped.bottom(), orig.x, orig.right(), occluders));
+    let out = PhysRect::from_edges(l, t, r, b);
+    if out.is_empty() { orig } else { out }
+}
+
+/// 사슬·근거에서 계측용 숫자(근거 비트·가림 비율·고른 단계)를 요약한다(R2-CAP-6).
+pub fn metrics_of(ev: &Evidence, chain: &[Node], picked_level: usize) -> RecogMetrics {
+    let sources = chain.get(picked_level).map_or(0, |n| n.sources);
+    let occluded_ratio = match ev.window {
+        Some(w) if w.area() > 0 && !ev.occluders.is_empty() => {
+            let occ_area: i64 = ev
+                .occluders
+                .iter()
+                .filter_map(|o| w.intersect(o).map(|i| i.area()))
+                .sum();
+            (occ_area as f64 / w.area() as f64).clamp(0.0, 1.0) as f32
+        }
+        _ => 0.0,
+    };
+    RecogMetrics {
+        sources,
+        occluded_ratio,
+        picked_level,
+        chain_len: chain.len(),
+    }
+}
 
 /// 그 창보다 앞(z가 작음)에 있고 겹치는 창 사각형들 — 근거의 `occluders`. 오버레이로 의심되는 창은 뺀다.
 pub fn occluders_of(windows: &[crate::snapshot::WindowInfo], target: u64) -> Vec<PhysRect> {
@@ -323,6 +408,11 @@ fn score(n: &Node, support: f32, window: Option<PhysRect>) -> f32 {
 
 /// 커서 점에서 사슬(작은 것 → 큰 것). 마지막은 언제나 창(있으면) → 모니터 → 가상 화면.
 pub fn build_chain(ev: &Evidence) -> Vec<Node> {
+    build_chain_with(ev, &RecogOptions::default())
+}
+
+/// 추가 옵션(`refine_image` 등)과 함께 사슬을 만든다(R2-CAP-2·3·4).
+pub fn build_chain_with(ev: &Evidence, opts: &RecogOptions) -> Vec<Node> {
     let p = ev.point;
     let window = ev.window;
     let clip_to = window.unwrap_or(ev.monitor);
@@ -338,22 +428,52 @@ pub fn build_chain(ev: &Evidence) -> Vec<Node> {
         }
         raw.push(Node { rect: r, kind, score: 0.0, sources, hidden_container: false });
     };
-    // 요소·자식 창은 앞 창에 가린 곳을 빼고 보이는 부분만(R2-CAP-1) — 경계 붙이기 뒤에 자른다
+    // 요소·자식 창: 앞 창 가림 제거(R2-CAP-1) → Image면 평탄도 재측정(R2-CAP-3) → 앞 창 경계 보호 경계 맞춤(R2-CAP-2)
     for e in ev.elements {
-        if let Some(r) = visible_part(snap(e.rect), ev.occluders, p) {
-            push(r, NodeKind::Element(e.control), if e.from_msaa { src::M } else { src::A });
+        if let Some(vis) = visible_part(e.rect, ev.occluders, p) {
+            let base = if e.control == Control::Image {
+                if let Some(refine) = opts.refine_image {
+                    let cand = refine(vis);
+                    vis.intersect(&cand)
+                        .filter(|r| r.contains(p) && r.w >= MIN_SIDE && r.h >= MIN_SIDE && r.area() >= MIN_AREA)
+                        .unwrap_or(vis)
+                } else {
+                    vis
+                }
+            } else {
+                vis
+            };
+            let clipped = (
+                base.x != e.rect.x,
+                base.y != e.rect.y,
+                base.right() != e.rect.right(),
+                base.bottom() != e.rect.bottom(),
+            );
+            let snapped = snap_safe(base, snap(base), clipped, ev.occluders);
+            push(snapped, NodeKind::Element(e.control), if e.from_msaa { src::M } else { src::A });
         }
     }
     for c in ev.children {
-        if let Some(r) = visible_part(snap(*c), ev.occluders, p) {
-            push(r, NodeKind::Child, src::H);
+        if let Some(vis) = visible_part(*c, ev.occluders, p) {
+            let clipped = (
+                vis.x != c.x,
+                vis.y != c.y,
+                vis.right() != c.right(),
+                vis.bottom() != c.bottom(),
+            );
+            let snapped = snap_safe(vis, snap(vis), clipped, ev.occluders);
+            push(snapped, NodeKind::Child, src::H);
         }
     }
+    // V 후보: 앞 창 경계 ±2 px에 붙었거나 앞 창과 겹치는 후보는 버린다(R2-CAP-2)
     for v in ev.vision {
+        if !ev.occluders.is_empty() && touches_occluder_edge(v.rect, ev.occluders) {
+            continue;
+        }
         push(v.rect, NodeKind::Vision(v.kind), src::V);
     }
 
-    // 중복 합치기(IoU ≥ 0.92): 뜻이 있는 종류(요소 > 자식 창 > V)를 남기고 근거를 합친다
+    // 중복 합치기(IoU ≥ 0.90): 뜻이 있는 종류(요소 > 자식 창 > V)를 남기고 근거를 합친다(R2-CAP-4)
     let rank = |k: NodeKind| match k {
         NodeKind::Element(c) if !c.is_container() => 3,
         NodeKind::Element(_) => 2,
@@ -365,11 +485,17 @@ pub fn build_chain(ev: &Evidence) -> Vec<Node> {
         NodeKind::Element(c) => c.meaning(),
         _ => 0.0,
     };
+    // 면적 오름차순으로 합쳐 테두리 속면(Flat)·안쪽 래퍼·바깥 상자가 입력 순서와 무관하게 추이적으로 합쳐지게 한다(R2-CAP-4)
+    raw.sort_by_key(|n| n.rect.area());
     let mut merged: Vec<Node> = Vec::new();
     for n in raw {
         if let Some(m) = merged.iter_mut().find(|m| iou(&m.rect, &n.rect) >= MERGE_IOU) {
             m.sources |= n.sources;
-            let better = rank(n.kind) > rank(m.kind) || (rank(n.kind) == rank(m.kind) && meaning(n.kind) > meaning(m.kind));
+            let better = rank(n.kind) > rank(m.kind)
+                || (rank(n.kind) == rank(m.kind) && meaning(n.kind) > meaning(m.kind))
+                || (rank(n.kind) == rank(m.kind)
+                    && (meaning(n.kind) - meaning(m.kind)).abs() <= f32::EPSILON
+                    && n.rect.area() > m.rect.area());
             if better {
                 m.kind = n.kind;
                 m.rect = n.rect;
@@ -398,16 +524,33 @@ pub fn build_chain(ev: &Evidence) -> Vec<Node> {
         n.score = score(n, s.unwrap_or(0.5), window);
     }
 
-    // 사슬: 넓이 순, 엄격히 커지게 — 앞 단계와 ±1 px 같은 것은 빼서 휠 한 칸마다 강조가 반드시 바뀐다(02 §1.1)
+    // 사슬: 넓이 순, 엄격히 커지게 — IoU ≥ 0.90 또는 ±1 px 같은 것은 합쳐서 휠·Tab마다 강조가 반드시 바뀐다(R2-CAP-4)
     merged.sort_by_key(|n| n.rect.area());
     let mut chain: Vec<Node> = Vec::new();
     for n in merged.into_iter().chain(tail) {
         if let Some(last) = chain.last_mut() {
-            if near_same(&last.rect, &n.rect) {
-                // 조각과 창·모니터가 같으면 창·모니터 이름을 살리고, 창·모니터끼리 같으면 앞(좁은 뜻)을 살린다
+            let same_tail = rank(last.kind) == 0 && rank(n.kind) == 0;
+            let dup = if same_tail {
+                near_same(&last.rect, &n.rect)
+            } else {
+                near_same(&last.rect, &n.rect) || iou(&last.rect, &n.rect) >= MERGE_IOU
+            };
+            if dup {
+                // 조각과 창·모니터가 같으면 창·모니터 이름을 살리고, 조각끼리 같으면 더 뜻있고 점수 높은 쪽을 살린다
                 let sources = last.sources | n.sources;
                 if rank(last.kind) > 0 && rank(n.kind) == 0 {
                     *last = Node { sources, ..n };
+                } else if rank(last.kind) > 0 && rank(n.kind) > 0 {
+                    let better = rank(n.kind) > rank(last.kind)
+                        || (rank(n.kind) == rank(last.kind) && meaning(n.kind) > meaning(last.kind))
+                        || (rank(n.kind) == rank(last.kind)
+                            && (meaning(n.kind) - meaning(last.kind)).abs() <= f32::EPSILON
+                            && n.score > last.score + 0.001);
+                    if better {
+                        *last = Node { sources, ..n };
+                    } else {
+                        last.sources = sources;
+                    }
                 } else {
                     last.sources = sources;
                 }
@@ -689,5 +832,91 @@ mod tests {
         ];
         assert_eq!(occluders_of(&wins, 4), vec![PhysRect::new(0, 0, 800, 160)]);
         assert!(occluders_of(&wins, 99).is_empty());
+    }
+
+    #[test]
+    fn 가린_창_모서리에_붙은_v_후보는_버리고_snap은_끌리지_않는다() {
+        let p = PhysPoint { x: 300, y: 300 };
+        let photo = PhysRect::new(100, 100, 400, 300);
+        let occ = [PhysRect::new(0, 0, 1920, 145)]; // 위 15% (45 px) 가림
+        let img = [ElementCand { rect: photo, control: Control::Image, from_msaa: false }];
+        // 앞 창 아래 모서리(y=145) ±2 px에 붙은 V 후보 + 그 안에 있는 정상 카드
+        let vis = [
+            VisionCand { rect: PhysRect::new(100, 146, 400, 254), kind: VisionKind::Box, support: 0.9 },
+            VisionCand { rect: PhysRect::new(180, 180, 240, 180), kind: VisionKind::Box, support: 0.85 },
+        ];
+        // snap이 잘린 윗변(145)을 그림자(147)로 끌고 가려 해도 snap_safe가 막는다
+        let snap = |r: PhysRect| PhysRect::new(r.x, r.y + 2, r.w, r.h - 2);
+        let ev = Evidence {
+            point: p,
+            window: Some(WIN),
+            children: &[],
+            elements: &img,
+            vision: &vis,
+            monitor: MON,
+            virtual_bounds: MON,
+            occluders: &occ,
+            support: None,
+            snap: Some(&snap),
+        };
+        let chain = build_chain(&ev);
+        assert!(!chain.iter().any(|n| matches!(n.kind, NodeKind::Vision(_)) && n.rect.y <= 147), "앞 창 ±2px V 후보는 제외: {chain:?}");
+        let img_node = chain.iter().find(|n| matches!(n.kind, NodeKind::Element(Control::Image))).unwrap();
+        assert_eq!(img_node.rect, PhysRect::new(100, 145, 400, 255), "잘린 윗변은 앞 창 그림자에 끌리지 않는다");
+
+        // 가려지지 않았지만 앞 창 아래 2 px에 붙어 놓인 요소도 snap이 y=145로 붙이지 않는다
+        let near = [ElementCand { rect: PhysRect::new(100, 147, 400, 250), control: Control::Image, from_msaa: false }];
+        let snap_to_occ = |r: PhysRect| PhysRect::new(r.x, 145, r.w, r.h + 2);
+        let ev2 = Evidence { elements: &near, vision: &[], snap: Some(&snap_to_occ), ..ev };
+        let c2 = build_chain(&ev2);
+        let img2 = c2.iter().find(|n| matches!(n.kind, NodeKind::Element(Control::Image))).unwrap();
+        assert_eq!(img2.rect.y, 147);
+    }
+
+    #[test]
+    fn 이미지_요소는_평탄도_재측정으로_여백을_걷는다() {
+        let p = PhysPoint { x: 300, y: 250 };
+        let elem = PhysRect::new(100, 100, 400, 300);
+        let inner = PhysRect::new(130, 125, 340, 250);
+        let els = [ElementCand { rect: elem, control: Control::Image, from_msaa: false }];
+        let ev = ev(p, &els, &[]);
+        let opts = RecogOptions { refine_image: Some(&|_| inner) };
+        let chain = build_chain_with(&ev, &opts);
+        assert_eq!(chain[0].rect, inner);
+    }
+
+    #[test]
+    fn 사다리_겹침_정리는_iou_090_이상_후보를_하나로_합친다() {
+        let p = PhysPoint { x: 400, y: 210 };
+        // ListItem(800×120) vs Group(790×110) → IoU = 0.9052 >= 0.90
+        let item = PhysRect::new(110, 160, 800, 120);
+        let wrapper = PhysRect::new(115, 165, 790, 110);
+        let els = [
+            ElementCand { rect: wrapper, control: Control::Group, from_msaa: false },
+            ElementCand { rect: item, control: Control::ListItem, from_msaa: false },
+        ];
+        let chain = build_chain(&ev(p, &els, &[]));
+        let non_tail: Vec<&Node> = chain
+            .iter()
+            .filter(|n| !matches!(n.kind, NodeKind::Window | NodeKind::Monitor | NodeKind::Virtual))
+            .collect();
+        assert_eq!(non_tail.len(), 1, "IoU ≥ 0.90 겹침은 하나로 합친다: {non_tail:?}");
+        assert_eq!(non_tail[0].kind, NodeKind::Element(Control::ListItem));
+        assert_eq!(non_tail[0].rect, item);
+    }
+
+    #[test]
+    fn 계측_요약은_근거와_가림_비율과_단계를_담는다() {
+        let p = PhysPoint { x: 300, y: 300 };
+        let img = [ElementCand { rect: PhysRect::new(100, 100, 400, 300), control: Control::Image, from_msaa: false }];
+        let occ = [PhysRect::new(100, 100, 600, 160)];
+        let ev = Evidence { point: p, window: Some(WIN), children: &[], elements: &img, vision: &[], monitor: MON, virtual_bounds: MON, occluders: &occ, support: None, snap: None };
+        let chain = build_chain(&ev);
+        let picked = first_level(&chain, None);
+        let m = metrics_of(&ev, &chain, picked);
+        assert_eq!(m.sources, src::A);
+        assert!(m.occluded_ratio > 0.05 && m.occluded_ratio < 0.15);
+        assert_eq!(m.picked_level, picked);
+        assert_eq!(m.chain_len, chain.len());
     }
 }

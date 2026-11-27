@@ -442,3 +442,59 @@ fn 병렬_전처리는_단일_스레드와_완전히_동일하다() {
     assert_eq!(seq.v_segs, par.v_segs, "v_segs 불일치");
     assert_eq!(seq.v_col_offsets, par.v_col_offsets, "v_col_offsets 불일치");
 }
+
+#[test]
+fn 가림_창_경계_2px_v_후보와_snap_제외() {
+    let mut c = Canvas::new(800, 600, [245, 245, 245]);
+    // 가린 창(0..800 × 0..160) 바로 아래 2 px에 연한 윗변 사진
+    let photo = PhysRect::new(160, 162, 320, 220);
+    c.fill_rect(photo, [232, 232, 232]); // 배경 245와 차이 13 < 24라 윗변 경계 없음
+    c.fill_rect(PhysRect::new(160, 170, 320, 212), [80, 120, 170]);
+    let occ = [PhysRect::new(0, 0, 800, 160)];
+    c.fill_rect(occ[0], [45, 50, 60]);
+
+    let p = prepare(&c.bgra, c.w, c.h);
+    // 일반 snap은 강한 앞 창 모서리 y=160으로 끌리지만, snap_with_occluders는 y=162를 지킨다
+    assert_eq!(p.snap(photo, 3).y, 160);
+    assert_eq!(p.snap_with_occluders(photo, 3, &occ), photo);
+
+    // query_with_occluders는 앞 창 경계 ±2 px에 붙은 후보를 내지 않는다
+    let q = p.query_with_occluders(320, 270, &occ);
+    assert!(!q.iter().any(|cand| cand.rect.y <= 162 && cand.rect.bottom() >= 160), "앞 창 경계 후보 금지: {:?}", q);
+    assert!(p.support_with_occluders(PhysRect::new(160, 160, 320, 222), &occ) < p.support(PhysRect::new(160, 160, 320, 222)));
+}
+
+#[test]
+fn 평탄도_이미지_경계_재측정_여백_그림자_둥근모서리_3종() {
+    // 1. 여백 4면
+    let mut c1 = Canvas::new(640, 480, [255, 255, 255]);
+    let elem1 = PhysRect::new(80, 80, 320, 220);
+    let inner1 = PhysRect::new(110, 105, 260, 170);
+    c1.fill_rect(inner1, [238, 235, 230]);
+    let p1 = prepare(&c1.bgra, c1.w, c1.h);
+    assert_eq!(p1.refine_image(elem1), inner1);
+
+    // 2. 부드러운 그림자 + 여백
+    let mut c2 = Canvas::new(640, 480, [246, 246, 246]);
+    let elem2 = PhysRect::new(100, 80, 340, 240);
+    let inner2 = PhysRect::new(125, 105, 290, 190);
+    c2.draw_shadow(inner2, 14, 0.14);
+    c2.fill_rect(inner2, [234, 236, 238]);
+    let p2 = prepare(&c2.bgra, c2.w, c2.h);
+    assert_eq!(p2.refine_image(elem2), inner2);
+
+    // 3. 둥근 모서리 + 여백
+    let mut c3 = Canvas::new(640, 480, [248, 248, 248]);
+    let elem3 = PhysRect::new(100, 100, 280, 200);
+    let inner3 = PhysRect::new(124, 120, 232, 160);
+    c3.fill_rounded_rect(inner3, 20, [225, 210, 200]);
+    let p3 = prepare(&c3.bgra, c3.w, c3.h);
+    assert_eq!(p3.refine_image(elem3), inner3);
+
+    // 4. 여백 없는 둥근 모서리 그림 & 상단 하늘 사진은 줄이지 않음(비오탐)
+    let mut c4 = Canvas::new(640, 480, [245, 245, 245]);
+    let tight = PhysRect::new(120, 100, 240, 160);
+    c4.fill_rounded_rect(tight, 18, [120, 155, 205]);
+    let p4 = prepare(&c4.bgra, c4.w, c4.h);
+    assert_eq!(p4.refine_image(tight), tight);
+}

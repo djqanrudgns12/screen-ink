@@ -15,6 +15,35 @@ const CORNER_SEARCH: i32 = 16;
 const MIN_SIDE_SUPPORT: f32 = 0.35;
 /// 사다리에 남길 최대 상자 수.
 const MAX_LADDER_BOXES: usize = 5;
+/// 사다리·후보 겹침 정리 IoU 문턱(R2-CAP-4).
+pub(crate) const DEDUP_IOU: f64 = 0.90;
+/// 앞 창 경계 제외 허용 오차(±2 px, R2-CAP-2).
+pub(crate) const OCCLUDER_EDGE_TOL: i32 = 2;
+
+/// 가로선 `[x0, x1)`이 앞 창(`occluders`)의 위·아래 모서리 `±tol`에 붙는지 판정한다.
+#[inline]
+pub(crate) fn h_line_touches_occluders(y: i32, x0: i32, x1: i32, occluders: &[PhysRect], tol: i32) -> bool {
+    occluders.iter().any(|o| {
+        ((y - o.y).abs() <= tol || (y - o.bottom()).abs() <= tol) && x1 > o.x && x0 < o.right()
+    })
+}
+
+/// 세로선 `[y0, y1)`이 앞 창(`occluders`)의 왼쪽·오른쪽 모서리 `±tol`에 붙는지 판정한다.
+#[inline]
+pub(crate) fn v_line_touches_occluders(x: i32, y0: i32, y1: i32, occluders: &[PhysRect], tol: i32) -> bool {
+    occluders.iter().any(|o| {
+        ((x - o.x).abs() <= tol || (x - o.right()).abs() <= tol) && y1 > o.y && y0 < o.bottom()
+    })
+}
+
+/// 사각형이 앞 창 영역과 겹치거나 네 변 중 하나가 앞 창 모서리 `±tol`에 붙는지 판정한다(R2-CAP-2).
+pub(crate) fn rect_touches_occluders(r: PhysRect, occluders: &[PhysRect], tol: i32) -> bool {
+    occluders.iter().any(|o| r.intersect(o).is_some_and(|i| i.area() > 0))
+        || h_line_touches_occluders(r.y, r.x, r.right(), occluders, tol)
+        || h_line_touches_occluders(r.bottom(), r.x, r.right(), occluders, tol)
+        || v_line_touches_occluders(r.x, r.y, r.bottom(), occluders, tol)
+        || v_line_touches_occluders(r.right(), r.y, r.bottom(), occluders, tol)
+}
 
 #[derive(Clone, Copy)]
 struct HEdge {
@@ -39,8 +68,15 @@ pub(crate) struct BoxHit {
 }
 
 /// ROI 좌표 사각형의 경계 지지율(전체 둘레 비율 + 네 변 중 최솟값).
+#[allow(dead_code)]
 #[inline]
 pub(crate) fn rect_support_local(data: &PrepData, r: PhysRect) -> (f32, f32) {
+    rect_support_local_excluding(data, r, &[])
+}
+
+/// 앞 창 경계(`occluders` ±2 px)에 붙은 변의 경계 가중치를 0으로 하여 지지율을 잰다(R2-CAP-2).
+#[inline]
+pub(crate) fn rect_support_local_excluding(data: &PrepData, r: PhysRect, occluders: &[PhysRect]) -> (f32, f32) {
     if r.w <= 0 || r.h <= 0 {
         return (0.0, 0.0);
     }
@@ -49,10 +85,26 @@ pub(crate) fn rect_support_local(data: &PrepData, r: PhysRect) -> (f32, f32) {
     let ly0 = r.y;
     let ly1 = r.bottom();
 
-    let top = data.h_edge_count(ly0, lx0, lx1);
-    let bot = data.h_edge_count(ly1, lx0, lx1);
-    let left = data.v_edge_count(lx0, ly0, ly1);
-    let right = data.v_edge_count(lx1, ly0, ly1);
+    let top = if h_line_touches_occluders(ly0, lx0, lx1, occluders, OCCLUDER_EDGE_TOL) {
+        0
+    } else {
+        data.h_edge_count(ly0, lx0, lx1)
+    };
+    let bot = if h_line_touches_occluders(ly1, lx0, lx1, occluders, OCCLUDER_EDGE_TOL) {
+        0
+    } else {
+        data.h_edge_count(ly1, lx0, lx1)
+    };
+    let left = if v_line_touches_occluders(lx0, ly0, ly1, occluders, OCCLUDER_EDGE_TOL) {
+        0
+    } else {
+        data.v_edge_count(lx0, ly0, ly1)
+    };
+    let right = if v_line_touches_occluders(lx1, ly0, ly1, occluders, OCCLUDER_EDGE_TOL) {
+        0
+    } else {
+        data.v_edge_count(lx1, ly0, ly1)
+    };
 
     let wf = r.w as f32;
     let hf = r.h as f32;
@@ -114,12 +166,15 @@ fn push_coalesced_v(out: &mut Vec<VEdge>, cand: VEdge, prefer_outer_smaller: boo
     out.push(cand);
 }
 
-fn collect_h_above(data: &PrepData, x: i32, y: i32, limit: usize, slack: i32) -> Vec<HEdge> {
+fn collect_h_above(data: &PrepData, x: i32, y: i32, limit: usize, slack: i32, occluders: &[PhysRect]) -> Vec<HEdge> {
     let ys = &data.h_nonempty_ys;
     let pos = ys.partition_point(|&hy| hy <= y);
     let mut out = Vec::with_capacity(limit);
     for &hy in ys[..pos].iter().rev() {
         if let Some(seg) = seg_covering(data.h_row_segs(hy), x, slack) {
+            if h_line_touches_occluders(hy, seg.start as i32, seg.end as i32, occluders, OCCLUDER_EDGE_TOL) {
+                continue;
+            }
             push_coalesced_h(&mut out, HEdge { y: hy, start: seg.start as i32, end: seg.end as i32 }, true);
             if out.len() >= limit {
                 break;
@@ -129,12 +184,15 @@ fn collect_h_above(data: &PrepData, x: i32, y: i32, limit: usize, slack: i32) ->
     out
 }
 
-fn collect_h_below(data: &PrepData, x: i32, y: i32, limit: usize, slack: i32) -> Vec<HEdge> {
+fn collect_h_below(data: &PrepData, x: i32, y: i32, limit: usize, slack: i32, occluders: &[PhysRect]) -> Vec<HEdge> {
     let ys = &data.h_nonempty_ys;
     let pos = ys.partition_point(|&hy| hy <= y);
     let mut out = Vec::with_capacity(limit);
     for &hy in &ys[pos..] {
         if let Some(seg) = seg_covering(data.h_row_segs(hy), x, slack) {
+            if h_line_touches_occluders(hy, seg.start as i32, seg.end as i32, occluders, OCCLUDER_EDGE_TOL) {
+                continue;
+            }
             push_coalesced_h(&mut out, HEdge { y: hy, start: seg.start as i32, end: seg.end as i32 }, false);
             if out.len() >= limit {
                 break;
@@ -144,12 +202,15 @@ fn collect_h_below(data: &PrepData, x: i32, y: i32, limit: usize, slack: i32) ->
     out
 }
 
-fn collect_v_left(data: &PrepData, x: i32, y: i32, limit: usize, slack: i32) -> Vec<VEdge> {
+fn collect_v_left(data: &PrepData, x: i32, y: i32, limit: usize, slack: i32, occluders: &[PhysRect]) -> Vec<VEdge> {
     let xs = &data.v_nonempty_xs;
     let pos = xs.partition_point(|&vx| vx <= x);
     let mut out = Vec::with_capacity(limit);
     for &vx in xs[..pos].iter().rev() {
         if let Some(seg) = seg_covering(data.v_col_segs(vx), y, slack) {
+            if v_line_touches_occluders(vx, seg.start as i32, seg.end as i32, occluders, OCCLUDER_EDGE_TOL) {
+                continue;
+            }
             push_coalesced_v(&mut out, VEdge { x: vx, start: seg.start as i32, end: seg.end as i32 }, true);
             if out.len() >= limit {
                 break;
@@ -159,12 +220,15 @@ fn collect_v_left(data: &PrepData, x: i32, y: i32, limit: usize, slack: i32) -> 
     out
 }
 
-fn collect_v_right(data: &PrepData, x: i32, y: i32, limit: usize, slack: i32) -> Vec<VEdge> {
+fn collect_v_right(data: &PrepData, x: i32, y: i32, limit: usize, slack: i32, occluders: &[PhysRect]) -> Vec<VEdge> {
     let xs = &data.v_nonempty_xs;
     let pos = xs.partition_point(|&vx| vx <= x);
     let mut out = Vec::with_capacity(limit);
     for &vx in &xs[pos..] {
         if let Some(seg) = seg_covering(data.v_col_segs(vx), y, slack) {
+            if v_line_touches_occluders(vx, seg.start as i32, seg.end as i32, occluders, OCCLUDER_EDGE_TOL) {
+                continue;
+            }
             push_coalesced_v(&mut out, VEdge { x: vx, start: seg.start as i32, end: seg.end as i32 }, false);
             if out.len() >= limit {
                 break;
@@ -174,8 +238,16 @@ fn collect_v_right(data: &PrepData, x: i32, y: i32, limit: usize, slack: i32) ->
     out
 }
 
-/// `[lo, hi]` 범위에서 `ly0..ly1` 구간 세로 경계 화소가 가장 많은 열을 찾는다(동점이면 바깥쪽).
-fn best_v_in_range(data: &PrepData, lo: i32, hi: i32, ly0: i32, ly1: i32, prefer_smaller: bool) -> Option<(i32, u32)> {
+/// `[lo, hi]` 범위에서 `ly0..ly1` 구간 세로 경계 화소가 가장 많은 열을 찾는다(동점이면 바깥쪽, 앞 창 경계 제외).
+fn best_v_in_range(
+    data: &PrepData,
+    lo: i32,
+    hi: i32,
+    ly0: i32,
+    ly1: i32,
+    prefer_smaller: bool,
+    occluders: &[PhysRect],
+) -> Option<(i32, u32)> {
     let a = lo.max(0);
     let b = hi.min(data.rw as i32);
     if a > b || ly1 <= ly0 {
@@ -184,6 +256,9 @@ fn best_v_in_range(data: &PrepData, lo: i32, hi: i32, ly0: i32, ly1: i32, prefer
     let mut best_x = a;
     let mut best_c = 0u32;
     for lx in a..=b {
+        if v_line_touches_occluders(lx, ly0, ly1, occluders, OCCLUDER_EDGE_TOL) {
+            continue;
+        }
         let c = data.v_edge_count(lx, ly0, ly1);
         let better = c > best_c || (c == best_c && c > 0 && (if prefer_smaller { lx < best_x } else { lx > best_x }));
         if better {
@@ -194,8 +269,16 @@ fn best_v_in_range(data: &PrepData, lo: i32, hi: i32, ly0: i32, ly1: i32, prefer
     (best_c > 0).then_some((best_x, best_c))
 }
 
-/// `[lo, hi]` 범위에서 `lx0..lx1` 구간 가로 경계 화소가 가장 많은 행을 찾는다(동점이면 바깥쪽).
-fn best_h_in_range(data: &PrepData, lo: i32, hi: i32, lx0: i32, lx1: i32, prefer_smaller: bool) -> Option<(i32, u32)> {
+/// `[lo, hi]` 범위에서 `lx0..lx1` 구간 가로 경계 화소가 가장 많은 행을 찾는다(동점이면 바깥쪽, 앞 창 경계 제외).
+fn best_h_in_range(
+    data: &PrepData,
+    lo: i32,
+    hi: i32,
+    lx0: i32,
+    lx1: i32,
+    prefer_smaller: bool,
+    occluders: &[PhysRect],
+) -> Option<(i32, u32)> {
     let a = lo.max(0);
     let b = hi.min(data.rh as i32);
     if a > b || lx1 <= lx0 {
@@ -204,6 +287,9 @@ fn best_h_in_range(data: &PrepData, lo: i32, hi: i32, lx0: i32, lx1: i32, prefer
     let mut best_y = a;
     let mut best_c = 0u32;
     for ly in a..=b {
+        if h_line_touches_occluders(ly, lx0, lx1, occluders, OCCLUDER_EDGE_TOL) {
+            continue;
+        }
         let c = data.h_edge_count(ly, lx0, lx1);
         let better = c > best_c || (c == best_c && c > 0 && (if prefer_smaller { ly < best_y } else { ly > best_y }));
         if better {
@@ -264,28 +350,60 @@ fn encloses(outer: PhysRect, inner: PhysRect) -> bool {
         && outer.area() > inner.area()
 }
 
+/// 사다리 후보 목록에서 `IoU ≥ DEDUP_IOU(0.90)` 또는 ±2 px 겹침을 합쳐 중복을 없앤다(R2-CAP-4).
+pub(crate) fn dedup_hits(hits: Vec<BoxHit>) -> Vec<BoxHit> {
+    let mut out: Vec<BoxHit> = Vec::with_capacity(hits.len());
+    for h in hits {
+        if let Some(existing) = out.iter_mut().find(|c| near_same(c.rect, h.rect) || iou_rect(c.rect, h.rect) >= DEDUP_IOU) {
+            let better = h.closure > existing.closure
+                || (h.closure == existing.closure && h.support > existing.support + 0.01)
+                || (h.closure == existing.closure
+                    && (h.support - existing.support).abs() <= 0.01
+                    && h.rect.area() > existing.rect.area());
+            if better {
+                *existing = h;
+            }
+        } else {
+            out.push(h);
+        }
+    }
+    out.sort_by_key(|c| c.rect.area());
+    out
+}
+
 /// ROI 좌표 `(lx, ly)`에서 상자 사다리(작은 것 → 큰 것, 최대 5개)를 찾는다.
+#[allow(dead_code)]
 pub(crate) fn find_box_ladder(data: &PrepData, lx: i32, ly: i32) -> Vec<BoxHit> {
+    find_box_ladder_excluding(data, lx, ly, &[])
+}
+
+/// 앞 창 경계(`occluders` ±2 px)를 제외하고 상자 사다리를 찾는다(R2-CAP-2·4).
+pub(crate) fn find_box_ladder_excluding(
+    data: &PrepData,
+    lx: i32,
+    ly: i32,
+    occluders: &[PhysRect],
+) -> Vec<BoxHit> {
     if data.is_empty() || lx < 0 || ly < 0 || lx >= data.rw as i32 || ly >= data.rh as i32 {
         return Vec::new();
     }
     let pt = PhysPoint { x: lx, y: ly };
 
-    let mut tops = collect_h_above(data, lx, ly, MAX_DIR_EDGES, 0);
-    let mut bots = collect_h_below(data, lx, ly, MAX_DIR_EDGES, 0);
-    let mut lefts = collect_v_left(data, lx, ly, MAX_DIR_EDGES, 0);
-    let mut rights = collect_v_right(data, lx, ly, MAX_DIR_EDGES, 0);
+    let mut tops = collect_h_above(data, lx, ly, MAX_DIR_EDGES, 0, occluders);
+    let mut bots = collect_h_below(data, lx, ly, MAX_DIR_EDGES, 0, occluders);
+    let mut lefts = collect_v_left(data, lx, ly, MAX_DIR_EDGES, 0, occluders);
+    let mut rights = collect_v_right(data, lx, ly, MAX_DIR_EDGES, 0, occluders);
 
     // 둥근 모서리 근처 보강: 커서가 모서리 굴곡 바로 옆에 있을 때 반대 축 중앙에서 경계를 보충
     if let (Some(l), Some(r)) = (lefts.first().copied(), rights.first().copied()) {
         let mid_x = (l.x + r.x) / 2;
         if mid_x != lx {
-            for e in collect_h_above(data, mid_x, ly, 4, 0) {
+            for e in collect_h_above(data, mid_x, ly, 4, 0, occluders) {
                 if e.start - CORNER_SEARCH <= lx && lx < e.end + CORNER_SEARCH && !tops.iter().any(|t| (t.y - e.y).abs() <= 1) {
                     tops.push(e);
                 }
             }
-            for e in collect_h_below(data, mid_x, ly, 4, 0) {
+            for e in collect_h_below(data, mid_x, ly, 4, 0, occluders) {
                 if e.start - CORNER_SEARCH <= lx && lx < e.end + CORNER_SEARCH && !bots.iter().any(|b| (b.y - e.y).abs() <= 1) {
                     bots.push(e);
                 }
@@ -297,12 +415,12 @@ pub(crate) fn find_box_ladder(data: &PrepData, lx: i32, ly: i32) -> Vec<BoxHit> 
     if let (Some(t), Some(b)) = (tops.first().copied(), bots.first().copied()) {
         let mid_y = (t.y + b.y) / 2;
         if mid_y != ly {
-            for e in collect_v_left(data, lx, mid_y, 4, 0) {
+            for e in collect_v_left(data, lx, mid_y, 4, 0, occluders) {
                 if e.start - CORNER_SEARCH <= ly && ly < e.end + CORNER_SEARCH && !lefts.iter().any(|l| (l.x - e.x).abs() <= 1) {
                     lefts.push(e);
                 }
             }
-            for e in collect_v_right(data, lx, mid_y, 4, 0) {
+            for e in collect_v_right(data, lx, mid_y, 4, 0, occluders) {
                 if e.start - CORNER_SEARCH <= ly && ly < e.end + CORNER_SEARCH && !rights.iter().any(|r| (r.x - e.x).abs() <= 1) {
                     rights.push(e);
                 }
@@ -317,12 +435,15 @@ pub(crate) fn find_box_ladder(data: &PrepData, lx: i32, ly: i32) -> Vec<BoxHit> 
         if rect.w < 4 || rect.h < 4 || rect.area() < 16 || !rect.contains(pt) {
             return;
         }
-        let (sup, min_side) = rect_support_local(data, rect);
+        if !occluders.is_empty() && rect_touches_occluders(rect, occluders, OCCLUDER_EDGE_TOL) {
+            return;
+        }
+        let (sup, min_side) = rect_support_local_excluding(data, rect, occluders);
         if sup < MIN_SUPPORT || min_side < MIN_SIDE_SUPPORT {
             return;
         }
         let (closure, h_closed) = closure_score(data, rect);
-        if let Some(existing) = raw.iter_mut().find(|c| near_same(c.rect, rect) || iou_rect(c.rect, rect) >= 0.94) {
+        if let Some(existing) = raw.iter_mut().find(|c| near_same(c.rect, rect) || iou_rect(c.rect, rect) >= DEDUP_IOU) {
             let better = closure > existing.closure
                 || (closure == existing.closure && sup > existing.support + 0.01)
                 || (closure == existing.closure && (sup - existing.support).abs() <= 0.01 && rect.area() > existing.rect.area());
@@ -348,8 +469,8 @@ pub(crate) fn find_box_ladder(data: &PrepData, lx: i32, ly: i32) -> Vec<BoxHit> 
             if x1 - x0 < 4 || lx < x0 - CORNER_SEARCH || lx >= x1 + CORNER_SEARCH {
                 continue;
             }
-            let left_best = best_v_in_range(data, x0 - CORNER_SEARCH, x0 + 2, t.y, b.y, true);
-            let right_best = best_v_in_range(data, x1 - 2, x1 + CORNER_SEARCH, t.y, b.y, false);
+            let left_best = best_v_in_range(data, x0 - CORNER_SEARCH, x0 + 2, t.y, b.y, true, occluders);
+            let right_best = best_v_in_range(data, x1 - 2, x1 + CORNER_SEARCH, t.y, b.y, false, occluders);
             if let (Some((xl, _)), Some((xr, _))) = (left_best, right_best) {
                 try_rect(PhysRect::from_edges(xl, t.y, xr, b.y));
                 // 표 전체 포착: 행의 양 끝 세로 경계(xl, xr)가 위·아래로 이어진 전체 높이 확인
@@ -358,8 +479,8 @@ pub(crate) fn find_box_ladder(data: &PrepData, lx: i32, ly: i32) -> Vec<BoxHit> 
                     let ty0 = (vl.start as i32).max(vr.start as i32);
                     let ty1 = (vl.end as i32).min(vr.end as i32);
                     if let (Some((yt, _)), Some((yb, _))) = (
-                        best_h_in_range(data, ty0 - CORNER_SEARCH, ty0 + 2, xl, xr, true),
-                        best_h_in_range(data, ty1 - 2, ty1 + CORNER_SEARCH, xl, xr, false),
+                        best_h_in_range(data, ty0 - CORNER_SEARCH, ty0 + 2, xl, xr, true, occluders),
+                        best_h_in_range(data, ty1 - 2, ty1 + CORNER_SEARCH, xl, xr, false, occluders),
                     ) {
                         try_rect(PhysRect::from_edges(xl, yt, xr, yb));
                     }
@@ -382,8 +503,8 @@ pub(crate) fn find_box_ladder(data: &PrepData, lx: i32, ly: i32) -> Vec<BoxHit> 
             if y1 - y0 < 4 || ly < y0 - CORNER_SEARCH || ly >= y1 + CORNER_SEARCH {
                 continue;
             }
-            let top_best = best_h_in_range(data, y0 - CORNER_SEARCH, y0 + 2, l.x, r.x, true);
-            let bot_best = best_h_in_range(data, y1 - 2, y1 + CORNER_SEARCH, l.x, r.x, false);
+            let top_best = best_h_in_range(data, y0 - CORNER_SEARCH, y0 + 2, l.x, r.x, true, occluders);
+            let bot_best = best_h_in_range(data, y1 - 2, y1 + CORNER_SEARCH, l.x, r.x, false, occluders);
             if let (Some((yt, _)), Some((yb, _))) = (top_best, bot_best) {
                 try_rect(PhysRect::from_edges(l.x, yt, r.x, yb));
                 let mid_x = (l.x + r.x) / 2;
@@ -391,8 +512,8 @@ pub(crate) fn find_box_ladder(data: &PrepData, lx: i32, ly: i32) -> Vec<BoxHit> 
                     let tx0 = (ht.start as i32).max(hb.start as i32);
                     let tx1 = (ht.end as i32).min(hb.end as i32);
                     if let (Some((xl, _)), Some((xr, _))) = (
-                        best_v_in_range(data, tx0 - CORNER_SEARCH, tx0 + 2, yt, yb, true),
-                        best_v_in_range(data, tx1 - 2, tx1 + CORNER_SEARCH, yt, yb, false),
+                        best_v_in_range(data, tx0 - CORNER_SEARCH, tx0 + 2, yt, yb, true, occluders),
+                        best_v_in_range(data, tx1 - 2, tx1 + CORNER_SEARCH, yt, yb, false, occluders),
                     ) {
                         try_rect(PhysRect::from_edges(xl, yt, xr, yb));
                     }
@@ -452,7 +573,7 @@ pub(crate) fn find_box_ladder(data: &PrepData, lx: i32, ly: i32) -> Vec<BoxHit> 
         let enclosing: Vec<BoxHit> = raw
             .iter()
             .copied()
-            .filter(|c| encloses(c.rect, cur.rect) && !near_same(c.rect, cur.rect) && iou_rect(c.rect, cur.rect) < 0.92)
+            .filter(|c| encloses(c.rect, cur.rect) && !near_same(c.rect, cur.rect) && iou_rect(c.rect, cur.rect) < DEDUP_IOU)
             .collect();
         if enclosing.is_empty() {
             break;
@@ -491,5 +612,47 @@ pub(crate) fn find_box_ladder(data: &PrepData, lx: i32, ly: i32) -> Vec<BoxHit> 
         ladder.push(next);
     }
 
-    ladder
+    dedup_hits(ladder)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn 사다리_겹침_정리는_iou_090_이상_중복을_합친다() {
+        // 300×200 vs 288×188 → IoU ≈ 0.9024 >= 0.90
+        let outer = BoxHit {
+            rect: PhysRect::new(100, 100, 300, 200),
+            support: 0.95,
+            closure: 4,
+            h_closed: true,
+        };
+        let inner = BoxHit {
+            rect: PhysRect::new(106, 106, 288, 188),
+            support: 0.85,
+            closure: 3,
+            h_closed: true,
+        };
+        let distinct = BoxHit {
+            rect: PhysRect::new(140, 130, 160, 100),
+            support: 0.90,
+            closure: 4,
+            h_closed: true,
+        };
+        let deduped = dedup_hits(vec![distinct, inner, outer]);
+        assert_eq!(deduped.len(), 2, "0.9024 겹침은 하나로 합친다: {:?}", deduped.iter().map(|h| h.rect).collect::<Vec<_>>());
+        assert_eq!(deduped[0].rect, distinct.rect);
+        assert_eq!(deduped[1].rect, outer.rect);
+        assert!(iou_rect(deduped[0].rect, deduped[1].rect) < DEDUP_IOU);
+    }
+
+    #[test]
+    fn 앞_창_경계_판별은_2px_이내만_걸린다() {
+        let occ = [PhysRect::new(0, 0, 800, 160)];
+        assert!(h_line_touches_occluders(160, 100, 500, &occ, OCCLUDER_EDGE_TOL));
+        assert!(h_line_touches_occluders(162, 100, 500, &occ, OCCLUDER_EDGE_TOL));
+        assert!(!h_line_touches_occluders(163, 100, 500, &occ, OCCLUDER_EDGE_TOL));
+        assert!(!h_line_touches_occluders(160, 850, 950, &occ, OCCLUDER_EDGE_TOL));
+    }
 }

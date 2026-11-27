@@ -20,6 +20,10 @@ pub const MIN_SUPPORT: f32 = 0.6;
 pub const FLAT_TOLERANCE: u8 = 6;
 /// 평탄 영역 탐색 최대 화소 예산.
 pub const FLAT_PIXEL_BUDGET: usize = 300_000;
+/// 사다리·후보 합침 IoU 문턱(R2-CAP-4).
+pub const LADDER_MERGE_IOU: f64 = 0.90;
+/// 앞 창 경계 제외 허용 오차(±2 px, R2-CAP-2).
+pub const OCCLUDER_EDGE_TOL: i32 = 2;
 
 /// V 후보 종류.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -84,6 +88,11 @@ impl Prepared {
     /// 커서 `(x, y)`에서 V 후보(상자 사다리 작은 것→큰 것 + 평탄 영역)를 찾는다.
     /// 지지율 `< 0.6`이거나 커서를 담지 않는 후보는 버린다.
     pub fn query(&self, x: i32, y: i32) -> Vec<VCandidate> {
+        self.query_with_occluders(x, y, &[])
+    }
+
+    /// 앞 창(`occluders`)의 경계 ±2 px에 붙은 V 선·후보를 버리고 사다리 IoU ≥ 0.90 겹침을 합쳐 찾는다(R2-CAP-2·4).
+    pub fn query_with_occluders(&self, x: i32, y: i32, occluders: &[PhysRect]) -> Vec<VCandidate> {
         if self.data.is_empty() {
             return Vec::new();
         }
@@ -93,7 +102,8 @@ impl Prepared {
             return Vec::new();
         }
 
-        let boxes = ladder::find_box_ladder(&self.data, lx, ly);
+        let local_occ: Vec<PhysRect> = occluders.iter().map(|&o| self.to_local_rect(o)).collect();
+        let boxes = ladder::find_box_ladder_excluding(&self.data, lx, ly, &local_occ);
         let mut out: Vec<VCandidate> = Vec::with_capacity(boxes.len() + 1);
         let cursor = PhysPoint { x, y };
 
@@ -105,12 +115,14 @@ impl Prepared {
         }
 
         if let Some(flat_local) = flat::find_flat_region(&self.data, lx, ly) {
-            let g = self.to_global_rect(flat_local);
-            let sup = self.support(g);
-            if g.contains(cursor) && sup >= MIN_SUPPORT {
-                let dup = out.iter().any(|c| rect_iou(c.rect, g) >= 0.92);
-                if !dup {
-                    out.push(VCandidate { rect: g, kind: VKind::Flat, support: sup });
+            if local_occ.is_empty() || !ladder::rect_touches_occluders(flat_local, &local_occ, OCCLUDER_EDGE_TOL) {
+                let g = self.to_global_rect(flat_local);
+                let sup = self.support_with_occluders(g, occluders);
+                if g.contains(cursor) && sup >= MIN_SUPPORT {
+                    let dup = out.iter().any(|c| rect_iou(c.rect, g) >= LADDER_MERGE_IOU);
+                    if !dup {
+                        out.push(VCandidate { rect: g, kind: VKind::Flat, support: sup });
+                    }
                 }
             }
         }
@@ -121,106 +133,121 @@ impl Prepared {
                 .cmp(&b.rect.area())
                 .then_with(|| (a.kind == VKind::Flat).cmp(&(b.kind == VKind::Flat)))
         });
-        out
+
+        let mut deduped: Vec<VCandidate> = Vec::with_capacity(out.len());
+        for cand in out {
+            if let Some(existing) = deduped.iter_mut().find(|c| rect_iou(c.rect, cand.rect) >= LADDER_MERGE_IOU) {
+                let better = (cand.kind == VKind::Box && existing.kind == VKind::Flat)
+                    || (cand.kind == existing.kind && cand.support > existing.support + 0.01);
+                if better {
+                    *existing = cand;
+                }
+            } else {
+                deduped.push(cand);
+            }
+        }
+        deduped
     }
 
     /// 네 변 화소 중 경계 화소 비율(누적합으로 O(1)).
     pub fn support(&self, r: PhysRect) -> f32 {
+        self.support_with_occluders(r, &[])
+    }
+
+    /// 앞 창 경계(±2 px)에 붙은 변은 경계 가중치를 0으로 하여 지지율을 잰다(R2-CAP-2).
+    pub fn support_with_occluders(&self, r: PhysRect, occluders: &[PhysRect]) -> f32 {
         if self.data.is_empty() || r.w <= 0 || r.h <= 0 {
             return 0.0;
         }
         let local = self.to_local_rect(r);
-        let (sup, _) = ladder::rect_support_local(&self.data, local);
+        let local_occ: Vec<PhysRect> = occluders.iter().map(|&o| self.to_local_rect(o)).collect();
+        let (sup, _) = ladder::rect_support_local_excluding(&self.data, local, &local_occ);
         sup
     }
 
     /// 각 변을 `±tol` 안의 곧은 경계(그 변 지지율 `≥ 0.6`)로 붙인다(경계 맞춤 08 §4.4-3).
     pub fn snap(&self, r: PhysRect, tol: i32) -> PhysRect {
+        self.snap_with_occluders(r, tol, &[])
+    }
+
+    /// 앞 창 경계(`occluders` ±2 px)에는 붙이지 않고 `±tol` 안의 곧은 경계로 맞춘다(R2-CAP-2).
+    pub fn snap_with_occluders(&self, r: PhysRect, tol: i32, occluders: &[PhysRect]) -> PhysRect {
         if self.data.is_empty() || r.w <= 0 || r.h <= 0 || tol <= 0 {
             return r;
         }
         let local = self.to_local_rect(r);
+        let local_occ: Vec<PhysRect> = occluders.iter().map(|&o| self.to_local_rect(o)).collect();
         let lx0 = local.x;
         let lx1 = local.right();
         let ly0 = local.y;
         let ly1 = local.bottom();
 
-        let snap_h = |orig_y: i32, span_x0: i32, span_x1: i32| -> i32 {
-            let span = (span_x1 - span_x0).max(0);
+        let snap_axis = |orig: i32, span0: i32, span1: i32, horizontal: bool| -> i32 {
+            let span = (span1 - span0).max(0);
             if span <= 0 {
-                return orig_y;
+                return orig;
             }
-            let y_lo = (orig_y - tol).max(0);
-            let y_hi = (orig_y + tol).min(self.data.rh as i32);
-            let mut best_y = orig_y;
+            let max_coord = if horizontal { self.data.rh } else { self.data.rw } as i32;
+            let lo = (orig - tol).max(0);
+            let hi = (orig + tol).min(max_coord);
+            let mut best = orig;
             let mut best_sup = -1.0f32;
             let mut best_dist = i32::MAX;
-            for cy in y_lo..=y_hi {
-                let hits = self.data.h_edge_count(cy, span_x0, span_x1);
+            for c in lo..=hi {
+                let touches_occ = !local_occ.is_empty()
+                    && if horizontal {
+                        ladder::h_line_touches_occluders(c, span0, span1, &local_occ, OCCLUDER_EDGE_TOL)
+                    } else {
+                        ladder::v_line_touches_occluders(c, span0, span1, &local_occ, OCCLUDER_EDGE_TOL)
+                    };
+                if touches_occ {
+                    continue;
+                }
+                let hits = if horizontal {
+                    self.data.h_edge_count(c, span0, span1)
+                } else {
+                    self.data.v_edge_count(c, span0, span1)
+                };
                 let sup = hits as f32 / span as f32;
                 if sup < MIN_SUPPORT {
                     continue;
                 }
-                if span >= MIN_SEGMENT_LEN && !has_h_seg_overlap(&self.data, cy, span_x0, span_x1) {
+                let seg_ok = span < MIN_SEGMENT_LEN
+                    || if horizontal {
+                        has_h_seg_overlap(&self.data, c, span0, span1)
+                    } else {
+                        has_v_seg_overlap(&self.data, c, span0, span1)
+                    };
+                if !seg_ok {
                     continue;
                 }
-                let dist = (cy - orig_y).abs();
+                let dist = (c - orig).abs();
                 let better = sup > best_sup + 0.001 || ((sup - best_sup).abs() <= 0.001 && dist < best_dist);
                 if better {
                     best_sup = sup;
                     best_dist = dist;
-                    best_y = cy;
+                    best = c;
                 }
             }
-            best_y
+            best
         };
 
-        let snap_v = |orig_x: i32, span_y0: i32, span_y1: i32| -> i32 {
-            let span = (span_y1 - span_y0).max(0);
-            if span <= 0 {
-                return orig_x;
-            }
-            let x_lo = (orig_x - tol).max(0);
-            let x_hi = (orig_x + tol).min(self.data.rw as i32);
-            let mut best_x = orig_x;
-            let mut best_sup = -1.0f32;
-            let mut best_dist = i32::MAX;
-            for cx in x_lo..=x_hi {
-                let hits = self.data.v_edge_count(cx, span_y0, span_y1);
-                let sup = hits as f32 / span as f32;
-                if sup < MIN_SUPPORT {
-                    continue;
-                }
-                if span >= MIN_SEGMENT_LEN && !has_v_seg_overlap(&self.data, cx, span_y0, span_y1) {
-                    continue;
-                }
-                let dist = (cx - orig_x).abs();
-                let better = sup > best_sup + 0.001 || ((sup - best_sup).abs() <= 0.001 && dist < best_dist);
-                if better {
-                    best_sup = sup;
-                    best_dist = dist;
-                    best_x = cx;
-                }
-            }
-            best_x
-        };
-
-        let mut nt = snap_h(ly0, lx0, lx1);
-        let mut nb = snap_h(ly1, lx0, lx1);
+        let mut nt = snap_axis(ly0, lx0, lx1, true);
+        let mut nb = snap_axis(ly1, lx0, lx1, true);
         if nb <= nt {
             nt = ly0;
             nb = ly1;
         }
-        let mut nl = snap_v(lx0, nt, nb);
-        let mut nr = snap_v(lx1, nt, nb);
+        let mut nl = snap_axis(lx0, nt, nb, false);
+        let mut nr = snap_axis(lx1, nt, nb, false);
         if nr <= nl {
             nl = lx0;
             nr = lx1;
         }
         // 가로 변이 세로 보정 뒤 더 정확히 붙을 수 있으면 1회 다듬기
         if nl != lx0 || nr != lx1 {
-            let rt = snap_h(ly0, nl, nr);
-            let rb = snap_h(ly1, nl, nr);
+            let rt = snap_axis(ly0, nl, nr, true);
+            let rb = snap_axis(ly1, nl, nr, true);
             if rb > rt {
                 nt = rt;
                 nb = rb;
@@ -228,6 +255,16 @@ impl Prepared {
         }
 
         self.to_global_rect(PhysRect::from_edges(nl, nt, nr, nb))
+    }
+
+    /// 이미지 요소(`r`, 가상 화면 물리 px) 안에서 여백·그림자를 걷어내고 실제 그림 가장자리를 다시 잰다(R2-CAP-3).
+    pub fn refine_image(&self, r: PhysRect) -> PhysRect {
+        if self.data.is_empty() || r.w <= 0 || r.h <= 0 {
+            return r;
+        }
+        let local = self.to_local_rect(r);
+        let refined = flat::refine_image_bounds(&self.data, local);
+        self.to_global_rect(refined)
     }
 
     /// `(x, y)`에서 반경 `radius` 안의 곧은 세로 경계 `x`들과 가로 경계 `y`들(정렬·중복 제거, 드래그 자석용).
