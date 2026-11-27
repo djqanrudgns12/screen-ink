@@ -13,6 +13,7 @@
 use crate::coords::{Placed, RectF};
 use crate::window::{screen_frame, ALL_SPACES, OVERLAY_LEVEL};
 use block2::RcBlock;
+use ink_app::Frame;
 use ink_domain::geometry::PhysRect;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObject, ProtocolObject};
@@ -47,6 +48,14 @@ extern "C" {
 }
 #[link(name = "CoreVideo", kind = "framework")]
 extern "C" {
+    fn CVPixelBufferGetWidth(pb: CFTypeRef) -> usize;
+    fn CVPixelBufferGetHeight(pb: CFTypeRef) -> usize;
+    fn CVPixelBufferGetPixelFormatType(pb: CFTypeRef) -> u32;
+    fn CVPixelBufferGetBytesPerRow(pb: CFTypeRef) -> usize;
+    fn CVPixelBufferGetDataSize(pb: CFTypeRef) -> usize;
+    fn CVPixelBufferLockBaseAddress(pb: CFTypeRef, flags: u64) -> i32;
+    fn CVPixelBufferUnlockBaseAddress(pb: CFTypeRef, flags: u64) -> i32;
+    fn CVPixelBufferGetBaseAddress(pb: CFTypeRef) -> *const u8;
     fn CVPixelBufferGetIOSurface(pb: CFTypeRef) -> CFTypeRef;
 }
 #[link(name = "CoreFoundation", kind = "framework")]
@@ -99,6 +108,32 @@ struct Panel {
 }
 
 impl Panel {
+    /// 층의 확대 사각형과 커서 층을 합성하기 전의 BGRA 버퍼를 판서에 넘긴다.
+    fn original_frame(&self, screen: &Placed) -> Option<Frame> {
+        let pb = self.current?;
+        // SAFETY: 패널이 붙잡은 완전한 표본이다. 메인 스레드에서 빌린 동안 교체될 수 없다.
+        unsafe {
+            let (w, h) = (CVPixelBufferGetWidth(pb), CVPixelBufferGetHeight(pb));
+            if w != screen.phys.w as usize || h != screen.phys.h as usize || CVPixelBufferGetPixelFormatType(pb) != u32::from_be_bytes(*b"BGRA") {
+                return None;
+            }
+            const READ_ONLY: u64 = 1;
+            if CVPixelBufferLockBaseAddress(pb, READ_ONLY) != 0 {
+                return None;
+            }
+            let base = CVPixelBufferGetBaseAddress(pb);
+            let size = CVPixelBufferGetDataSize(pb);
+            // 잠근 동안에만 주소를 빌린다. 판서 세션은 자체 사본을 쥔다.
+            let bgra = if base.is_null() || size > isize::MAX as usize {
+                None
+            } else {
+                copy_rows(std::slice::from_raw_parts(base, size), w, h, CVPixelBufferGetBytesPerRow(pb))
+            };
+            CVPixelBufferUnlockBaseAddress(pb, READ_ONLY);
+            Some(Frame { monitor_id: screen.id, width: w as u32, height: h as u32, bgra: Arc::new(bgra?) })
+        }
+    }
+
     /// 프레임 하나를 붙이고 지난 것을 놓는다(None = 비우기). 암묵 애니메이션 없이.
     fn set_frame(&mut self, pb: Option<CFTypeRef>) {
         quiet(|| {
@@ -113,6 +148,22 @@ impl Panel {
             unsafe { CFRelease(old) };
         }
     }
+}
+
+/// 행 끝 여백을 건너뛰고 알파를 불투명으로 맞춘다. 줄 순서와 원본 색은 유지한다.
+fn copy_rows(src: &[u8], w: usize, h: usize, stride: usize) -> Option<Vec<u8>> {
+    let bytes = w.checked_mul(4)?;
+    if bytes == 0 || h == 0 || stride < bytes || src.len() < stride.checked_mul(h - 1)?.checked_add(bytes)? {
+        return None;
+    }
+    let mut out = Vec::with_capacity(bytes.checked_mul(h)?);
+    for row in src.chunks(stride).take(h) {
+        out.extend_from_slice(&row[..bytes]);
+    }
+    for pixel in out.chunks_exact_mut(4) {
+        pixel[3] = 255;
+    }
+    Some(out)
 }
 
 thread_local! {
@@ -164,6 +215,7 @@ fn make_panel(mtm: MainThreadMarker) -> Panel {
 /// SCK 표본 큐에서 프레임을 받는다. 첫 프레임은 `start`가 기다리는 채널로, 그다음은 메인 대기열로 붙인다.
 /// 세대가 바뀌면(멈춤) 버린다.
 struct Sink {
+    excludes_self: bool,
     gen: Arc<AtomicU64>,
     mine: u64,
     first: Mutex<Option<mpsc::Sender<Hold<CFTypeRef>>>>,
@@ -370,7 +422,7 @@ impl CursorState {
 
 struct Live {
     stream: Hold<Retained<SCStream>>,
-    _output: Hold<Retained<ZoomOutput>>,
+    output: Hold<Retained<ZoomOutput>>,
     monitor: PhysRect,
     placed: Placed,
     cursor: CursorState,
@@ -403,7 +455,7 @@ impl MacMagnifier {
     fn open_stream(&self, monitor: PhysRect, display: u32, mine: u64, first: mpsc::Sender<Hold<CFTypeRef>>) -> Result<(Retained<SCStream>, Retained<ZoomOutput>), String> {
         let display = crate::capture::shareable_display(display)?;
         let me = crate::capture::shareable_me();
-        let output = ZoomOutput::new(Sink { gen: self.gen.clone(), mine, first: Mutex::new(Some(first)) });
+        let output = ZoomOutput::new(Sink { excludes_self: me.is_some(), gen: self.gen.clone(), mine, first: Mutex::new(Some(first)) });
         // SAFETY: 필터·설정·스트림은 만든 뒤 SCK에 넘긴다. 표본 큐는 직렬.
         let stream = unsafe {
             let apps: Retained<NSArray<SCRunningApplication>> = match &me {
@@ -412,6 +464,7 @@ impl MacMagnifier {
             };
             let filter = SCContentFilter::initWithDisplay_excludingApplications_exceptingWindows(SCContentFilter::alloc(), &display, &apps, &NSArray::new());
             let config = SCStreamConfiguration::new();
+            config.setCaptureResolution(objc2_screen_capture_kit::SCCaptureResolutionType::Best);
             config.setWidth(monitor.w.max(2) as usize);
             config.setHeight(monitor.h.max(2) as usize);
             config.setMinimumFrameInterval(CMTime::new(1, 60));
@@ -479,7 +532,7 @@ impl ink_app::Magnifier for MacMagnifier {
             if cursor.allowed { "on" } else { "off" },
             if wheel.is_some() { "on" } else { "off" }
         );
-        self.live = Some(Live { stream: Hold(stream), _output: Hold(output), monitor, placed, cursor, _wheel: wheel });
+        self.live = Some(Live { stream: Hold(stream), output: Hold(output), monitor, placed, cursor, _wheel: wheel });
         Ok(())
     }
 
@@ -493,6 +546,14 @@ impl ink_app::Magnifier for MacMagnifier {
         });
         live.cursor.sync(&live.placed, live.monitor, source, scale);
         Ok(())
+    }
+
+    fn original_frame(&self) -> Option<Frame> {
+        let live = self.live.as_ref()?;
+        if !live.output.0.ivars().excludes_self || crate::refresh_space().screen_of(live.monitor) != Some(&live.placed) {
+            return None;
+        }
+        PANEL.with_borrow(|p| p.as_ref()?.original_frame(&live.placed))
     }
 
     fn stop(&mut self) {
@@ -526,6 +587,14 @@ impl Drop for MacMagnifier {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn 판서_원본은_행_여백을_빼고_색을_보존하며_알파를_불투명하게_한다() {
+        let rows = [1, 2, 3, 0, 4, 5, 6, 7, 99, 99, 8, 9, 10, 11, 12, 13, 14, 15];
+        assert_eq!(copy_rows(&rows, 2, 2, 10).unwrap(), [1, 2, 3, 255, 4, 5, 6, 255, 8, 9, 10, 255, 12, 13, 14, 255]);
+        assert!(copy_rows(&rows[..17], 2, 2, 10).is_none());
+        assert!(copy_rows(&rows, 2, 2, 7).is_none());
+    }
 
     #[test]
     fn 원본_사각형은_아래에서_잰_정규화_사각형() {

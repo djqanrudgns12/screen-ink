@@ -282,8 +282,8 @@ pub fn entry_line(board: bool, total_ms: f64, capture_ms: f64, show_ms: f64, pai
 pub enum DrawSource {
     /// 판서 키·트레이(커서 모니터를 새로 찍는다) — 줄 모양은 예전 그대로
     Key,
-    /// 실시간 확대 중 Alt+1(5.3) — `hide_ms` = 돋보기 숨김 + 화면 갱신 한 번 기다림
-    Zoom { hide_ms: f64 },
+    /// 실시간 확대 중 Alt+1. 숨김 시간에는 새로 찍을 때만 화면 갱신 대기가 포함된다.
+    Zoom { hide_ms: f64, reused: bool },
     /// 결과 섬 [판서로](3e-handoff) — `reused` = 방금 고른 범위의 정지 프레임을 다시 씀(새로 찍지 않음)
     Capture { reused: bool },
     /// 트레이에서 고른 캡처. 현재 화면을 새로 찍지 않는다.
@@ -299,7 +299,8 @@ pub fn entry_line_from(source: DrawSource, scale: f64, board: bool, total_ms: f6
     let from = match source {
         DrawSource::Key => String::new(),
         DrawSource::Recent { .. } => format!("from recent, scale {s}, "),
-        DrawSource::Zoom { hide_ms } => format!("from zoom, scale {s}, hide {hide_ms:.0}, "),
+        DrawSource::Zoom { hide_ms, reused: true } => format!("from zoom, scale {s}, frame reused, hide {hide_ms:.0}, "),
+        DrawSource::Zoom { hide_ms, reused: false } => format!("from zoom, scale {s}, hide {hide_ms:.0}, "),
         DrawSource::Capture { reused: true } => format!("from capture, scale {s}, frame reused, "),
         DrawSource::Capture { reused: false } => format!("from capture, scale {s}, "),
     };
@@ -659,7 +660,7 @@ impl InkService {
         self.prepare_overlays();
         let layout = self.prepared.clone().unwrap_or_default();
         let cursor = self.ports.monitors.cursor();
-        let DrawStart { monitor_id, mut frame, mut view, source } = start;
+        let DrawStart { monitor_id, mut frame, mut view, mut source } = start;
         let wanted = monitor_id.and_then(|id| layout.monitors.iter().find(|m| m.id == id)).cloned();
         if let (Some(id), None) = (monitor_id, wanted.as_ref()) {
             log::warn!("draw: monitor {id} is gone — cursor monitor at 1x");
@@ -681,9 +682,17 @@ impl InkService {
             DrawKind::Restore => self.draw.kept.as_ref().is_some_and(|k| k.board),
         };
 
+        // 넘겨받은 모니터와 물리 해상도가 지금도 같아야 원본을 쓸 수 있다.
+        let reuse = frame.take().filter(|f| f.monitor_id == mon.id && f.width == mon.bounds.w as u32 && f.height == mon.bounds.h as u32);
+        if let DrawSource::Zoom { hide_ms, reused } = &mut source {
+            *reused = reuse.is_some();
+            if !*reused {
+                let t = Instant::now();
+                self.zoom.magnifier.wait_hidden();
+                *hide_ms += ms(t.elapsed());
+            }
+        }
         let t = Instant::now();
-        // 넘겨받은 프레임은 그 모니터 것일 때만(다른 모니터 것이면 새로 찍는다)
-        let reuse = frame.take().filter(|f| f.monitor_id == mon.id);
         let frame = if board {
             None
         } else if let DrawSource::Recent { id } = source {
@@ -1090,7 +1099,7 @@ mod tests {
         // 출처: 확대 이어받기(5.3)·결과 섬 [판서로](3e-handoff) — 키 진입 줄은 예전 그대로
         assert_eq!(entry_line_from(DrawSource::Key, 2.0, false, 92.4, 41.2, 3.4, None), "mode enter draw [92 ms] (capture 41, show 3)");
         assert_eq!(
-            entry_line_from(DrawSource::Zoom { hide_ms: 17.6 }, 2.5, false, 61.0, 35.2, 3.0, Some(5.0)),
+            entry_line_from(DrawSource::Zoom { hide_ms: 17.6, reused: false }, 2.5, false, 61.0, 35.2, 3.0, Some(5.0)),
             "mode enter draw [61 ms] (from zoom, scale 2.5, hide 18, capture 35, show 3, ui paint 5)"
         );
         assert_eq!(

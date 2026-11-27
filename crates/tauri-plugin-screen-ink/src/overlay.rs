@@ -204,12 +204,20 @@ pub fn serve<R: Runtime>(ctx: UriSchemeContext<'_, R>, req: Request<Vec<u8>>) ->
     let (Ok(session), Ok(monitor)) = (s.parse::<u64>(), m.parse::<u32>()) else { return not_found() };
     let Some(store) = ctx.app_handle().try_state::<FrameStore>() else { return not_found() };
     let Some(f) = store.get(session, monitor) else { return not_found() };
+    #[cfg(target_os = "macos")]
+    let body = if req.uri().query() == Some("rgb=24") {
+        ink_platform_macos::freeze::draw_bmp(&f).unwrap_or_else(|| ink_domain::bmp::encode(f.width, f.height, &f.bgra))
+    } else {
+        ink_domain::bmp::encode(f.width, f.height, &f.bgra)
+    };
+    #[cfg(not(target_os = "macos"))]
+    let body = ink_domain::bmp::encode(f.width, f.height, &f.bgra);
     Response::builder()
         .header("Content-Type", "image/bmp")
         .header("Cache-Control", "no-store")
         // 확대경이 캔버스로 픽셀을 읽을 수 있게(crossorigin="anonymous")
         .header("Access-Control-Allow-Origin", "*")
-        .body(ink_domain::bmp::encode(f.width, f.height, &f.bgra))
+        .body(body)
         .unwrap_or_else(|_| not_found())
 }
 
@@ -499,7 +507,10 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
         let url = match &frame {
             Some(f) => {
                 self.frames.put(session.session, std::slice::from_ref(f));
-                Some(frame_url(session.session, m.id))
+                let url = frame_url(session.session, m.id);
+                #[cfg(target_os = "macos")]
+                let url = format!("{url}?rgb=24");
+                Some(url)
             }
             None => {
                 self.frames.put(session.session, &[]);

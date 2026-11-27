@@ -6,6 +6,7 @@
     bakeItem,
     createCanvasTextMeasurer,
     drawBackground,
+    FRAME_PLACEHOLDER,
     renderActive,
     renderItems,
     resolveInkColor,
@@ -80,6 +81,8 @@
   let rootEl = $state(null);
   /** @type {HTMLCanvasElement | null} */
   let bgEl = $state(null);
+  /** @type {HTMLDivElement | null} */
+  let frameLayer = $state(null);
   /** @type {HTMLCanvasElement | null} */
   let bakedEl = $state(null);
   /** @type {HTMLCanvasElement | null} */
@@ -210,7 +213,7 @@
     const image = backgroundImage;
     const viewChanged = sizeDirty || e.revs.view !== drawn.view;
     const bgChanged = bg !== drawn.bg;
-    const imageW = /** @type {any} */ (image)?.width;
+    const imageW = image instanceof HTMLImageElement ? image.naturalWidth : /** @type {any} */ (image)?.width;
     const base = {
       view: e.view,
       dpr,
@@ -222,8 +225,20 @@
       createCanvas,
     };
     if (viewChanged || bgChanged || image !== drawn.image) {
-      drawBackground(bgCtx, { background: bg, image, view: e.view, dpr, docSize: e.doc.docSize, canvasW, canvasH });
-      refreshEyedropperCapability();
+      // 맥 판서는 이미 디코딩한 원본을 웹뷰의 이미지 층에 놓는다.
+      // 획과 같은 문서→화면 변환을 써서 고해상도 캔버스 복사와 동기 픽셀 읽기를 건너뛴다.
+      if (bg === 'frame' && frameLayer && image instanceof HTMLImageElement && image.src.startsWith('ink://localhost/frame/')) {
+        if (frameLayer.firstChild !== image) frameLayer.replaceChildren(image);
+        const { s, tx, ty } = e.view;
+        image.style.width = `${e.doc.docSize.w}px`;
+        image.style.height = `${e.doc.docSize.h}px`;
+        image.style.transform = `matrix(${s}, 0, 0, ${s}, ${tx}, ${ty})`;
+        canEyedropper = true;
+      } else {
+        if (frameLayer?.firstChild) frameLayer.replaceChildren();
+        drawBackground(bgCtx, { background: bg, image, view: e.view, dpr, docSize: e.doc.docSize, canvasW, canvasH });
+        refreshEyedropperCapability();
+      }
     }
     const docChanged = e.revs.doc !== drawn.doc;
     const hiddenChanged = e.revs.hidden !== drawn.hidden;
@@ -381,6 +396,10 @@
     const px = Math.max(0, Math.min(canvasW - 1, Math.round(x * dpr)));
     const py = Math.max(0, Math.min(canvasH - 1, Math.round(y * dpr)));
     try {
+      // 이미지 층의 화면 색은 실제로 고를 때만 같은 변환으로 그려 읽는다.
+      if (frameLayer?.firstChild) {
+        drawBackground(bgCtx, { background: 'frame', image: backgroundImage, view: engine.view, dpr, docSize: engine.doc.docSize, canvasW, canvasH });
+      }
       const data = bgCtx.getImageData(px, py, 1, 1).data;
       const hex = rgbToHex([data[0], data[1], data[2]]);
       handlePanelColor(hex, { recordRecent: true });
@@ -930,6 +949,7 @@
   oncontextmenu={handleContextMenu}
 >
   <canvas bind:this={bgEl} class="ink-draw-layer ink-draw-bg"></canvas>
+  <div bind:this={frameLayer} class="ink-draw-layer ink-frame-image" style:background={FRAME_PLACEHOLDER}></div>
   <canvas bind:this={bakedEl} class="ink-draw-layer ink-draw-baked"></canvas>
   <canvas bind:this={activeEl} class="ink-draw-layer ink-draw-active"></canvas>
 
@@ -1116,6 +1136,17 @@
     width: 100%;
     height: 100%;
     pointer-events: none;
+  }
+
+  .ink-frame-image:empty {
+    display: none;
+  }
+
+  .ink-frame-image :global(img) {
+    display: block;
+    max-width: none;
+    max-height: none;
+    transform-origin: top left;
   }
 
   .ink-draw-text {

@@ -4,8 +4,7 @@
 //! 판단은 `ink_domain::zoom`(순수), 창은 `Magnifier` 포트. 틱은 어댑터가 메인 스레드에서 부른다(`tick_zoom`).
 //! 배율은 휠로만 바꾼다(어댑터 훅 — Shift+휠은 아래 앱으로). 확대 중 잠시 잡는 전역 키는 끝내기(`z-exit`, Esc) 하나뿐이고
 //! 끝나면 바로 푼다(R-KEY-6). 방향키는 잡지 않는다 — 아래 앱(PPT 넘기기 등)이 받아야 한다(2026-11-26 사용자 결정).
-//! 5.3(Alt+1 → 정지 판서 이어받기, R-ZOOM-3 ≤ 150 ms): 이어받을 값 읽기 → 확대 끝(돋보기 숨김) → 화면 갱신 한 번
-//! 기다리기(`Magnifier::wait_hidden` — 돋보기가 캡처에 찍히지 않게) → 그 모니터 정지 캡처 → 판서(initial_view = 확대 그대로).
+//! 5.3 확대 중 판서는 원본 프레임과 확대 변환을 이어받는다. 원본이 없으면 돋보기를 숨기고 새로 찍는다.
 
 use crate::draw::{DrawSource, DrawStart};
 use crate::ports::{Magnifier, NoMagnifier, SystemEvent, ZOOM_UNSUPPORTED};
@@ -148,17 +147,17 @@ impl InkService {
         Some(HotkeyOutcome::Zoom)
     }
 
-    /// 5.3 확대 중 Alt+1(·트레이 판서): 그 순간 확대 화면·배율 그대로 정지 판서로. 순서가 중요하다 —
-    /// ① 이어받을 값을 먼저 읽고(확대를 끝내면 사라진다) ② 돋보기를 내리고 ③ 화면 갱신 한 번을 기다린 뒤
-    /// ④ **확대하던 그 모니터**(커서가 옆 모니터로 갔어도)를 찍어 ⑤ `initial_view = (s, tx, ty)`로 판서를 연다.
+    /// 확대 중 판서는 그 모니터와 배율을 유지한다. 돋보기를 내리기 전에 표시 중인 원본을 확보한다.
     pub(crate) fn zoom_to_draw(&mut self, pressed: Instant) {
         let Some(h) = self.zoom_handoff() else { return };
-        let hide_ms = self.end_zoom_settled();
+        let frame = self.zoom.magnifier.original_frame();
+        let t = Instant::now();
+        self.end_zoom();
         let start = DrawStart {
             monitor_id: Some(h.monitor_id),
-            frame: None,
+            frame,
             view: DrawViewTransform { s: h.s, tx: h.tx, ty: h.ty },
-            source: DrawSource::Zoom { hide_ms },
+            source: DrawSource::Zoom { hide_ms: ms(t.elapsed()), reused: false },
         };
         self.begin_draw_with(DrawKind::Draw, pressed, start);
     }

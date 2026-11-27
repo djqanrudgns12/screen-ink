@@ -28,6 +28,32 @@ use objc2_quartz_core::{CALayer, CATransaction};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
+/// 맥 판서용 24비트 BMP. 불투명 화면의 알파만 덜어 내고 원본 sRGB와 위→아래 행 순서를 유지한다.
+pub fn draw_bmp(frame: &ink_app::Frame) -> Option<Vec<u8>> {
+    let (w, h) = (frame.width as usize, frame.height as usize);
+    if w == 0 || h == 0 || frame.bgra.len() != w.checked_mul(h)?.checked_mul(4)? {
+        return None;
+    }
+    let row = w * 3;
+    let stride = (row + 3) & !3;
+    let pixels = u32::try_from(stride.checked_mul(h)?).ok()?;
+    let mut header = ink_domain::bmp::header(frame.width, frame.height);
+    let size = pixels.checked_add(header.len() as u32)?;
+    header[2..6].copy_from_slice(&size.to_le_bytes());
+    header[28..30].copy_from_slice(&24u16.to_le_bytes());
+    header[30..34].fill(0); // BI_RGB
+    header[34..38].copy_from_slice(&pixels.to_le_bytes());
+    header[54..70].fill(0); // BI_RGB에는 채널 마스크가 없다.
+    let mut bmp = vec![0; size as usize];
+    bmp[..header.len()].copy_from_slice(&header);
+    for (src, dst) in frame.bgra.chunks_exact(w * 4).zip(bmp[header.len()..].chunks_exact_mut(stride)) {
+        for (bgra, bgr) in src.chunks_exact(4).zip(dst[..row].chunks_exact_mut(3)) {
+            bgr.copy_from_slice(&bgra[..3]);
+        }
+    }
+    Some(bmp)
+}
+
 /// 웹뷰 오버레이 바로 아래 층.
 const FREEZE_LEVEL: isize = OVERLAY_LEVEL - 1;
 /// Windows와 같은 50%.
@@ -216,6 +242,24 @@ pub fn prepare(monitors: &[u32]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn 판서_비트맵은_원본_색과_행_방향을_지키고_행마다_정렬한다() {
+        for w in 1..=4 {
+            let bgra: Vec<u8> = (0..w * 2).flat_map(|n| [10 + n, 40 + n, 90 + n, 255]).collect();
+            let f = ink_app::Frame { monitor_id: 0, width: w.into(), height: 2, bgra: bgra.into() };
+            let bmp = draw_bmp(&f).unwrap();
+            let stride = (usize::from(w) * 3 + 3) & !3;
+            let offset = u32::from_le_bytes(bmp[10..14].try_into().unwrap()) as usize;
+            assert_eq!(i32::from_le_bytes(bmp[22..26].try_into().unwrap()), -2);
+            assert_eq!(bmp[28], 24);
+            assert_eq!(bmp.len(), offset + 2 * stride);
+            for n in 0..2 * w {
+                let i = offset + usize::from(n / w) * stride + usize::from(n % w) * 3;
+                assert_eq!(&bmp[i..i + 3], &[10 + n, 40 + n, 90 + n]);
+            }
+        }
+    }
 
     /// 층 나무를 비트맵(BGRA, 위→아래)에 그려 본다 — 창·화면 기록 권한 없이.
     #[test]
