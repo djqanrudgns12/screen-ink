@@ -531,11 +531,11 @@
 
   .ink-island[data-result-card='true'] {
     border-radius: 22px;
-    padding: 8px 10px 11px 14px;
+    padding: 7px 9px 10px 12px;
   }
 
   .ink-island[data-result-card='true'][data-thumb='true'] {
-    padding: 8px 8px 11px 8px;
+    padding: 7px 8px 10px 8px;
   }
 
   .ink-island[data-muted='true'] {
@@ -562,7 +562,7 @@
 
   .ink-island[data-result-card='true'] .ink-island-row {
     min-height: 36px;
-    gap: 8px;
+    gap: 6px;
   }
 
   .ink-island-thumb {
@@ -577,9 +577,9 @@
   }
 
   .ink-island[data-result-card='true'] .ink-island-thumb {
-    width: 64px;
-    height: 38px;
-    border-radius: 16px 7px 7px 16px;
+    width: 56px;
+    height: 36px;
+    border-radius: 15px 7px 7px 15px;
   }
 
   .ink-island-thumb-img {
@@ -617,11 +617,12 @@
 
   .ink-island-result-meta {
     font-size: 11px;
+    line-height: 1.3;
     color: var(--ink-island-sub);
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
 
   .ink-island-path {
@@ -823,6 +824,16 @@
     box-shadow: var(--ink-island-ring);
     padding: 0 10px 0 8px;
     gap: 6px;
+  }
+
+  .ink-island[data-result-card='true'] .ink-island-btn {
+    padding: 0 9px;
+    gap: 5px;
+  }
+
+  .ink-island[data-result-card='true'] .ink-island-chip {
+    padding: 0 9px 0 7px;
+    gap: 5px;
   }
 
   .ink-island-chip-swatch {

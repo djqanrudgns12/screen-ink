@@ -123,3 +123,39 @@
 | `macos` | `en` | 정상 | 1쪽 | 6 | 188 | 35,991 B | 28.07 ms | **0건** |
 | `windows` | `ko` | 정상 | 1쪽 | 6 | 190 | 46,029 B | 22.69 ms | **0건** |
 | `windows` | `en` | 정상 | 1쪽 | 6 | 190 | 34,636 B | 22.06 ms | **0건** |
+
+---
+
+## 5. 고친 뒤 (`G16` 재검사)
+
+- **실행 일시**: 2026-11-27 17:21~17:24 KST
+- **실행 명령**: `/Users/bodyking/.local/bin/resource-guard run --profile test --wait-seconds 900 -- bash -c 'timeout 900 node scripts/qa-snapshots.mjs --only=snapshots'`
+
+### 전후 집계 비교
+
+| 지표 | 고치기 전 (`R2-QA-1`) | 고친 뒤 (`G16`) | 변화 |
+|---|---:|---:|---|
+| 총 스냅숏 수 | 168장 | 168장 | 유지 |
+| 대상 미발견 / 스크린숏 실패 | 0건 / 0건 | 0건 / 0건 | 유지 |
+| 콘솔 오류 / 페이지 예외 | 0건 / 0건 | 0건 / 0건 | 유지 |
+| OS 표기 섞임 (화면 168장 + PDF 4조합) | 0건 | 0건 | 유지 |
+| 경계 이탈 / 뷰포트 잘림 / 직계 형제 겹침 | 0건 / 0건 / 0건 | 0건 / 0건 / 0건 | 유지 |
+| **가로 넘침** | **12장** | **0장** | **-12장 (전부 해소)** |
+| **잘림(말줄임)** | **20장** | **8장** | **-12장** |
+
+### 항목별 확인 결과
+
+- **문제 1 (`first-step3` · `settings-shortcuts` 원시 키)**: G13 합본 반영으로 원시 키 노출 해소(`settings-shortcuts` 8장·`first-step3` 한국어 4장 모두 통과, 넘침 8장 → 0장).
+- **문제 2 (`settings-shortcuts` 영어 충돌 배너 한국어)**: `8cb4a9e`로 해소.
+- **문제 3 (`tray` macOS `[전체]` 타일 `⌃⌥F1` +3 px 넘침)**: **4장 → 0장**. 타일 좌우 패딩(`9px → 8px`)·윗줄 간격(`4px → 3px`)·타일 전용 키캡 치수(`18px`, `10px`, `gap 2px`) 조정으로 `⌃⌥F1`이 테두리 안쪽에 여유 있게 들어가며 다른 3개 타일 모양 유지(`tray__macos_ko_light.png` 눈 검수 확인).
+- **문제 4 (`island-gallery` 결과 섬 보조 문구 잘림 + 미리보기 3열 겹침)**: **4장 → 0장**.
+  - 실제 섬(`Island.svelte`): 결과 카드 썸네일(`64→56px`)·간격(`8→6px`)·단추 패딩(`11→9px`)을 다듬고 `.ink-island-result-meta`에 두 줄 줄바꿈(`white-space: normal; word-break: keep-all`)을 허용했다. Windows 기본 결과 섬은 한 줄에 다 들어가고, 단색 HEX 칩 포함 결과 섬은 두 줄로 접혀 `⌘V`/`Ctrl+V` 끝까지 잘림 없이 표시된다.
+  - 미리보기(`Preview.svelte`): `.pv-island-grid`를 `minmax(min(540px, 100%), 1fr)`(1280 px 기준 2열)로 조정해 520 px 결과 섬의 칸 겹침·화면 밖 잘림 해소(`island-gallery__macos_ko_dark.png`, `island-gallery__windows_en_dark.png` 눈 검수 확인).
+- **문제 5 (`font-picker` `systemFonts` 미위임)**: `Preview.svelte`의 `overlayPreviewClient`에 `systemFonts` 위임을 추가해 이 컴퓨터 글꼴(가짜 5종) 정상 표시 확인(`font-picker__macos_ko_dark.png`).
+- **정보 › 글꼴 고지(`settings-info`)**: `Freesentation · Paperlogy · IBM Plex Mono · Pretendard (SIL OFL 1.1)` 반영 및 넘침·잘림 0건 확인(`settings-info__macos_ko_light.png`).
+- **PDF 4조합 재검증**: `%PDF-` 정상 · OS 표기 섞임 0건 (`macos/ko` 47,500 B, `macos/en` 35,990 B, `windows/ko` 46,028 B, `windows/en` 34,635 B).
+
+### 잔여 잘림 8장 (G16 범위 밖 · 후속 참고)
+
+1. **`first-step3` 영어 4조합** (`macos/windows × light/dark`): `span.ink-preset-name("Presentation default")` `111 px > 91 px` (**+20 px** 잘림) — 영어 카드에서 `Current` 배지와 나란히 놓일 때 이름 말줄임 잔존.
+2. **`settings-general` 영어 4조합** (`macos/windows × light/dark`): `span.ink-row-sub("Saves logs, system info, and settings as a zip ·")` `401 px > 275 px` (**+126 px** 잘림) — G14 추가 항목(`about.diag.sub`) 영어 보조 문구 한 줄 말줄임.

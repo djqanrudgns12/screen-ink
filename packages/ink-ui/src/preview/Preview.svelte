@@ -88,6 +88,7 @@
     previewImport: () => client.previewImport(),
     applyImport: (path) => client.applyImport(path),
     resetAll: () => client.resetAll(),
+    systemFonts: () => client.systemFonts(),
     overlayReady: (session, ui) => {
       overlayLastTiming = ui ?? null;
       return client.overlayReady(session, ui);
@@ -860,7 +861,7 @@
 
   .pv-island-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(540px, 100%), 1fr));
     gap: 18px 24px;
   }
 
@@ -869,6 +870,8 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .pv-isl-item p {

@@ -1,0 +1,3 @@
+/* 영어 macOS 앱 표시 이름(Dock·Launchpad·Finder) */
+"CFBundleDisplayName" = "ShookShok";
+"CFBundleName" = "ShookShok";

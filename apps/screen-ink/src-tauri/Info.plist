@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Tauri가 번들의 Info.plist에 합친다. 앱 꾸러미 이름은 Shookshok.app(productName), Dock·Launchpad에 보이는 이름만 슉쇽(docs/brand/README.md 3장). -->
+<!-- Tauri가 번들의 Info.plist에 합친다. 앱 꾸러미 이름은 Shookshok.app(productName), Dock·Launchpad 표시 이름은 OS 언어에 따라 슉쇽(ko) / ShookShok(en)(docs/brand/README.md 3장 · R2-ONB-8). -->
 <plist version="1.0">
 <dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>ko</string>
   <key>CFBundleDisplayName</key>
   <string>슉쇽</string>
+  <key>CFBundleLocalizations</key>
+  <array>
+    <string>ko</string>
+    <string>en</string>
+  </array>
+  <key>LSHasLocalizedDisplayName</key>
+  <true/>
 </dict>
 </plist>

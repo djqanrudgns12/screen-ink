@@ -330,7 +330,7 @@
     justify-content: space-between;
     gap: 6px;
     min-height: 54px;
-    padding: 8px 9px;
+    padding: 8px 8px;
     box-sizing: border-box;
     border: 1px solid var(--ink-line-soft);
     border-radius: 9px;
@@ -378,7 +378,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 4px;
+    gap: 3px;
     width: 100%;
   }
 
@@ -387,6 +387,18 @@
     align-items: center;
     color: var(--ink-text-2);
     flex: none;
+  }
+
+  /* 3키 조합(macOS ⌃⌥F1 등)이 2×2 타일 폭 안에 여유 있게 들어가도록 타일 키캡만 살짝 조밀하게 맞춘다 */
+  .ink-tray-tile :global(.ink-tile-keycap) {
+    gap: 2px;
+  }
+
+  .ink-tray-tile :global(.ink-tile-keycap .ink-kbd) {
+    min-width: 16px;
+    height: 18px;
+    padding: 0 4px;
+    font-size: 10px;
   }
 
   .ink-tray-tile :global(.ink-tile-keycap .ink-kbd[data-variant='default']),
