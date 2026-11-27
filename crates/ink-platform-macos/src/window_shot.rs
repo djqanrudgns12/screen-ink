@@ -1,8 +1,10 @@
 //! F2 창 단독 캡처(M14, R-WIN-1·3): ScreenCaptureKit 창 하나 필터(`desktopIndependentWindow`)로 가려진 부분까지 한 장.
 //! Windows `wgc_window.rs`와 같은 흐름 — 고르는 중 창이 정해지면 미리 준비([`prepare`]) → 확정 때 한 장([`shoot`]) →
 //! 시간 안에 안 오거나 RGB가 전부 0이면 서비스가 정지 스냅숏 자르기로 대체(`windowshot::after_primary`).
-//! - 그림자는 빼고(`ignoreShadowsSingleWindow`, macOS 14+), 둥근 모서리 바깥은 SCK가 준 투명 그대로(곧은 알파 BGRA —
-//!   사용자 결정 "둥근 창은 귀만 투명", R-OUT-3). 그래서 `corner_radius` = 0(서비스가 따로 깎지 않음).
+//! - 그림자는 빼고(`ignoreShadowsSingleWindow`, macOS 14+). 둥근 모서리 바깥은 SCK가 투명으로 주지만, 서비스는 창 안
+//!   반투명(사이드바 비침 등)을 없애려고 그림 전체를 불투명으로 바꾼 뒤 `corner_radius`만큼 귀를 깎는다(사용자 결정
+//!   "둥근 창은 귀만 투명", R-OUT-3). 그래서 SCK 알파에서 귀 반지름을 재어 넘긴다([`corner_radius_from_alpha`]).
+//!   0으로 넘기면 귀가 검게 칠해진다(2026-11-27 실기).
 //! - 크기 = 서비스가 넘긴 창 사각형(계약 물리 px).
 //! - 창 제목은 읽지 않는다(05 개인정보) — 창 번호로만 찾는다.
 
@@ -153,9 +155,82 @@ pub fn shoot(window: u64, bounds: PhysRect) -> Result<WindowShot, String> {
         raw.alpha_info
     );
     match after_primary(Some(b), 0) {
-        ShotNext::Use => Ok(WindowShot { width: raw.w, height: raw.h, bgra: raw.bgra, method: "sck", corner_radius: 0 }),
+        ShotNext::Use => {
+            let corner_radius = corner_radius_from_alpha(&raw.bgra, raw.w, raw.h);
+            log::debug!("window shot corner radius {corner_radius} px");
+            Ok(WindowShot { width: raw.w, height: raw.h, bgra: raw.bgra, method: "sck", corner_radius })
+        }
         _ if b == Blankness::Unpainted => Err("window capture empty".into()),
         _ => Err("window capture black".into()),
+    }
+}
+
+/// SCK가 준 곧은 알파에서 둥근 귀 반지름(px)을 잰다. 네 귀마다 맨 끝 줄에서 알파가 절반을 넘는 첫 화소까지 거리 x를 재고,
+/// 원 r에서 그 줄 가운데(0.5 px) 높이의 경계는 x = r − √(r − ¼) → r = (½ + √x)² + ¼ 이다. 네 귀의 가운데 값을 쓰고,
+/// 모자라면 검은 테가 남으므로 올림한다. 귀 화소가 불투명하면(전체 화면·각진 창) 0.
+fn corner_radius_from_alpha(bgra: &[u8], w: u32, h: u32) -> u32 {
+    if w < 4 || h < 4 || bgra.len() < (w as usize * h as usize * 4) {
+        return 0;
+    }
+    let alpha = |x: u32, y: u32| bgra[(y as usize * w as usize + x as usize) * 4 + 3];
+    let limit = w.min(h) / 2;
+    let edge = |y: u32, from_right: bool| -> Option<u32> {
+        let at = |i: u32| if from_right { w - 1 - i } else { i };
+        if alpha(at(0), y) >= 128 {
+            return Some(0);
+        }
+        (1..limit).find(|&i| alpha(at(i), y) >= 128)
+    };
+    let mut radii: Vec<f64> = [(0, false), (0, true), (h - 1, false), (h - 1, true)]
+        .into_iter()
+        .filter_map(|(y, right)| edge(y, right))
+        .map(|x| if x == 0 { 0.0 } else { (0.5 + (x as f64).sqrt()).powi(2) + 0.25 })
+        .collect();
+    if radii.is_empty() {
+        return 0;
+    }
+    radii.sort_by(|a, b| a.total_cmp(b));
+    let mid = (radii[(radii.len() - 1) / 2] + radii[radii.len() / 2]) / 2.0;
+    (mid.ceil() as u32).min(limit)
+}
+
+#[cfg(test)]
+mod radius_tests {
+    use super::corner_radius_from_alpha;
+    use ink_domain::image::mask_round_corners;
+
+    fn rounded(w: u32, h: u32, r: u32) -> Vec<u8> {
+        let mut px = vec![255u8; (w * h * 4) as usize];
+        mask_round_corners(&mut px, w, h, r);
+        px
+    }
+
+    #[test]
+    fn 둥근_귀_반지름을_알파에서_잰다() {
+        for r in [8u32, 12, 20, 26, 40] {
+            let got = corner_radius_from_alpha(&rounded(300, 200, r), 300, 200);
+            assert!(got >= r && got <= r + 2, "r {r} → {got}");
+        }
+    }
+
+    #[test]
+    fn 각진_창과_잘못된_크기는_0() {
+        assert_eq!(corner_radius_from_alpha(&vec![255u8; 100 * 80 * 4], 100, 80), 0);
+        assert_eq!(corner_radius_from_alpha(&[0u8; 8], 100, 80), 0);
+    }
+
+    #[test]
+    fn 잰_반지름으로_깎으면_귀_밖에_불투명이_남지_않는다() {
+        let (w, h, r) = (240u32, 160u32, 22u32);
+        let sck = rounded(w, h, r);
+        let est = corner_radius_from_alpha(&sck, w, h);
+        // 서비스처럼: 전부 불투명 → 잰 반지름으로 깎기
+        let mut out = sck.clone();
+        out.chunks_exact_mut(4).for_each(|p| p[3] = 255);
+        mask_round_corners(&mut out, w, h, est);
+        for (o, s) in out.chunks_exact(4).zip(sck.chunks_exact(4)) {
+            assert!(o[3] <= s[3].saturating_add(8), "SCK가 투명하게 준 곳이 불투명해짐");
+        }
     }
 }
 
@@ -176,7 +251,16 @@ mod tests {
             let shot = super::shoot(w.handle, w.rect).expect("창 한 장");
             let ms = t.elapsed().as_secs_f64() * 1000.0;
             let a = |x: u32, y: u32| shot.bgra[((y * shot.width + x) * 4 + 3) as usize];
-            eprintln!("{} {}x{} in {ms:.0} ms, alpha corner {} (4,4) {} center {}", w.exe, shot.width, shot.height, a(0, 0), a(4, 4), a(shot.width / 2, shot.height / 2));
+            eprintln!(
+                "{} {}x{} in {ms:.0} ms, alpha corner {} (4,4) {} center {}, radius {}",
+                w.exe,
+                shot.width,
+                shot.height,
+                a(0, 0),
+                a(4, 4),
+                a(shot.width / 2, shot.height / 2),
+                shot.corner_radius
+            );
             assert_eq!((shot.width, shot.height), (w.rect.w as u32, w.rect.h as u32));
             assert_eq!(a(shot.width / 2, shot.height / 2), 255, "창 가운데는 불투명");
         }
