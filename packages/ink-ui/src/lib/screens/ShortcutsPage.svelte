@@ -130,7 +130,7 @@
   );
   let conflicts = $derived(state?.conflicts ?? { count: 0, app: undefined, combos: [] });
   let conflictHeadline = $derived.by(() => {
-    const raw = formatConflictBanner(conflicts, platform);
+    const raw = formatConflictBanner(conflicts, platform, locale.lang);
     if (!raw) return null;
     if (!conflicts.app) {
       return { lead: '', message: t('shortcuts.conflict.generic', { n: conflicts.count }) };
