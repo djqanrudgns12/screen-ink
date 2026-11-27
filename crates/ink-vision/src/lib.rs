@@ -279,11 +279,17 @@ impl Prepared {
 
     /// 이미지 요소(`r`, 가상 화면 물리 px) 안에서 여백·그림자를 걷어내고 실제 그림 가장자리를 다시 잰다(R2-CAP-3).
     pub fn refine_image(&self, r: PhysRect) -> PhysRect {
+        self.refine_image_with_occluders(r, &[])
+    }
+
+    /// 앞 창(`occluders`)에 가려 잘린 변은 여백 찾기를 건너뛰고 나머지 변의 여백·그림자를 다시 잰다(R2-CAP-2·3).
+    pub fn refine_image_with_occluders(&self, r: PhysRect, occluders: &[PhysRect]) -> PhysRect {
         if self.data.is_empty() || r.w <= 0 || r.h <= 0 {
             return r;
         }
         let local = self.to_local_rect(r);
-        let refined = flat::refine_image_bounds(&self.data, local);
+        let local_occ: Vec<PhysRect> = occluders.iter().map(|&o| self.to_local_rect(o)).collect();
+        let refined = flat::refine_image_bounds_with_occluders(&self.data, local, &local_occ);
         self.to_global_rect(refined)
     }
 

@@ -529,3 +529,67 @@ fn 앞_창에_맞닿은_요소는_앞_창_안쪽_3px_경계로_끌리지_않는�
     assert_eq!(snapped_l.x, 160, "왼쪽 앞 창 안쪽 3 px 경계로 끌려 들어가면 안 된다: {snapped_l:?}");
     assert_eq!(snapped_l.intersect(&occ_l[0]).map_or(0, |i| i.area()), 0);
 }
+
+#[test]
+fn 앞_창에_가린_이미지_여백_재측정은_잘린_변만_건너뛰고_나머지_세_변을_다시_잰다() {
+    // (a) 위 15% 가림 + 4면 흰 여백 + 둥근 모서리 + 앞 창 2 px 경계·10 px 그림자(W5 실기 치수)
+    let mut ca = Canvas::new(900, 600, [238, 238, 238]);
+    let elem_a = PhysRect::new(175, 160, 540, 319);
+    ca.fill_rect(elem_a, [255, 255, 255]);
+    let inner_a = PhysRect::new(216, 200, 459, 239);
+    ca.fill_rounded_rect(inner_a, 24, [150, 175, 210]);
+    let occ_a = [PhysRect::new(0, 0, 900, 236)];
+    ca.draw_shadow(occ_a[0], 10, 0.25);
+    ca.fill_rect(occ_a[0], [50, 55, 65]);
+    ca.fill_rect(PhysRect::new(0, 236, 900, 2), [190, 190, 190]);
+    let pa = prepare(&ca.bgra, ca.w, ca.h);
+    let vis_a = PhysRect::new(175, 236, 540, 243);
+    assert_eq!(pa.refine_image_with_occluders(vis_a, &occ_a), PhysRect::new(216, 236, 459, 203));
+
+    // (b) 왼쪽 위 L자 가림 + 4면 여백 → 우·하 여백만 걷어내고 좌·상 잘린 경계 유지
+    let mut cb = Canvas::new(800, 600, [238, 238, 238]);
+    let elem_b = PhysRect::new(120, 100, 400, 300);
+    cb.fill_rect(elem_b, [255, 255, 255]);
+    let inner_b = PhysRect::new(150, 130, 340, 240);
+    cb.fill_rect(inner_b, [120, 160, 200]);
+    let occ_b = [PhysRect::new(0, 0, 200, 180)];
+    cb.fill_rect(occ_b[0], [45, 50, 60]);
+    cb.fill_rect(PhysRect::new(0, 180, 202, 2), [185, 185, 185]);
+    cb.fill_rect(PhysRect::new(200, 0, 2, 182), [185, 185, 185]);
+    let pb = prepare(&cb.bgra, cb.w, cb.h);
+    // 왼쪽 띠 또는 아래 띠 중 커서를 담는 아래 띠(120, 180, 400, 220): 위쪽 일부만 가린 L자 아래 띠
+    let vis_b = PhysRect::new(120, 180, 400, 220);
+    assert_eq!(pb.refine_image_with_occluders(vis_b, &occ_b), PhysRect::new(150, 180, 340, 190));
+
+    // (c) 앞 창이 윗여백 일부만 가리고 그림 위 여백이 남은 경우 → 남은 윗여백까지 걷어냄
+    let mut cc = Canvas::new(800, 600, [238, 238, 238]);
+    let elem_c = PhysRect::new(120, 100, 400, 300);
+    cc.fill_rect(elem_c, [255, 255, 255]);
+    let inner_c = PhysRect::new(160, 160, 320, 190);
+    cc.fill_rect(inner_c, [110, 150, 195]);
+    let occ_c = [PhysRect::new(0, 0, 800, 125)];
+    cc.fill_rect(occ_c[0], [48, 52, 60]);
+    cc.fill_rect(PhysRect::new(0, 125, 800, 2), [190, 190, 190]);
+    let pc = prepare(&cc.bgra, cc.w, cc.h);
+    let vis_c = PhysRect::new(120, 125, 400, 275);
+    assert_eq!(pc.refine_image_with_occluders(vis_c, &occ_c), inner_c);
+
+    // (d) 위 15% 가림 + 여백 없는 하늘 사진 → 비오탐(원래 잘린 사각형 유지)
+    let mut cd = Canvas::new(800, 600, [255, 255, 255]);
+    let photo_d = PhysRect::new(120, 100, 400, 300);
+    for y in photo_d.y..photo_d.bottom() {
+        let t = ((y - (photo_d.y + 90)) as f32 / 120.0).clamp(0.0, 1.0);
+        let b = (230.0 * (1.0 - t) + 70.0 * t).round() as u8;
+        let g = (180.0 * (1.0 - t) + 155.0 * t).round() as u8;
+        let r = (120.0 * (1.0 - t) + 80.0 * t).round() as u8;
+        for x in photo_d.x..photo_d.right() {
+            cd.set_px(x, y, [b, g, r]);
+        }
+    }
+    let occ_d = [PhysRect::new(0, 0, 800, 145)];
+    cd.fill_rect(occ_d[0], [48, 52, 60]);
+    cd.fill_rect(PhysRect::new(0, 145, 800, 2), [190, 190, 190]);
+    let pd = prepare(&cd.bgra, cd.w, cd.h);
+    let vis_d = PhysRect::new(120, 145, 400, 255);
+    assert_eq!(pd.refine_image_with_occluders(vis_d, &occ_d), vis_d);
+}

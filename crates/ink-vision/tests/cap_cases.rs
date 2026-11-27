@@ -571,6 +571,64 @@ fn build_cases() -> Vec<CaseSpec> {
         });
     }
 
+    // 15. 위 15% 가림 + 4면 흰 여백 + 둥근 모서리 그림(Windows 실기 W5 재현)
+    {
+        let mut c = Canvas::new(1280, 800, [238, 238, 238]);
+        let win = PhysRect::new(60, 60, 1140, 680);
+        c.fill_rect(win, [238, 238, 238]);
+        let elem = PhysRect::new(175, 160, 540, 319);
+        c.fill_rect(elem, [255, 255, 255]);
+        let inner = PhysRect::new(216, 200, 459, 239);
+        c.fill_soft_edge_photo(inner, 24, [234, 236, 238], [-85, -55, -20]);
+        let occ = PhysRect::new(0, 0, 1200, 236);
+        c.draw_shadow(occ, 10, 0.25);
+        c.fill_rect(occ, [50, 55, 65]);
+        c.fill_rect(PhysRect::new(0, 236, 1200, 2), [190, 190, 190]);
+        cases.push(CaseSpec {
+            id: "cap15_occluded_top15_rounded_padded",
+            category: "가림+여백+둥근모서리",
+            canvas: c,
+            point: PhysPoint { x: 445, y: 337 },
+            window: Some(win),
+            children: vec![],
+            elements: vec![ElementCand { rect: elem, control: Control::Image, from_msaa: false }],
+            occluders: vec![occ],
+            truth: PhysRect::new(216, 236, 459, 203),
+            check_occluder_edge: true,
+        });
+    }
+
+    // 16. 위 15% 가림 + 여백 없는 하늘 사진(가림 경계에서 단색 하늘 오탐 방지)
+    {
+        let mut c = Canvas::new(1280, 800, [255, 255, 255]);
+        let win = PhysRect::new(50, 50, 1100, 700);
+        let photo = PhysRect::new(120, 100, 400, 300);
+        for y in photo.y..photo.bottom() {
+            let t = ((y - (photo.y + 90)) as f32 / 120.0).clamp(0.0, 1.0);
+            let b = (230.0 * (1.0 - t) + 70.0 * t).round() as u8;
+            let g = (180.0 * (1.0 - t) + 155.0 * t).round() as u8;
+            let r = (120.0 * (1.0 - t) + 80.0 * t).round() as u8;
+            for x in photo.x..photo.right() {
+                c.set_px(x, y, [b, g, r]);
+            }
+        }
+        let occ = PhysRect::new(0, 0, 1200, 145);
+        c.fill_rect(occ, [48, 52, 60]);
+        c.fill_rect(PhysRect::new(0, 145, 1200, 2), [190, 190, 190]);
+        cases.push(CaseSpec {
+            id: "cap16_occluded_top15_fullbleed_sky",
+            category: "가림+여백없는 하늘(비오탐)",
+            canvas: c,
+            point: PhysPoint { x: 320, y: 270 },
+            window: Some(win),
+            children: vec![],
+            elements: vec![ElementCand { rect: photo, control: Control::Image, from_msaa: false }],
+            occluders: vec![occ],
+            truth: PhysRect::new(120, 145, 400, 255),
+            check_occluder_edge: true,
+        });
+    }
+
     cases
 }
 
@@ -589,7 +647,7 @@ fn 합성_사례_14종_r2_cap_2_5_모두_맞춤() {
         let vis = to_vision_cands(vc);
         let sup = |r: PhysRect| prep.support_with_occluders(r, &cs.occluders);
         let snap = |r: PhysRect| prep.snap_with_occluders(r, 3, &cs.occluders);
-        let refine = |r: PhysRect| prep.refine_image(r);
+        let refine = |r: PhysRect| prep.refine_image_with_occluders(r, &cs.occluders);
         let ev = Evidence {
             point: cs.point,
             window: cs.window,
@@ -672,6 +730,49 @@ fn 합성_사례_14종_r2_cap_2_5_모두_맞춤() {
                 cs.id,
                 chain
             );
+        }
+    }
+}
+
+#[test]
+fn 합성_사례_16종_기본_refine_image_호환() {
+    // ink-app/src/capture.rs가 쓰는 refine_image(occluders 미전달) 경로에서도
+    // recog.rs의 2 px 경계 보호·복원을 통해 16종(가림+여백 cap15, 가림+하늘 cap16 포함) 모두 통과해야 한다.
+    let cases = build_cases();
+    assert_eq!(cases.len(), 16);
+    for cs in &cases {
+        let prep = prepare(&cs.canvas.bgra, cs.canvas.w, cs.canvas.h);
+        let vc = prep.query_with_occluders(cs.point.x, cs.point.y, &cs.occluders);
+        let vis = to_vision_cands(vc);
+        let sup = |r: PhysRect| prep.support_with_occluders(r, &cs.occluders);
+        let snap = |r: PhysRect| prep.snap_with_occluders(r, 3, &cs.occluders);
+        let refine_plain = |r: PhysRect| prep.refine_image(r);
+        let ev = Evidence {
+            point: cs.point,
+            window: cs.window,
+            children: &cs.children,
+            elements: &cs.elements,
+            vision: &vis,
+            monitor: MON,
+            virtual_bounds: MON,
+            occluders: &cs.occluders,
+            support: Some(&sup),
+            snap: Some(&snap),
+        };
+        let opts = RecogOptions { refine_image: Some(&refine_plain) };
+        let chain = build_chain_with(&ev, &opts);
+        let lvl = first_level(&chain, None);
+        let picked = chain[lvl].rect;
+        let score_iou = iou(&picked, &cs.truth);
+        assert!(score_iou >= 0.90, "{} 기본 refine_image 호환 실패: truth={:?}, picked={:?}, iou={:.4}", cs.id, cs.truth, picked, score_iou);
+        assert_eq!(count_dup_pairs(&chain), 0, "{} 기본 refine_image 경로 중복", cs.id);
+        if cs.check_occluder_edge {
+            let occ_hits = vis.iter().filter(|v| touches_occ_edge(v.rect, &cs.occluders)).count()
+                + chain
+                    .iter()
+                    .filter(|n| matches!(n.kind, NodeKind::Vision(_)) && touches_occ_edge(n.rect, &cs.occluders))
+                    .count();
+            assert_eq!(occ_hits, 0, "{} 기본 refine_image 경로 앞 창 경계 오염", cs.id);
         }
     }
 }

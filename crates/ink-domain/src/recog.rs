@@ -457,10 +457,56 @@ pub fn build_chain_with(ev: &Evidence, opts: &RecogOptions) -> Vec<Node> {
     // 요소·자식 창: 앞 창 가림 제거(R2-CAP-1) → Image면 창·모니터로 자른 뒤 평탄도 재측정(R2-CAP-3) → 앞 창 경계 보호 경계 맞춤(R2-CAP-2)
     for e in ev.elements {
         if let Some(vis) = visible_part(e.rect, ev.occluders, p) {
+            let occ_l = vis.x != e.rect.x;
+            let occ_t = vis.y != e.rect.y;
+            let occ_r = vis.right() != e.rect.right();
+            let occ_b = vis.bottom() != e.rect.bottom();
             let base = if e.control == Control::Image {
                 if let Some(refine) = opts.refine_image {
                     if let Some(bounded) = vis.intersect(&clip_to).and_then(|r| r.intersect(&ev.monitor)) {
-                        let cand = refine(bounded);
+                        // 앞 창에 잘린 변은 ±2 px 경계·그림자 띠를 피해 재측정을 요청한 뒤, 잘린 변은 원래 경계로 복원한다
+                        let inset_l = if occ_l { OCCLUDER_EDGE_TOL } else { 0 };
+                        let inset_t = if occ_t { OCCLUDER_EDGE_TOL } else { 0 };
+                        let inset_r = if occ_r { OCCLUDER_EDGE_TOL } else { 0 };
+                        let inset_b = if occ_b { OCCLUDER_EDGE_TOL } else { 0 };
+                        let probe_cand = PhysRect::from_edges(
+                            bounded.x + inset_l,
+                            bounded.y + inset_t,
+                            bounded.right() - inset_r,
+                            bounded.bottom() - inset_b,
+                        );
+                        let probe = if probe_cand.w >= 16 && probe_cand.h >= 16 && probe_cand.contains(p) {
+                            probe_cand
+                        } else {
+                            bounded
+                        };
+                        let raw_cand = refine(probe);
+                        let cand = if let Some(c) = probe.intersect(&raw_cand) {
+                            // 잘린 변이 그대로 닿아 있거나 다른 변이 안 변한 채 잘린 변만 줄었다면(가린 단색 오탐) 원래 경계 유지
+                            let top = if occ_t && (c.y <= probe.y || (c.x == probe.x && c.right() == probe.right())) {
+                                bounded.y
+                            } else {
+                                c.y
+                            };
+                            let bot = if occ_b && (c.bottom() >= probe.bottom() || (c.x == probe.x && c.right() == probe.right())) {
+                                bounded.bottom()
+                            } else {
+                                c.bottom()
+                            };
+                            let left = if occ_l && (c.x <= probe.x || (c.y == probe.y && c.bottom() == probe.bottom())) {
+                                bounded.x
+                            } else {
+                                c.x
+                            };
+                            let right = if occ_r && (c.right() >= probe.right() || (c.y == probe.y && c.bottom() == probe.bottom())) {
+                                bounded.right()
+                            } else {
+                                c.right()
+                            };
+                            PhysRect::from_edges(left, top, right, bot)
+                        } else {
+                            bounded
+                        };
                         bounded
                             .intersect(&cand)
                             .filter(|r| r.contains(p) && r.w >= MIN_SIDE && r.h >= MIN_SIDE && r.area() >= MIN_AREA)
@@ -475,10 +521,10 @@ pub fn build_chain_with(ev: &Evidence, opts: &RecogOptions) -> Vec<Node> {
                 vis
             };
             let clipped = (
-                vis.x != e.rect.x,
-                vis.y != e.rect.y,
-                vis.right() != e.rect.right(),
-                vis.bottom() != e.rect.bottom(),
+                occ_l && base.x == vis.x,
+                occ_t && base.y == vis.y,
+                occ_r && base.right() == vis.right(),
+                occ_b && base.bottom() == vis.bottom(),
             );
             let snapped = snap_safe(base, snap(base), clipped, ev.occluders);
             push(snapped, NodeKind::Element(e.control), if e.from_msaa { src::M } else { src::A });
@@ -1031,5 +1077,44 @@ mod tests {
         assert_eq!(received.get(), Some(PhysRect::new(100, 100, 800, 600)));
         let img = chain.iter().find(|n| matches!(n.kind, NodeKind::Element(Control::Image))).unwrap();
         assert_eq!(img.rect, PhysRect::new(120, 120, 700, 500));
+    }
+
+    #[test]
+    fn 앞_창에_가린_이미지_재측정은_잘린_변을_2px_피해_묻고_원래_가림_경계를_복원한다() {
+        use std::cell::Cell;
+        let elem = PhysRect::new(175, 160, 540, 319);
+        let occ = [PhysRect::new(0, 0, 1200, 236)];
+        let els = [ElementCand { rect: elem, control: Control::Image, from_msaa: false }];
+        let p = PhysPoint { x: 445, y: 337 };
+        let received = Cell::new(None);
+        // (1) 잘린 윗변이 2 px 안쪽(238)으로 전달되고 좌·우·하 여백을 걷었을 때 윗변은 236으로 복원된다
+        let refine = |r: PhysRect| {
+            received.set(Some(r));
+            PhysRect::from_edges(216, r.y, 675, 439)
+        };
+        let ev1 = Evidence {
+            point: p,
+            window: Some(WIN),
+            children: &[],
+            elements: &els,
+            vision: &[],
+            monitor: MON,
+            virtual_bounds: MON,
+            occluders: &occ,
+            support: None,
+            snap: None,
+        };
+        let opts1 = RecogOptions { refine_image: Some(&refine) };
+        let c1 = build_chain_with(&ev1, &opts1);
+        assert_eq!(received.get(), Some(PhysRect::new(175, 238, 540, 241)));
+        let img1 = c1.iter().find(|n| matches!(n.kind, NodeKind::Element(Control::Image))).unwrap();
+        assert_eq!(img1.rect, PhysRect::new(216, 236, 459, 203));
+
+        // (2) 좌·우·하가 안 변한 채 잘린 윗변만 단독 축소(가린 하늘 오탐)되면 윗변을 원래 경계(236)로 복원한다
+        let refine_sky_false_pos = |r: PhysRect| PhysRect::from_edges(r.x, r.y + 40, r.right(), r.bottom());
+        let opts2 = RecogOptions { refine_image: Some(&refine_sky_false_pos) };
+        let c2 = build_chain_with(&ev1, &opts2);
+        let img2 = c2.iter().find(|n| matches!(n.kind, NodeKind::Element(Control::Image))).unwrap();
+        assert_eq!(img2.rect, PhysRect::new(175, 236, 540, 243));
     }
 }

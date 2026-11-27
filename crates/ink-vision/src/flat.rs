@@ -2,7 +2,7 @@
 //! 4K에서도 1 ms 안에 끝나도록 스캔라인 채우기 + 64×64 타일 비트셋(방문한 타일만 할당)을 쓴다.
 
 use crate::prep::PrepData;
-use crate::{FLAT_PIXEL_BUDGET, FLAT_TOLERANCE, GRAD_THRESHOLD};
+use crate::{ladder, FLAT_PIXEL_BUDGET, FLAT_TOLERANCE, GRAD_THRESHOLD, OCCLUDER_EDGE_TOL};
 use ink_domain::geometry::PhysRect;
 use std::collections::VecDeque;
 
@@ -167,8 +167,8 @@ const SIDE_FLAT_RATIO: f32 = 0.85;
 const OUTSIDE_CONFIRM_RATIO: f32 = 0.50;
 const MAX_SHADOW_SPREAD: u8 = 24;
 const SHADOW_MAX_ENTRY_DROP: i32 = 9;
-const SHADOW_MAX_LUMA_DROP: i32 = 12;
-const SHADOW_MAX_CH_DROP: u8 = 16;
+const SHADOW_MAX_LUMA_DROP: i32 = 18;
+const SHADOW_MAX_CH_DROP: u8 = 20;
 const SHADOW_MIN_SCALE: f32 = 0.45;
 const SHADOW_CHROMA_TOL: f32 = 8.0;
 const MIN_REMAINING_AREA_RATIO: f64 = 0.15;
@@ -233,7 +233,8 @@ fn shadow_step_ok(p: [u8; 3], q: [u8; 3], max_drop: i32) -> bool {
 }
 
 /// 변 위의 색들을 샘플링해 대표 색과 일치 비율(>= 0.85) 및 양 끝 모서리 일치 여부를 확인한다.
-fn dominant_side_bg(samples: &[[u8; 3]]) -> Option<[u8; 3]> {
+/// 가려 잘린 인접 변 쪽 끝(`check_start`/`check_end == false`)은 모서리 검사를 건너뛴다.
+fn dominant_side_bg(samples: &[[u8; 3]], check_start: bool, check_end: bool) -> Option<[u8; 3]> {
     if samples.len() < 4 {
         return None;
     }
@@ -252,16 +253,41 @@ fn dominant_side_bg(samples: &[[u8; 3]]) -> Option<[u8; 3]> {
     if (matched as f32 / samples.len() as f32) < SIDE_FLAT_RATIO {
         return None;
     }
-    // 여백 없는 둥근 모서리 그림 오탐 방지: 양 끝 모서리 구간(2 px)에도 대표 색이 닿아야 여백 변으로 인정
+    // 여백 없는 둥근 모서리 그림 오탐 방지: 양 끝 모서리 구간(3 px)에도 대표 색이 닿아야 여백 변으로 인정
     let end_span = samples.len().min(3);
-    let start_ok = samples[..end_span].iter().any(|&s| bgr_matches(s, best_c));
-    let end_ok = samples[samples.len() - end_span..].iter().any(|&s| bgr_matches(s, best_c));
-    (start_ok && end_ok).then_some(best_c)
+    let start_slice = &samples[..end_span];
+    let end_slice = &samples[samples.len() - end_span..];
+    let start_ok = !check_start || start_slice.iter().any(|&s| bgr_matches(s, best_c));
+    let end_ok = !check_end || end_slice.iter().any(|&s| bgr_matches(s, best_c));
+    if start_ok && end_ok {
+        return Some(best_c);
+    }
+    // 한쪽 끝은 바탕과 일치하고 다른 한쪽 끝만 앞 창 그림자 감쇠 범위에 놓인 경우 허용
+    if check_start && check_end {
+        let start_bg = start_slice.iter().any(|&s| bgr_matches(s, best_c));
+        let end_bg = end_slice.iter().any(|&s| bgr_matches(s, best_c));
+        let start_shadow = start_slice.iter().any(|&s| is_shadow_pixel(s, best_c));
+        let end_shadow = end_slice.iter().any(|&s| is_shadow_pixel(s, best_c));
+        if (start_bg && end_shadow) || (end_bg && start_shadow) {
+            return Some(best_c);
+        }
+    }
+    None
 }
 
 /// 이미지 요소(`local_rect`, ROI 좌표) 안에서 여백·부드러운 그림자를 걷어내어 실제 그림 가장자리를 다시 잰다.
 /// 여백 없는 사진(예: 상단 하늘)이나 너무 작은 영역은 원래 사각형을 그대로 돌려준다.
+#[allow(dead_code)]
 pub(crate) fn refine_image_bounds(data: &PrepData, local_rect: PhysRect) -> PhysRect {
+    refine_image_bounds_with_occluders(data, local_rect, &[])
+}
+
+/// 앞 창(`occluders`, ROI 좌표)에 가려 잘린 변은 여백 찾기를 건너뛰고 나머지 변의 여백·그림자를 걷어낸다(R2-CAP-2·3).
+pub(crate) fn refine_image_bounds_with_occluders(
+    data: &PrepData,
+    local_rect: PhysRect,
+    occluders: &[PhysRect],
+) -> PhysRect {
     if data.is_empty() {
         return local_rect;
     }
@@ -274,27 +300,80 @@ pub(crate) fn refine_image_bounds(data: &PrepData, local_rect: PhysRect) -> Phys
 
     let w = data.rw as usize;
     let h = data.rh as usize;
-    let rx0 = clipped.x as usize;
-    let ry0 = clipped.y as usize;
-    let rx1 = clipped.right() as usize;
-    let ry1 = clipped.bottom() as usize;
+    let lx0 = clipped.x;
+    let ly0 = clipped.y;
+    let lx1 = clipped.right();
+    let ly1 = clipped.bottom();
+    let rx0 = lx0 as usize;
+    let ry0 = ly0 as usize;
+    let rx1 = lx1 as usize;
+    let ry1 = ly1 as usize;
     let bw = rx1 - rx0;
     let bh = ry1 - ry0;
 
-    // 4변(0=위, 1=아래, 2=왼쪽, 3=오른쪽) 샘플링
-    let top_s: Vec<[u8; 3]> = (rx0..rx1).map(|x| px_bgr(&data.bgra, w, x, ry0)).collect();
-    let bot_s: Vec<[u8; 3]> = (rx0..rx1).map(|x| px_bgr(&data.bgra, w, x, ry1 - 1)).collect();
-    let left_s: Vec<[u8; 3]> = (ry0..ry1).map(|y| px_bgr(&data.bgra, w, rx0, y)).collect();
-    let right_s: Vec<[u8; 3]> = (ry0..ry1).map(|y| px_bgr(&data.bgra, w, rx1 - 1, y)).collect();
+    // 4변(0=위, 1=아래, 2=왼쪽, 3=오른쪽)의 앞 창 가림 여부 및 경계 ±2 px 그림자·테두리 오염 마진 계산
+    let occluded = if occluders.is_empty() {
+        [false; 4]
+    } else {
+        [
+            ladder::h_line_touches_occluders(ly0, lx0, lx1, occluders, OCCLUDER_EDGE_TOL),
+            ladder::h_line_touches_occluders(ly1, lx0, lx1, occluders, OCCLUDER_EDGE_TOL),
+            ladder::v_line_touches_occluders(lx0, ly0, ly1, occluders, OCCLUDER_EDGE_TOL),
+            ladder::v_line_touches_occluders(lx1, ly0, ly1, occluders, OCCLUDER_EDGE_TOL),
+        ]
+    };
+    let mut margin = [0usize; 4];
+    for o in occluders {
+        if o.right() > lx0 && o.x < lx1 {
+            if occluded[0] && o.y < ly0 && (ly0 - o.bottom()).abs() <= OCCLUDER_EDGE_TOL {
+                let m = (o.bottom() + OCCLUDER_EDGE_TOL - ly0).clamp(0, OCCLUDER_EDGE_TOL) as usize;
+                margin[0] = margin[0].max(m);
+            }
+            if occluded[1] && o.bottom() > ly1 && (o.y - ly1).abs() <= OCCLUDER_EDGE_TOL {
+                let m = (ly1 - (o.y - OCCLUDER_EDGE_TOL)).clamp(0, OCCLUDER_EDGE_TOL) as usize;
+                margin[1] = margin[1].max(m);
+            }
+        }
+        if o.bottom() > ly0 && o.y < ly1 {
+            if occluded[2] && o.x < lx0 && (lx0 - o.right()).abs() <= OCCLUDER_EDGE_TOL {
+                let m = (o.right() + OCCLUDER_EDGE_TOL - lx0).clamp(0, OCCLUDER_EDGE_TOL) as usize;
+                margin[2] = margin[2].max(m);
+            }
+            if occluded[3] && o.right() > lx1 && (o.x - lx1).abs() <= OCCLUDER_EDGE_TOL {
+                let m = (lx1 - (o.x - OCCLUDER_EDGE_TOL)).clamp(0, OCCLUDER_EDGE_TOL) as usize;
+                margin[3] = margin[3].max(m);
+            }
+        }
+    }
+
+    let x_start = margin[2];
+    let x_end = bw.saturating_sub(margin[3]);
+    let y_start = margin[0];
+    let y_end = bh.saturating_sub(margin[1]);
+    if x_end <= x_start + 4 || y_end <= y_start + 4 {
+        return local_rect;
+    }
+
+    // 가려지지 않은 변만 샘플링(가려 잘린 변은 여백 후보·시드에서 제외)
+    let top_s: Option<Vec<[u8; 3]>> = (!occluded[0])
+        .then(|| (rx0 + x_start..rx0 + x_end).map(|x| px_bgr(&data.bgra, w, x, ry0 + y_start)).collect());
+    let bot_s: Option<Vec<[u8; 3]>> = (!occluded[1])
+        .then(|| (rx0 + x_start..rx0 + x_end).map(|x| px_bgr(&data.bgra, w, x, ry0 + y_end - 1)).collect());
+    let left_s: Option<Vec<[u8; 3]>> = (!occluded[2])
+        .then(|| (ry0 + y_start..ry0 + y_end).map(|y| px_bgr(&data.bgra, w, rx0 + x_start, y)).collect());
+    let right_s: Option<Vec<[u8; 3]>> = (!occluded[3])
+        .then(|| (ry0 + y_start..ry0 + y_end).map(|y| px_bgr(&data.bgra, w, rx0 + x_end - 1, y)).collect());
 
     let side_bgs = [
-        dominant_side_bg(&top_s),
-        dominant_side_bg(&bot_s),
-        dominant_side_bg(&left_s),
-        dominant_side_bg(&right_s),
+        top_s.as_deref().and_then(|s| dominant_side_bg(s, !occluded[2], !occluded[3])),
+        bot_s.as_deref().and_then(|s| dominant_side_bg(s, !occluded[2], !occluded[3])),
+        left_s.as_deref().and_then(|s| dominant_side_bg(s, !occluded[0], !occluded[1])),
+        right_s.as_deref().and_then(|s| dominant_side_bg(s, !occluded[0], !occluded[1])),
     ];
 
     // 외부 배경 일치 또는 다변 일치 확인(한쪽 끝만 단색인 하늘 사진 오탐 방지)
+    let span_w = (x_end - x_start) as f32;
+    let span_h = (y_end - y_start) as f32;
     let mut confirmed = [false; 4];
     for (i, side_opt) in side_bgs.iter().enumerate() {
         let Some(bg) = *side_opt else { continue };
@@ -307,21 +386,29 @@ pub(crate) fn refine_image_bounds(data: &PrepData, local_rect: PhysRect) -> Phys
             continue;
         }
         let outside_match = match i {
-            0 if ry0 > 0 => {
-                let cnt = (rx0..rx1).filter(|&x| bgr_matches(px_bgr(&data.bgra, w, x, ry0 - 1), bg)).count();
-                cnt as f32 / bw as f32 >= OUTSIDE_CONFIRM_RATIO
+            0 if !occluded[0] && ry0 > 0 => {
+                let cnt = (rx0 + x_start..rx0 + x_end)
+                    .filter(|&x| bgr_matches(px_bgr(&data.bgra, w, x, ry0 - 1), bg))
+                    .count();
+                cnt as f32 / span_w >= OUTSIDE_CONFIRM_RATIO
             }
-            1 if ry1 < h => {
-                let cnt = (rx0..rx1).filter(|&x| bgr_matches(px_bgr(&data.bgra, w, x, ry1), bg)).count();
-                cnt as f32 / bw as f32 >= OUTSIDE_CONFIRM_RATIO
+            1 if !occluded[1] && ry1 < h => {
+                let cnt = (rx0 + x_start..rx0 + x_end)
+                    .filter(|&x| bgr_matches(px_bgr(&data.bgra, w, x, ry1), bg))
+                    .count();
+                cnt as f32 / span_w >= OUTSIDE_CONFIRM_RATIO
             }
-            2 if rx0 > 0 => {
-                let cnt = (ry0..ry1).filter(|&y| bgr_matches(px_bgr(&data.bgra, w, rx0 - 1, y), bg)).count();
-                cnt as f32 / bh as f32 >= OUTSIDE_CONFIRM_RATIO
+            2 if !occluded[2] && rx0 > 0 => {
+                let cnt = (ry0 + y_start..ry0 + y_end)
+                    .filter(|&y| bgr_matches(px_bgr(&data.bgra, w, rx0 - 1, y), bg))
+                    .count();
+                cnt as f32 / span_h >= OUTSIDE_CONFIRM_RATIO
             }
-            3 if rx1 < w => {
-                let cnt = (ry0..ry1).filter(|&y| bgr_matches(px_bgr(&data.bgra, w, rx1, y), bg)).count();
-                cnt as f32 / bh as f32 >= OUTSIDE_CONFIRM_RATIO
+            3 if !occluded[3] && rx1 < w => {
+                let cnt = (ry0 + y_start..ry0 + y_end)
+                    .filter(|&y| bgr_matches(px_bgr(&data.bgra, w, rx1, y), bg))
+                    .count();
+                cnt as f32 / span_h >= OUTSIDE_CONFIRM_RATIO
             }
             _ => false,
         };
@@ -381,10 +468,10 @@ pub(crate) fn refine_image_bounds(data: &PrepData, local_rect: PhysRect) -> Phys
         let side_bg = side_bgs[side_idx].unwrap();
         let bg_idx = bgs.iter().position(|&b| bgr_matches(b, side_bg)).unwrap_or(0);
         match side_idx {
-            0 => (0..bw).for_each(|lx| seed_px(lx, 0, bg_idx)),
-            1 => (0..bw).for_each(|lx| seed_px(lx, bh - 1, bg_idx)),
-            2 => (0..bh).for_each(|ly| seed_px(0, ly, bg_idx)),
-            _ => (0..bh).for_each(|ly| seed_px(bw - 1, ly, bg_idx)),
+            0 => (x_start..x_end).for_each(|lx| seed_px(lx, y_start, bg_idx)),
+            1 => (x_start..x_end).for_each(|lx| seed_px(lx, y_end - 1, bg_idx)),
+            2 => (y_start..y_end).for_each(|ly| seed_px(x_start, ly, bg_idx)),
+            _ => (y_start..y_end).for_each(|ly| seed_px(x_end - 1, ly, bg_idx)),
         }
     }
 
@@ -393,10 +480,10 @@ pub(crate) fn refine_image_bounds(data: &PrepData, local_rect: PhysRect) -> Phys
         let bg = bgs[bg_i as usize];
         let p_px = px_bgr(&data.bgra, w, rx0 + lx, ry0 + ly);
         let neighbors = [
-            (lx > 0).then(|| (lx - 1, ly)),
-            (lx + 1 < bw).then(|| (lx + 1, ly)),
-            (ly > 0).then(|| (lx, ly - 1)),
-            (ly + 1 < bh).then(|| (lx, ly + 1)),
+            (lx > x_start).then(|| (lx - 1, ly)),
+            (lx + 1 < x_end).then(|| (lx + 1, ly)),
+            (ly > y_start).then(|| (lx, ly - 1)),
+            (ly + 1 < y_end).then(|| (lx, ly + 1)),
         ];
         for n in neighbors.into_iter().flatten() {
             if is_vis(&visited, n.0, n.1) {
@@ -429,10 +516,10 @@ pub(crate) fn refine_image_bounds(data: &PrepData, local_rect: PhysRect) -> Phys
         let bg = bgs[bg_i as usize];
         let p_px = px_bgr(&data.bgra, w, rx0 + lx, ry0 + ly);
         let neighbors = [
-            (lx > 0).then(|| (lx - 1, ly)),
-            (lx + 1 < bw).then(|| (lx + 1, ly)),
-            (ly > 0).then(|| (lx, ly - 1)),
-            (ly + 1 < bh).then(|| (lx, ly + 1)),
+            (lx > x_start).then(|| (lx - 1, ly)),
+            (lx + 1 < x_end).then(|| (lx + 1, ly)),
+            (ly > y_start).then(|| (lx, ly - 1)),
+            (ly + 1 < y_end).then(|| (lx, ly + 1)),
         ];
         for n in neighbors.into_iter().flatten() {
             if is_vis(&visited, n.0, n.1) {
@@ -453,14 +540,14 @@ pub(crate) fn refine_image_bounds(data: &PrepData, local_rect: PhysRect) -> Phys
         }
     }
 
-    // 미방문(전경 그림) 픽셀의 최소 바운딩 박스 계산
-    let mut min_x = bw;
-    let mut max_x = 0usize;
-    let mut min_y = bh;
-    let mut max_y = 0usize;
+    // 미방문(전경 그림) 픽셀의 최소 바운딩 박스 계산(마진 제외한 내부 영역 기준)
+    let mut min_x = x_end;
+    let mut max_x = x_start;
+    let mut min_y = y_end;
+    let mut max_y = y_start;
     let mut any_fg = false;
-    for ly in 0..bh {
-        for lx in 0..bw {
+    for ly in y_start..y_end {
+        for lx in x_start..x_end {
             if !is_vis(&visited, lx, ly) {
                 any_fg = true;
                 min_x = min_x.min(lx);
@@ -472,6 +559,20 @@ pub(crate) fn refine_image_bounds(data: &PrepData, local_rect: PhysRect) -> Phys
     }
     if !any_fg {
         return local_rect;
+    }
+
+    // 앞 창 경계 ±2 px 마진 때문에 안쪽으로 밀린 전경 변은 원래 잘린 경계로 복원
+    if occluded[0] && min_y == y_start {
+        min_y = 0;
+    }
+    if occluded[1] && max_y + 1 == y_end {
+        max_y = bh - 1;
+    }
+    if occluded[2] && min_x == x_start {
+        min_x = 0;
+    }
+    if occluded[3] && max_x + 1 == x_end {
+        max_x = bw - 1;
     }
 
     let refined = PhysRect::from_edges(
