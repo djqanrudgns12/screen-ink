@@ -13,6 +13,7 @@ permissions = [
   "allow-shortcut-capture",
   "allow-save-pdf",
   "allow-system-fonts",
+  "allow-audio-inputs",
   "allow-text-focus",
   "allow-run",
   "allow-preview-import",

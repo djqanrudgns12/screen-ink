@@ -14,6 +14,7 @@ screen-ink 창(팝오버·설정·섬)이 InkClient 명령을 모두 쓸 수 있
 - `allow-shortcut-capture`
 - `allow-save-pdf`
 - `allow-system-fonts`
+- `allow-audio-inputs`
 - `allow-text-focus`
 - `allow-run`
 - `allow-preview-import`
@@ -67,6 +68,32 @@ Enables the apply_import command without any pre-configured scope.
 <td>
 
 Denies the apply_import command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:allow-audio-inputs`
+
+</td>
+<td>
+
+Enables the audio_inputs command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`screen-ink:deny-audio-inputs`
+
+</td>
+<td>
+
+Denies the audio_inputs command without any pre-configured scope.
 
 </td>
 </tr>
@@ -847,19 +874,6 @@ Enables the zoom_input command without any pre-configured scope.
 <td>
 
 Denies the zoom_input command without any pre-configured scope.
-
-</td>
-</tr>
-
-<tr>
-<td>
-
-`screen-ink:windows-audio-inputs`
-
-</td>
-<td>
-
-Windows 설정 창에서 녹화용 마이크 목록을 읽는다.
 
 </td>
 </tr>

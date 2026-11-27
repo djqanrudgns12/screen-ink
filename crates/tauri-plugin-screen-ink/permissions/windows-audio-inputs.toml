@@ -1,5 +1,0 @@
-[[permission]]
-identifier = "windows-audio-inputs"
-description = "Windows 설정 창에서 녹화용 마이크 목록을 읽는다."
-platforms = ["windows"]
-commands.allow = ["audio_inputs"]
