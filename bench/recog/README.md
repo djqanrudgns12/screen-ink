@@ -86,6 +86,18 @@ cargo run -p ink-platform-fake --bin recog-replay -- --vision-only --filter RB-0
 
 `cases/baseline.json` = `{ "<사례 id>": <Top-1로 맞힌 점 수> }`. 로직을 고쳐 좋아졌으면 숫자를 올린다(내리지 않는다).
 
+### 새 장면(hold-out) 판정
+
+287점 기준선 과적합을 확인하기 위한 시험 전용 사례는 `bench/recog/holdout/`에 따로 둔다([holdout/README.md](holdout/README.md)).
+
+```powershell
+cargo run -p ink-platform-fake --bin recog-replay -- --holdout               # → bench/results/recog-holdout.csv
+cargo run -p ink-platform-fake --bin recog-replay -- --holdout --min-top1 80 # 80% 관문 판정
+```
+
+- **보지 않는 규칙**: 인식 규칙·문턱값을 고칠 때 `holdout/` 사례를 보거나 맞추지 않는다.
+- `baseline.json`과 섞지 않고 기준선 검사 없이 Top-1·Top-3·경계 오차만 보고한다. CI(`.github/workflows/ci.yml`) 기존 재생 시험은 `cases/`만 돈다.
+
 ## 판정
 
 - 맞음 = 네 변 모두 ±2 px 안(`HIT_TOLERANCE`). 경계 오차 = 맞힌 사각형의 가장 큰 변 오차.

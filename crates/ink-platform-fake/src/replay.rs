@@ -10,6 +10,7 @@ use ink_app::{CaptureInput, Frame, InkService};
 use ink_domain::geometry::{MonitorLayout, PhysRect};
 use ink_domain::shortcuts::Platform;
 use serde::Serialize;
+use std::collections::BTreeSet;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
@@ -257,6 +258,11 @@ pub fn to_csv(scores: &[PointScore]) -> String {
     out
 }
 
+/// 기존 287점 기준선 사례 폴더(저장소 루트 기준).
+pub const CASES_REL_DIR: &str = "bench/recog/cases";
+/// 과적합 확인용 새 장면(hold-out) 사례 폴더(저장소 루트 기준).
+pub const HOLDOUT_REL_DIR: &str = "bench/recog/holdout";
+
 /// 폴더의 모든 사례(`*.json`, 이름순).
 pub fn cases_in(dir: &Path) -> Vec<std::path::PathBuf> {
     let mut v: Vec<_> = std::fs::read_dir(dir)
@@ -264,4 +270,79 @@ pub fn cases_in(dir: &Path) -> Vec<std::path::PathBuf> {
         .unwrap_or_default();
     v.sort();
     v
+}
+
+/// 사례 하나의 재생 결과 요약.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CaseReport {
+    pub id: String,
+    pub note: String,
+    pub summary: Summary,
+    pub scores: Vec<PointScore>,
+}
+
+/// 폴더 전체의 재생 결과(기준선 비교 없이 점수·경계 오차·p95만 집계).
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EvalReport {
+    pub cases: Vec<CaseReport>,
+    pub all: Vec<PointScore>,
+    pub summary: Summary,
+}
+
+/// 사례 폴더를 재생해 사례별·전체 요약과 점별 결과를 돌려준다.
+///
+/// `baseline.json`은 읽지도 검사하지도 않는다(새 장면 hold-out 보고 및 필터 재생 공용).
+pub fn evaluate_dir(dir: &Path, vision_only: bool, filter: &[String]) -> Result<EvalReport, String> {
+    let files = cases_in(dir);
+    if files.is_empty() {
+        return Err(format!("사례가 없어요: {}", dir.display()));
+    }
+    let mut seen_ids = BTreeSet::new();
+    let mut cases = Vec::new();
+    let mut all = Vec::new();
+    let mut matched = vec![false; filter.len()];
+    for f in &files {
+        let mut l = load(f)?;
+        if !seen_ids.insert(l.case.id.clone()) {
+            return Err(format!("사례 ID가 겹쳐요: {}", l.case.id));
+        }
+        let hay = format!("{} {}", l.case.id, l.case.note).to_lowercase();
+        let mut selected = filter.is_empty();
+        for (term, seen) in filter.iter().zip(&mut matched) {
+            if hay.contains(term.as_str()) {
+                *seen |= !l.case.points.is_empty();
+                selected = true;
+            }
+        }
+        if !selected {
+            continue;
+        }
+        for p in &l.case.points {
+            let in_truth = p.truth.contains(p.at);
+            let in_monitor = l.case.monitors.iter().any(|m| m.monitor.bounds.contains(p.at));
+            if !in_truth || !in_monitor {
+                return Err(format!("{}: 잘못된 정답 점 {}", l.case.id, p.label));
+            }
+        }
+        if vision_only {
+            l.case.elements.clear();
+            l.case.children.clear();
+        }
+        let scores = score(&l);
+        let summary = summarize(&scores);
+        cases.push(CaseReport { id: l.case.id.clone(), note: l.case.note.clone(), summary, scores: scores.clone() });
+        all.extend(scores);
+    }
+    for (term, seen) in filter.iter().zip(matched) {
+        if !seen {
+            return Err(format!("필터에 맞는 정답 점이 없어요: {term}"));
+        }
+    }
+    if all.is_empty() {
+        return Err("고른 사례에 점이 없어요(--filter 확인)".into());
+    }
+    let summary = summarize(&all);
+    Ok(EvalReport { cases, all, summary })
 }

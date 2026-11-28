@@ -133,3 +133,87 @@ fn 확정하면_사례가_써지고_재생하면_맞는다() {
     assert!(replay::score(&back)[0].top1());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn 새_장면_폴더는_기준선_없이_보고만_낸다() {
+    let dir = std::env::temp_dir().join(format!("screen-ink-holdout-eval-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+
+    assert!(replay::evaluate_dir(&dir, false, &[]).is_err(), "빈 폴더는 오류");
+
+    let l = synthetic();
+    replay::save(&dir, &l.case, &l.frames).unwrap();
+    std::fs::write(dir.join("README.md"), "# holdout\n").unwrap();
+
+    let report = replay::evaluate_dir(&dir, false, &[]).unwrap();
+    assert_eq!(report.cases.len(), 1);
+    assert_eq!(report.cases[0].id, "synthetic-panel");
+    assert_eq!(report.summary.points, 2);
+    assert!(report.summary.top3 >= 1.0);
+    assert!(report.summary.p95_ms >= 0.0);
+
+    let filtered = replay::evaluate_dir(&dir, true, &["synthetic".into()]).unwrap();
+    assert_eq!(filtered.summary.points, 2);
+
+    assert!(replay::evaluate_dir(&dir, false, &["missing-case".into()]).is_err());
+
+    // 사례 ID 중복 차단
+    let dup = dir.join("dup.json");
+    let raw = std::fs::read_to_string(dir.join("synthetic-panel.json")).unwrap();
+    std::fs::write(&dup, raw).unwrap();
+    assert!(replay::evaluate_dir(&dir, false, &[]).is_err());
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn recog_replay_바이너리_holdout_실행() {
+    let base = std::env::temp_dir().join(format!("screen-ink-holdout-bin-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&base);
+    let empty_dir = base.join("empty");
+    let ho_dir = base.join("holdout");
+    let csv_path = base.join("out.csv");
+    std::fs::create_dir_all(&empty_dir).unwrap();
+
+    let bin = env!("CARGO_BIN_EXE_recog-replay");
+
+    // 1) 빈 holdout 폴더는 안내와 함께 종료 코드 1
+    let empty_out = std::process::Command::new(bin).args(["--holdout"]).arg(&empty_dir).output().unwrap();
+    assert!(!empty_out.status.success());
+    let stderr = String::from_utf8_lossy(&empty_out.stderr);
+    assert!(stderr.contains("새 장면(hold-out)"), "stderr: {stderr}");
+
+    // 2) 맞히는 점 1개(BUTTON) + 빗나가는 점 1개(흰 바탕 위 존재하지 않는 사각형) → Top-1 50.0%
+    let mut l = synthetic();
+    l.case.id = "ho-synth".into();
+    l.case.monitors[0].frame = Case::frame_name("ho-synth", 0);
+    l.case.points = vec![
+        CasePoint { at: PhysPoint { x: 210, y: 218 }, truth: BUTTON, label: "맞는 단추".into() },
+        CasePoint { at: PhysPoint { x: 640, y: 470 }, truth: PhysRect::new(615, 455, 50, 30), label: "없는 상자".into() },
+    ];
+    replay::save(&ho_dir, &l.case, &l.frames).unwrap();
+
+    let ok_out = std::process::Command::new(bin).arg("--holdout").arg(&ho_dir).arg(&csv_path).args(["--min-top1", "50"]).output().unwrap();
+    assert!(ok_out.status.success(), "stderr: {}", String::from_utf8_lossy(&ok_out.stderr));
+    let stdout = String::from_utf8_lossy(&ok_out.stdout);
+    assert!(stdout.contains("전체 (새 장면): 점 2  Top-1 50.0%"), "stdout: {stdout}");
+    assert!(stdout.contains("판정: Top-1 50.0% ≥ 50.0% — 통과"), "stdout: {stdout}");
+    assert!(csv_path.exists());
+
+    // 3) --no-csv + --min-top1 80 미달 검증
+    let fail_out = std::process::Command::new(bin).arg("--holdout").arg(&ho_dir).args(["--no-csv", "--min-top1", "80"]).output().unwrap();
+    assert!(!fail_out.status.success());
+    let fail_stdout = String::from_utf8_lossy(&fail_out.stdout);
+    assert!(fail_stdout.contains("판정: Top-1 50.0% < 80.0% — 미달"), "stdout: {fail_stdout}");
+
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+#[test]
+fn 저장소_holdout_폴더가_기준선과_분리되어_있다() {
+    let root: PathBuf = [env!("CARGO_MANIFEST_DIR"), "..", ".."].iter().collect();
+    let cases = root.join(replay::CASES_REL_DIR);
+    let holdout = root.join(replay::HOLDOUT_REL_DIR);
+    assert_ne!(cases, holdout);
+    assert!(holdout.join("README.md").is_file(), "holdout README.md가 있어야 해요");
+}
