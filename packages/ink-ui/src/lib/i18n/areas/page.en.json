@@ -48,7 +48,7 @@
   "page.capture.templateErrEmpty": "Enter a file name",
   "page.capture.templateErrForbidden": "Can't use \\ / : * ? \" < > |",
   "page.capture.templateTokensHint": "{tokens}",
-  "page.capture.title": "Capture & record",
+  "page.capture.title": "Capture & recording",
 
   "page.draw.boardBgBlack": "Black",
   "page.draw.boardBgWhite": "White",

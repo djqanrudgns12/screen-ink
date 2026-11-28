@@ -747,7 +747,9 @@
 
   function toggleStylePanel() {
     if (!annotTool) {
+      // 색·굵기 단추는 패널을 열라고 누르는 것 — 도구가 없으면 펜을 고르면서 패널도 연다(첫 누름에 안 열리던 것, 2026-11-28 화면 확인)
       selectTool('pen');
+      panelOpen = true;
       return;
     }
     panelOpen = !panelOpen;

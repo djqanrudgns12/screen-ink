@@ -227,7 +227,8 @@
             class="ink-text-input ink-mono ink-focus"
           />
           {#if !templateError}
-            <span class="ink-template-preview ink-mono">→ {templatePreview}</span>
+            <!-- 미리보기는 입력칸 아래 한 줄(길면 말줄임, 전체는 풍선 도움말) — 오른쪽으로 넘치던 것(2026-11-28 화면 확인) -->
+            <span class="ink-template-preview ink-mono" title={templatePreview}>→ {templatePreview}</span>
           {/if}
         </div>
       </Row>
@@ -442,9 +443,11 @@
 
   .ink-template-box {
     display: inline-flex;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
     min-width: 0;
+    max-width: 260px;
   }
 
   .ink-text-input {
@@ -464,7 +467,10 @@
   }
 
   .ink-template-preview {
-    font-size: 11.5px;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 11px;
     color: var(--ink-accent-text);
     white-space: nowrap;
   }
