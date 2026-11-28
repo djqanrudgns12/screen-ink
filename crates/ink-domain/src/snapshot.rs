@@ -101,6 +101,20 @@ impl Snapshot {
         self.windows.iter().find(|w| w.rect.contains(p) && !(skip_overlays && w.suspect_overlay))
     }
 
+    /// 범위가 걸친 커서 화면을 우선하고, 키로 다른 화면의 범위를 불렀으면 가장 많이 걸친 화면을 쓴다.
+    pub fn island_monitor(&self, rect: Option<PhysRect>, cursor: PhysPoint) -> Option<&crate::geometry::Monitor> {
+        let current = self.layout.nearest(cursor);
+        let Some(rect) = rect else { return current };
+        if current.is_some_and(|m| m.bounds.intersect(&rect).is_some()) {
+            return current;
+        }
+        self.layout.monitors.iter()
+            .filter_map(|m| m.bounds.intersect(&rect).map(|part| (m, part.area())))
+            .max_by_key(|(_, area)| *area)
+            .map(|(m, _)| m)
+            .or(current)
+    }
+
     /// 커서가 있는 모니터 전체(작업 표시줄 포함). 틈에 있으면 가장 가까운 모니터.
     pub fn cursor_monitor(&self) -> Option<PhysRect> {
         self.layout.monitor_at(self.cursor).or_else(|| self.layout.nearest(self.cursor)).map(|m| m.bounds)
@@ -225,6 +239,17 @@ mod tests {
         let w = filter_windows(&raw, &layout(), 42, &[]);
         assert_eq!(w.iter().map(|x| x.handle).collect::<Vec<_>>(), vec![10]);
         assert_eq!(w[0].z, 0);
+    }
+
+    #[test]
+    fn 섬은_고른_범위의_모니터에서_피한다() {
+        let cursor = PhysPoint { x: 200, y: 200 };
+        let snap = Snapshot { id: 1, kind: CaptureKind::Region, layout: layout(), windows: vec![], cursor };
+        let monitor = |r, p| snap.island_monitor(Some(r), p).unwrap().bounds.x;
+        let across = PhysRect::new(1800, 100, 300, 300);
+        assert_eq!(monitor(across, cursor), 0);
+        assert_eq!(monitor(across, PhysPoint { x: 2000, y: 200 }), 1920);
+        assert_eq!(monitor(PhysRect::new(2100, 60, 820, 320), cursor), 1920);
     }
 
     #[test]

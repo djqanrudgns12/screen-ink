@@ -1,5 +1,5 @@
 use super::*;
-use crate::{tr_for, IslandGen, EVT_ISLAND, ISLAND, ISLAND_SIZE};
+use crate::{cursor_island_rect, tr_for, IslandGen, EVT_ISLAND, ISLAND};
 use ink_app::InkService;
 use ink_domain::mode::Mode;
 use ink_domain::package::{should_defer_update, UpdateDeferInput};
@@ -107,7 +107,7 @@ fn offer<R: Runtime>(app: &AppHandle<R>, ready: Arc<Ready>) {
         let Some(window) = h.get_webview_window(ISLAND) else { return };
         if let Ok(hwnd) = window.hwnd() {
             use ink_platform_windows::screen;
-            screen::show_island(hwnd.0 as isize, screen::cursor_pos(), ISLAND_SIZE);
+            screen::show_island(hwnd.0 as isize, cursor_island_rect(&h, None));
         }
         let _ = h.emit(EVT_ISLAND, event);
         std::thread::spawn(move || {

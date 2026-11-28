@@ -100,6 +100,20 @@ pub struct Monitor {
 }
 
 impl Monitor {
+    /// 작업 영역 위 가운데를 기준으로 삼고, 강조와 겹치면 같은 화면 아래 가운데에 놓는다.
+    pub fn island_rect(&self, logical_size: (f64, f64), avoid: Option<PhysRect>) -> PhysRect {
+        let work = self.work;
+        let px = |logical: f64| (logical * self.scale).round() as i32;
+        let w = px(logical_size.0).min(work.w);
+        let h = px(logical_size.1).min(work.h);
+        let gap = px(12.0).min(work.h - h);
+        let mut rect = PhysRect::new(work.x + (work.w - w) / 2, work.y + gap, w, h);
+        if avoid.is_some_and(|a| rect.intersect(&a).is_some()) {
+            rect.y = work.bottom() - h - gap;
+        }
+        rect
+    }
+
     /// 이 모니터 오버레이 웹뷰 안의 논리 좌표(모니터 왼쪽 위 = 0,0).
     pub fn to_local_logical(&self, p: PhysPoint) -> LogicalPoint {
         LogicalPoint { x: (p.x - self.bounds.x) as f64 / self.scale, y: (p.y - self.bounds.y) as f64 / self.scale }
@@ -187,6 +201,20 @@ mod tests {
             Monitor { id: 1, bounds: PhysRect::new(0, 0, 2880, 1800), work: PhysRect::new(0, 0, 2880, 1728), scale: 1.5, primary: true },
             Monitor { id: 2, bounds: PhysRect::new(2880, -200, 1920, 1080), work: PhysRect::new(2880, -200, 1920, 1040), scale: 1.0, primary: false },
         ])
+    }
+
+    #[test]
+    fn 섬은_상단과_겹칠_때만_작업_영역_아래로_간다() {
+        let work = PhysRect::new(0, 0, 3840, 2064);
+        let m = Monitor { id: 0, bounds: work, work, scale: 2.0, primary: true };
+        let place = |avoid| m.island_rect((560.0, 88.0), avoid);
+        let top = PhysRect::new(1360, 24, 1120, 176);
+        let bottom = PhysRect::new(1360, 1864, 1120, 176);
+        assert_eq!(place(None), top);
+        assert_eq!(place(Some(PhysRect::new(1280, 65, 820, 320))), bottom);
+        assert_eq!(place(Some(work)), bottom);
+        assert_eq!(place(Some(PhysRect::new(1280, 200, 820, 320))), top);
+        assert_eq!(place(Some(PhysRect::new(-820, 65, 820, 320))), top);
     }
 
     #[test]

@@ -426,7 +426,11 @@ impl InkService {
         }
     }
 
-    fn emit_capture(&self) {
+    pub(crate) fn emit_capture(&self) {
+        // F2 섬의 경로와 강조는 hover_window가 함께 보낸다.
+        if self.window_picking() {
+            return;
+        }
         let (Some(session), Some(sel)) = (self.session(), self.cap.selector.as_ref()) else { return };
         let selection = sel.view();
         let annot_tool = if matches!(selection.phase, ink_domain::selection::Phase::Confirmed) {
@@ -435,7 +439,8 @@ impl InkService {
             None
         };
         let (annot_can_undo, annot_can_redo) = self.annot_history_flags(session);
-        self.ports.notifier.capture(&CaptureView { session, selection, annot_tool, annot_can_undo, annot_can_redo });
+        let island_monitor = self.snapshot.as_ref().and_then(|snap| snap.island_monitor(selection.rect, sel.cursor())).cloned();
+        self.ports.notifier.capture(&CaptureView { island_monitor, session, selection, annot_tool, annot_can_undo, annot_can_redo });
     }
 
     /// 오버레이 입력 한 건.
@@ -1319,7 +1324,9 @@ impl InkService {
         let order: BTreeMap<u32, u64> = d.annot_items.keys().enumerate().map(|(i, &m)| (m, (i + 1) as u64)).collect();
         let order_seq = order.len() as u64;
         self.cap.annot = AnnotState { session, items: d.annot_items, order, order_seq, snapshots: d.annot_snapshots, ..Default::default() };
-        self.island(self.capture_island(d.kind));
+        let mut event = self.capture_island(d.kind);
+        event.avoid_rect = Some(d.rect);
+        self.island(event);
         self.emit_state();
         self.start_selection_confirmed(kept, cursor, d.rect);
         self.after_entry(d.kind, cursor);

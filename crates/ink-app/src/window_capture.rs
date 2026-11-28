@@ -14,10 +14,23 @@ use ink_domain::mode::Mode;
 use ink_domain::modekeys::{self, CaptureKeys};
 use ink_domain::selection::{Button, Command, Input, Phase, SelectionView};
 use ink_domain::settings::ExcludedApp;
+use ink_domain::shortcuts::Platform;
 use ink_domain::snapshot::{filter_windows, CaptureKind, WindowInfo};
 use ink_domain::windowshot::{self, ShotNext};
 use std::sync::Arc;
 use std::time::Instant;
+
+/// 창 목록의 실행 파일 이름과 맥 번들 식별자만 표시 이름의 근거로 쓴다.
+fn window_label(exe: &str, class: &str, platform: Platform) -> String {
+    let exe = exe.trim();
+    if platform == Platform::Mac {
+        let bundle_name = class.rsplit('.').next().unwrap_or_default();
+        if !bundle_name.is_empty() && (exe.is_empty() || bundle_name.eq_ignore_ascii_case(exe)) {
+            return ink_domain::topmost::display_name(bundle_name);
+        }
+    }
+    ink_domain::topmost::display_name(exe)
+}
 
 impl InkService {
     pub(crate) fn window_picking(&self) -> bool {
@@ -54,17 +67,24 @@ impl InkService {
     pub(crate) fn hover_window(&mut self, p: PhysPoint, force: bool) {
         let Mode::Capture { session, .. } = self.mode else { return };
         let Some(snap) = self.snapshot.as_ref() else { return };
-        let hit = snap.window_at(p, true).map(|w| (w.handle, w.rect));
-        let handle = hit.map(|(h, _)| h);
-        if !force && handle == self.rec.hovered {
+        let hit = snap.window_at(p, true);
+        let handle = hit.map(|w| w.handle);
+        let rect = hit.map(|w| w.rect);
+        let island_monitor = snap.island_monitor(rect, p).cloned();
+        let monitor_id = island_monitor.as_ref().map(|m| m.id);
+        if !force && handle == self.rec.hovered && monitor_id == self.rec.hovered_monitor && rect == self.cap.drawn {
             return;
         }
+        if force || handle != self.rec.hovered {
+            self.ports.screen.prepare_window(handle);
+        }
         self.rec.hovered = handle;
-        self.ports.screen.prepare_window(handle);
-        let rect = hit.map(|(_, r)| r);
+        self.rec.hovered_monitor = monitor_id;
+        self.cap.drawn = rect;
+        let name = hit.map(|w| window_label(&w.exe, &w.class, self.platform)).filter(|n| !n.is_empty()).unwrap_or_else(|| self.t("island.window.pathWindow"));
         self.ports.overlay.highlight(session, rect);
-        let view = SelectionView { phase: Phase::Hover, rect, path: vec![self.t("island.window.pathWindow")], level: 0, guides: Vec::new(), magnet: true, cursor_included: false, help: false, evidence: Vec::new() };
-        self.ports.notifier.capture(&CaptureView { session, selection: view, annot_tool: None, annot_can_undo: false, annot_can_redo: false });
+        let view = SelectionView { phase: Phase::Hover, rect, path: vec![name], level: 0, guides: Vec::new(), magnet: true, cursor_included: false, help: false, evidence: Vec::new() };
+        self.ports.notifier.capture(&CaptureView { island_monitor, session, selection: view, annot_tool: None, annot_can_undo: false, annot_can_redo: false });
     }
 
     fn shoot_hovered(&mut self, save: bool) {
@@ -204,5 +224,21 @@ impl InkService {
         ev.detail = Some(if method == "snapshot" { self.t("island.capture.pasteHint") } else { self.t("island.window.occludedPasteHint") });
         ev.thumb_url = thumb;
         self.island(ev);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::window_label;
+    use ink_domain::shortcuts::Platform;
+
+    #[test]
+    fn 창_고르기에는_앱_이름만_쓴다() {
+        assert_eq!(window_label("notepad.exe", "Notepad", Platform::Win), "Notepad");
+        assert_eq!(window_label("safari", "com.apple.Safari", Platform::Mac), "Safari");
+        assert_eq!(window_label("textedit", "com.apple.TextEdit", Platform::Mac), "TextEdit");
+        assert_eq!(window_label("", "com.apple.TextEdit", Platform::Mac), "TextEdit");
+        assert_eq!(window_label("", "임의의 창 클래스", Platform::Win), "");
+        assert_eq!(window_label("", "", Platform::Mac), "");
     }
 }

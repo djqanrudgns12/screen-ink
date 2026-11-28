@@ -193,6 +193,9 @@ pub struct IslandHint {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CaptureView {
+    /// 네이티브 섬 창을 놓을 모니터. 피할 사각형은 아래 고르기 상태와 같다.
+    #[serde(skip)]
+    pub island_monitor: Option<ink_domain::geometry::Monitor>,
     pub session: u64,
     #[serde(flatten)]
     pub selection: ink_domain::selection::SelectionView,
@@ -205,6 +208,9 @@ pub struct CaptureView {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct IslandEvent {
+    /// 캡처 모드 섬을 처음 보일 때 피할 물리 사각형.
+    #[serde(skip)]
+    pub avoid_rect: Option<ink_domain::geometry::PhysRect>,
     pub kind: IslandKind,
     pub text: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -264,6 +270,7 @@ pub struct IslandEvent {
 impl IslandEvent {
     pub fn new(kind: IslandKind, text: impl Into<String>) -> Self {
         Self {
+            avoid_rect: None,
             kind,
             text: text.into(),
             detail: None,

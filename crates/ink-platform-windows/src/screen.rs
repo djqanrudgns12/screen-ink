@@ -72,24 +72,13 @@ pub fn cursor_pos() -> PhysPoint {
     PhysPoint { x: p.x, y: p.y }
 }
 
-/// 옮기기 전 창 크기는 이전 모니터의 픽셀이다. 섬의 논리 크기와 위 여백을 도착할 모니터에서 환산한다.
-fn island_rect(monitor: &Monitor, logical_size: (f64, f64)) -> PhysRect {
-    let work = monitor.work;
-    let px = |logical: f64| (logical * monitor.scale).round() as i32;
-    let w = px(logical_size.0).min(work.w);
-    let h = px(logical_size.1).min(work.h);
-    PhysRect::new(work.x + (work.w - w) / 2, work.y + px(12.0).min(work.h - h), w, h)
-}
-
-/// 포커스를 가져오지 않고 커서 모니터의 작업 영역 위 가운데에 섬을 보인다.
-pub fn show_island(hwnd: isize, cursor: PhysPoint, logical_size: (f64, f64)) {
+/// 포커스 변경 없이 물리 픽셀로 계산한 자리에 섬을 보인다.
+pub fn show_island(hwnd: isize, target: Option<PhysRect>) {
     use windows_sys::Win32::UI::WindowsAndMessaging::{SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOSIZE, SWP_SHOWWINDOW};
-    let layout = monitor_layout();
-    let Some(m) = layout.nearest(cursor) else {
+    let Some(r) = target else {
         crate::events::set_window_shown(hwnd, true);
         return;
     };
-    let r = island_rect(m, logical_size);
     // 위치와 크기를 함께 주면 WM_DPICHANGED가 새 물리 크기에 배율을 한 번 더 적용한다.
     // 먼저 이전 크기 그대로 모니터를 건너고, 도착한 뒤 작업 영역에 맞춘다.
     // SAFETY: 두 호출 모두 앱 소유의 섬 창만 옮기며 포커스를 가져오지 않는다.
@@ -445,7 +434,7 @@ mod tests {
             (PhysRect::new(80, 40, 500, 90), 1.5, PhysRect::new(80, 40, 500, 90)),
         ] {
             let m = Monitor { id: 0, bounds: work, work, scale, primary: false };
-            assert_eq!(island_rect(&m, (560.0, 88.0)), want);
+            assert_eq!(m.island_rect((560.0, 88.0), None), want);
         }
     }
 

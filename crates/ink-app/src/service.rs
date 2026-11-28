@@ -243,6 +243,11 @@ impl InkService {
         let pairs: Vec<(&str, &str)> = hints.iter().map(|(k, l)| (k.as_str(), l.as_str())).collect();
         let mut ev = IslandEvent::new(IslandKind::Mode, text).variant(variant).hints(&pairs);
         ev.mode = Some(kind.slot().into());
+        ev.avoid_rect = match (kind, self.snapshot.as_ref()) {
+            (CaptureKind::Window, Some(snap)) => self.cap.drawn.or_else(|| snap.window_at(snap.cursor, true).map(|w| w.rect)),
+            (_, Some(snap)) => self.cap.selector.as_ref().and_then(|s| s.rect()).or_else(|| snap.default_highlight()),
+            (_, None) => None,
+        };
         ev
     }
 
@@ -1218,7 +1223,14 @@ impl InkService {
         if path == "general.lang" {
             self.emit_zoom();
             match self.mode {
-                Mode::Capture { kind, .. } => self.island(self.capture_island(kind)),
+                Mode::Capture { kind, .. } => {
+                    self.island(self.capture_island(kind));
+                    if kind == CaptureKind::Window {
+                        self.hover_window(self.ports.monitors.cursor(), true);
+                    } else {
+                        self.emit_capture();
+                    }
+                }
                 Mode::Draw { .. } => self.emit_draw_island(),
                 Mode::LiveZoom { .. } => {
                     if let Some(v) = self.zoom.view {

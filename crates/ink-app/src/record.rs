@@ -74,6 +74,7 @@ pub struct RecordState {
     pub(crate) delay_esc: Option<String>,
     /// F2 고르기 중 커서 아래 창(준비해 둔 창 캡처)
     pub(crate) hovered: Option<u64>,
+    pub(crate) hovered_monitor: Option<u32>,
 }
 
 impl Default for RecordState {
@@ -98,6 +99,7 @@ impl Default for RecordState {
             delay: None,
             delay_esc: None,
             hovered: None,
+            hovered_monitor: None,
         }
     }
 }

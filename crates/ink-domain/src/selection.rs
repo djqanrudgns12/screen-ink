@@ -285,6 +285,11 @@ impl Selector {
         self
     }
 
+    /// 마지막 고르기 입력의 물리 좌표.
+    pub fn cursor(&self) -> PhysPoint {
+        self.cursor
+    }
+
     /// 지금 범위.
     pub fn rect(&self) -> Option<PhysRect> {
         match &self.state {

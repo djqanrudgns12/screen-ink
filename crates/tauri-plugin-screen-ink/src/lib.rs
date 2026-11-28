@@ -24,6 +24,7 @@ use ink_app::{
 use ink_app::SystemEvent;
 #[cfg(all(not(windows), not(target_os = "macos")))]
 use ink_domain::shortcuts::LiveBinding;
+use ink_domain::geometry::PhysRect;
 use ink_domain::i18n::Lang;
 use ink_domain::shortcuts::{catalog, Platform};
 use ink_domain::snapshot::CaptureKind;
@@ -168,6 +169,8 @@ struct TauriNotifier<R: Runtime> {
     tray_tooltip: Mutex<Option<String>>,
     /// 마지막으로 창 제목에 반영한 언어 — 언어가 바뀌면 열린 창 제목도 갱신
     last_lang: Mutex<Option<Lang>>,
+    /// 같은 자리에 머무는 동안에는 네이티브 창을 다시 옮기지 않는다.
+    capture_island_rect: Mutex<Option<PhysRect>>,
 }
 
 impl<R: Runtime> Notifier for TauriNotifier<R> {
@@ -228,8 +231,15 @@ impl<R: Runtime> Notifier for TauriNotifier<R> {
     fn island(&self, event: &IslandEvent) {
         log::debug!("island {:?}", event.kind);
         // 모드 끝은 거두기만 — 창을 새로 보이지 않는다(UI가 섬을 치우면 창도 숨김)
-        if event.kind != IslandKind::End {
-            show_island(&self.app);
+        if event.kind == IslandKind::End {
+            if self.capture_island_rect.lock().unwrap_or_else(|e| e.into_inner()).take().is_some() {
+                self.app.state::<IslandGen>().0.fetch_add(1, Ordering::SeqCst);
+            }
+        } else {
+            let capture_mode = event.kind == IslandKind::Mode && matches!(event.variant.as_deref(), Some("region" | "window"));
+            let target = cursor_island_rect(&self.app, event.avoid_rect);
+            *self.capture_island_rect.lock().unwrap_or_else(|e| e.into_inner()) = target.filter(|_| capture_mode);
+            show_island(&self.app, target, capture_mode);
         }
         if event.secondary_button.as_ref().is_some_and(|b| b.action == ACTION_TO_DRAW) {
             release_capture_frame_later(&self.app);
@@ -241,6 +251,13 @@ impl<R: Runtime> Notifier for TauriNotifier<R> {
     }
 
     fn capture(&self, view: &ink_app::CaptureView) {
+        if let Some(monitor) = &view.island_monitor {
+            let next = monitor.island_rect(ISLAND_SIZE, view.selection.rect);
+            let previous = self.capture_island_rect.lock().unwrap_or_else(|e| e.into_inner()).replace(next);
+            if previous != Some(next) {
+                show_island(&self.app, Some(next), true);
+            }
+        }
         let _ = self.app.emit(EVT_CAPTURE, view);
     }
 
@@ -496,11 +513,33 @@ fn refresh_window_titles<R: Runtime>(app: &AppHandle<R>, lang: Lang) {
     }
 }
 
-fn show_island<R: Runtime>(app: &AppHandle<R>) {
+/// 새 섬의 기본 모니터는 커서가 있는 화면이다. 캡처 중에는 고르기 알림이 주는 모니터를 쓴다.
+fn cursor_island_rect<R: Runtime>(_app: &AppHandle<R>, avoid: Option<PhysRect>) -> Option<PhysRect> {
+    #[cfg(windows)]
+    {
+        use ink_platform_windows::screen;
+        screen::monitor_layout().nearest(screen::cursor_pos()).map(|m| m.island_rect(ISLAND_SIZE, avoid))
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let space = ink_platform_macos::space();
+        space.layout().nearest(ink_platform_macos::display::cursor(&space)).map(|m| m.island_rect(ISLAND_SIZE, avoid))
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
+    {
+        let w = _app.get_webview_window(ISLAND)?;
+        let m = _app.cursor_position().ok().and_then(|p| w.monitor_from_point(p.x, p.y).ok().flatten()).or_else(|| w.primary_monitor().ok().flatten())?;
+        let wa = m.work_area();
+        let work = PhysRect::new(wa.position.x, wa.position.y, wa.size.width as i32, wa.size.height as i32);
+        let monitor = ink_domain::geometry::Monitor { id: 0, work, bounds: work, scale: m.scale_factor(), primary: false };
+        Some(monitor.island_rect(ISLAND_SIZE, avoid))
+    }
+}
+
+fn show_island<R: Runtime>(app: &AppHandle<R>, target: Option<PhysRect>, capture_mode: bool) {
     let gen = app.state::<IslandGen>().0.fetch_add(1, Ordering::SeqCst) + 1;
     #[cfg(windows)]
     {
-        let cursor = ink_platform_windows::screen::cursor_pos();
         // SetWindowPos는 WebView2 창 절차에 재진입한다. 서비스 잠금을 놓은 다음 창을 옮긴다.
         overlay::defer(app, move |app| {
             if app.state::<IslandGen>().0.load(Ordering::SeqCst) != gen {
@@ -508,14 +547,18 @@ fn show_island<R: Runtime>(app: &AppHandle<R>) {
             }
             if let Some(w) = app.get_webview_window(ISLAND) {
                 if let Ok(h) = w.hwnd() {
-                    ink_platform_windows::screen::show_island(h.0 as isize, cursor, ISLAND_SIZE);
+                    ink_platform_windows::screen::show_island(h.0 as isize, target);
                 }
             }
         });
     }
     #[cfg(not(windows))]
     if let Some(w) = app.get_webview_window(ISLAND) {
-        place_island(app, &w);
+        place_island(&w, target);
+    }
+    // 고르는 동안에는 범위를 오래 손보더라도 섬을 유지한다. 종료 알림에서 거둔다.
+    if capture_mode {
+        return;
     }
     let app = app.clone();
     std::thread::spawn(move || {
@@ -551,19 +594,16 @@ fn hide_windows_island<R: Runtime>(window: &tauri::WebviewWindow<R>) {
 }
 
 #[cfg(not(windows))]
-fn place_island<R: Runtime>(app: &AppHandle<R>, w: &tauri::WebviewWindow<R>) {
-    // 커서가 있는 모니터의 위 가운데(02 §7: 단축키 순간 커서 모니터가 대상)
-    // 맥: 혼합 배율에서 Tauri 물리 좌표는 옆 화면에 걸쳐 놓인다 → 포인트로 직접 놓는다
-    #[cfg(target_os = "macos")]
-    let placed = w.ns_window().is_ok_and(|ns| ink_platform_macos::window::place_top_center(ns, &ink_platform_macos::space(), ink_platform_macos::display::cursor_pt(), 12.0));
-    #[cfg(not(target_os = "macos"))]
-    let placed = false;
-    let monitor = app.cursor_position().ok().and_then(|p| w.monitor_from_point(p.x, p.y).ok().flatten()).or_else(|| w.primary_monitor().ok().flatten());
-    if let (false, Some(m), Ok(size)) = (placed, monitor, w.outer_size()) {
-        let wa = m.work_area();
-        let x = wa.position.x + (wa.size.width as i32 - size.width as i32) / 2;
-        let y = wa.position.y + (12.0 * m.scale_factor()) as i32;
-        let _ = w.set_position(PhysicalPosition::new(x, y));
+fn place_island<R: Runtime>(w: &tauri::WebviewWindow<R>, target: Option<PhysRect>) {
+    if let Some(r) = target {
+        #[cfg(target_os = "macos")]
+        let placed = w.ns_window().is_ok_and(|ns| ink_platform_macos::window::place_rect(ns, &ink_platform_macos::space(), r));
+        #[cfg(not(target_os = "macos"))]
+        let placed = false;
+        if !placed {
+            let _ = w.set_position(PhysicalPosition::new(r.x, r.y));
+            let _ = w.set_size(tauri::PhysicalSize::new(r.w as u32, r.h as u32));
+        }
     }
     // 맥: 지금 Space(전체 화면 앱 포함)에 바로 올린다(Tauri show는 나중으로 미룬다)
     #[cfg(target_os = "macos")]
@@ -2149,6 +2189,7 @@ fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error
             tray_mode: Mutex::new(None),
             tray_tooltip: Mutex::new(None),
             last_lang: Mutex::new(None),
+            capture_island_rect: Mutex::new(None),
         }),
         screen,
         windows,
