@@ -11,7 +11,7 @@
 //! - 패널·층은 메인 스레드 전용(thread_local). 서비스는 메인 스레드에서 부른다.
 
 use crate::coords::{Placed, RectF};
-use crate::window::{screen_frame, ALL_SPACES, OVERLAY_LEVEL};
+use crate::window::{overlay_level, screen_frame, ALL_SPACES};
 use block2::RcBlock;
 use ink_app::Frame;
 use ink_domain::geometry::PhysRect;
@@ -31,7 +31,9 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, Instant};
 
 /// 정지 패널과 같은 층(웹뷰 오버레이·HUD·섬 아래).
-const MAG_LEVEL: isize = OVERLAY_LEVEL - 1;
+fn mag_level() -> isize {
+    overlay_level() - 1
+}
 /// 첫 그림을 기다리는 시간.
 const FIRST_FRAME_WAIT: Duration = Duration::from_millis(800);
 const START_WAIT: Duration = Duration::from_secs(3);
@@ -188,7 +190,7 @@ fn make_panel(mtm: MainThreadMarker) -> Panel {
     window.setHasShadow(false);
     window.setIgnoresMouseEvents(true);
     window.setHidesOnDeactivate(false);
-    window.setLevel(MAG_LEVEL);
+    window.setLevel(mag_level());
     window.setCollectionBehavior(NSWindowCollectionBehavior(ALL_SPACES));
     // 확인용(SCREEN_INK_ZOOM_SHARE=1): 화면 찍기에 돋보기가 보이게 — 배율·뒤집기 실측에만 쓴다
     let share = std::env::var("SCREEN_INK_ZOOM_SHARE").is_ok_and(|v| v == "1");

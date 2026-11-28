@@ -23,10 +23,22 @@ use std::ffi::c_void;
 
 /// NSWindowCollectionBehavior: 모든 Space · 고정 · 창 순환 제외 · 전체 화면 앱 위.
 pub(crate) const ALL_SPACES: usize = 1 << 0 | 1 << 4 | 1 << 6 | 1 << 8;
-/// `NSScreenSaverWindowLevel` — 메뉴 막대(24)·Dock(20)·전체 화면 앱 위.
-pub const OVERLAY_LEVEL: isize = 1000;
-/// 섬은 오버레이 위에.
-pub const ISLAND_LEVEL: isize = 1001;
+extern "C" {
+    fn CGShieldingWindowLevel() -> i32;
+}
+
+/// 캡처·판서·확대 층 = `CGShieldingWindowLevel()`(화면 잡기용 최상층, 커서 바로 아래). 예전 값 1000(화면 보호기 층)은
+/// 같은 층에 화면 크기 창을 두는 다른 앱(Claude 앱 등)이 정지 화면(999)을 덮어, 전체 화면 앱 위에서 F1이 캡처로
+/// 안 바뀐 것처럼 보였다(2026-11-28 맥 실기·시험 가림 창으로 확인).
+pub fn overlay_level() -> isize {
+    // SAFETY: 인자 없는 CoreGraphics 조회 함수.
+    unsafe { CGShieldingWindowLevel() as isize }
+}
+
+/// 섬은 오버레이 위에(커서 층보다는 아래).
+pub fn island_level() -> isize {
+    overlay_level() + 1
+}
 /// 팝오버 = `NSPopUpMenuWindowLevel`(메뉴 막대 위, 오버레이 아래).
 pub const POPOVER_LEVEL: isize = 101;
 
@@ -108,8 +120,8 @@ pub fn configure(ns_window: *mut c_void, role: Role) {
         log::info!("{role:?} stays a normal window (may switch Spaces over full-screen apps)");
     }
     let level = match role {
-        Role::Overlay => OVERLAY_LEVEL,
-        Role::Island => ISLAND_LEVEL,
+        Role::Overlay => overlay_level(),
+        Role::Island => island_level(),
         Role::Popover => POPOVER_LEVEL,
     };
     // SAFETY: NSWindow 공개 메서드, 인자 형식은 NSInteger·NSUInteger·BOOL.

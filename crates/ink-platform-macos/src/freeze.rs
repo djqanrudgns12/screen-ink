@@ -12,7 +12,7 @@
 //! 메인 스레드 전용이다. 패널은 메인 스레드의 thread_local에만 두고, 다른 스레드에서 부르면 아무것도 하지 않는다.
 
 use crate::coords::{around, cocoa_to_cg, Placed, RectF, Space};
-use crate::window::{screen_frame, ALL_SPACES, OVERLAY_LEVEL};
+use crate::window::{overlay_level, screen_frame, ALL_SPACES};
 use crate::{capture, pixels};
 use ink_domain::geometry::PhysRect;
 use objc2::rc::Retained;
@@ -55,7 +55,9 @@ pub fn draw_bmp(frame: &ink_app::Frame) -> Option<Vec<u8>> {
 }
 
 /// 웹뷰 오버레이 바로 아래 층.
-const FREEZE_LEVEL: isize = OVERLAY_LEVEL - 1;
+fn freeze_level() -> isize {
+    overlay_level() - 1
+}
 /// Windows와 같은 50%.
 const DIM: f32 = 0.5;
 
@@ -144,7 +146,7 @@ fn make(mtm: MainThreadMarker) -> Panel {
     window.setHasShadow(false);
     window.setIgnoresMouseEvents(true);
     window.setHidesOnDeactivate(false);
-    window.setLevel(FREEZE_LEVEL);
+    window.setLevel(freeze_level());
     window.setCollectionBehavior(NSWindowCollectionBehavior(ALL_SPACES));
     window.setSharingType(NSWindowSharingType::None);
     // 창 색 공간을 그림(SCK sRGB)과 맞춘다: 안 맞으면 층을 넘길 때(flush) CPU가 4K 그림 전체를 디스플레이 색으로
