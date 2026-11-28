@@ -1,4 +1,5 @@
 <script>
+  import { withSlotLabels } from '../models/shortcutLabels.js';
   import { tick } from 'svelte';
   import AppIcon from '../icons/AppIcon.svelte';
   import Icon from '../icons/Icon.svelte';
@@ -113,7 +114,7 @@
     searchSettings(searchQuery, {
       lang,
       platform,
-      shortcuts: state?.shortcuts ?? [],
+      shortcuts: withSlotLabels(state?.shortcuts ?? [], t),
       translate: t,
       limit: 8,
     }),

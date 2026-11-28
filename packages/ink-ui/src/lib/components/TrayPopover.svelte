@@ -36,6 +36,19 @@
   let menuEl = $state(null);
   let resolvedLabel = $derived(label || t('tray.menu.aria'));
 
+  // 팝오버 창이 열리거나 초점을 받으면 메뉴로 초점을 옮긴다 — 문서 본문에 초점이 있으면 방향키·Enter·첫 글자가
+  // 메뉴 처리기에 닿지 않았다(2026-11-28 Windows 화면 확인 #1). 메뉴 안 항목에 이미 있으면 그대로 둔다.
+  $effect(() => {
+    if (!open || !menuEl) return;
+    const el = menuEl;
+    const pull = () => {
+      if (!el.contains(document.activeElement)) el.focus({ preventScroll: true });
+    };
+    pull();
+    window.addEventListener('focus', pull);
+    return () => window.removeEventListener('focus', pull);
+  });
+
   function handleMenuKeydown(e) {
     if (!menuEl && e.key !== 'Escape') return;
 

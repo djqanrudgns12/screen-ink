@@ -1,4 +1,5 @@
 <script>
+  import { slotLabel } from '../models/shortcutLabels.js';
   import { Tabs } from 'bits-ui';
   import { SHORTCUT_GROUPS } from '@screen-ink/client';
   import Banner from '../components/Banner.svelte';
@@ -22,65 +23,6 @@
     'zoom-mode': 'shortcuts.group.zoomMode',
   };
 
-  const SLOT_I18N_KEYS = {
-    region: 'shortcuts.slot.region',
-    window: 'shortcuts.slot.window',
-    record: 'shortcuts.slot.record',
-    draw: 'shortcuts.slot.draw',
-    zoom: 'shortcuts.slot.zoom',
-    board: 'shortcuts.slot.board',
-    last: 'shortcuts.slot.last',
-    full: 'shortcuts.slot.full',
-    active: 'shortcuts.slot.active',
-    delay: 'shortcuts.slot.delay',
-    restore: 'shortcuts.slot.restore',
-    pause: 'shortcuts.slot.pause',
-    topmost: 'shortcuts.slot.topmost',
-    pin: 'shortcuts.slot.pin',
-    pinToggle: 'shortcuts.slot.pinToggle',
-    timer: 'shortcuts.slot.timer',
-    'c-detect': 'shortcuts.slot.cDetect',
-    'c-copy': 'shortcuts.slot.cCopy',
-    'c-save': 'shortcuts.slot.cSave',
-    'c-quick': 'shortcuts.slot.cQuick',
-    'c-cancel': 'shortcuts.slot.cCancel',
-    'c-last': 'shortcuts.slot.cLast',
-    'c-prev': 'shortcuts.slot.cPrev',
-    'c-next': 'shortcuts.slot.cNext',
-    'c-full': 'shortcuts.slot.cFull',
-    'c-cursor': 'shortcuts.slot.cCursor',
-    'c-color': 'shortcuts.slot.cColor',
-    'd-pen': 'shortcuts.slot.dPen',
-    'd-marker': 'shortcuts.slot.dMarker',
-    'd-text': 'shortcuts.slot.dText',
-    'd-select': 'shortcuts.slot.dSelect',
-    'd-eraser': 'shortcuts.slot.dEraser',
-    'd-clear': 'shortcuts.slot.dClear',
-    'd-red': 'shortcuts.slot.dRed',
-    'd-yellow': 'shortcuts.slot.dYellow',
-    'd-green': 'shortcuts.slot.dGreen',
-    'd-orange': 'shortcuts.slot.dOrange',
-    'd-blue': 'shortcuts.slot.dBlue',
-    'd-lime': 'shortcuts.slot.dLime',
-    'd-white': 'shortcuts.slot.dWhite',
-    'd-black': 'shortcuts.slot.dBlack',
-    'd-undo': 'shortcuts.slot.dUndo',
-    'd-redo': 'shortcuts.slot.dRedo',
-    'd-copy': 'shortcuts.slot.dCopy',
-    'd-save': 'shortcuts.slot.dSave',
-    'd-restore': 'shortcuts.slot.dRestore',
-    'd-center': 'shortcuts.slot.dCenter',
-    'd-zin': 'shortcuts.slot.dZin',
-    'd-zout': 'shortcuts.slot.dZout',
-    'd-wup': 'shortcuts.slot.dWup',
-    'd-wdown': 'shortcuts.slot.dWdown',
-    'd-help': 'shortcuts.slot.dHelp',
-    'd-exit': 'shortcuts.slot.dExit',
-    'd-spot': 'shortcuts.slot.dSpot',
-    'd-check': 'shortcuts.slot.dCheck',
-    'd-number': 'shortcuts.slot.dNumber',
-    'z-exit': 'shortcuts.slot.zExit',
-  };
 
   /**
    * S02 설정 · 단축키 화면(F04).
@@ -149,8 +91,7 @@
   }
 
   function rowLabel(row) {
-    const key = SLOT_I18N_KEYS[row.id];
-    return key ? t(key) : row.label;
+    return slotLabel(row, t);
   }
 
   async function handleExportPdf() {

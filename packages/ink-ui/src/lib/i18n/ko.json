@@ -618,6 +618,7 @@
   "islandUi.draw.penColorAria": "펜 색",
   "islandUi.magnifier.aria": "색 돋보기",
   "islandUi.magnifier.copyHex": "C 색 복사 · ⇧ 전환",
+  "islandUi.magnifier.copyHex~win": "C 색 복사 · Shift 전환",
   "islandUi.record.micOff": "마이크 꺼짐",
   "islandUi.selection.aria": "고른 범위",
   "islandUi.tag.cursorIncluded": "커서 포함",
