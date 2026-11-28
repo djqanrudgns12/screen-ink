@@ -158,15 +158,44 @@ function stepEnabledIndex(items, currentIndex, delta) {
   return -1;
 }
 
+/** 두벌식 자판: 물리 키(`KeyboardEvent.code`) → 초성 자모(Shift면 된소리). */
+const DUBEOLSIK_CHOSEONG = {
+  KeyR: ['ㄱ', 'ㄲ'], KeyS: ['ㄴ', 'ㄴ'], KeyE: ['ㄷ', 'ㄸ'], KeyF: ['ㄹ', 'ㄹ'], KeyA: ['ㅁ', 'ㅁ'],
+  KeyQ: ['ㅂ', 'ㅃ'], KeyT: ['ㅅ', 'ㅆ'], KeyD: ['ㅇ', 'ㅇ'], KeyW: ['ㅈ', 'ㅉ'], KeyC: ['ㅊ', 'ㅊ'],
+  KeyZ: ['ㅋ', 'ㅋ'], KeyX: ['ㅌ', 'ㅌ'], KeyV: ['ㅍ', 'ㅍ'], KeyG: ['ㅎ', 'ㅎ'],
+};
+
+/**
+ * 한글 입력기가 켜진 채 메뉴에서 자음 키를 누르면 Windows는 글자 대신 `Process`(조합 중)를 준다. 메뉴는 글 쓰는 칸이
+ * 아니라 조합이 끝나지 않으므로, 물리 키를 두벌식 초성으로 바꿔 첫 글자 이동에 쓴다(2026-11-28 Windows 재확인 #1).
+ * @param {{ key?: string, code?: string, isComposing?: boolean, shiftKey?: boolean }} event
+ * @returns {string | null}
+ */
+export function imeChoseongOf(event) {
+  const composing = event?.isComposing || event?.key === 'Process' || event?.key === 'Unidentified';
+  if (!composing) return null;
+  const pair = /** @type {Record<string, string[]>} */ (DUBEOLSIK_CHOSEONG)[event?.code ?? ''];
+  return pair ? pair[event?.shiftKey ? 1 : 0] : null;
+}
+
 /**
  * 메뉴 키보드 이벤트에 대한 동작(↑↓·Home·End·Enter·Esc·첫 글자 이동)을 계산한다.
- * @param {{ key?: string, isComposing?: boolean, ctrlKey?: boolean, metaKey?: boolean, altKey?: boolean }} event
+ * @param {{ key?: string, code?: string, isComposing?: boolean, shiftKey?: boolean, ctrlKey?: boolean, metaKey?: boolean, altKey?: boolean }} event
  * @param {{ label: string, disabled?: boolean }[]} items
  * @param {number} currentIndex
  * @returns {{ type: 'close' } | { type: 'focus', index: number } | { type: 'activate', index: number } | { type: 'noop' }}
  */
 export function resolveMenuKeyAction(event, items, currentIndex) {
-  if (!event || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) {
+  if (!event || event.ctrlKey || event.metaKey || event.altKey) {
+    return { type: 'noop' };
+  }
+  const jamo = imeChoseongOf(event);
+  if (jamo) {
+    if (!Array.isArray(items) || items.length === 0) return { type: 'noop' };
+    const idx = findTypeaheadIndex(items, currentIndex, jamo);
+    return idx >= 0 ? { type: 'focus', index: idx } : { type: 'noop' };
+  }
+  if (event.isComposing) {
     return { type: 'noop' };
   }
   const key = event.key ?? '';

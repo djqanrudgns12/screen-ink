@@ -11,6 +11,7 @@ import {
   formatElapsed,
   getHangulChoseong,
   resolveMenuKeyAction,
+  imeChoseongOf,
   resolveTrayStatus,
 } from './trayMenu.js';
 
@@ -160,4 +161,14 @@ test('tray 카탈로그에 금지 용어가 없다', () => {
       assert.ok(!v.toLowerCase().includes(word), `tray.en.json[${k}]에 금지어 '${word}' 포함: ${v}`);
     }
   }
+});
+
+test('한글 입력기가 켜진 채 자음 키(Process)를 누르면 두벌식 초성으로 첫 글자 이동', () => {
+  const items = [{ label: '영역 찍기' }, { label: '그리기' }, { label: '설정…' }, { label: '끝내기' }];
+  assert.equal(imeChoseongOf({ key: 'Process', code: 'KeyT' }), 'ㅅ');
+  assert.equal(imeChoseongOf({ key: 'Process', code: 'KeyR', shiftKey: true }), 'ㄲ');
+  assert.equal(imeChoseongOf({ key: 't', code: 'KeyT' }), null, '조합 아님 = 보통 첫 글자');
+  assert.deepEqual(resolveMenuKeyAction({ key: 'Process', code: 'KeyT' }, items, 0), { type: 'focus', index: 2 });
+  assert.deepEqual(resolveMenuKeyAction({ key: 'ㄱ', code: 'KeyR', isComposing: true }, items, 0), { type: 'focus', index: 1 });
+  assert.deepEqual(resolveMenuKeyAction({ key: 'Process', code: 'Digit1' }, items, 0), { type: 'noop' }, '자음 키가 아니면 그대로');
 });

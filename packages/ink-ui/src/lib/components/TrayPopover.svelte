@@ -66,6 +66,8 @@
     const result = resolveMenuKeyAction(
       {
         key: e.key,
+        code: e.code,
+        shiftKey: e.shiftKey,
         isComposing: e.isComposing,
         ctrlKey: e.ctrlKey,
         metaKey: e.metaKey,
