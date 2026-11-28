@@ -185,3 +185,111 @@ test('색·굵기 패널(G19): 상단 섬(560×88)과 겹치면 툴바 아래로
   const seamRight = placeToolOptions({ x: 3290, y: 500, side: 'below' }, bar, panel, rightMon, 530);
   assert.equal(seamRight.x + panel.w, 1920 + 1920 - TOOLBAR_EDGE);
 });
+
+test('#13 크기 배지: 툴바가 범위 위로 갈 때 겹치지 않는 자리로 옮기고, F2는 오른쪽 위 꼬리표로 둔다', () => {
+  const badge = { w: 96, h: 24 };
+  const barSize = { w: 540, h: 40 };
+
+  // 1) 화면 아래쪽 범위(1920×1080에서 630×150px → CSS 315×75) — 툴바가 위로 올라가 범위 왼쪽 위를 덮는 경우
+  const lowSel = { x: 750, y: 995, width: 315, height: 75 };
+  const lowBar = placeToolbar(lowSel, VIEW, barSize);
+  assert.equal(lowBar.side, 'above');
+  const lowBarRect = { x: lowBar.x, y: lowBar.y, w: barSize.w, h: barSize.h };
+  const movedBadge = placeSizeBadge(lowSel, VIEW, badge, { avoidRects: [lowBarRect] });
+  assert.equal(movedBadge.inside, true);
+  assert.equal(
+    rectsOverlap({ x: movedBadge.x, y: movedBadge.y, w: badge.w, h: badge.h }, lowBarRect, 4),
+    false,
+    '배지가 툴바와 겹치지 않음',
+  );
+  assert.ok(movedBadge.x >= lowSel.x && movedBadge.y >= lowSel.y, '범위 안 왼쪽 위로 이동');
+
+  // 2) 매우 얇은 하단 범위(height=16) → 안쪽 공간이 툴바와 겹치거나 모자라면 범위 왼쪽 위/툴바 위로 피함
+  const thinSel = { x: 750, y: 1045, width: 315, height: 16 };
+  const thinBar = placeToolbar(thinSel, VIEW, barSize);
+  const thinBarRect = { x: thinBar.x, y: thinBar.y, w: barSize.w, h: barSize.h };
+  const thinBadge = placeSizeBadge(thinSel, VIEW, badge, { avoidRects: [thinBarRect] });
+  assert.equal(
+    rectsOverlap({ x: thinBadge.x, y: thinBadge.y, w: badge.w, h: badge.h }, thinBarRect, 4),
+    false,
+  );
+  assert.ok(thinBadge.x >= TOOLBAR_EDGE && thinBadge.y >= TOOLBAR_EDGE);
+
+  // 3) 넓은 범위에서 툴바가 위지만 오른쪽 끝(x=1160..1700)에 있어 왼쪽 위 배지(x=200)와 안 겹치면 바깥 유지
+  const wideSel = { x: 200, y: 995, width: 1500, height: 75 };
+  const wideBar = placeToolbar(wideSel, VIEW, barSize);
+  assert.equal(wideBar.side, 'above');
+  const wideBadge = placeSizeBadge(wideSel, VIEW, badge, {
+    avoidRects: [{ x: wideBar.x, y: wideBar.y, w: barSize.w, h: barSize.h }],
+  });
+  assert.equal(wideBadge.inside, false);
+  assert.equal(wideBadge.x, 200);
+
+  // 4) F2 창 캡처 오른쪽 위 꼬리표: 창 안쪽 오른쪽 위, 화면 가장자리 밖으로 나가지 않음
+  const winBadge = placeSizeBadge({ x: 100, y: 80, width: 640, height: 480 }, VIEW, badge, {
+    corner: 'top-right',
+  });
+  assert.equal(winBadge.inside, true);
+  assert.equal(winBadge.x, 100 + 640 - TOOLBAR_GAP - badge.w);
+  assert.equal(winBadge.y, 80 + TOOLBAR_GAP);
+
+  const maxWinBadge = placeSizeBadge({ x: -20, y: -10, width: 1980, height: 1120 }, VIEW, badge, {
+    corner: 'top-right',
+  });
+  assert.ok(maxWinBadge.x <= VIEW.w - TOOLBAR_EDGE - badge.w);
+  assert.ok(maxWinBadge.y >= TOOLBAR_EDGE);
+});
+
+test('#15 색·굵기 패널: 선택 범위(그릴 자리)를 가리지 않고 옆/아래 바깥에 열리며 8px 경계를 지킨다', () => {
+  const barSize = { w: 540, h: 40 };
+  const panel = { w: 284, h: 216 };
+  const island = computeTopIslandRect(VIEW);
+
+  // 1) 600×370 중앙 범위(툴바 아래) → 툴바 아래로 열려 선택 범위 겹침 0
+  const midSel = { x: 500, y: 200, width: 600, height: 370 };
+  const midBar = placeToolbar(midSel, VIEW, barSize);
+  assert.equal(midBar.side, 'below');
+  const midOpts = placeToolOptions(midBar, barSize, panel, VIEW, 120, { selection: midSel });
+  assert.equal(midOpts.side, 'below');
+  assert.equal(midOpts.showArrow, true);
+  assert.equal(rectsOverlap({ x: midOpts.x, y: midOpts.y, w: panel.w, h: panel.h }, midSel), false);
+  assert.equal(
+    rectsOverlap({ x: midOpts.x, y: midOpts.y, w: panel.w, h: panel.h }, { x: midBar.x, y: midBar.y, w: barSize.w, h: barSize.h }),
+    false,
+  );
+
+  // 2) 아래 공간이 모자란 600×370 하단 범위 → 범위 오른쪽 바깥으로 열려 선택·툴바·섬 겹침 0
+  const lowSel = { x: 500, y: 620, width: 600, height: 370 };
+  const lowBar = placeToolbar(lowSel, VIEW, barSize);
+  const lowOpts = placeToolOptions(lowBar, barSize, panel, VIEW, 120, { selection: lowSel });
+  assert.equal(lowOpts.side, 'right');
+  assert.equal(lowOpts.showArrow, false);
+  assert.equal(rectsOverlap({ x: lowOpts.x, y: lowOpts.y, w: panel.w, h: panel.h }, lowSel), false);
+  assert.equal(
+    rectsOverlap({ x: lowOpts.x, y: lowOpts.y, w: panel.w, h: panel.h }, { x: lowBar.x, y: lowBar.y, w: barSize.w, h: barSize.h }),
+    false,
+  );
+  assert.equal(rectsOverlap({ x: lowOpts.x, y: lowOpts.y, w: panel.w, h: panel.h }, island), false);
+
+  // 3) 오른쪽 공간도 없는 우하단 좁은 범위 + 넓은 툴바 → 범위 왼쪽 바깥 + 툴바 비겹침
+  const brSel = { x: 1600, y: 620, width: 280, height: 370 };
+  const brBar = placeToolbar(brSel, VIEW, barSize);
+  const brOpts = placeToolOptions(brBar, barSize, panel, VIEW, 120, { selection: brSel });
+  assert.equal(brOpts.side, 'left');
+  assert.equal(rectsOverlap({ x: brOpts.x, y: brOpts.y, w: panel.w, h: panel.h }, brSel), false);
+  assert.equal(
+    rectsOverlap({ x: brOpts.x, y: brOpts.y, w: panel.w, h: panel.h }, { x: brBar.x, y: brBar.y, w: barSize.w, h: barSize.h }),
+    false,
+  );
+
+  // 4) 화면 전체 범위에서도 8px 여백 유지 및 툴바와 비겹침
+  const fullSel = { x: 0, y: 0, width: VIEW.w, height: VIEW.h };
+  const fullBar = placeToolbar(fullSel, VIEW, barSize);
+  const fullOpts = placeToolOptions(fullBar, barSize, panel, VIEW, 120, { selection: fullSel });
+  assert.ok(fullOpts.x >= TOOLBAR_EDGE && fullOpts.x + panel.w <= VIEW.w - TOOLBAR_EDGE);
+  assert.ok(fullOpts.y >= TOOLBAR_EDGE && fullOpts.y + panel.h <= VIEW.h - TOOLBAR_EDGE);
+  assert.equal(
+    rectsOverlap({ x: fullOpts.x, y: fullOpts.y, w: panel.w, h: panel.h }, { x: fullBar.x, y: fullBar.y, w: barSize.w, h: barSize.h }),
+    false,
+  );
+});

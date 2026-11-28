@@ -235,3 +235,20 @@ test('확대중_CtrlC_CtrlS도_늘_모니터_전체_view는_쓰지_않는다', (
   assert.equal(zoomed.calls('stroke').length, 2, '화면 밖(확대로 안 보이던) 항목도 포함');
   assert.deepEqual(zoomed.calls('drawImage')[0], ['drawImage', img, 0, 0, 1920, 1080]);
 });
+
+test('칠판_여러쪽_내보내기는_지금_쪽만_합성한다', () => {
+  const board = createInkDocument({
+    mode: 'board',
+    docSize: { w: 1280, h: 720 },
+    physSize: { w: 1280, h: 720 },
+    pages: [
+      { id: 'page-1', background: 'white', items: [stroke({ id: 'p1-s1' })] },
+      { id: 'page-2', background: 'black', items: [stroke({ id: 'p2-s1' }), stroke({ id: 'p2-s2' })] },
+    ],
+    activePage: 1,
+  });
+  const r = recorder();
+  renderDocument(r.ctx, board);
+  assert.equal(r.calls('fillRect')[0][5].fillStyle, BOARD_COLORS.black);
+  assert.equal(r.calls('stroke').length, 2, '지금 쪽(2쪽)의 획 2개만 그림');
+});

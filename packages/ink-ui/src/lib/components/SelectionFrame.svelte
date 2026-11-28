@@ -1,15 +1,19 @@
 <script>
   import { t } from '../i18n/index.svelte.js';
+  import { windowCornerRadius } from '../models/captureOverlay.js';
 
   /**
-   * 캡처·녹화 선택 틀(F09 · F10 · F12 · 10 §5).
+   * 캡처·녹화 선택 틀(F09 · F10 · F11 · F12 · 10 §5).
    * 상태: picking(고르는 중) | confirmed(확정·손잡이) | recording(녹화·빨강) | afterimage(잔상)
+   * 변형: region(F1 네 귀 꺾쇠) | window(F2 둥근 창 테두리 2px 주황)
    * @type {{
    *   x?: number,
    *   y?: number,
    *   width: number,
    *   height: number,
    *   state?: 'picking' | 'confirmed' | 'recording' | 'afterimage',
+   *   variant?: 'region' | 'window',
+   *   radius?: number,
    *   scrim?: boolean,
    *   instant?: boolean,
    *   aligned?: boolean,
@@ -23,6 +27,8 @@
     width = 240,
     height = 100,
     state: frameState = 'picking',
+    variant = 'region',
+    radius = undefined,
     scrim = true,
     instant = false,
     aligned = false,
@@ -35,6 +41,14 @@
   let pad = 8;
   let safeW = $derived(Math.max(0, width));
   let safeH = $derived(Math.max(0, height));
+  let isWindow = $derived(variant === 'window');
+  let windowRadius = $derived(
+    isWindow
+      ? typeof radius === 'number' && Number.isFinite(radius)
+        ? Math.max(0, Math.min(radius, Math.floor(Math.min(safeW, safeH) / 2)))
+        : windowCornerRadius('windows', { width: safeW, height: safeH })
+      : 0,
+  );
   let svgW = $derived(safeW + pad * 2);
   let svgH = $derived(safeH + pad * 2);
   let arm = $derived(Math.min(14, Math.floor(Math.min(safeW, safeH) / 3)));
@@ -47,14 +61,16 @@
   aria-label={resolvedLabel}
   class="ink-sel-frame {className}"
   data-state={frameState}
+  data-variant={variant}
   data-scrim={scrim && frameState !== 'afterimage' ? 'true' : undefined}
   data-instant={instant ? 'true' : undefined}
   style:left={`${x}px`}
   style:top={`${y}px`}
   style:width={`${safeW}px`}
   style:height={`${safeH}px`}
+  style:border-radius={isWindow ? `${windowRadius}px` : undefined}
 >
-  {#if frameState !== 'afterimage'}
+  {#if frameState !== 'afterimage' && !isWindow}
     <svg
       aria-hidden="true"
       class="ink-sel-brackets"
@@ -88,7 +104,7 @@
     </svg>
   {/if}
 
-  {#if frameState === 'confirmed'}
+  {#if frameState === 'confirmed' && !isWindow}
     <span class="ink-sel-handle ink-h-tl" aria-hidden="true"></span>
     <span class="ink-sel-handle ink-h-tr" aria-hidden="true"></span>
     <span class="ink-sel-handle ink-h-bl" aria-hidden="true"></span>
@@ -124,6 +140,11 @@
   .ink-sel-frame[data-state='picking'][data-scrim='true'],
   .ink-sel-frame[data-state='confirmed'][data-scrim='true'] {
     box-shadow: 0 0 0 9999px var(--ink-scrim);
+  }
+
+  .ink-sel-frame[data-variant='window'][data-state='picking'],
+  .ink-sel-frame[data-variant='window'][data-state='confirmed'] {
+    border: 2px solid var(--ink-accent);
   }
 
   .ink-sel-frame[data-state='recording'] {

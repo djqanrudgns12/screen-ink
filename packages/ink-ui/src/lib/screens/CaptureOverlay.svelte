@@ -76,11 +76,13 @@
     physicalToClient,
     resolveCaptureFrame,
     resolveMonitorGuides,
+    selectionFrameVariant,
     shouldPreventCaptureKey,
     toCaptureKeyInput,
     toCapturePointerInput,
     toCaptureWheelInput,
     toggleColorFormat,
+    windowCornerRadius,
   } from '../models/captureOverlay.js';
 
   /**
@@ -1558,6 +1560,10 @@
   });
   let effectiveFont = $derived(annotFontPreview?.family ?? annotFont);
   let effectiveFontWeight = $derived(annotFontPreview?.weight ?? annotFontWeight);
+  let frameVariant = $derived(selectionFrameVariant(sessionKind));
+  let frameRadius = $derived(
+    frameVariant === 'window' ? windowCornerRadius(platform, activeFrame ?? undefined) : undefined,
+  );
   let topIslandRect = $derived(computeTopIslandRect({ w: viewportW, h: viewportH }, monitor));
   let panelAvoidRects = $derived(topIslandRect ? [topIslandRect] : []);
   let optsPos = $derived(
@@ -1567,12 +1573,26 @@
       { w: optsW || 284, h: optsH || 216 },
       { w: viewportW, h: viewportH },
       toolbarAnchorX,
-      { avoidRects: panelAvoidRects },
+      { avoidRects: panelAvoidRects, selection: activeFrame },
     ),
   );
-  let sizeBadgeText = $derived(activeFrame && captureView?.rect ? formatSizeBadge(captureView.rect) : '');
+  let sizeBadgeRect = $derived(captureView ? captureView.rect : sessionHighlight);
+  let sizeBadgeText = $derived(activeFrame && sizeBadgeRect ? formatSizeBadge(sizeBadgeRect) : '');
   let sizeBadgePos = $derived(
-    activeFrame ? placeSizeBadge(activeFrame, { w: viewportW, h: viewportH }, { w: badgeW, h: badgeH }) : { x: 0, y: 0, inside: false },
+    activeFrame
+      ? placeSizeBadge(
+          activeFrame,
+          { w: viewportW, h: viewportH },
+          { w: badgeW, h: badgeH },
+          frameVariant === 'window'
+            ? { corner: 'top-right' }
+            : {
+                avoidRects: toolbarVisible
+                  ? [{ x: toolbarPos.x, y: toolbarPos.y, w: toolbarSize.w, h: toolbarSize.h }]
+                  : [],
+              },
+        )
+      : { x: 0, y: 0, inside: false },
   );
   let stageHintText = $derived.by(() => {
     if (eyedropperActive) return t('capture.hint.eyedropper');
@@ -1656,6 +1676,8 @@
         width={activeFrame.width}
         height={activeFrame.height}
         state={activeFrame.state}
+        variant={frameVariant}
+        radius={frameRadius}
         instant={activeFrame.instant}
         scrim={!nativeFrame}
       />
@@ -1717,6 +1739,7 @@
     {#if sizeBadgeText}
       <div
         class="ink-size-badge ink-mono"
+        data-variant={frameVariant}
         data-inside={sizeBadgePos.inside ? 'true' : undefined}
         style:transform={`translate3d(${sizeBadgePos.x}px, ${sizeBadgePos.y}px, 0)`}
         bind:offsetWidth={badgeW}
@@ -1770,6 +1793,7 @@
           y={optsPos.y}
           side={optsPos.side}
           arrowX={optsPos.arrowX}
+          showArrow={optsPos.showArrow}
           avoidRects={panelAvoidRects}
           bind:boxWidth={optsW}
           bind:boxHeight={optsH}
@@ -1870,6 +1894,16 @@
     pointer-events: none;
     white-space: nowrap;
     z-index: 5;
+  }
+
+  .ink-size-badge[data-variant='window'] {
+    background: var(--ink-accent);
+    color: var(--ink-on-accent);
+    border-color: transparent;
+    border-radius: 6px;
+    font-weight: 600;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .ink-stage-hint {

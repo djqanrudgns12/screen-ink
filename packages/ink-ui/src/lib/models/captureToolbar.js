@@ -1,7 +1,7 @@
 // 선택 툴바(R2-UI-TB, 04 S08) 순수 모델 — 어느 모니터에 띄울지, 어디에 붙일지, 단추·툴팁·크기 배지.
 // 좌표: 사각형·모니터 = 가상 화면 물리 px, 배치 = 그 모니터 오버레이 창의 CSS px.
 
-import { computeTopIslandRect, placeAnchoredPopover } from './popoverPlacement.js';
+import { computeTopIslandRect, normalizeRect, placeAnchoredPopover, rectsOverlap } from './popoverPlacement.js';
 import { defaultSlotCombo, formatComboReadable } from './shortcutDisplay.js';
 
 /** 범위와 툴바 사이(CSS px) */
@@ -91,25 +91,78 @@ export function placeToolbar(sel, viewport, size) {
 }
 
 /**
- * 범위 모서리 크기 배지 자리(CSS px): 범위 왼쪽 위 바깥 → 위가 모자라면 범위 안쪽 왼쪽 위.
+ * 범위 모서리 크기 배지 자리(CSS px):
+ * - `corner === 'top-left'`(F1): 범위 왼쪽 위 바깥 → (`avoidRects`와 겹치거나 위가 모자라면) 범위 안쪽 왼쪽 위(여유 8px) →
+ *   그래도 겹치면 범위 왼쪽 아래 바깥 → 겹치는 막대 바로 위 바깥 순으로 안 겹치는 자리를 고른다.
+ * - `corner === 'top-right'`(F2): 창 안쪽 오른쪽 위 꼬리표(화면 가장자리 8px 안쪽 유지).
  * @param {{ x: number, y: number, width: number, height: number }} sel
  * @param {{ w: number, h: number }} viewport
  * @param {{ w: number, h: number }} badgeSize
+ * @param {{
+ *   corner?: 'top-left' | 'top-right',
+ *   avoidRects?: ReadonlyArray<import('./popoverPlacement.js').RectLike | null | undefined>,
+ * }} [opts]
  * @returns {{ x: number, y: number, inside: boolean }}
  */
-export function placeSizeBadge(sel, viewport, badgeSize) {
+export function placeSizeBadge(sel, viewport, badgeSize, opts = {}) {
   const vw = Math.max(0, viewport.w);
   const vh = Math.max(0, viewport.h);
-  const left = Math.max(0, sel.x);
-  const top = Math.max(0, sel.y);
   const maxX = Math.max(TOOLBAR_EDGE, vw - TOOLBAR_EDGE - badgeSize.w);
   const maxY = Math.max(TOOLBAR_EDGE, vh - TOOLBAR_EDGE - badgeSize.h);
-  const x = Math.min(maxX, Math.max(TOOLBAR_EDGE, left));
+  const clampX = (/** @type {number} */ v) => Math.min(maxX, Math.max(TOOLBAR_EDGE, v));
+  const clampY = (/** @type {number} */ v) => Math.min(maxY, Math.max(TOOLBAR_EDGE, v));
+
+  if (opts.corner === 'top-right') {
+    const visRight = Math.min(vw, sel.x + sel.width);
+    const visTop = Math.max(0, sel.y);
+    return {
+      x: Math.round(clampX(visRight - TOOLBAR_GAP - badgeSize.w)),
+      y: Math.round(clampY(visTop + TOOLBAR_GAP)),
+      inside: true,
+    };
+  }
+
+  const left = Math.max(0, sel.x);
+  const top = Math.max(0, sel.y);
+  const bottom = Math.min(vh, sel.y + sel.height);
+  const obstacles = Array.isArray(opts.avoidRects)
+    ? opts.avoidRects.map((r) => normalizeRect(r)).filter((r) => r !== null)
+    : [];
+  const collides = (/** @type {number} */ x, /** @type {number} */ y) =>
+    obstacles.some((obs) => rectsOverlap({ x, y, w: badgeSize.w, h: badgeSize.h }, obs, 4));
+
+  const x1 = clampX(left);
   const above = top - TOOLBAR_GAP - badgeSize.h;
   if (above >= TOOLBAR_EDGE) {
-    return { x, y: Math.min(maxY, above), inside: false };
+    const y1 = Math.min(maxY, above);
+    if (!collides(x1, y1)) {
+      return { x: x1, y: y1, inside: false };
+    }
   }
-  return { x, y: Math.min(maxY, Math.max(TOOLBAR_EDGE, top + TOOLBAR_GAP)), inside: true };
+
+  const insetX =
+    obstacles.length > 0 && left >= TOOLBAR_EDGE && sel.width >= badgeSize.w + TOOLBAR_GAP * 2
+      ? TOOLBAR_GAP
+      : 0;
+  const x2 = clampX(left + insetX);
+  const y2 = clampY(top + TOOLBAR_GAP);
+  if (!collides(x2, y2)) {
+    return { x: x2, y: y2, inside: true };
+  }
+
+  if (obstacles.length > 0) {
+    const below = bottom + TOOLBAR_GAP;
+    if (below + badgeSize.h <= vh - TOOLBAR_EDGE && !collides(x1, below)) {
+      return { x: x1, y: below, inside: false };
+    }
+    const minObsTop = Math.min(...obstacles.map((o) => o.top));
+    const aboveObs = minObsTop - TOOLBAR_GAP - badgeSize.h;
+    if (aboveObs >= TOOLBAR_EDGE && !collides(x1, aboveObs)) {
+      return { x: x1, y: aboveObs, inside: false };
+    }
+  }
+
+  return { x: x2, y: y2, inside: true };
 }
 
 /**
@@ -228,10 +281,22 @@ export function annotOptionsKind(toolId) {
 }
 
 /**
- * 색·굵기 패널 자리(CSS px, R2-FIX-11 · G19):
- * - `anchorX`(툴바 왼쪽 기준 단추 가운데 X)가 있으면 그 단추 위에 중앙 정렬, 없으면 툴바 오른쪽 끝에 맞춤.
- * - 세로는 툴바 **위(`above`)** 우선(툴바 위 8px), 위 공간이 모자라거나 상단 섬(560×88)과 겹치면 툴바 **아래(`below`)**로 뒤집는다.
- * - 양쪽 다 모자라면 화면 가장자리 및 섬 바깥 안쪽으로 밀어 넣고 삼각 꼬리 위치 `arrowX`를 돌려준다.
+ * 두 사각형이 겹치는 면적(CSS px²).
+ * @param {import('./popoverPlacement.js').BoxRect} a
+ * @param {import('./popoverPlacement.js').BoxRect} b
+ */
+function overlapArea(a, b) {
+  const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+  const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+  return w > 0 && h > 0 ? w * h : 0;
+}
+
+/**
+ * 색·굵기 패널 자리(CSS px, R2-FIX-11 · G19 · #15):
+ * - `opts.selection`이 없으면 기존 툴바 위(`above`) 우선 → 상단 섬·화면 부족 시 아래(`below`) 배치.
+ * - `opts.selection`이 있으면 선택 범위(그릴 자리)와 겹치지 않는 자리를 우선 고른다:
+ *   툴바 반대편 바깥 → 범위 오른쪽/왼쪽 바깥 → 범위 아래/위 바깥 → 불가피하면 겹침이 가장 작은 자리.
+ * - 어느 경우든 모니터 가장자리 `TOOLBAR_EDGE`(8px) 안쪽을 유지하고 상단 섬·툴바를 피한다.
  * @param {{ x: number, y: number, side: 'below' | 'above' | 'inside' }} bar  placeToolbar 결과
  * @param {{ w: number, h: number }} barSize
  * @param {{ w: number, h: number }} optsSize
@@ -241,8 +306,9 @@ export function annotOptionsKind(toolId) {
  *   avoidTopIsland?: boolean,
  *   avoidRects?: ReadonlyArray<import('./popoverPlacement.js').RectLike | null | undefined>,
  *   monitor?: import('./popoverPlacement.js').MonitorBoundsLike | null,
+ *   selection?: import('./popoverPlacement.js').RectLike | null,
  * }} [opts]
- * @returns {{ x: number, y: number, side: 'above' | 'below', arrowX: number }}
+ * @returns {{ x: number, y: number, side: 'above' | 'below' | 'left' | 'right', arrowX: number, showArrow: boolean }}
  */
 export function placeToolOptions(bar, barSize, optsSize, viewport, anchorX = null, opts = {}) {
   const vw = Math.max(0, viewport.w);
@@ -264,26 +330,209 @@ export function placeToolOptions(bar, barSize, optsSize, viewport, anchorX = nul
           })();
 
   const hasAnchorX = typeof anchorX === 'number' && Number.isFinite(anchorX);
-  const placed = placeAnchoredPopover(
-    { left: bar.x, top: bar.y, width: barSize.w, height: barSize.h },
-    { width: optsSize.w, height: optsSize.h, minHeight: optsSize.h },
-    bounds,
-    {
-      gap: TOOLBAR_OPTIONS_GAP,
-      edge: TOOLBAR_EDGE,
-      align: hasAnchorX ? 'center' : 'end',
-      targetCenterX: hasAnchorX ? bar.x + anchorX : null,
-      preferredSide: 'above',
-      avoidRects,
-    },
-  );
-
   const targetCenter = hasAnchorX ? bar.x + anchorX : bar.x + barSize.w - 20;
   const arrowPad = Math.min(18, Math.max(8, optsSize.w / 4));
-  const arrowX = Math.round(
-    Math.min(Math.max(arrowPad, targetCenter - placed.left), Math.max(arrowPad, optsSize.w - arrowPad)),
-  );
-  return { x: placed.left, y: placed.top, side: placed.side, arrowX };
+  const computeArrowX = (/** @type {number} */ left) =>
+    Math.round(
+      Math.min(Math.max(arrowPad, targetCenter - left), Math.max(arrowPad, optsSize.w - arrowPad)),
+    );
+
+  const rawSel = opts.selection ? normalizeRect(opts.selection) : null;
+  const selRect = rawSel
+    ? normalizeRect({
+        left: Math.max(bounds.left, rawSel.left),
+        top: Math.max(bounds.top, rawSel.top),
+        right: Math.min(bounds.left + vw, rawSel.right),
+        bottom: Math.min(bounds.top + vh, rawSel.bottom),
+      })
+    : null;
+
+  if (!selRect) {
+    const placed = placeAnchoredPopover(
+      { left: bar.x, top: bar.y, width: barSize.w, height: barSize.h },
+      { width: optsSize.w, height: optsSize.h, minHeight: optsSize.h },
+      bounds,
+      {
+        gap: TOOLBAR_OPTIONS_GAP,
+        edge: TOOLBAR_EDGE,
+        align: hasAnchorX ? 'center' : 'end',
+        targetCenterX: hasAnchorX ? bar.x + anchorX : null,
+        preferredSide: 'above',
+        avoidRects,
+      },
+    );
+    return {
+      x: placed.left,
+      y: placed.top,
+      side: placed.side,
+      arrowX: computeArrowX(placed.left),
+      showArrow: true,
+    };
+  }
+
+  const gap = TOOLBAR_OPTIONS_GAP;
+  const edge = TOOLBAR_EDGE;
+  const pw = Math.max(0, optsSize.w);
+  const ph = Math.max(0, optsSize.h);
+  const minX = bounds.left + edge;
+  const maxLeft = Math.max(minX, bounds.left + vw - edge - pw);
+  const minY = bounds.top + edge;
+  const maxTop = Math.max(minY, bounds.top + vh - edge - ph);
+  const clampX = (/** @type {number} */ x) => Math.round(Math.min(maxLeft, Math.max(minX, x)));
+  const clampY = (/** @type {number} */ y) => Math.round(Math.min(maxTop, Math.max(minY, y)));
+
+  const barRect = {
+    left: bar.x,
+    top: bar.y,
+    right: bar.x + barSize.w,
+    bottom: bar.y + barSize.h,
+    width: barSize.w,
+    height: barSize.h,
+  };
+  const obstacles = Array.isArray(avoidRects)
+    ? avoidRects.map((r) => normalizeRect(r)).filter((r) => r !== null)
+    : [];
+
+  /** @type {Array<{ x: number, y: number, side: 'above' | 'below' | 'left' | 'right', priority: number }>} */
+  const candidates = [];
+  const pushCand = (
+    /** @type {number} */ rawX,
+    /** @type {number} */ rawY,
+    /** @type {'above' | 'below' | 'left' | 'right'} */ side,
+    /** @type {number} */ priority,
+  ) => {
+    candidates.push({ x: clampX(rawX), y: clampY(rawY), side, priority });
+  };
+
+  const baseAnchorX = hasAnchorX ? targetCenter - pw / 2 : barRect.right - pw;
+  const xVariants = [
+    baseAnchorX,
+    selRect.right - pw,
+    selRect.left,
+    ...obstacles.flatMap((obs) => [obs.left - gap - pw, obs.right + gap]),
+  ];
+  const sideYVariants = [
+    selRect.bottom - ph,
+    barRect.bottom - ph,
+    selRect.top,
+    (selRect.top + selRect.bottom - ph) / 2,
+    barRect.top - gap - ph,
+    barRect.bottom + gap,
+  ];
+
+  // 0) 툴바 반대편 밀착(세로 잘림 없이 툴바 바로 아래/위에 붙고 툴바와 가로로 겹칠 때만 우선)
+  if (bar.side === 'below' || bar.side === 'above') {
+    const rawY = bar.side === 'below' ? barRect.bottom + gap : barRect.top - gap - ph;
+    if (rawY >= minY && rawY <= maxTop) {
+      const side = bar.side === 'below' ? 'below' : 'above';
+      for (const xv of xVariants) {
+        const cx = clampX(xv);
+        if (cx + pw > barRect.left && cx < barRect.right) {
+          candidates.push({ x: cx, y: Math.round(rawY), side, priority: 0 });
+        }
+      }
+    }
+  }
+
+  // 1) 범위 오른쪽 바깥(오른쪽에 실제로 들어갈 때만)
+  const rightX = selRect.right + gap;
+  if (rightX <= maxLeft) {
+    for (const yv of sideYVariants) {
+      candidates.push({ x: Math.round(rightX), y: clampY(yv), side: 'right', priority: 1 });
+    }
+  }
+
+  // 2) 범위 왼쪽 바깥(왼쪽에 실제로 들어갈 때만) + 툴바 좌우 바깥
+  const leftX = selRect.left - gap - pw;
+  if (leftX >= minX) {
+    for (const yv of sideYVariants) {
+      candidates.push({ x: Math.round(leftX), y: clampY(yv), side: 'left', priority: 2 });
+    }
+  }
+  if (barRect.right + gap <= maxLeft) {
+    for (const yv of sideYVariants) {
+      candidates.push({ x: Math.round(barRect.right + gap), y: clampY(yv), side: 'right', priority: 2 });
+    }
+  }
+  if (barRect.left - gap - pw >= minX) {
+    for (const yv of sideYVariants) {
+      candidates.push({ x: Math.round(barRect.left - gap - pw), y: clampY(yv), side: 'left', priority: 2 });
+    }
+  }
+
+  // 3) 범위 반대편 세로 바깥(실제로 아래/위에 들어갈 때만)
+  if (selRect.bottom + gap <= maxTop) {
+    for (const xv of xVariants) {
+      candidates.push({ x: clampX(xv), y: Math.round(selRect.bottom + gap), side: 'below', priority: 3 });
+    }
+  }
+  if (selRect.top - gap - ph >= minY) {
+    for (const xv of xVariants) {
+      candidates.push({ x: clampX(xv), y: Math.round(selRect.top - gap - ph), side: 'above', priority: 3 });
+    }
+  }
+
+  // 4) 최후 폴백(화면 전체 범위 등 모든 자리가 범위와 겹칠 때)
+  pushCand(baseAnchorX, barRect.top - gap - ph, 'above', 4);
+  pushCand(baseAnchorX, barRect.bottom + gap, 'below', 4);
+  pushCand(minX, minY, 'above', 4);
+  pushCand(maxLeft, minY, 'above', 4);
+  pushCand(minX, maxTop, 'below', 4);
+  pushCand(maxLeft, maxTop, 'below', 4);
+
+  const barCenterY = (barRect.top + barRect.bottom) / 2;
+  let best = null;
+  for (const cand of candidates) {
+    const rect = {
+      left: cand.x,
+      top: cand.y,
+      right: cand.x + pw,
+      bottom: cand.y + ph,
+      width: pw,
+      height: ph,
+    };
+    const selOverlap = overlapArea(rect, selRect);
+    const barOverlap = overlapArea(rect, barRect);
+    const obsOverlap = obstacles.reduce((acc, obs) => acc + overlapArea(rect, obs), 0);
+    const cx = cand.x + pw / 2;
+    const cy = cand.y + ph / 2;
+    const distToAnchor = Math.hypot(cx - targetCenter, cy - barCenterY);
+    const score = {
+      ...cand,
+      selOverlap,
+      barOverlap,
+      obsOverlap,
+      distToAnchor,
+    };
+    if (
+      !best ||
+      score.selOverlap < best.selOverlap - 0.5 ||
+      (Math.abs(score.selOverlap - best.selOverlap) <= 0.5 &&
+        (score.barOverlap < best.barOverlap - 0.5 ||
+          (Math.abs(score.barOverlap - best.barOverlap) <= 0.5 &&
+            (score.obsOverlap < best.obsOverlap - 0.5 ||
+              (Math.abs(score.obsOverlap - best.obsOverlap) <= 0.5 &&
+                (score.priority < best.priority ||
+                  (score.priority === best.priority && score.distToAnchor < best.distToAnchor)))))))
+    ) {
+      best = score;
+    }
+  }
+
+  const chosen = best ?? { x: minX, y: minY, side: /** @type {'above'} */ ('above') };
+  const alignedHoriz = chosen.x + pw > barRect.left && chosen.x < barRect.right;
+  const showArrow =
+    alignedHoriz &&
+    ((chosen.side === 'above' && Math.abs(chosen.y + ph + gap - barRect.top) <= 2) ||
+      (chosen.side === 'below' && Math.abs(chosen.y - (barRect.bottom + gap)) <= 2));
+
+  return {
+    x: chosen.x,
+    y: chosen.y,
+    side: chosen.side,
+    arrowX: computeArrowX(chosen.x),
+    showArrow,
+  };
 }
 
 /**

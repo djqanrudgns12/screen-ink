@@ -218,6 +218,29 @@ export function matchDrawSizeBracketKey(event, keymap, platform = 'windows') {
 }
 
 /**
+ * 칠판(Alt+3 / ⌥3) 쪽 넘기기 키(`PgDn` = 다음/새 쪽, `PgUp` = 이전 쪽) 판정.
+ * 수식키나 IME 조합 중이거나, 사용자가 해당 키를 다른 판서 동작에 묶어 두었으면 양보한다.
+ * @param {KeyEventLike | null | undefined} event
+ * @param {Map<string, string> | null | undefined} [keymap]
+ * @param {Platform} [platform='windows']
+ * @returns {'next' | 'prev' | null}
+ */
+export function matchBoardPageKey(event, keymap, platform = 'windows') {
+  if (!event || isComposingEvent(event)) return null;
+  if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return null;
+  const dir =
+    event.code === 'PageDown' || event.key === 'PageDown'
+      ? 'next'
+      : event.code === 'PageUp' || event.key === 'PageUp'
+        ? 'prev'
+        : null;
+  if (!dir) return null;
+  const combo = eventToCombo(event, platform);
+  if (combo && keymap?.has(combo)) return null;
+  return dir;
+}
+
+/**
  * 조합 상태 추적 — compositionstart~compositionend와 끝난 뒤 40 ms 동안 도구·색 키를 막는다.
  */
 export function createImeGuard() {

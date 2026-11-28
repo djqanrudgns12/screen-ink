@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MAGNIFIER_LENS,
+  WINDOW_CORNER_RADIUS,
   findMonitorForOverlay,
   clientToPhysical,
   physicalToClient,
@@ -10,7 +11,9 @@ import {
   physicalRectToClient,
   resolveMonitorHighlight,
   resolveCaptureFrame,
+  selectionFrameVariant,
   formatRectSize,
+  windowCornerRadius,
   clipGuideToMonitor,
   resolveMonitorGuides,
   toCapturePointerInput,
@@ -317,4 +320,14 @@ test('clips magnetic snap guides to monitor bounds (including monitor edges) and
   assert.equal(formatRectSize({ w: 718, h: 40 }), '718×40');
   assert.equal(formatRectSize({ w: 0, h: 40 }), '');
   assert.equal(formatRectSize(null), '');
+});
+
+test('F2 창 캡처 강조 변형과 OS별 둥글기 상수를 계산한다', () => {
+  assert.deepEqual(WINDOW_CORNER_RADIUS, { macos: 10, windows: 8 });
+  assert.equal(windowCornerRadius('macos'), 10);
+  assert.equal(windowCornerRadius('windows'), 8);
+  assert.equal(windowCornerRadius('macos', { width: 12, height: 40 }), 6);
+  assert.equal(selectionFrameVariant('window'), 'window');
+  assert.equal(selectionFrameVariant('region'), 'region');
+  assert.equal(selectionFrameVariant('record'), 'region');
 });

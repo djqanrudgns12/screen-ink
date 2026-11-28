@@ -52,8 +52,9 @@
    *   zoomScale?: number,
    *   x?: number,
    *   y?: number,
-   *   side?: 'above' | 'below',
+   *   side?: 'above' | 'below' | 'left' | 'right',
    *   arrowX?: number,
+   *   showArrow?: boolean,
    *   avoidRects?: ReadonlyArray<import('../models/popoverPlacement.js').RectLike | null | undefined> | null,
    *   onColor?: (codeOrHex: string, opts?: { recordRecent?: boolean }) => void,
    *   onSize?: (val: number) => void,
@@ -84,6 +85,7 @@
     y = 0,
     side = 'above',
     arrowX = 140,
+    showArrow = true,
     avoidRects = undefined,
     onColor = () => {},
     onSize = () => {},
@@ -315,7 +317,9 @@
     e.stopPropagation();
   }}
 >
-  <span class="ink-cw-arrow" data-side={side} style:left={`${arrowX}px`} aria-hidden="true"></span>
+  {#if showArrow && (side === 'above' || side === 'below')}
+    <span class="ink-cw-arrow" data-side={side} style:left={`${arrowX}px`} aria-hidden="true"></span>
+  {/if}
 
   {#if showColor}
     <section class="ink-cw-section" aria-label={t('capture.panel.colorSection')}>
@@ -463,7 +467,7 @@
         recentFonts={activeRecentFonts}
         systemFonts={activeSystemFonts}
         anchorEl={fontBtnEl}
-        preferredSide={side}
+        preferredSide={side === 'below' ? 'below' : 'above'}
         {avoidRects}
         layoutKey={`${x}:${y}:${side}:${boxHeight}`}
         onSelect={handleFontSelect}

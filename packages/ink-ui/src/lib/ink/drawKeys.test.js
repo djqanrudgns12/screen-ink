@@ -11,6 +11,7 @@ import {
   defaultDrawCombo,
   isComposingEvent,
   isDrawToolbarToggleKey,
+  matchBoardPageKey,
   matchDrawKey,
   matchDrawSizeBracketKey,
   normalizeCombo,
@@ -133,4 +134,18 @@ test('도구막대_숨기기_V키와_크기조절_대괄호키_사용자키_우�
   assert.deepEqual(matchDrawSizeBracketKey({ code: 'BracketRight', shiftKey: true }, defaultMap), { dir: 1, large: true });
   assert.equal(matchDrawSizeBracketKey({ code: 'BracketLeft', ctrlKey: true }, defaultMap), null);
   assert.equal(matchDrawSizeBracketKey({ code: 'KeyP' }, defaultMap), null);
+});
+
+test('칠판_쪽넘기기_PgDn_PgUp_판정과_수식키_IME_사용자키_양보', () => {
+  const defaultMap = buildDrawKeymap(null);
+  assert.equal(matchBoardPageKey({ code: 'PageDown' }, defaultMap), 'next');
+  assert.equal(matchBoardPageKey({ code: 'PageUp' }, defaultMap), 'prev');
+  assert.equal(matchBoardPageKey({ code: '', key: 'PageDown' }, defaultMap), 'next');
+  assert.equal(matchBoardPageKey({ code: 'PageDown', shiftKey: true }, defaultMap), null);
+  assert.equal(matchBoardPageKey({ code: 'PageDown', ctrlKey: true }, defaultMap), null);
+  assert.equal(matchBoardPageKey({ code: 'PageDown', isComposing: true }, defaultMap), null);
+  assert.equal(matchBoardPageKey({ code: 'PageUp', keyCode: 229 }, defaultMap), null);
+
+  const customMap = buildDrawKeymap([{ id: 'd-clear', combo: 'PgDn' }]);
+  assert.equal(matchBoardPageKey({ code: 'PageDown' }, customMap), null, '사용자 단축키가 묶였으면 양보');
 });

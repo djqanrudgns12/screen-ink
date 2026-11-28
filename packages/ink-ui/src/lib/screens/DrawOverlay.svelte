@@ -8,7 +8,7 @@
   import { renderDocument } from '../ink/canvasRender.js';
   import { BASIC_COLOR_CODES } from '../models/palette.js';
   import { parseAnnotateStyle, serializeAnnotateStyle } from '../models/inkSize.js';
-  import { clampDrawSettingWidth, drawIslandColor } from '../models/drawToolbar.js';
+  import { buildDrawIslandPatch, clampDrawSettingWidth } from '../models/drawToolbar.js';
   import {
     DRAW_IDLE_DIM_MS,
     DRAW_MINIMAP_MARGIN_PX,
@@ -180,21 +180,7 @@
   // ───────────── 그리기 섬 ─────────────
 
   function patchOf() {
-    const p = engine.islandPatch;
-    const color = drawIslandColor(p.color);
-    return {
-      session: sessionId,
-      ...(color ? { color } : {}),
-      tool: p.tool,
-      widthPx: clampDrawSettingWidth(p.widthPx),
-      zoom: p.zoom,
-      background: p.background,
-      pageIndex: p.pageIndex,
-      pageCount: p.pageCount,
-      suggestion: p.suggestion,
-      idleDim,
-      avoid: cursorAvoid,
-    };
+    return buildDrawIslandPatch(sessionId, engine.islandPatch, { idleDim, avoid: cursorAvoid });
   }
 
   function resetIdleTimer() {

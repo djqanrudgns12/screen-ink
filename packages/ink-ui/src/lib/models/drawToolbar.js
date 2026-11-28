@@ -129,6 +129,39 @@ export function drawIslandColor(color) {
 }
 
 /**
+ * `DrawOverlay`에서 Rust `drawIsland`로 보낼 패치 객체를 조립한다(S12 · S14).
+ * 쪽 번호(`pageIndex`/`pageCount`)·배경(`white`/`black`/`frame`)·색·굵기를 함께 정규화한다.
+ * @param {number} sessionId
+ * @param {{
+ *   color?: string | null,
+ *   tool?: string,
+ *   widthPx?: number,
+ *   zoom?: number,
+ *   background?: 'frame' | 'white' | 'black',
+ *   pageIndex?: number,
+ *   pageCount?: number,
+ *   suggestion?: string | null,
+ * }} patch
+ * @param {{ idleDim?: boolean, avoid?: boolean }} [opts]
+ */
+export function buildDrawIslandPatch(sessionId, patch, opts = {}) {
+  const color = drawIslandColor(patch?.color);
+  return {
+    session: sessionId,
+    ...(color ? { color } : {}),
+    tool: patch?.tool,
+    widthPx: clampDrawSettingWidth(patch?.widthPx ?? 4),
+    zoom: patch?.zoom,
+    background: patch?.background,
+    pageIndex: patch?.pageIndex,
+    pageCount: patch?.pageCount,
+    suggestion: patch?.suggestion ?? null,
+    idleDim: Boolean(opts.idleDim),
+    avoid: Boolean(opts.avoid),
+  };
+}
+
+/**
  * 칠판 ↔ 화면 전환 단추의 다음 배경·라벨 키·아이콘을 결정한다.
  * - 그리기 모드(`mode === 'draw'`): 화면(`frame`) ↔ 칠판(`white`), 검은 칠판이면 화면으로 복귀.
  * - 칠판 모드(`mode === 'board'`): 흰 칠판(`white`) ↔ 검은 칠판(`black`).

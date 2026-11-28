@@ -915,3 +915,72 @@ test('도구막대_도형도구_굵기64px_배경전환_영어알림', () => {
   const fx = e.runAction('d-clear');
   assert.deepEqual(fx, [{ type: 'notice', text: 'Cleared all drawings', action: 'undo' }]);
 });
+
+test('칠판_PgDn_PgUp_쪽넘기기_독립획_지금쪽만지우기_그리기모드비간섭', () => {
+  // 1) 칠판 모드(Alt+3 / ⌥3): PgDn = 새 빈 쪽·다음 쪽, PgUp = 이전 쪽
+  const board = engine({ docOptions: { mode: 'board' } });
+  key(board, 'KeyK'); // 검은 칠판
+  drag(board, line(100, 100, 300, 100, 4));
+  assert.equal(board.items.length, 1);
+  assert.equal(board.islandPatch.pageIndex, 0);
+  assert.equal(board.islandPatch.pageCount, 1);
+
+  const r1 = key(board, 'PageDown');
+  assert.equal(r1.handled, true);
+  assert.equal(board.doc.activePage, 1);
+  assert.equal(board.doc.pages.length, 2);
+  assert.equal(board.background, 'black', '새 쪽도 현재 칠판 바탕을 잇는다');
+  assert.equal(board.items.length, 0, '새 쪽은 빈 칠판');
+  assert.equal(board.islandPatch.pageIndex, 1);
+  assert.equal(board.islandPatch.pageCount, 2);
+
+  // 두 번째 쪽에 획 2개 추가
+  drag(board, line(100, 200, 300, 200, 4));
+  drag(board, line(100, 300, 300, 300, 4));
+  assert.equal(board.items.length, 2);
+
+  // repeat·제스처 중에는 중복 쪽 생성 안 함
+  const rep = key(board, 'PageDown', { repeat: true });
+  assert.equal(rep.handled, true);
+  assert.equal(board.doc.pages.length, 2);
+
+  // PgUp으로 0번 쪽 복귀 → 첫 쪽의 획 1개가 그대로
+  const r2 = key(board, 'PageUp');
+  assert.equal(r2.handled, true);
+  assert.equal(board.doc.activePage, 0);
+  assert.equal(board.items.length, 1);
+  assert.equal(board.islandPatch.pageIndex, 0);
+  assert.equal(board.islandPatch.pageCount, 2);
+
+  // 0번 쪽에서 한 번 더 PgUp은 무시되지만 키는 먹는다
+  assert.equal(key(board, 'PageUp').handled, true);
+  assert.equal(board.doc.activePage, 0);
+
+  // 중간 쪽(0번)에서 PgDn은 새 쪽을 만들지 않고 1번 쪽으로 이동
+  assert.equal(key(board, 'PageDown').handled, true);
+  assert.equal(board.doc.activePage, 1);
+  assert.equal(board.doc.pages.length, 2);
+  assert.equal(board.items.length, 2);
+
+  // 다 지우기(E)는 지금 쪽(1번)만 비우고 0번 쪽 획은 그대로 둔다
+  key(board, 'KeyE');
+  assert.equal(board.items.length, 0);
+  assert.equal(board.doc.pages[0].items.length, 1);
+  key(board, 'KeyZ', { ctrlKey: true });
+  assert.equal(board.items.length, 2, 'Ctrl+Z로 지금 쪽 획 복구');
+
+  // 글자 입력 중에는 PgDn/PgUp을 입력 상자로 남긴다
+  key(board, 'KeyT');
+  click(board, 200, 200);
+  assert.equal(key(board, 'PageDown').handled, false);
+  key(board, 'Escape');
+
+  // 2) 그리기(화면 위) 모드에서는 PgDn/PgUp을 가로채지 않는다(W/K 임시 칠판 전환 중 포함)
+  const draw = engine({ docOptions: { mode: 'draw' } });
+  assert.equal(key(draw, 'PageDown').handled, false);
+  assert.equal(key(draw, 'PageUp').handled, false);
+  key(draw, 'KeyK');
+  assert.equal(draw.background, 'black');
+  assert.equal(key(draw, 'PageDown').handled, false);
+  assert.equal(draw.doc.pages.length, 1);
+});

@@ -37,6 +37,7 @@ import {
   buildDrawKeymap,
   createImeGuard,
   defaultDrawCombo,
+  matchBoardPageKey,
   matchDrawKey,
   normalizeCombo,
 } from './drawKeys.js';
@@ -1153,23 +1154,49 @@ export class InkEngine {
     return true;
   }
 
-  /** 칠판 새 장(R-BOARD-2, P1 — 키는 아직 묶지 않음). */
+  /** 칠판 새 장(R-BOARD-2 · #18). */
   addPage() {
+    if (this.editing) this.commitText();
     this.pageSeq += 1;
     const index = this.doc.activePage + 1;
     const page = { id: `page-${this.pageSeq}`, background: this.background, items: [] };
     this.selection = [];
+    if (this.hidden.size) {
+      this.hidden = new Set();
+      this.revs.hidden++;
+    }
     this.push({ type: 'addPage', index, page });
   }
 
   /** @param {number} index */
   gotoPage(index) {
     if (index < 0 || index >= this.doc.pages.length || index === this.doc.activePage) return false;
+    if (this.editing) this.commitText();
     this.dropSuggestion();
     this.doc = { ...this.doc, activePage: index };
     this.selection = [];
+    if (this.hidden.size) {
+      this.hidden = new Set();
+      this.revs.hidden++;
+    }
     this.markDoc({ kind: 'full' });
     return true;
+  }
+
+  /** 칠판 다음 쪽(마지막 쪽이면 빈 칠판 새 쪽). */
+  nextBoardPage() {
+    if (this.doc.mode !== 'board') return false;
+    if (this.doc.activePage < this.doc.pages.length - 1) {
+      return this.gotoPage(this.doc.activePage + 1);
+    }
+    this.addPage();
+    return true;
+  }
+
+  /** 칠판 이전 쪽. */
+  prevBoardPage() {
+    if (this.doc.mode !== 'board') return false;
+    return this.gotoPage(this.doc.activePage - 1);
   }
 
   // ── 글자(T) ──
@@ -1918,7 +1945,19 @@ export class InkEngine {
     if (e.code === 'Tab') return { handled: true, effects };
     if (e.code && MOD_CODES.has(e.code)) return { handled: e.code.startsWith('Alt'), effects };
     const id = matchDrawKey(e, this.keymap, this.platform);
-    if (!id) return { handled: false, effects };
+    if (!id) {
+      // 칠판(Alt+3 / ⌥3)에서만 PgDn/PgUp 쪽 넘기기를 처리한다(화면 위 그리기는 아래 앱 발표 넘기기와 겹치지 않게 그대로 통과).
+      if (this.doc.mode === 'board') {
+        const pageDir = matchBoardPageKey(e, this.keymap, this.platform);
+        if (pageDir) {
+          if (e.repeat || this.gesture) return { handled: true, effects };
+          const changed = pageDir === 'next' ? this.nextBoardPage() : this.prevBoardPage();
+          if (changed) this.notify();
+          return { handled: true, effects: [...effects, ...this.takeEffects()] };
+        }
+      }
+      return { handled: false, effects };
+    }
     if (e.repeat && NO_REPEAT.has(id)) return { handled: true, effects };
     if (this.gesture && !['d-exit', 'd-undo', 'd-redo'].includes(id)) return { handled: true, effects };
     const out = this.runAction(id);

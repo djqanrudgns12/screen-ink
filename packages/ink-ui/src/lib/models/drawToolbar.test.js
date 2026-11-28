@@ -8,6 +8,7 @@ import {
   DRAW_TOOLBAR_PROXIMITY_PX,
   DRAW_TOOLBAR_TOOLS,
   activeDrawToolId,
+  buildDrawIslandPatch,
   clampDrawSettingWidth,
   drawIslandColor,
   drawToolSizeToEngineWidth,
@@ -164,4 +165,38 @@ test('색·굵기 패널은 도구 막대 위 가운데에 붙고 화면 안으�
   assert.equal(flipped.side, 'below');
   assert.equal(flipped.y, 280 + 42 + 10);
   assert.equal(rectsOverlap({ x: flipped.x, y: flipped.y, w: 284, h: 216 }, island), false);
+});
+
+test('칠판 쪽·배경·색·굵기 섬 패치를 정규화해 만든다', () => {
+  assert.deepEqual(
+    buildDrawIslandPatch(
+      7,
+      {
+        color: 'B',
+        tool: 'pen',
+        widthPx: 42,
+        zoom: 1,
+        background: 'black',
+        pageIndex: 1,
+        pageCount: 3,
+        suggestion: null,
+      },
+      { idleDim: true, avoid: false },
+    ),
+    {
+      session: 7,
+      color: 'B',
+      tool: 'pen',
+      widthPx: 30,
+      zoom: 1,
+      background: 'black',
+      pageIndex: 1,
+      pageCount: 3,
+      suggestion: null,
+      idleDim: true,
+      avoid: false,
+    },
+  );
+  const custom = buildDrawIslandPatch(9, { color: '#123456', tool: 'marker', widthPx: 8, background: 'white', pageIndex: 0, pageCount: 1 });
+  assert.equal('color' in custom, false, '기본 8색 밖 HEX는 섬 패치에서 생략');
 });

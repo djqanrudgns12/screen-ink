@@ -141,6 +141,38 @@ export function resolveCaptureFrame(view, sessionHighlight, monitor) {
   return { ...hl, state: 'picking', instant: false };
 }
 
+/** F2 창 캡처 강조 모서리 둥글기 기본값(CSS px, OS 기본값 상수 — 04 S10). */
+export const WINDOW_CORNER_RADIUS = Object.freeze({
+  macos: 10,
+  windows: 8,
+});
+
+/**
+ * F2 창 캡처 강조 모서리 둥글기(CSS px)를 계산한다.
+ * 창 크기가 아주 작을 때는 짧은 변의 절반으로 가둔다.
+ * @param {'windows' | 'macos' | string} [platform='windows']
+ * @param {{ width?: number, height?: number, w?: number, h?: number } | null} [size]
+ * @returns {number}
+ */
+export function windowCornerRadius(platform = 'windows', size = null) {
+  const base = platform === 'macos' || platform === 'mac' ? WINDOW_CORNER_RADIUS.macos : WINDOW_CORNER_RADIUS.windows;
+  if (!size) return base;
+  const w = Number.isFinite(size.width) ? /** @type {number} */ (size.width) : Number.isFinite(size.w) ? /** @type {number} */ (size.w) : Infinity;
+  const h = Number.isFinite(size.height) ? /** @type {number} */ (size.height) : Number.isFinite(size.h) ? /** @type {number} */ (size.h) : Infinity;
+  const cap = Math.floor(Math.min(Math.max(0, w), Math.max(0, h)) / 2);
+  return Number.isFinite(cap) ? Math.min(base, cap) : base;
+}
+
+/**
+ * 캡처 세션 종류(`sessionKind`)에 따른 `SelectionFrame` 변형.
+ * F2(`window`)만 둥근 주황 테두리(`window`)를 쓰고, F1(`region`)·녹화(`record`)는 기존 네 귀 꺾쇠를 유지한다.
+ * @param {'region' | 'window' | 'record' | string | null | undefined} sessionKind
+ * @returns {'region' | 'window'}
+ */
+export function selectionFrameVariant(sessionKind) {
+  return sessionKind === 'window' ? 'window' : 'region';
+}
+
 /**
  * 물리 px 사각형 크기를 고정폭 배지 문자열(`718×40`)로 바꾼다.
  * @param {{ w: number, h: number } | null | undefined} rect
