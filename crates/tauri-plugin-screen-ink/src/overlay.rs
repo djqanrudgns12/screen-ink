@@ -406,6 +406,8 @@ pub struct TauriOverlayHost<R: Runtime> {
     pub frames: FrameStore,
     #[cfg(windows)]
     pub freeze: ink_platform_windows::freeze::Freeze,
+    #[cfg(windows)]
+    window_capture_origin: Option<ink_platform_windows::events::ForegroundWindow>,
     /// 지금 세션의 모니터 배치(강조를 모니터별로 나눌 때)
     layout: Option<MonitorLayout>,
     thumbs: crate::adapters::ThumbStore,
@@ -429,6 +431,8 @@ impl<R: Runtime> TauriOverlayHost<R> {
             frames,
             #[cfg(windows)]
             freeze: Default::default(),
+            #[cfg(windows)]
+            window_capture_origin: None,
             layout: None,
             thumbs,
             afterimage_gen: Arc::new(AtomicU64::new(0)),
@@ -479,7 +483,19 @@ impl<R: Runtime> TauriOverlayHost<R> {
     fn hide_windows(&mut self) {
         self.bump_afterimage_gen();
         #[cfg(windows)]
-        self.freeze.hide_all();
+        {
+            // F2를 두 번 누르면 숨기기가 끝난 직후 전경 창을 읽는다. 그 전에 캡처 창이 가져간 포커스를 돌려준다.
+            if let Some(origin) = self.window_capture_origin.take() {
+                origin.restore_from(
+                    self.app
+                        .webview_windows()
+                        .into_iter()
+                        .filter(|(label, _)| label.starts_with(PREFIX) || label == crate::ISLAND)
+                        .filter_map(|(_, window)| window.hwnd().ok().map(|hwnd| hwnd.0 as isize)),
+                );
+            }
+            self.freeze.hide_all();
+        }
         // 맥: 창을 숨기기 전에 커서를 화살표로(판서 `cursor: none`·캡처 십자가 숨긴 뒤에도 남지 않게).
         // on_main은 아래 Tauri hide()보다 먼저 메인 대기열에 들어간다.
         #[cfg(target_os = "macos")]
@@ -559,6 +575,10 @@ impl<R: Runtime> OverlayHost for TauriOverlayHost<R> {
             // 아직 창을 만드는 중(시작 직후·모니터를 막 꽂음) — 다음 진입부터 된다
             self.prepare(&MonitorLayout::new(session.monitors.iter().map(|m| ink_domain::geometry::Monitor { id: m.id, bounds: m.bounds, work: m.work, scale: m.scale, primary: m.primary }).collect()));
             return Err("overlay windows not ready".into());
+        }
+        #[cfg(windows)]
+        if session.kind == ink_domain::snapshot::CaptureKind::Window {
+            self.window_capture_origin = ink_platform_windows::events::ForegroundWindow::current_external();
         }
         // 화면 쪽 잔상은 새 `overlay` 알림을 받으면 스스로 걷는다
         for (l, w) in self.app.webview_windows() {

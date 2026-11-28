@@ -109,7 +109,6 @@ fn offer<R: Runtime>(app: &AppHandle<R>, ready: Arc<Ready>) {
             use ink_platform_windows::screen;
             screen::show_island(hwnd.0 as isize, screen::cursor_pos(), ISLAND_SIZE);
         }
-        let _ = window.show();
         let _ = h.emit(EVT_ISLAND, event);
         std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(OFFER_MS.into()));
@@ -122,7 +121,7 @@ fn offer<R: Runtime>(app: &AppHandle<R>, ready: Arc<Ready>) {
                     .compare_exchange(generation, generation + 1, Ordering::SeqCst, Ordering::SeqCst)
                     .is_ok()
                 {
-                    let _ = window.hide();
+                    crate::hide_windows_island(&window);
                 }
             });
         });

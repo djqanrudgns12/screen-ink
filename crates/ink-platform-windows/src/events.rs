@@ -144,6 +144,49 @@ pub fn focus_window(hwnd: isize) -> bool {
     unsafe { SetForegroundWindow(hwnd as HWND) != 0 }
 }
 
+/// 창 캡처를 열기 직전 전경에 있던 외부 창. 창 제목은 읽지 않는다.
+pub struct ForegroundWindow {
+    hwnd: isize,
+    process: u32,
+    thread: u32,
+}
+
+impl ForegroundWindow {
+    pub fn current_external() -> Option<Self> {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+        let mut process = 0;
+        // SAFETY: 전경 창의 핸들과 스레드·프로세스 번호를 읽기만 한다.
+        let (hwnd, thread) = unsafe {
+            let hwnd = GetForegroundWindow();
+            (hwnd, GetWindowThreadProcessId(hwnd, &mut process))
+        };
+        (thread != 0 && process != 0 && process != std::process::id()).then_some(Self { hwnd: hwnd as isize, process, thread })
+    }
+
+    /// 캡처 창이 여전히 입력을 받는 경우에만 창을 돌려준다. 사용자가 그 사이 다른 창을 열었다면 그대로 둔다.
+    pub fn restore_from(self, capture_windows: impl IntoIterator<Item = isize>) {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId, IsIconic, IsWindowVisible};
+        // SAFETY: 현재 전경 창과 보관했던 창의 표시 상태·소유자를 읽는다.
+        unsafe {
+            let active = GetForegroundWindow() as isize;
+            if !capture_windows.into_iter().any(|hwnd| hwnd == active) {
+                return;
+            }
+            let hwnd = self.hwnd as HWND;
+            let mut process = 0;
+            if GetWindowThreadProcessId(hwnd, &mut process) != self.thread
+                || process != self.process
+                || IsWindowVisible(hwnd) == 0
+                || IsIconic(hwnd) != 0
+                || crate::screen::cloaked(hwnd)
+            {
+                return;
+            }
+        }
+        focus_window(self.hwnd);
+    }
+}
+
 /// 창을 화면 캡처·녹화에서 뺀다(Windows 10 2004+). 섬·팝오버·녹화 테두리·고정 테두리에 쓴다.
 pub fn exclude_from_capture(hwnd: isize, exclude: bool) -> bool {
     // SAFETY: 창 핸들 하나에 표시 속성만 바꾼다.

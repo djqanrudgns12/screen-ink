@@ -510,7 +510,6 @@ fn show_island<R: Runtime>(app: &AppHandle<R>) {
                 if let Ok(h) = w.hwnd() {
                     ink_platform_windows::screen::show_island(h.0 as isize, cursor, ISLAND_SIZE);
                 }
-                let _ = w.show();
             }
         });
     }
@@ -521,12 +520,34 @@ fn show_island<R: Runtime>(app: &AppHandle<R>) {
     let app = app.clone();
     std::thread::spawn(move || {
         std::thread::sleep(ISLAND_FALLBACK);
+        #[cfg(windows)]
+        hide_windows_island_at(&app, gen);
+        #[cfg(not(windows))]
         if app.state::<IslandGen>().0.load(Ordering::SeqCst) == gen {
             if let Some(w) = app.get_webview_window(ISLAND) {
                 let _ = w.hide();
             }
         }
     });
+}
+
+#[cfg(windows)]
+fn hide_windows_island_at<R: Runtime>(app: &AppHandle<R>, generation: u64) {
+    let h = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        if h.state::<IslandGen>().0.load(Ordering::SeqCst) == generation {
+            if let Some(window) = h.get_webview_window(ISLAND) {
+                hide_windows_island(&window);
+            }
+        }
+    });
+}
+
+#[cfg(windows)]
+fn hide_windows_island<R: Runtime>(window: &tauri::WebviewWindow<R>) {
+    if let Ok(hwnd) = window.hwnd() {
+        ink_platform_windows::events::set_window_shown(hwnd.0 as isize, false);
+    }
 }
 
 #[cfg(not(windows))]
@@ -580,7 +601,7 @@ fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         }
     });
 
-    app_window(app, ISLAND, WebviewUrl::App("index.html?view=island".into()))
+    let island = app_window(app, ISLAND, WebviewUrl::App("index.html?view=island".into()))
         .title(tr(app, "plugin.window.island"))
         .inner_size(ISLAND_SIZE.0, ISLAND_SIZE.1)
         .resizable(false)
@@ -593,6 +614,15 @@ fn build_static_windows<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
         .focused(false)
         .visible(false)
         .build()?;
+    #[cfg(windows)]
+    // 웹뷰는 한 번 켜 놓고 최상위 창만 Win32로 보이거나 숨긴다. Tauri show는 뒤에 다시 열 때 포커스를 가져간다.
+    island.with_webview(|view| unsafe {
+        if let Err(e) = view.controller().SetIsVisible(true) {
+            log::warn!("섬 웹뷰 표시 준비 실패: {e}");
+        }
+    })?;
+    #[cfg(not(windows))]
+    let _ = island;
     rec_frame::build(app)?;
     Ok(())
 }
@@ -1793,7 +1823,11 @@ async fn run<R: Runtime>(app: AppHandle<R>, action: String, id: Option<u64>) -> 
         "island.hidden" => {
             log::debug!("island hidden by ui");
             #[cfg(windows)]
-            app.state::<IslandGen>().0.fetch_add(1, Ordering::SeqCst);
+            {
+                let generation = app.state::<IslandGen>().0.fetch_add(1, Ordering::SeqCst) + 1;
+                hide_windows_island_at(&app, generation);
+            }
+            #[cfg(not(windows))]
             hide(ISLAND)
         }
         "folder.open" => {
